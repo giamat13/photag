@@ -770,9 +770,9 @@
       <div class="lang-toggle" id="langToggle">
         <button class="lang-btn" data-lang="hebrew">עברית</button>
         <button class="lang-btn active" data-lang="english">English</button>
-        <button class="lang-btn" data-lang="both">שניהם</button>
+        <button class="lang-btn groq-only" data-lang="both">שניהם</button>
       </div>
-      <span class="ollama-lang-note hidden" id="ollamaLangNote" style="font-size:12px;color:var(--accent3);font-family:'Space Mono',monospace;">🦙 English only</span>
+      <span id="translateNote" class="hidden" style="font-size:11px;color:var(--accent3);font-family:'Space Mono',monospace;">via Google Translate</span>
     </div>
   </div>
 
@@ -820,7 +820,6 @@
   const ollamaUrlInput = document.getElementById('ollamaUrl');
 
   const langToggle     = document.getElementById('langToggle');
-  const ollamaLangNote = document.getElementById('ollamaLangNote');
 
   function applyBackend(backend) {
     currentBackend = backend;
@@ -833,26 +832,28 @@
       backendBadge.className = 'backend-badge groq';
       const savedKey = localStorage.getItem('photag_groq_key');
       if (savedKey) { apikeyInput.value = savedKey; updateKeyStatus(savedKey); }
-      langToggle.classList.remove('hidden');
-      ollamaLangNote.classList.add('hidden');
-      // restore all lang buttons
+      // GROQ: show all buttons
       langToggle.querySelectorAll('.lang-btn').forEach(b => b.style.display = '');
+      document.getElementById('translateNote').classList.add('hidden');
     } else {
       apikeyCard.classList.add('hidden');
       ollamaCard.classList.remove('hidden');
       backendBadge.textContent = '🦙 Ollama';
       backendBadge.className = 'backend-badge ollama';
-      // hide hebrew + both, keep only English (and auto-select it)
+      // Ollama: hide 'both' only, keep hebrew+english
       langToggle.querySelectorAll('.lang-btn').forEach(b => {
-        if (b.dataset.lang !== 'english') {
+        if (b.dataset.lang === 'both') {
           b.style.display = 'none';
-          b.classList.remove('active');
-        } else {
-          b.classList.add('active');
+          if (b.classList.contains('active')) {
+            // if 'both' was selected, fall back to english
+            b.classList.remove('active');
+            langToggle.querySelector('[data-lang="english"]').classList.add('active');
+            selectedLang = 'english';
+          }
         }
       });
-      selectedLang = 'english';
-      ollamaLangNote.classList.remove('hidden');
+      // show translate note if hebrew is currently selected
+      updateTranslateNote();
     }
 
     if (!IS_GITHUB) backendBadge.classList.remove('hidden');
@@ -966,8 +967,18 @@
       document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedLang = btn.dataset.lang;
+      updateTranslateNote();
     });
   });
+
+  function updateTranslateNote() {
+    const note = document.getElementById('translateNote');
+    if (currentBackend === 'ollama' && selectedLang === 'hebrew') {
+      note.classList.remove('hidden');
+    } else {
+      note.classList.add('hidden');
+    }
+  }
 
   // ─── Analyze ──────────────────────────────────────────────────────
   analyzeBtn.addEventListener('click', analyzeImage);
@@ -1034,6 +1045,10 @@ You MUST return exactly ${tagCount} tag objects. confidence is an integer 60-99.
       } else {
         loadingText.textContent = 'מריץ Ollama מקומית (minicpm-v)...';
         tags = await analyzeWithOllama(base64Data, ollamaPrompt, errorMsg);
+        if (tags && selectedLang === 'hebrew') {
+          loadingText.textContent = 'מתרגם לעברית...';
+          tags = await translateToHebrew(tags);
+        }
       }
 
       if (tags) displayTags(tags);
@@ -1084,6 +1099,18 @@ You MUST return exactly ${tagCount} tag objects. confidence is an integer 60-99.
     const text  = data.choices?.[0]?.message?.content || '';
     const clean = text.replace(/```json|```/g, '').trim();
     return JSON.parse(clean).tags;
+  }
+
+  // ─── Google Translate (free endpoint, no key) ─────────────────────
+  async function translateToHebrew(tags) {
+    // Translate all tags in one request, joined by newline
+    const texts = tags.map(t => t.tag).join('\n');
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=he&dt=t&q=${encodeURIComponent(texts)}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    // data[0] is array of [translatedChunk, originalChunk, ...]
+    const translated = data[0].map(chunk => chunk[0]).join('').split('\n');
+    return tags.map((t, i) => ({ ...t, tag: (translated[i] || t.tag).trim() }));
   }
 
   // ─── Ollama backend ───────────────────────────────────────────────
