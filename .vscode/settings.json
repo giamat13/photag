@@ -1,0 +1,7 @@
+{
+    "files.readonlyInclude": {
+        "{**/.c4z/.extsrcs/*.PROTSYM.cbl,**/.c4z/.extsrcs/*.PROTSYM.listing}": true
+    },
+    "python.defaultInterpreterPath": "C:\\Users\\Giamat13\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "python.terminal.activateEnvironment": false
+}

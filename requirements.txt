@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pywebview
+pillow
+pillow-heif
+piexif
+numpy
+scipy
+onnxruntime
+insightface

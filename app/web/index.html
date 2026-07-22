@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PhotoManager — ניהול תמונות</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside class="side">
+    <div class="brand">📷 PhotoManager</div>
+    <nav id="nav">
+      <button data-view="all" class="active">🖼️ כל התמונות</button>
+      <button data-view="albums">📁 אלבומים</button>
+      <button data-view="people">🧑 אנשים</button>
+      <button data-view="tags">🏷️ תגיות</button>
+      <button data-view="favorites">⭐ מועדפים</button>
+      <button data-view="memories">💭 זיכרונות</button>
+      <button data-view="trash">🗑️ אשפה</button>
+      <button data-view="settings">⚙️ הגדרות</button>
+    </nav>
+    <div class="stats" id="stats"></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <input id="search" type="search" placeholder="חיפוש: שם קובץ, תיאור, אדם, תגית…">
+      <span class="crumb" id="crumb"></span>
+      <div class="spacer"></div>
+      <button id="btn-import" class="primary">⬆️ ייבוא מגוגל פוטוס</button>
+    </header>
+    <section id="content" class="content"></section>
+  </main>
+</div>
+
+<!-- lightbox -->
+<div id="lightbox" class="lightbox hidden">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <div class="lb-stage"><div id="lb-media"></div></div>
+  <aside class="lb-panel">
+    <div class="lb-tabs">
+      <button data-tab="info" class="active">מידע</button>
+      <button data-tab="meta">עריכת מאפיינים</button>
+      <button data-tab="edit">עריכת תמונה</button>
+    </div>
+    <div id="tab-info" class="lb-tab"></div>
+    <div id="tab-meta" class="lb-tab hidden"></div>
+    <div id="tab-edit" class="lb-tab hidden"></div>
+  </aside>
+</div>
+
+<!-- import modal -->
+<div id="import-modal" class="modal hidden">
+  <div class="modal-box">
+    <h3>ייבוא מ‑Google Takeout</h3>
+    <p>קובץ ה‑ZIP שהורדת מגוגל (Takeout):</p>
+    <div class="row">
+      <input id="zip-path" type="text" placeholder="C:\...\takeout-....zip" spellcheck="false" style="flex:1">
+      <button onclick="pickZip()">📂 בחר קובץ…</button>
+    </div>
+    <div class="row">
+      <button class="primary" onclick="doImport()">התחל ייבוא</button>
+      <button onclick="hide('import-modal')">ביטול</button>
+    </div>
+    <div class="hint">התמונות יישמרו בספרייה המקומית שלך. אחרי הייבוא אפשר להריץ זיהוי פנים ותיוג.</div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "PhotoManager (חלון דסקטופ)",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "C:\\Users\\Giamat13\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "program": "${workspaceFolder}/photo_manager.py",
+      "console": "integratedTerminal",
+      "env": { "PYTHONUTF8": "1" }
+    },
+    {
+      "name": "PhotoManager (דפדפן)",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "C:\\Users\\Giamat13\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "program": "${workspaceFolder}/photo_manager.py",
+      "args": ["--browser"],
+      "console": "integratedTerminal",
+      "env": { "PYTHONUTF8": "1" }
+    }
+  ]
+}
