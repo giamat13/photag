@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS photos(
   gphotos_url TEXT,
   faces_done INTEGER DEFAULT 0,
   tags_done INTEGER DEFAULT 0,
+  tags_en_done INTEGER DEFAULT 0,
   edited INTEGER DEFAULT 0,
   orig_backup TEXT,         -- rel path of pre-edit original, if edited
   imported_at INTEGER
@@ -94,6 +95,10 @@ def connect() -> sqlite3.Connection:
 def init_db():
     con = connect()
     con.executescript(SCHEMA)
+    try:
+        con.execute("ALTER TABLE photos ADD COLUMN tags_en_done INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # ponytail: column already exists on upgraded DBs
     con.commit()
     return con
 

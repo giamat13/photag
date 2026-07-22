@@ -23,7 +23,7 @@ _LOCK = threading.Lock()  # ponytail: one job at a time is plenty for a desktop 
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "tagging"):
+        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "tagging", "pulling"):
             raise HTTPException(409, "המשימה כבר רצה")
         prog = importer.Progress()
         JOBS[name] = prog
@@ -42,6 +42,7 @@ def job(name: str):
 def status():
     con = db.init_db()
     c = lambda q: con.execute(q).fetchone()[0]
+    vision_model, vision_model_fits = tagging.pick_vision_model_info()
     return {
         "library_root": str(PATHS.root),
         "db_path": str(PATHS.db),
@@ -56,7 +57,9 @@ def status():
             "trashed": c("SELECT COUNT(*) FROM photos WHERE trashed=1"),
         },
         "ollama": tagging.available(),
-        "ollama_vision_model": tagging.pick_vision_model(),
+        "ollama_vision_model": vision_model,
+        "ollama_vision_model_fits": vision_model_fits,
+        "ollama_recommended_small_model": tagging.RECOMMENDED_SMALL_VISION_MODEL,
     }
 
 
@@ -112,6 +115,15 @@ def start_faces():
 @app.post("/api/tags")
 def start_tags():
     _start("tags", tagging.run_tagging)
+    return {"ok": True}
+
+
+class PullModelIn(BaseModel):
+    model: str = tagging.RECOMMENDED_SMALL_VISION_MODEL
+
+@app.post("/api/pull-model")
+def start_pull_model(body: PullModelIn):
+    _start("pull_model", tagging.pull_model, body.model)
     return {"ok": True}
 
 

@@ -207,6 +207,7 @@ async function pollJob(name, label){
     toast(`${label}: ${p.error||p.msg||'הושלם'} ✓`); refreshStats();
     if(name==='import') route('all');
     if(name==='faces') { if(STATE.view==='people') loadPeople(); }
+    if(name==='pull_model' && STATE.view==='settings') loadSettings();
     return;
   }
   setTimeout(()=>pollJob(name,label), 800);
@@ -233,10 +234,13 @@ async function loadSettings(){
       <div class="row">
         <button class="primary" onclick="jpost('/api/faces').then(()=>pollJob('faces','זיהוי פנים'))">🧑 זהה פרצופים (buffalo_l)</button>
         <button ${s.ollama_vision_model?'':'disabled title="אין מודל ראייה מותקן ב-Ollama"'} onclick="jpost('/api/tags').then(()=>pollJob('tags','תיוג חכם'))">🏷️ תיוג חכם (Ollama${s.ollama_vision_model?': '+s.ollama_vision_model:''})</button>
+        ${s.ollama_vision_model && !s.ollama_vision_model_fits ?
+          `<button onclick="jpost('/api/pull-model',{model:'${esc(s.ollama_recommended_small_model)}'}).then(()=>pollJob('pull_model','התקנת מודל קטן'))">⬇️ התקן מודל קטן יותר (${esc(s.ollama_recommended_small_model)})</button>` : ''}
       </div>
       <div class="hint">${!s.ollama ? 'Ollama לא רץ — הפעילו את שרת Ollama כדי לקבל תגיות אוטומטיות'
-        : s.ollama_vision_model ? `Ollama מחובר, ישתמש במודל <b>${esc(s.ollama_vision_model)}</b> לתיוג`
-        : 'Ollama רץ אבל אין מודל ראייה מותקן — הריצו: <code>ollama pull llava</code>'}</div>
+        : !s.ollama_vision_model ? 'Ollama רץ אבל אין מודל ראייה מותקן — הריצו: <code>ollama pull llava</code>'
+        : !s.ollama_vision_model_fits ? `Ollama מחובר, אבל <b>${esc(s.ollama_vision_model)}</b> גדול על הזיכרון הפנוי כרגע — התקינו מודל קטן יותר או סגרו תוכנות אחרות`
+        : `Ollama מחובר, ישתמש במודל <b>${esc(s.ollama_vision_model)}</b> לתיוג`}</div>
     </div>`;
 }
 window.pickLib=async()=>{
