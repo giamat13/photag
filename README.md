@@ -29,7 +29,6 @@
 ```bat
 pip install -r requirements.txt
 python photo_manager.py            REM חלון דסקטופ (WebView2)
-python photo_manager.py --browser  REM דפדפן: http://127.0.0.1:8756
 ```
 או ב‑VS Code: F5 → "PhotoManager (חלון דסקטופ)".
 

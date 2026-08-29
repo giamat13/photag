@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS photos(
   favorited INTEGER DEFAULT 0,
   rating INTEGER DEFAULT 0, -- 0-5, Windows-style
   trashed INTEGER DEFAULT 0,
+  trashed_at INTEGER,       -- unix seconds; set when moved to trash, used to auto-purge
   gphotos_url TEXT,
   faces_done INTEGER DEFAULT 0,
   tags_done INTEGER DEFAULT 0,
@@ -97,6 +98,10 @@ def init_db():
     con.executescript(SCHEMA)
     try:
         con.execute("ALTER TABLE photos ADD COLUMN tags_en_done INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # ponytail: column already exists on upgraded DBs
+    try:
+        con.execute("ALTER TABLE photos ADD COLUMN trashed_at INTEGER")
     except sqlite3.OperationalError:
         pass  # ponytail: column already exists on upgraded DBs
     con.commit()

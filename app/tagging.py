@@ -6,6 +6,7 @@ import ctypes
 import json
 import os
 import subprocess
+import time
 import urllib.error
 import urllib.request
 
@@ -27,6 +28,32 @@ def available() -> bool:
             return r.status == 200
     except Exception:
         return False
+
+
+_START_ATTEMPTED = False
+
+
+def ensure_running(wait: float = 2.0) -> bool:
+    """If Ollama isn't reachable, try launching `ollama serve` in the background
+    and give it a moment to come up. No-op if already running, the CLI isn't
+    installed, or we already tried once this session."""
+    global _START_ATTEMPTED
+    if available():
+        return True
+    if _START_ATTEMPTED:
+        return False
+    _START_ATTEMPTED = True
+    try:
+        subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+    except Exception:
+        return False
+    deadline = time.time() + wait
+    while time.time() < deadline:
+        if available():
+            return True
+        time.sleep(0.2)
+    return False
 
 
 def _ram_bytes() -> int:

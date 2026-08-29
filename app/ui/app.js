@@ -6,7 +6,8 @@ const esc = s => (s??'').toString().replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;
 const fdate = t => t ? new Date(t*1000).toLocaleString('he-IL') : '—';
 const show = id => $('#'+id).classList.remove('hidden');
 const hide = id => $('#'+id).classList.add('hidden');
-let STATE = {view:'all', filter:{}, photos:[]};
+let STATE = {view:'all', filter:{}, photos:[], sort:'date_desc'};
+let TRASH_DAYS = 60;
 
 function toast(msg, keep){ const t=$('#toast'); t.innerHTML=msg; t.classList.remove('hidden');
   clearTimeout(t._h); if(!keep) t._h=setTimeout(()=>t.classList.add('hidden'), 3500); }
@@ -18,6 +19,8 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
 });
 $('#search').oninput = debounce(()=>{ if($('#search').value){STATE.view='all'; STATE.filter={q:$('#search').value}; loadPhotos('חיפוש');} }, 300);
 $('#btn-import').onclick = ()=>show('import-modal');
+$('#sort').value = STATE.sort;
+$('#sort').onchange = ()=>{ STATE.sort=$('#sort').value; if(STATE.photos.length) renderPhotoGrid(); };
 
 function debounce(fn,ms){let h;return(...a)=>{clearTimeout(h);h=setTimeout(()=>fn(...a),ms);};}
 
@@ -25,7 +28,7 @@ async function route(view){
   STATE.view=view; $('#crumb').textContent='';
   if(view==='all') return loadPhotos('כל התמונות');
   if(view==='favorites'){STATE.filter={favorite:1}; return loadPhotos('מועדפים');}
-  if(view==='trash'){STATE.filter={trashed:1}; return loadPhotos('אשפה');}
+  if(view==='trash'){STATE.filter={trashed:1}; return loadPhotos(`אשפה — תמונות נמחקות לצמיתות אחרי ${TRASH_DAYS} יום`);}
   if(view==='albums') return loadAlbums();
   if(view==='people') return loadPeople();
   if(view==='tags') return loadTags();
@@ -38,9 +41,37 @@ async function loadPhotos(title){
   $('#crumb').textContent = title||'';
   const q = new URLSearchParams(STATE.filter).toString();
   STATE.photos = await api('/api/photos?'+q);
+  renderPhotoGrid();
+}
+function sortPhotos(photos, sort){
+  const arr=photos.slice();
+  if(sort==='date_asc') arr.sort((a,b)=>(a.taken_at||0)-(b.taken_at||0));
+  else if(sort==='name_asc') arr.sort((a,b)=>a.filename.localeCompare(b.filename));
+  else if(sort==='name_desc') arr.sort((a,b)=>b.filename.localeCompare(a.filename));
+  else if(sort==='favorite') arr.sort((a,b)=>(b.favorited-a.favorited)||((b.taken_at||0)-(a.taken_at||0)));
+  else arr.sort((a,b)=>(b.taken_at||0)-(a.taken_at||0)); // date_desc
+  return arr;
+}
+function dayLabel(t){
+  return t ? new Date(t*1000).toLocaleDateString('he-IL', {weekday:'long', day:'numeric', month:'long', year:'numeric'}) : 'ללא תאריך';
+}
+function renderPhotoGrid(){
   const c=$('#content');
   if(!STATE.photos.length){ c.innerHTML=`<div class="empty">אין תמונות כאן.<br>לחצו על «ייבוא מגוגל פוטוס» כדי להתחיל.</div>`; return; }
-  c.innerHTML = `<div class="grid">${STATE.photos.map(cell).join('')}</div>`;
+  const sorted = sortPhotos(STATE.photos, STATE.sort);
+  if(STATE.sort==='date_asc' || STATE.sort==='date_desc'){
+    let html='', curDay=null, buf=[];
+    const flush=()=>{ if(buf.length) html+=`<div class="day-header">${curDay}</div><div class="grid">${buf.join('')}</div>`; buf=[]; };
+    for(const p of sorted){
+      const day = dayLabel(p.taken_at ? p.taken_at - (p.taken_at % 86400) : null);
+      if(day!==curDay){ flush(); curDay=day; }
+      buf.push(cell(p));
+    }
+    flush();
+    c.innerHTML = html;
+  } else {
+    c.innerHTML = `<div class="grid">${sorted.map(cell).join('')}</div>`;
+  }
   c.querySelectorAll('.cell').forEach(el=>el.onclick=()=>openLightbox(+el.dataset.id));
 }
 function cell(p){
@@ -120,6 +151,7 @@ function renderInfo(){
     <div class="kv"><span>מידות</span>${p.width||'?'}×${p.height||'?'}</div>
     <div class="kv"><span>גודל</span>${p.bytes?(p.bytes/1048576).toFixed(1)+' MB':'—'}</div>
     <div class="kv"><span>מיקום</span>${p.lat?`${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`:'—'}</div>
+    ${p.trashed?`<div class="kv"><span>באשפה</span>יימחק לצמיתות בעוד ${Math.max(0, TRASH_DAYS - Math.floor((Date.now()/1000 - p.trashed_at)/86400))} ימים</div>`:''}
     <div class="kv"><span>מועדף</span>${p.favorited?'⭐':'—'}</div>
     <div class="kv"><span>דירוג</span>${'★'.repeat(p.rating||0)||'—'}</div>
     ${p.description?`<div class="field" style="margin-top:10px"><label>תיאור</label>${esc(p.description)}</div>`:''}
@@ -237,7 +269,7 @@ async function loadSettings(){
         ${s.ollama_vision_model && !s.ollama_vision_model_fits ?
           `<button onclick="jpost('/api/pull-model',{model:'${esc(s.ollama_recommended_small_model)}'}).then(()=>pollJob('pull_model','התקנת מודל קטן'))">⬇️ התקן מודל קטן יותר (${esc(s.ollama_recommended_small_model)})</button>` : ''}
       </div>
-      <div class="hint">${!s.ollama ? 'Ollama לא רץ — הפעילו את שרת Ollama כדי לקבל תגיות אוטומטיות'
+      <div class="hint">${!s.ollama ? 'לא ניתן להפעיל את Ollama אוטומטית (ודאו שהוא מותקן) — כדי לקבל תגיות אוטומטיות'
         : !s.ollama_vision_model ? 'Ollama רץ אבל אין מודל ראייה מותקן — הריצו: <code>ollama pull llava</code>'
         : !s.ollama_vision_model_fits ? `Ollama מחובר, אבל <b>${esc(s.ollama_vision_model)}</b> גדול על הזיכרון הפנוי כרגע — התקינו מודל קטן יותר או סגרו תוכנות אחרות`
         : `Ollama מחובר, ישתמש במודל <b>${esc(s.ollama_vision_model)}</b> לתיוג`}</div>
@@ -251,6 +283,7 @@ window.setLib=async()=>{ const p=$('#lib-path').value.trim(); if(!p)return; awai
 
 async function refreshStats(){
   const s=await api('/api/status');
+  TRASH_DAYS = s.trash_days;
   $('#stats').innerHTML = `${s.counts.photos} תמונות · ${s.counts.albums} אלבומים<br>${s.counts.people} אנשים · ${s.counts.faces} פרצופים<br>Ollama: ${s.ollama?'מחובר':'—'}`;
 }
 

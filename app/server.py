@@ -13,11 +13,22 @@ from . import db, images, importer, faces, tagging, config
 from .config import PATHS
 
 app = FastAPI(title="PhotoManager")
-WEB = Path(__file__).parent / "web"
+UI = Path(__file__).parent / "ui"
 
 # ---- background jobs -------------------------------------------------------
 JOBS: dict[str, importer.Progress] = {}
 _LOCK = threading.Lock()  # ponytail: one job at a time is plenty for a desktop app
+
+
+def _trash_purge_loop():
+    while True:
+        importer.purge_expired_trash(db.init_db())
+        time.sleep(24 * 3600)
+
+
+@app.on_event("startup")
+def _start_trash_purge():
+    threading.Thread(target=_trash_purge_loop, daemon=True).start()
 
 
 def _start(name, target, *args):
@@ -56,10 +67,11 @@ def status():
             "tags": c("SELECT COUNT(*) FROM tags"),
             "trashed": c("SELECT COUNT(*) FROM photos WHERE trashed=1"),
         },
-        "ollama": tagging.available(),
+        "ollama": tagging.ensure_running(),
         "ollama_vision_model": vision_model,
         "ollama_vision_model_fits": vision_model_fits,
         "ollama_recommended_small_model": tagging.RECOMMENDED_SMALL_VISION_MODEL,
+        "trash_days": config.TRASH_RETENTION_DAYS,
     }
 
 
@@ -264,6 +276,8 @@ def update_meta(pid: int, m: MetaIn):
         raise HTTPException(404)
     fields = {k: v for k, v in m.dict().items()
               if k in ("description", "taken_at", "lat", "lng", "favorited", "rating", "trashed") and v is not None}
+    if "trashed" in fields:
+        fields["trashed_at"] = int(time.time()) if fields["trashed"] else None
     if fields:
         con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in fields)} WHERE id=?",
                     (*fields.values(), pid))
@@ -353,4 +367,4 @@ def rename_person(pid: int, body: RenameIn):
 
 
 # ---- static frontend (mounted last so /api wins) ---------------------------
-app.mount("/", StaticFiles(directory=str(WEB), html=True), name="web")
+app.mount("/", StaticFiles(directory=str(UI), html=True), name="ui")

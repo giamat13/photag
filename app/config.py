@@ -58,3 +58,6 @@ FACE_MODEL = "buffalo_l"
 # Ollama vision model for content tags (optional; skipped if Ollama is down).
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_VISION_MODEL = os.environ.get("OLLAMA_VISION_MODEL", "llava")
+
+# Photos sit in the trash this many days before being deleted for good.
+TRASH_RETENTION_DAYS = 60

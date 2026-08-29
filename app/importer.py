@@ -13,12 +13,33 @@ import zipfile
 from pathlib import Path
 
 from . import db, images
-from .config import PATHS
+from .config import PATHS, TRASH_RETENTION_DAYS
 
 ROOT_PREFIX = "Takeout/Google Photos/"
 YEAR_RE = re.compile(r"(?:תמונות משנת|Photos from)\s*(\d{4})")
 LATIN_PAIR_RE = re.compile(r"^[A-Za-z].*,")  # e.g. "Itamar, dafna" -> shared/people album
 SUPP_RE = re.compile(r"\.supplemental[\w-]*\.json$", re.I)
+
+
+def purge_expired_trash(con, days: int = TRASH_RETENTION_DAYS):
+    """Permanently delete photos that have sat in the trash for over `days`:
+    their media/thumb/backup files and every DB row referencing them."""
+    cutoff = int(time.time()) - days * 86400
+    rows = con.execute(
+        "SELECT id, sha256, rel_path, orig_backup FROM photos "
+        "WHERE trashed=1 AND trashed_at IS NOT NULL AND trashed_at < ?", (cutoff,)).fetchall()
+    for r in rows:
+        for p in (PATHS.media / r["rel_path"], images.thumb_path(r["sha256"])):
+            p.unlink(missing_ok=True)
+        if r["orig_backup"]:
+            (PATHS.media / r["orig_backup"]).unlink(missing_ok=True)
+        pid = r["id"]
+        for table in ("photo_albums", "photo_people", "photo_tags", "faces"):
+            con.execute(f"DELETE FROM {table} WHERE photo_id=?", (pid,))
+        con.execute("DELETE FROM photos WHERE id=?", (pid,))
+    if rows:
+        con.commit()
+    return len(rows)
 
 
 def _album_kind(name: str) -> str:

@@ -28,6 +28,13 @@
       <input id="search" type="search" placeholder="חיפוש: שם קובץ, תיאור, אדם, תגית…">
       <span class="crumb" id="crumb"></span>
       <div class="spacer"></div>
+      <select id="sort" title="מיון">
+        <option value="date_desc">תאריך: חדש→ישן</option>
+        <option value="date_asc">תאריך: ישן→חדש</option>
+        <option value="name_asc">שם קובץ: א→ת</option>
+        <option value="name_desc">שם קובץ: ת→א</option>
+        <option value="favorite">מועדפים קודם</option>
+      </select>
       <button id="btn-import" class="primary">⬆️ ייבוא מגוגל פוטוס</button>
     </header>
     <section id="content" class="content"></section>

@@ -3,7 +3,7 @@
 # Note: buffalo_l (~300MB) and Ollama models download at runtime, not bundled.
 from PyInstaller.utils.hooks import collect_all, collect_data_files
 
-datas = [("app/web", "app/web")]
+datas = [("app/ui", "app/ui")]
 binaries = []
 hiddenimports = ["uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto",
                  "uvicorn.protocols.websockets.auto", "uvicorn.lifespan.on"]

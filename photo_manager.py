@@ -1,12 +1,10 @@
 """PhotoManager entry point.
 
 Runs the local FastAPI server and opens it in a native desktop window
-(pywebview). Fallbacks: `--browser` just serves and prints the URL.
+(pywebview).
 
-    python photo_manager.py            # desktop window
-    python photo_manager.py --browser  # serve only, open in your browser
+    python photo_manager.py
 """
-import sys
 import threading
 import time
 
@@ -35,22 +33,11 @@ def _wait_up(timeout=15):
 
 
 def main():
-    if "--browser" in sys.argv:
-        print(f"PhotoManager → {URL}")
-        _serve()
-        return
-
     threading.Thread(target=_serve, daemon=True).start()
     _wait_up()
-    try:
-        import webview
-        webview.create_window("PhotoManager — ניהול תמונות", URL, width=1280, height=860)
-        webview.start()
-    except Exception as e:
-        print(f"[חלון לא זמין: {e}] פותח בדפדפן: {URL}")
-        import webbrowser
-        webbrowser.open(URL)
-        _serve()
+    import webview
+    webview.create_window("PhotoManager — ניהול תמונות", URL, width=1280, height=860)
+    webview.start()
 
 
 if __name__ == "__main__":
