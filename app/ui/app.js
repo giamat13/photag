@@ -235,7 +235,7 @@ async function pollJob(name, label){
   const p=await api('/api/job/'+name);
   const bar = p.total? `<div class="progress"><i style="width:${100*p.done/p.total}%"></i></div>`:'';
   toast(`${label}: ${p.msg||p.state} ${p.total?`(${p.done}/${p.total})`:''}${bar}`, true);
-  if(['done','error','idle'].includes(p.state)){
+  if(['done','error'].includes(p.state)){
     toast(`${label}: ${p.error||p.msg||'הושלם'} ✓`); refreshStats();
     if(name==='import') route('all');
     if(name==='faces') { if(STATE.view==='people') loadPeople(); }
@@ -248,7 +248,7 @@ async function pollJob(name, label){
 // ---------- settings ----------
 async function loadSettings(){
   $('#crumb').textContent='הגדרות';
-  const s=await api('/api/status');
+  const [s, vm] = await Promise.all([api('/api/status'), api('/api/vision-models')]);
   $('#content').innerHTML = `
     <div class="settings-card">
       <h2 class="title">📂 איפה נשמרות התמונות</h2>
@@ -263,6 +263,15 @@ async function loadSettings(){
       <h2 class="title">🧠 עיבוד</h2>
       <div class="pathrow">תמונות: <b>${s.counts.photos}</b> · סרטונים: <b>${s.counts.videos}</b> · אלבומים: <b>${s.counts.albums}</b>
         · אנשים: <b>${s.counts.people}</b> · פרצופים: <b>${s.counts.faces}</b> · תגיות: <b>${s.counts.tags}</b></div>
+      ${vm.models.length ? `<div class="row">
+        <label>מודל תיוג:
+          <select id="vision-model">
+            <option value="">אוטומטי (הכי גדול שנכנס בזיכרון)</option>
+            ${vm.models.map(m=>`<option value="${esc(m.name)}" ${vm.override===m.name?'selected':''}>${esc(m.name)} (${(m.size/1024**3).toFixed(1)}GB)</option>`).join('')}
+          </select>
+        </label>
+        <button onclick="setVisionModel()">שמור</button>
+      </div>` : ''}
       <div class="row">
         <button class="primary" onclick="jpost('/api/faces').then(()=>pollJob('faces','זיהוי פנים'))">🧑 זהה פרצופים (buffalo_l)</button>
         <button ${s.ollama_vision_model?'':'disabled title="אין מודל ראייה מותקן ב-Ollama"'} onclick="jpost('/api/tags').then(()=>pollJob('tags','תיוג חכם'))">🏷️ תיוג חכם (Ollama${s.ollama_vision_model?': '+s.ollama_vision_model:''})</button>
@@ -280,6 +289,7 @@ window.pickLib=async()=>{
   if(r.path) $('#lib-path').value=r.path;
 };
 window.setLib=async()=>{ const p=$('#lib-path').value.trim(); if(!p)return; await jpost('/api/settings/library',{path:p}); toast('המיקום עודכן ✓'); loadSettings(); refreshStats(); };
+window.setVisionModel=async()=>{ const v=$('#vision-model').value; await jpost('/api/settings/vision-model',{model:v||null}); toast('המודל עודכן ✓'); loadSettings(); };
 
 async function refreshStats(){
   const s=await api('/api/status');

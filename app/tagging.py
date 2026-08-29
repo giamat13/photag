@@ -5,18 +5,22 @@ import base64
 import ctypes
 import json
 import os
+import re
 import subprocess
 import time
 import urllib.error
 import urllib.request
 
-from . import db, images
+from . import config, db, images
 from .config import OLLAMA_URL, OLLAMA_VISION_MODEL
 
+# Real example words, not generic "tag1/tag2" placeholders -> a weak model that
+# just echoes the example back verbatim no longer produces literal "tag1,tag2".
 PROMPT = ("תאר את התמונה בעד 8 תגיות קצרות בעברית ובעד 8 תגיות קצרות באנגלית שיעזרו לחפש אותה מאוחר יותר "
-          "(אובייקטים, מקום, סוג אירוע, אווירה). החזר בדיוק בפורמט הבא, בלי משפטים נוספים:\n"
-          "עברית: תגית1, תגית2, ...\n"
-          "English: tag1, tag2, ...")
+          "(אובייקטים, מקום, סוג אירוע, אווירה). אל תעתיק את המילים בדוגמה — כתוב תגיות אמיתיות שמתאימות לתמונה הזו. "
+          "החזר בדיוק בפורמט הבא, בלי משפטים נוספים (הדוגמה למבנה בלבד):\n"
+          "עברית: ים, שקיעה, חוף\n"
+          "English: sea, sunset, beach")
 
 RECOMMENDED_SMALL_VISION_MODEL = "moondream"  # ~1.7GB, runs on almost anything
 
@@ -105,11 +109,17 @@ def _model_size_budget() -> int:
     return min(int(ram / MODEL_RAM_OVERHEAD), cpu_cap)
 
 
-def _choose_model(vision: list[dict], budget: int) -> str:
+def _choose_model(vision: list[dict], budget: int, override: str | None = None) -> str:
     """Pure decision, no I/O -> unit-testable without a live Ollama/GPU/RAM.
-    Preferred OLLAMA_VISION_MODEL wins if it's in the list and fits the budget;
-    otherwise the largest model that fits (best quality this hardware can
-    handle); if nothing fits, the smallest overall (least-bad best effort)."""
+    An explicit user override wins outright (they picked it on purpose).
+    Otherwise preferred OLLAMA_VISION_MODEL wins if it's in the list and fits
+    the budget; otherwise the largest model that fits (best quality this
+    hardware can handle); if nothing fits, the smallest overall (least-bad
+    best effort)."""
+    if override:
+        for m in vision:
+            if m["name"] == override or m["name"].split(":")[0] == override:
+                return m["name"]
     fitting = [m for m in vision if m.get("size", 0) <= budget]
     pool = fitting or vision
     for m in pool:
@@ -129,11 +139,19 @@ def _fetch_vision_models() -> list[dict]:
     return [m for m in models if "vision" in (m.get("capabilities") or [])]
 
 
+def list_vision_models() -> list[dict]:
+    """Installed vision-capable models (name + size), for a model-picker UI."""
+    return _fetch_vision_models()
+
+
 def pick_vision_model() -> str | None:
-    """Pick a vision-capable model from what's actually installed, sized to fit
-    this machine's RAM/GPU/CPU (see _model_size_budget / _choose_model)."""
+    """Pick a vision-capable model from what's actually installed: the user's
+    chosen override if set and installed, else sized to fit this machine's
+    RAM/GPU/CPU (see _model_size_budget / _choose_model)."""
     vision = _fetch_vision_models()
-    return _choose_model(vision, _model_size_budget()) if vision else None
+    if not vision:
+        return None
+    return _choose_model(vision, _model_size_budget(), config.get_vision_model_override())
 
 
 def pick_vision_model_info() -> tuple[str | None, bool]:
@@ -143,14 +161,20 @@ def pick_vision_model_info() -> tuple[str | None, bool]:
     if not vision:
         return None, True
     budget = _model_size_budget()
-    model = _choose_model(vision, budget)
+    model = _choose_model(vision, budget, config.get_vision_model_override())
     size = next((m.get("size", 0) for m in vision if m["name"] == model), 0)
     return model, size <= budget
 
 
+# A weak vision model sometimes just echoes the prompt's format example back
+# verbatim instead of substituting real content -> reject literal placeholders
+# ("tag1", "תגית2", ...) as a second line of defense on top of the reworded PROMPT.
+_PLACEHOLDER_TAG = re.compile(r"^(tag|תגית)\d*$", re.IGNORECASE)
+
+
 def _split_tags(s: str) -> list[str]:
     tags = [t.strip(" .\n\t#") for t in s.replace("\n", ",").split(",")]
-    return [t for t in tags if 1 < len(t) <= 30][:8]
+    return [t for t in tags if 1 < len(t) <= 30 and not _PLACEHOLDER_TAG.match(t)][:8]
 
 
 def _tag_image(sha: str, model: str) -> dict[str, list[str]]:
@@ -190,7 +214,7 @@ def run_tagging(progress):
                           f"הריצו בטרמינל: ollama pull {OLLAMA_VISION_MODEL}")
         return
     budget = _model_size_budget()
-    model = _choose_model(vision, budget)
+    model = _choose_model(vision, budget, config.get_vision_model_override())
     size = next((m.get("size", 0) for m in vision if m["name"] == model), 0)
     if size > budget * SEVERE_RAM_OVERSHOOT:
         progress.state = "error"
@@ -282,5 +306,14 @@ if __name__ == "__main__":
     assert _choose_model(models, budget=24 * GB) == "mid:7b", "preferred model wins even over a bigger option"
     OLLAMA_VISION_MODEL = "big"
     assert _choose_model(models, budget=8 * GB) == "mid:7b", "preferred model ignored if it doesn't fit budget"
+
+    assert _choose_model(models, budget=8 * GB, override="big") == "big:34b", \
+        "explicit user override wins even if it doesn't fit budget"
+    assert _choose_model(models, budget=24 * GB, override="nope") == "big:34b", \
+        "unknown override falls back to normal budget logic"
+
+    assert _split_tags("tag1, tag2, ...") == [], "literal placeholder echo -> no tags"
+    assert _split_tags("תגית1, תגית2") == [], "literal Hebrew placeholder echo -> no tags"
+    assert _split_tags("ים, שקיעה, tag15") == ["ים", "שקיעה"], "real tags kept, placeholder-shaped one dropped"
 
     print("tagging._choose_model: all checks passed")

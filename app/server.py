@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from . import db, images, importer, faces, tagging, config
 from .config import PATHS
 
-app = FastAPI(title="PhotoManager")
+app = FastAPI(title="photag")
 UI = Path(__file__).parent / "ui"
 
 # ---- background jobs -------------------------------------------------------
@@ -105,6 +105,23 @@ def set_library(body: LibraryIn):
     PATHS.refresh()
     db.init_db()
     return {"library_root": str(PATHS.root)}
+
+
+@app.get("/api/vision-models")
+def vision_models():
+    return {
+        "models": tagging.list_vision_models(),
+        "override": config.get_vision_model_override(),
+    }
+
+
+class VisionModelIn(BaseModel):
+    model: str | None = None  # None/empty = auto (largest installed model that fits RAM)
+
+@app.post("/api/settings/vision-model")
+def set_vision_model(body: VisionModelIn):
+    config.set_vision_model_override(body.model or None)
+    return {"override": config.get_vision_model_override()}
 
 
 class ImportIn(BaseModel):

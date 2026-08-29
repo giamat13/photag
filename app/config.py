@@ -17,22 +17,47 @@ _POINTER = _appdata_dir() / "config.json"
 _DEFAULT_LIBRARY = Path(os.path.expanduser("~")) / APP_NAME
 
 
-def get_library_root() -> Path:
+def _read_pointer() -> dict:
     if _POINTER.exists():
         try:
-            p = json.loads(_POINTER.read_text("utf-8")).get("library_root")
-            if p:
-                return Path(p)
+            return json.loads(_POINTER.read_text("utf-8"))
         except Exception:
             pass
-    return _DEFAULT_LIBRARY
+    return {}
+
+
+def _write_pointer(**updates) -> None:
+    """Merge into the pointer file rather than overwrite it -> unrelated
+    settings (library_root, vision_model, ...) don't clobber each other."""
+    data = _read_pointer()
+    for k, v in updates.items():
+        if v is None:
+            data.pop(k, None)
+        else:
+            data[k] = v
+    _POINTER.write_text(json.dumps(data, ensure_ascii=False, indent=2), "utf-8")
+
+
+def get_library_root() -> Path:
+    p = _read_pointer().get("library_root")
+    return Path(p) if p else _DEFAULT_LIBRARY
 
 
 def set_library_root(path: str | os.PathLike) -> Path:
     root = Path(path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    _POINTER.write_text(json.dumps({"library_root": str(root)}, ensure_ascii=False, indent=2), "utf-8")
+    _write_pointer(library_root=str(root))
     return root
+
+
+def get_vision_model_override() -> str | None:
+    """User-chosen Ollama vision model for tagging, or None for auto (largest
+    installed model that fits available RAM/VRAM — see tagging._choose_model)."""
+    return _read_pointer().get("vision_model") or None
+
+
+def set_vision_model_override(name: str | None) -> None:
+    _write_pointer(vision_model=name or None)
 
 
 class Paths:
