@@ -5,8 +5,29 @@ Runs the local FastAPI server and opens it in a native desktop window
 
     python photo_manager.py
 """
+import os
+import sys
 import threading
 import time
+from pathlib import Path
+
+
+def _ensure_std_streams():
+    """The windowed EXE (console=False) starts with sys.stdout/stderr = None,
+    which makes uvicorn's logging setup crash (sys.stdout.isatty()) before the
+    server ever listens. Send them to a log file instead."""
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    log_dir = Path(os.environ.get("APPDATA") or Path.home()) / "PhotoManager"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log = open(log_dir / "photo_manager.log", "a", encoding="utf-8", buffering=1)
+    if sys.stdout is None:
+        sys.stdout = log
+    if sys.stderr is None:
+        sys.stderr = log
+
+
+_ensure_std_streams()
 
 import uvicorn
 
@@ -21,13 +42,15 @@ def _serve():
 
 
 def _wait_up(timeout=15):
-    import urllib.request
+    # Only wait for the port to accept connections. /api/status can take several
+    # seconds (it probes Ollama), so polling it with a short timeout never succeeds.
+    import socket
     end = time.time() + timeout
     while time.time() < end:
         try:
-            urllib.request.urlopen(f"{URL}/api/status", timeout=1)
-            return True
-        except Exception:
+            with socket.create_connection((HOST, PORT), timeout=1):
+                return True
+        except OSError:
             time.sleep(0.2)
     return False
 

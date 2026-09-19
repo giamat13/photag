@@ -4,3 +4,4 @@ build/
 dist/
 *.spec.bak
 .venv/
+installer_output/
