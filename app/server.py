@@ -174,7 +174,9 @@ def people():
         "SELECT pe.*, "
         "(SELECT COUNT(DISTINCT f.photo_id) FROM faces f WHERE f.person_id=pe.id) face_photos, "
         "(SELECT COUNT(*) FROM photo_people pp WHERE pp.person_id=pe.id) tag_photos, "
-        "(SELECT f.id FROM faces f WHERE f.person_id=pe.id ORDER BY f.det_score DESC LIMIT 1) cover_face "
+        "(SELECT f.id FROM faces f WHERE f.person_id=pe.id ORDER BY f.det_score DESC LIMIT 1) cover_face, "
+        "(SELECT pp.photo_id FROM photo_people pp JOIN photos p ON p.id=pp.photo_id "
+        " WHERE pp.person_id=pe.id AND p.trashed=0 AND p.is_video=0 ORDER BY p.taken_at DESC LIMIT 1) cover_photo "
         "FROM people pe ORDER BY tag_photos DESC, face_photos DESC").fetchall()]
 
 
@@ -258,6 +260,30 @@ def thumb(pid: int):
     if tp.exists():
         return FileResponse(tp, media_type="image/jpeg")
     return Response(status_code=204)  # no thumb (e.g. video w/o ffmpeg)
+
+
+@app.get("/face/{fid}")
+def face_thumb(fid: int):
+    """Square crop around a detected face (cached) — used as a person's avatar."""
+    out = PATHS.thumbs / f"face_{fid}.jpg"
+    if not out.exists():
+        con = db.connect()
+        r = con.execute("SELECT f.x1,f.y1,f.x2,f.y2,p.rel_path FROM faces f "
+                        "JOIN photos p ON p.id=f.photo_id WHERE f.id=?", (fid,)).fetchone()
+        if not r:
+            raise HTTPException(404)
+        try:
+            im = images.open_image(PATHS.media / r["rel_path"])
+            cx, cy = (r["x1"] + r["x2"]) / 2, (r["y1"] + r["y2"]) / 2
+            half = max(r["x2"] - r["x1"], r["y2"] - r["y1"]) * 0.8
+            box = (max(0, int(cx - half)), max(0, int(cy - half)),
+                   min(im.width, int(cx + half)), min(im.height, int(cy + half)))
+            crop = im.crop(box)
+            crop.thumbnail((256, 256))
+            crop.save(out, "JPEG", quality=88)
+        except Exception:
+            return Response(status_code=204)
+    return FileResponse(out, media_type="image/jpeg")
 
 
 @app.get("/media/{pid}")

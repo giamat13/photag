@@ -5,7 +5,7 @@
       "name": "PhotoManager (חלון דסקטופ)",
       "type": "debugpy",
       "request": "launch",
-      "python": "C:\\Users\\Giamat13\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "python": "C:\\Users\\furst\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "program": "${workspaceFolder}/photo_manager.py",
       "console": "integratedTerminal",
       "env": { "PYTHONUTF8": "1" }
