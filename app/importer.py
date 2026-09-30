@@ -131,6 +131,7 @@ class Progress:
 
 def run_import(zip_path: str, progress: Progress):
     con = db.init_db()
+    mark_import_start(con)
     progress.state = "scanning"; progress.msg = "קורא את מבנה ה-ZIP…"
     try:
         _do_import(zip_path, con, progress)
@@ -282,6 +283,116 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
         pid = con.execute("SELECT id FROM people WHERE name=?", (nm,)).fetchone()["id"]
         con.execute("INSERT OR IGNORE INTO photo_people(photo_id,person_id,source) VALUES(?,?, 'takeout')",
                     (photo_id, pid))
+
+
+# ---------- import from a folder / memory card (Lightroom "Copy") ----------
+MEDIA_EXT = images.IMAGE_EXT | images.VIDEO_EXT
+
+
+def scan_folder(folder: str, recursive: bool = True, cap: int = 20000) -> list[dict]:
+    """Media files under `folder`, newest first, for the import dialog grid."""
+    root = Path(folder)
+    it = root.rglob("*") if recursive else root.glob("*")
+    out = []
+    for p in it:
+        if len(out) >= cap:
+            break
+        if p.suffix.lower() in MEDIA_EXT and p.is_file() and not p.name.startswith("."):
+            st = p.stat()
+            out.append({"path": str(p), "name": p.name, "bytes": st.st_size,
+                        "mtime": int(st.st_mtime), "is_video": images.is_video(p)})
+    out.sort(key=lambda f: -f["mtime"])
+    return out
+
+
+def mark_import_start(con):
+    """'Previous Import' in the catalog = everything imported since this moment."""
+    db.set_setting(con, "last_import", int(time.time()))
+
+
+def run_folder_import(paths: list[str], keywords: list[str], album: str | None, progress: Progress):
+    con = db.init_db()
+    mark_import_start(con)
+    progress.state = "importing"; progress.total = len(paths); progress.done = 0
+    album_id = None
+    if album:
+        con.execute("INSERT OR IGNORE INTO albums(name,kind) VALUES(?, 'album')", (album,))
+        album_id = con.execute("SELECT id FROM albums WHERE name=?", (album,)).fetchone()["id"]
+    tag_ids = []
+    for k in keywords:
+        con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (k,))
+        tag_ids.append(con.execute("SELECT id FROM tags WHERE name=?", (k,)).fetchone()["id"])
+    added = dupes = 0
+    try:
+        for path in paths:
+            progress.done += 1
+            if progress.done % 10 == 0:
+                progress.msg = f"{progress.done}/{progress.total}"
+                con.commit()
+            src = Path(path)
+            if not src.is_file():
+                continue
+            sha = images.sha256_file(src)
+            row = con.execute("SELECT id FROM photos WHERE sha256=?", (sha,)).fetchone()
+            if row:
+                photo_id = row["id"]; dupes += 1
+            else:
+                taken, lat, lng = images.exif_info(src)
+                taken = taken or int(src.stat().st_mtime)
+                sub = PATHS.media / str(time.gmtime(taken).tm_year)
+                sub.mkdir(parents=True, exist_ok=True)
+                dest = _unique_dest(sub / _safe_component(src.name))
+                import shutil
+                shutil.copy2(src, dest)
+                w, h = images.dimensions(dest)
+                photo_id = con.execute(
+                    "INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,"
+                    "taken_at,created_at,lat,lng,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (sha, src.name, str(dest.relative_to(PATHS.media)), src.suffix.lower().lstrip("."),
+                     1 if images.is_video(dest) else 0, w, h, dest.stat().st_size,
+                     taken, int(time.time()), lat, lng, int(time.time()))).lastrowid
+                images.make_thumb(dest, sha)
+                added += 1
+            if album_id:
+                con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (photo_id, album_id))
+            for tid in tag_ids:
+                con.execute("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'manual')",
+                            (photo_id, tid))
+        con.commit()
+        progress.state = "done"
+        progress.msg = f"יובאו {added} פריטים" + (f" ({dupes} כבר היו בקטלוג)" if dupes else "")
+    except Exception as e:
+        con.commit()
+        progress.state = "error"; progress.error = str(e)
+
+
+def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
+               quality: int, progress: Progress):
+    """Copy (or re-encode as JPEG) the chosen photos into `dest`."""
+    con = db.connect()
+    out_dir = Path(dest)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    progress.state = "exporting"; progress.total = len(ids); progress.done = 0
+    try:
+        for pid in ids:
+            progress.done += 1
+            progress.msg = f"{progress.done}/{progress.total}"
+            r = con.execute("SELECT filename, rel_path, orig_backup, is_video FROM photos WHERE id=?",
+                            (pid,)).fetchone()
+            if not r:
+                continue
+            src = PATHS.media / (r["orig_backup"] if originals and r["orig_backup"] else r["rel_path"])
+            if not src.exists():
+                continue
+            name = _safe_component(r["filename"])
+            if r["is_video"] or originals or (not long_edge and quality >= 100):
+                import shutil
+                shutil.copy2(src, _unique_dest(out_dir / name))
+            else:
+                images.export_resized(src, _unique_dest(out_dir / (Path(name).stem + ".jpg")), long_edge, quality)
+        progress.state = "done"; progress.msg = f"יוצאו {progress.done} פריטים אל {out_dir}"
+    except Exception as e:
+        progress.state = "error"; progress.error = str(e)
 
 
 if __name__ == "__main__":  # ponytail self-check for the fiddly matcher

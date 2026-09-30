@@ -1,34 +1,35 @@
-; Inno Setup script -> installer_output\PhotoManagerSetup.exe
-; Build:  ISCC.exe installer.iss   (after: pyinstaller photo_manager.spec)
-; Per-user install (no admin). Photos/catalog live in %USERPROFILE%\PhotoManager and
+; Inno Setup script -> installer_output\photagSetup.exe
+; Build:  ISCC.exe installer.iss   (after: pyinstaller photag.spec)
+; Per-user install (no admin). Photos/catalog live in %USERPROFILE%\photag (or the older
+; %USERPROFILE%\PhotoManager from before the rename, which keeps being used) and
 ; are NOT touched by install or uninstall.
 
 [Setup]
 AppId={{6F0B7C1E-3A52-4D8B-9C47-5E2A1D0F8B36}
-AppName=PhotoManager
+AppName=photag
 AppVersion=1.0
-AppPublisher=PhotoManager
-DefaultDirName={autopf}\PhotoManager
-DefaultGroupName=PhotoManager
+AppPublisher=photag
+DefaultDirName={autopf}\photag
+DefaultGroupName=photag
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=installer_output
-OutputBaseFilename=PhotoManagerSetup
+OutputBaseFilename=photagSetup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-UninstallDisplayName=PhotoManager
-UninstallDisplayIcon={app}\PhotoManager.exe
+UninstallDisplayName=photag
+UninstallDisplayIcon={app}\photag.exe
 
 [Tasks]
 Name: "desktopicon"; Description: "צור קיצור דרך בשולחן העבודה"; GroupDescription: "קיצורי דרך:"
 
 [Files]
-Source: "dist\PhotoManager.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\photag.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\PhotoManager"; Filename: "{app}\PhotoManager.exe"
-Name: "{autodesktop}\PhotoManager"; Filename: "{app}\PhotoManager.exe"; Tasks: desktopicon
+Name: "{autoprograms}\photag"; Filename: "{app}\photag.exe"
+Name: "{autodesktop}\photag"; Filename: "{app}\photag.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\PhotoManager.exe"; Description: "הפעל את PhotoManager"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\photag.exe"; Description: "הפעל את photag"; Flags: nowait postinstall skipifsilent

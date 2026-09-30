@@ -1,20 +1,29 @@
 """Paths & settings. Library location is stored in a tiny pointer file in
-%APPDATA%\\PhotoManager so the app always knows (and can tell you) where your
+%APPDATA%\\photag so the app always knows (and can tell you) where your
 photos live, independent of where the EXE runs from."""
 import json
 import os
+import shutil
 from pathlib import Path
 
-APP_NAME = "PhotoManager"
+APP_NAME = "photag"
+OLD_APP_NAME = "PhotoManager"  # the app's name before the rename; its folders keep working
 
 def _appdata_dir() -> Path:
-    base = os.environ.get("APPDATA") or os.path.expanduser("~")
-    d = Path(base) / APP_NAME
+    base = Path(os.environ.get("APPDATA") or os.path.expanduser("~"))
+    d = base / APP_NAME
+    old = base / OLD_APP_NAME
+    if not (d / "config.json").exists() and (old / "config.json").exists():
+        d.mkdir(parents=True, exist_ok=True)  # carry the pointer over so the existing catalog is found
+        shutil.copy2(old / "config.json", d / "config.json")
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 _POINTER = _appdata_dir() / "config.json"
-_DEFAULT_LIBRARY = Path(os.path.expanduser("~")) / APP_NAME
+_HOME = Path(os.path.expanduser("~"))
+# An install from before the rename keeps its photos where they already are.
+_DEFAULT_LIBRARY = (_HOME / OLD_APP_NAME if (_HOME / OLD_APP_NAME / "catalog.db").exists()
+                    and not (_HOME / APP_NAME).exists() else _HOME / APP_NAME)
 
 
 def _read_pointer() -> dict:

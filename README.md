@@ -1,4 +1,4 @@
-# PhotoManager — ניהול תמונות מקומי
+# photag — ניהול ושמירת תמונות מקומי
 
 תוכנת ניהול תמונות למחשב (Windows) עם ייבוא מ‑Google Photos (Takeout), זיהוי
 פרצופים, תיוג חכם, עריכת תמונות ועריכת מאפיינים.
@@ -18,25 +18,25 @@
 - **שקיפות אחסון** — מסך ההגדרות מראה בדיוק איפה הכול נשמר, וניתן לשנות מיקום.
 
 ## איפה נשמרות התמונות
-ברירת מחדל: `%USERPROFILE%\PhotoManager\`
+ברירת מחדל: `%USERPROFILE%\photag\` (התקנה מלפני שינוי השם ממשיכה להשתמש ב‑`%USERPROFILE%\PhotoManager\`)
 - `media\` — קבצי התמונות/וידאו
 - `thumbs\` — תמונות ממוזערות
 - `catalog.db` — מסד הנתונים (SQLite)
 
-מצביע המיקום נשמר ב‑`%APPDATA%\PhotoManager\config.json`. אפשר לשנות מסך ההגדרות.
+מצביע המיקום נשמר ב‑`%APPDATA%\photag\config.json`. אפשר לשנות מסך ההגדרות.
 
 ## הרצה (פיתוח)
 ```bat
 pip install -r requirements.txt
-python photo_manager.py            REM חלון דסקטופ (WebView2)
+python photag.py            REM חלון דסקטופ (WebView2)
 ```
-או ב‑VS Code: F5 → "PhotoManager (חלון דסקטופ)".
+או ב‑VS Code: F5 → "photag (חלון דסקטופ)".
 
 ## בניית EXE
 ```bat
 pip install pyinstaller
-pyinstaller photo_manager.spec
-REM התוצאה: dist\PhotoManager.exe
+pyinstaller photag.spec
+REM התוצאה: dist\photag.exe
 ```
 המודל `buffalo_l` (~300MB) יורד אוטומטית בהרצה הראשונה של זיהוי פרצופים.
 

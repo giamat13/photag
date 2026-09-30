@@ -1,9 +1,9 @@
-"""PhotoManager entry point.
+"""photag entry point.
 
 Runs the local FastAPI server and opens it in a native desktop window
 (pywebview).
 
-    python photo_manager.py
+    python photag.py
 """
 import os
 import sys
@@ -18,9 +18,9 @@ def _ensure_std_streams():
     server ever listens. Send them to a log file instead."""
     if sys.stdout is not None and sys.stderr is not None:
         return
-    log_dir = Path(os.environ.get("APPDATA") or Path.home()) / "PhotoManager"
+    log_dir = Path(os.environ.get("APPDATA") or Path.home()) / "photag"
     log_dir.mkdir(parents=True, exist_ok=True)
-    log = open(log_dir / "photo_manager.log", "a", encoding="utf-8", buffering=1)
+    log = open(log_dir / "photag.log", "a", encoding="utf-8", buffering=1)
     if sys.stdout is None:
         sys.stdout = log
     if sys.stderr is None:
@@ -59,7 +59,7 @@ def main():
     threading.Thread(target=_serve, daemon=True).start()
     _wait_up()
     import webview
-    webview.create_window("PhotoManager — ניהול תמונות", URL, width=1280, height=860)
+    webview.create_window("photag", URL, width=1280, height=860)
     webview.start()
 
 

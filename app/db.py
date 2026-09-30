@@ -96,14 +96,16 @@ def connect() -> sqlite3.Connection:
 def init_db():
     con = connect()
     con.executescript(SCHEMA)
-    try:
-        con.execute("ALTER TABLE photos ADD COLUMN tags_en_done INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass  # ponytail: column already exists on upgraded DBs
-    try:
-        con.execute("ALTER TABLE photos ADD COLUMN trashed_at INTEGER")
-    except sqlite3.OperationalError:
-        pass  # ponytail: column already exists on upgraded DBs
+    for col in ("tags_en_done INTEGER DEFAULT 0",
+                "trashed_at INTEGER",
+                "flag INTEGER DEFAULT 0",    # Lightroom pick flag: 1 pick, -1 reject, 0 none
+                "label TEXT",                # color label: red|yellow|green|blue|purple
+                "quick INTEGER DEFAULT 0",   # member of the Quick Collection
+                "edit_ops TEXT"):            # JSON of the last applied develop settings
+        try:
+            con.execute(f"ALTER TABLE photos ADD COLUMN {col}")
+        except sqlite3.OperationalError:
+            pass  # ponytail: column already exists on upgraded DBs
     con.commit()
     return con
 

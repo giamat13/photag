@@ -80,6 +80,63 @@ def dimensions(path: Path):
         return (None, None)
 
 
+def exif_info(path: Path):
+    """(taken_at unix seconds | None, lat | None, lng | None) from a photo's EXIF.
+    The capture time is treated as UTC, the same way Takeout timestamps are shown."""
+    taken = lat = lng = None
+    if is_video(path):
+        return taken, lat, lng
+    try:
+        import calendar, datetime
+        with Image.open(path) as im:
+            ex = im.getexif()
+            sub = ex.get_ifd(0x8769)  # Exif IFD
+            raw = sub.get(36867) or sub.get(36868) or ex.get(306)  # DateTimeOriginal / Digitized / DateTime
+            if raw:
+                dt = datetime.datetime.strptime(str(raw).strip("\x00 ")[:19], "%Y:%m:%d %H:%M:%S")
+                taken = calendar.timegm(dt.timetuple())
+            gps = ex.get_ifd(0x8825)
+            if gps and 2 in gps and 4 in gps:
+                dms = lambda v: float(v[0]) + float(v[1]) / 60 + float(v[2]) / 3600
+                lat = dms(gps[2]) * (-1 if gps.get(1) in ("S", b"S") else 1)
+                lng = dms(gps[4]) * (-1 if gps.get(3) in ("W", b"W") else 1)
+                if lat == 0 and lng == 0:
+                    lat = lng = None
+    except Exception:
+        pass
+    return taken, lat, lng
+
+
+def small_preview(path: Path, size=256) -> bytes | None:
+    """Quick JPEG preview of a file that isn't in the library yet (import dialog)."""
+    import io
+    try:
+        im = Image.open(path)
+        im.draft("RGB", (size, size))  # JPEG: decode at reduced scale, much faster
+        im = ImageOps.exif_transpose(im).convert("RGB")
+        im.thumbnail((size, size))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=80)
+        return buf.getvalue()
+    except Exception:
+        return None
+
+
+def rotate_file(path: Path, degrees: int):
+    """Rotate a photo in place by a multiple of 90° (positive = clockwise)."""
+    im = open_image(path)
+    im = im.rotate(-degrees, expand=True)
+    fmt = "JPEG" if path.suffix.lower() in (".jpg", ".jpeg") else "PNG"
+    im.save(path, fmt, quality=95)
+
+
+def export_resized(src: Path, dst: Path, long_edge: int | None, quality: int):
+    im = open_image(src)
+    if long_edge:
+        im.thumbnail((long_edge, long_edge), Image.LANCZOS)
+    im.save(dst, "JPEG", quality=quality)
+
+
 # ---------- simple editing ----------
 def apply_edit(src: Path, ops: dict, dst: Path):
     """ops: rotate(deg), crop[x1,y1,x2,y2 fractions], brightness, contrast,

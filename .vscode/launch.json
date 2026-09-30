@@ -2,11 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "PhotoManager (חלון דסקטופ)",
+      "name": "photag (חלון דסקטופ)",
       "type": "debugpy",
       "request": "launch",
       "python": "C:\\Users\\furst\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
-      "program": "${workspaceFolder}/photo_manager.py",
+      "program": "${workspaceFolder}/photag.py",
       "console": "integratedTerminal",
       "env": { "PYTHONUTF8": "1" }
     }

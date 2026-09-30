@@ -18,7 +18,7 @@ if errorlevel 1 (
 )
 
 echo === Building photag.exe (PyInstaller) ===
-%PYEXE% -m PyInstaller photo_manager.spec
+%PYEXE% -m PyInstaller photag.spec
 if errorlevel 1 (
   echo PyInstaller build failed.
   exit /b 1

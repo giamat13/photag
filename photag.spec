@@ -1,5 +1,5 @@
-# PyInstaller spec -> single Windows EXE.  Build:  pyinstaller photo_manager.spec
-# Output: dist/PhotoManager.exe
+# PyInstaller spec -> single Windows EXE.  Build:  pyinstaller photag.spec
+# Output: dist/photag.exe
 # Note: buffalo_l (~300MB) and Ollama models download at runtime, not bundled.
 from PyInstaller.utils.hooks import collect_all, collect_data_files
 
@@ -14,8 +14,8 @@ for pkg in ("insightface", "onnxruntime", "pillow_heif", "scipy", "sklearn"):
     except Exception:
         pass
 
-a = Analysis(["photo_manager.py"], pathex=[], binaries=binaries, datas=datas,
+a = Analysis(["photag.py"], pathex=[], binaries=binaries, datas=datas,
              hiddenimports=hiddenimports, hookspath=[], runtime_hooks=[], excludes=[])
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="PhotoManager",
+exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="photag",
           console=False, disable_windowed_traceback=False, upx=True)

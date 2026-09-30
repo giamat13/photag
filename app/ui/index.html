@@ -3,161 +3,198 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PhotoManager</title>
+  <title>photag</title>
   <link rel="stylesheet" href="fonts.css">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="mod-library">
 <!-- icon sprite: stroke icons, colored by currentColor -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></symbol>
-    <symbol id="i-photos" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
-    <symbol id="i-albums" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-photos" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-drive" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="1"/><path d="M7 12h.01M11 12h6"/></symbol>
+    <symbol id="i-coll" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="12" rx="1"/><path d="M7 4h10"/></symbol>
+    <symbol id="i-smart" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="12" rx="1"/><path d="M7 4h10M9 13h6M12 10v6"/></symbol>
+    <symbol id="i-set" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="11" rx="1"/><path d="M5 5h14"/></symbol>
     <symbol id="i-people" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"/></symbol>
-    <symbol id="i-tags" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8zM7.5 7.5h.01"/></symbol>
-    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></symbol>
-    <symbol id="i-memories" viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
-    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="i-import" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
-    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
-    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v1M3 7v10a2 2 0 0 0 2 2h12l4-9H7l-4 9"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
+    <symbol id="i-loupe" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/></symbol>
+    <symbol id="i-compare" viewBox="0 0 24 24"><rect x="2.5" y="6" width="8.5" height="12" rx="1"/><rect x="13" y="6" width="8.5" height="12" rx="1"/><path d="M5 10l3 4M8 10l-3 4"/></symbol>
+    <symbol id="i-survey" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/></symbol>
+    <symbol id="i-face" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 4h11l-2.5 4L17 12H6"/></symbol>
+    <symbol id="i-reject" viewBox="0 0 24 24"><path d="M6 21V4M6 4h11l-2.5 4L17 12H6M9.5 6.3l4 3.4M13.5 6.3l-4 3.4"/></symbol>
+    <symbol id="i-rotl" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></symbol>
+    <symbol id="i-rotr" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></symbol>
+    <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></symbol>
+    <symbol id="i-kw" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8zM7.5 7.5h.01"/></symbol>
+    <symbol id="i-dev" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
-    <symbol id="i-back" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></symbol>
-    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></symbol>
-    <symbol id="i-face" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0"/></symbol>
-    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></symbol>
-    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></symbol>
-    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
-    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
-    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></symbol>
-    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M4 9h11a5 5 0 0 1 0 10H9M8 5L4 9l4 4"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></symbol>
+    <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v16h16M2 6h16v16"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
-    <symbol id="i-logo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5.5M20.5 9.5l-5.2 1.4M17 19.5l-3-4.6M7 19.5l3-4.6M3.5 9.5l5.2 1.4"/></symbol>
-    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
-    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></symbol>
   </defs>
 </svg>
 
-<header class="topbar">
-  <div class="brand"><span class="mark">Pm</span><span>PhotoManager</span></div>
-  <nav id="nav">
-    <button data-view="home" class="active">בית</button>
-    <button data-view="all">ספרייה</button>
-    <button data-view="albums">אלבומים</button>
-    <button data-view="people">אנשים</button>
-    <button data-view="tags">תגיות</button>
-    <button data-view="memories">זיכרונות</button>
-  </nav>
-  <label class="search">
-    <svg class="ic"><use href="#i-search"/></svg>
-    <input id="search" type="search" placeholder="חיפוש אנשים, תגיות, קבצים…">
-  </label>
-  <div class="tools">
-    <button id="job" class="job hidden" title="משימה ברקע"><span class="spin"></span><span id="job-label"></span></button>
-    <button class="icon-btn" data-view="settings" title="הגדרות" aria-label="הגדרות"><svg class="ic"><use href="#i-settings"/></svg></button>
-    <button id="btn-import" class="primary"><svg class="ic"><use href="#i-upload"/></svg><span>ייבוא</span></button>
+<!-- menu bar (Windows-style, like Lightroom Classic) -->
+<div id="menubar" class="menubar" role="menubar"></div>
+
+<!-- top panel: identity plate + activity + module picker -->
+<header id="toppanel" class="toppanel dimmable">
+  <div class="identity">
+    <span class="lrmark">pt</span>
+    <div class="idtext">
+      <b>photag</b>
+      <div id="activity" class="activity hidden"><span id="act-label"></span><div class="act-bar"><i id="act-fill"></i></div></div>
+    </div>
   </div>
+  <nav class="modules" id="modules">
+    <button data-mod="library" class="on">ספרייה</button><span>|</span>
+    <button data-mod="develop">פיתוח</button><span>|</span>
+    <button data-mod="slideshow">מצגת</button>
+  </nav>
+  <button class="edge-t" data-toggle="top" title="הסתר/הצג את הלוח העליון (F5)"></button>
 </header>
 
-<div class="workspace">
-  <aside class="side" id="side">
-    <details open><summary>קטלוג</summary>
-      <div class="list" id="side-catalog"></div>
-    </details>
-    <details open><summary>אלבומים</summary>
-      <div class="list" id="side-albums"></div>
-    </details>
-    <details open><summary>אנשים</summary>
-      <div class="list" id="side-people"></div>
-    </details>
+<div id="ws" class="ws">
+  <!-- LEFT PANEL -->
+  <aside id="left" class="side left dimmable">
+    <div class="side-scroll">
+      <section class="pnl" data-p="nav">
+        <h3><span>ניווט</span><em class="nav-modes"><a data-zoom="fit" class="on">התאם</a><a data-zoom="1">1:1</a></em></h3>
+        <div class="pbody"><div id="navigator" class="navigator"><img id="nav-img" alt=""><div id="nav-rect" class="nav-rect hidden"></div></div></div>
+      </section>
+      <div class="lib-only">
+        <section class="pnl" data-p="catalog"><h3><span>קטלוג</span></h3><div class="pbody"><div class="rows" id="p-catalog"></div></div></section>
+        <section class="pnl" data-p="folders"><h3><span>תיקיות</span></h3><div class="pbody"><div class="rows" id="p-folders"></div></div></section>
+        <section class="pnl" data-p="colls"><h3><span>אוספים</span><button class="hbtn" id="new-coll" title="אוסף חדש (Ctrl+N)"><svg class="ic"><use href="#i-plus"/></svg></button></h3>
+          <div class="pbody"><div class="rows" id="p-colls"></div></div></section>
+      </div>
+      <div class="dev-only">
+        <section class="pnl" data-p="presets"><h3><span>הגדרות קבועות</span></h3><div class="pbody"><div class="rows" id="p-presets"></div></div></section>
+        <section class="pnl" data-p="history"><h3><span>היסטוריה</span></h3><div class="pbody"><div class="rows" id="p-history"></div></div></section>
+      </div>
+    </div>
+    <div class="side-foot lib-only">
+      <button id="btn-import">ייבוא...</button>
+      <button id="btn-export">ייצוא...</button>
+    </div>
+    <div class="side-foot dev-only">
+      <button id="btn-copy-prev" title="החל את ההגדרות של התמונה הקודמת שנערכה">קודם</button>
+      <button id="btn-dev-reset">אפס</button>
+    </div>
   </aside>
-  <main class="main">
-    <section id="content" class="content"></section>
-    <footer class="gridbar" id="gridbar">
-      <span id="gb-count"></span>
-      <div class="spacer"></div>
-      <label class="gb-sort">מיון
-        <select id="sort">
-          <option value="date_desc">תאריך צילום ↓</option>
-          <option value="date_asc">תאריך צילום ↑</option>
-          <option value="name_asc">שם קובץ א–ת</option>
-          <option value="name_desc">שם קובץ ת–א</option>
-          <option value="favorite">מועדפים קודם</option>
-        </select></label>
-      <label class="gb-size" title="גודל תמונות ממוזערות"><svg class="ic sm"><use href="#i-grid"/></svg>
-        <input id="thumb-size" type="range" min="110" max="360" step="10" aria-label="גודל תמונות ממוזערות">
-        <svg class="ic"><use href="#i-grid"/></svg></label>
-    </footer>
+  <button class="edge edge-l" data-toggle="left" title="הסתר/הצג לוח (F7)"></button>
+
+  <!-- CENTER -->
+  <main id="center" class="center">
+    <div id="filterbar" class="filterbar lib-only">
+      <div class="fb-row">
+        <span class="fb-title">מסנן ספרייה :</span>
+        <nav class="fb-tabs" id="fb-tabs">
+          <a data-fb="text">טקסט</a><a data-fb="attr">מאפיינים</a><a data-fb="meta">מטא-נתונים</a><a data-fb="none" class="on">ללא</a>
+        </nav>
+        <span class="spacer"></span>
+        <span class="fb-state" id="fb-state"></span>
+      </div>
+      <div class="fb-panel hidden" id="fb-text">
+        <label>טקסט</label>
+        <select id="ft-field"><option value="any">כל שדה בר חיפוש</option><option value="name">שם קובץ</option><option value="kw">מילות מפתח</option></select>
+        <label class="ft-box"><svg class="ic"><use href="#i-search"/></svg><input id="ft-q" type="search" placeholder="חיפוש"></label>
+      </div>
+      <div class="fb-panel hidden" id="fb-attr"></div>
+      <div class="fb-panel meta hidden" id="fb-meta"></div>
+    </div>
+
+    <div id="stage" class="stage">
+      <div id="v-grid" class="v-grid" tabindex="-1"><div id="grid-inner" class="grid-inner"></div></div>
+      <div id="v-loupe" class="v-loupe hidden"><div id="loupe-media" class="loupe-media"></div><div id="loupe-info" class="loupe-info"></div></div>
+      <div id="v-compare" class="v-compare hidden"></div>
+      <div id="v-survey" class="v-survey hidden"></div>
+      <div id="v-people" class="v-people hidden"></div>
+      <div id="v-develop" class="v-develop hidden"><div id="dev-canvas" class="dev-canvas"><img id="dev-img" alt=""></div><div id="crop-ov" class="crop-ov hidden"></div><div id="dev-badge" class="dev-badge hidden">לפני</div></div>
+      <div id="v-empty" class="v-empty hidden"></div>
+    </div>
+
+    <div id="toolbar" class="toolbar"></div>
   </main>
-</div>
 
-<!-- loupe view -->
-<div id="lightbox" class="lightbox hidden">
-  <div class="loupe">
-    <div class="loupe-top">
-      <button class="icon-btn" onclick="closeLightbox()" title="חזרה לרשת (Esc)" aria-label="סגור"><svg class="ic"><use href="#i-back"/></svg></button>
-      <div class="lb-title"><b id="lb-name"></b><span id="lb-date"></span></div>
-      <div class="spacer"></div>
-      <span class="lb-counter" id="lb-counter"></span>
+  <button class="edge edge-r" data-toggle="right" title="הסתר/הצג לוח (F8)"></button>
+  <!-- RIGHT PANEL -->
+  <aside id="right" class="side right dimmable">
+    <div class="side-scroll">
+      <section class="pnl" data-p="histo">
+        <h3><span>היסטוגרמה</span></h3>
+        <div class="pbody histo"><canvas id="histo" width="300" height="120"></canvas><div class="histo-meta" id="histo-meta"></div></div>
+      </section>
+      <div class="lib-only">
+        <section class="pnl" data-p="kwing"><h3><span>תיוג מילות מפתח</span></h3><div class="pbody" id="p-kwing"></div></section>
+        <section class="pnl" data-p="kwlist"><h3><span>רשימת מילות מפתח</span></h3><div class="pbody" id="p-kwlist"></div></section>
+        <section class="pnl" data-p="meta"><h3><span>מטא-נתונים</span></h3><div class="pbody" id="p-meta"></div></section>
+      </div>
+      <div class="dev-only">
+        <div class="toolstrip" id="dev-tools">
+          <button data-tool="crop" title="כלי חיתוך (R)"><svg class="ic"><use href="#i-crop"/></svg></button>
+        </div>
+        <section class="pnl" data-p="basic"><h3><span>בסיסי</span></h3><div class="pbody" id="p-basic"></div></section>
+        <section class="pnl" data-p="transform"><h3><span>טרנספורמציה</span></h3><div class="pbody" id="p-transform"></div></section>
+      </div>
     </div>
-    <div class="lb-stage">
-      <button class="lb-btn lb-prev" onclick="stepLightbox(-1)" aria-label="הקודמת"><svg class="ic"><use href="#i-prev"/></svg></button>
-      <button class="lb-btn lb-next" onclick="stepLightbox(1)" aria-label="הבאה"><svg class="ic"><use href="#i-next"/></svg></button>
-      <div id="lb-media"></div>
+    <div class="side-foot lib-only">
+      <button id="btn-sync-meta" title="העתק את התיאור והדירוג של התמונה הפעילה לכל הנבחרות">סנכרן מטא-נתונים</button>
     </div>
-    <div class="loupe-bar">
-      <div class="stars" id="lb-stars"></div>
-      <button id="lb-fav" class="flag" onclick="toggleFav()" title="מועדף"><svg class="ic"><use href="#i-star"/></svg><span></span></button>
-      <div class="spacer"></div>
-      <button id="lb-trash" class="flag danger" onclick="trashPhoto()"><svg class="ic"><use href="#i-trash"/></svg><span></span></button>
+    <div class="side-foot dev-only">
+      <button id="btn-dev-revert" title="חזרה לקובץ המקורי">מקור</button>
+      <button id="btn-dev-apply" class="primary">החל</button>
     </div>
-    <div class="filmstrip" id="filmstrip"></div>
-  </div>
-  <aside class="lb-panel">
-    <div class="histo"><canvas id="histo" width="300" height="110"></canvas>
-      <div class="histo-meta" id="histo-meta"></div></div>
-    <details open><summary>מידע</summary><div class="pane" id="tab-info"></div></details>
-    <details><summary>בסיסי</summary><div class="pane" id="tab-edit"></div></details>
-    <details><summary>מאפיינים ותגיות</summary><div class="pane" id="tab-meta"></div></details>
   </aside>
 </div>
 
-<!-- import modal -->
-<div id="import-modal" class="modal hidden">
-  <div class="modal-box">
-    <h3>ייבוא מ‑Google Takeout</h3>
-    <p>בחרו את קובץ ה‑ZIP שהורדתם מ‑Google Takeout. הקובץ נקרא ישירות — אין צורך לפרוס אותו.</p>
-    <div class="row">
-      <input id="zip-path" type="text" placeholder="C:\...\takeout-....zip" spellcheck="false" dir="ltr" style="flex:1">
-      <button onclick="pickZip()"><svg class="ic"><use href="#i-folder-open"/></svg>בחר קובץ…</button>
-    </div>
-    <div class="hint">התמונות יישמרו בספרייה המקומית שלך. אחרי הייבוא אפשר להריץ זיהוי פנים ותיוג חכם מההגדרות.</div>
-    <div class="row end">
-      <button onclick="hide('import-modal')">ביטול</button>
-      <button class="primary" onclick="doImport()">ייבוא</button>
-    </div>
+<!-- filmstrip -->
+<footer id="filmstrip" class="filmstrip dimmable">
+  <button class="edge-b" data-toggle="film" title="הסתר/הצג רצועת תמונות (F6)"></button>
+  <div class="fs-head">
+    <button class="fs-ic" id="fs-grid" title="רשת (G)"><svg class="ic"><use href="#i-grid"/></svg></button>
+    <button class="fs-ic" id="fs-back" title="מקור קודם"><svg class="ic"><use href="#i-prev"/></svg></button>
+    <button class="fs-ic" id="fs-fwd" title="מקור הבא"><svg class="ic"><use href="#i-next"/></svg></button>
+    <div class="fs-path" id="fs-path"></div>
+    <span class="spacer"></span>
+    <div class="fs-filter" id="fs-filter"></div>
+  </div>
+  <div class="fs-strip" id="fs-strip"><div class="fs-inner" id="fs-inner"></div></div>
+</footer>
+
+<!-- lights-out veil, slideshow, dialogs -->
+<div id="slideshow" class="slideshow hidden">
+  <img id="ss-a" alt=""><img id="ss-b" alt="">
+  <div class="ss-bar" id="ss-bar">
+    <button onclick="ssStep(-1)" aria-label="הקודמת"><svg class="ic"><use href="#i-prev"/></svg></button>
+    <button id="ss-pp" onclick="ssToggle()" aria-label="השהה"><svg class="ic"><use href="#i-pause"/></svg></button>
+    <button onclick="ssStep(1)" aria-label="הבאה"><svg class="ic"><use href="#i-next"/></svg></button>
+    <span id="ss-count"></span>
+    <button onclick="ssStop()" aria-label="סגור"><svg class="ic"><use href="#i-close"/></svg></button>
   </div>
 </div>
 
-<!-- text prompt dialog -->
-<div id="dialog" class="modal hidden">
-  <form class="modal-box small" id="dialog-form">
-    <h3 id="dialog-title"></h3>
-    <input id="dialog-input" type="text" autocomplete="off">
-    <div class="row end">
-      <button type="button" id="dialog-cancel">ביטול</button>
-      <button type="submit" class="primary">שמור</button>
-    </div>
-  </form>
-</div>
-
+<div id="modal" class="modal hidden"><div class="modal-box" id="modal-box"></div></div>
+<div id="import" class="importer hidden"></div>
+<div id="menu-pop" class="menu-pop hidden"></div>
 <div id="toast" class="toast hidden"></div>
 <script src="app.js"></script>
 </body>

@@ -28,13 +28,14 @@ def _trash_purge_loop():
 
 @app.on_event("startup")
 def _start_trash_purge():
+    db.init_db()  # run schema migrations before the first request
     threading.Thread(target=_trash_purge_loop, daemon=True).start()
 
 
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "tagging", "pulling"):
+        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "tagging", "pulling", "exporting"):
             raise HTTPException(409, "המשימה כבר רצה")
         prog = importer.Progress()
         JOBS[name] = prog
@@ -72,11 +73,12 @@ def status():
         "ollama_vision_model_fits": vision_model_fits,
         "ollama_recommended_small_model": tagging.RECOMMENDED_SMALL_VISION_MODEL,
         "trash_days": config.TRASH_RETENTION_DAYS,
+        "last_import": int(db.get_setting(con, "last_import", 0) or 0),
     }
 
 
 @app.get("/api/pick-file")
-def pick_file(kind: str = "zip"):
+def pick_file(kind: str = "zip", title: str = ""):
     """Native Windows file/folder picker (tkinter -> real Explorer dialog),
     so choosing the Takeout ZIP or a library folder works like any other app."""
     import tkinter as tk
@@ -86,7 +88,7 @@ def pick_file(kind: str = "zip"):
     root.attributes("-topmost", True)
     try:
         if kind == "folder":
-            path = filedialog.askdirectory(title="בחר תיקיית ספרייה", parent=root)
+            path = filedialog.askdirectory(title=title or "בחר תיקייה", parent=root)
         else:
             path = filedialog.askopenfilename(
                 title="בחר קובץ ZIP של Google Takeout",
@@ -195,9 +197,27 @@ def memories():
             "comments": [dict(r) for r in con.execute("SELECT * FROM shared_comments ORDER BY created_at DESC").fetchall()]}
 
 
+def _folder_of(rel_path: str) -> str:
+    rel = rel_path.replace("\\", "/")
+    return rel.rsplit("/", 1)[0] if "/" in rel else ""
+
+
+@app.get("/api/folders")
+def folders():
+    """Top-level folders under media/ (the importer files photos by year)."""
+    con = db.connect()
+    counts: dict[str, int] = {}
+    for r in con.execute("SELECT rel_path FROM photos WHERE trashed=0"):
+        f = _folder_of(r["rel_path"])
+        counts[f] = counts.get(f, 0) + 1
+    return {"root": str(PATHS.media),
+            "folders": [{"name": k, "n": v} for k, v in sorted(counts.items(), reverse=True)]}
+
+
 @app.get("/api/photos")
 def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
            favorite: int = 0, year: int = 0, trashed: int = 0,
+           folder: str | None = None, quick: int = 0, prev_import: int = 0, cluster: int = 0,
            limit: int = 200, offset: int = 0):
     con = db.connect()
     where = ["p.trashed=?"]; args = [trashed]
@@ -209,10 +229,23 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
         where.append("(p.id IN (SELECT photo_id FROM faces WHERE person_id=?) "
                      "OR p.id IN (SELECT photo_id FROM photo_people WHERE person_id=?))")
         args += [person, person]
+    if cluster:
+        where.append("p.id IN (SELECT photo_id FROM faces WHERE cluster_id=?)"); args.append(cluster)
     if tag:
         where.append("p.id IN (SELECT photo_id FROM photo_tags WHERE tag_id=?)"); args.append(tag)
     if favorite:
         where.append("p.favorited=1")
+    if quick:
+        where.append("p.quick=1")
+    if prev_import:
+        where.append("p.imported_at>=?"); args.append(int(db.get_setting(con, "last_import", 0) or 0))
+    if folder == "":
+        where.append("p.rel_path NOT LIKE '%\\%' AND p.rel_path NOT LIKE '%/%'")
+    elif folder is not None:
+        # rel_path is "<folder>\\<file>" (Windows) or "<folder>/<file>"
+        where.append("(p.rel_path LIKE ? ESCAPE '!' OR p.rel_path LIKE ? ESCAPE '!')")
+        f = folder.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        args += [f + "\\%", f + "/%"]
     if year:
         where.append("CAST(strftime('%Y', p.taken_at, 'unixepoch') AS INT)=?"); args.append(year)
     if q:
@@ -220,11 +253,17 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
                      "OR p.id IN (SELECT photo_id FROM photo_tags pt JOIN tags t ON t.id=pt.tag_id WHERE t.name LIKE ?) "
                      "OR p.id IN (SELECT pp.photo_id FROM photo_people pp JOIN people pe ON pe.id=pp.person_id WHERE pe.name LIKE ?))")
         args += [f"%{q}%"] * 4
-    sql = (f"SELECT p.id,p.filename,p.is_video,p.taken_at,p.favorited,p.rating,p.width,p.height "
+    sql = (f"SELECT p.id,p.filename,p.is_video,p.taken_at,p.favorited,p.rating,p.width,p.height,"
+           f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.rel_path,"
+           f"EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=p.id) has_kw "
            f"FROM photos p{joins} WHERE {' AND '.join(where)} "
            f"ORDER BY p.taken_at DESC, p.id DESC LIMIT ? OFFSET ?")
     args += [limit, offset]
-    return [dict(r) for r in con.execute(sql, args).fetchall()]
+    out = []
+    for r in con.execute(sql, args).fetchall():
+        d = dict(r); d["folder"] = _folder_of(d.pop("rel_path") or "")
+        out.append(d)
+    return out
 
 
 @app.get("/api/photo/{pid}")
@@ -306,10 +345,39 @@ class MetaIn(BaseModel):
     lng: float | None = None
     favorited: int | None = None
     rating: int | None = None
+    flag: int | None = None          # 1 pick, -1 reject, 0 unflagged
+    label: str | None = None         # "" clears the color label
+    quick: int | None = None
     trashed: int | None = None
     add_tags: list[str] | None = None
     remove_tag_ids: list[int] | None = None
     write_exif: bool = False
+
+SIMPLE_FIELDS = ("description", "taken_at", "lat", "lng", "favorited", "rating", "flag", "quick", "trashed")
+
+
+def _apply_meta(con, ids: list[int], m: MetaIn):
+    fields = {k: v for k, v in m.dict().items() if k in SIMPLE_FIELDS and v is not None}
+    if m.label is not None:
+        fields["label"] = m.label or None
+    if "trashed" in fields:
+        fields["trashed_at"] = int(time.time()) if fields["trashed"] else None
+    q = ",".join("?" * len(ids))
+    if fields:
+        con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in fields)} WHERE id IN ({q})",
+                    (*fields.values(), *ids))
+    for t in (m.add_tags or []):
+        t = t.strip()
+        if not t:
+            continue
+        con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (t,))
+        tid = con.execute("SELECT id FROM tags WHERE name=?", (t,)).fetchone()["id"]
+        con.executemany("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'manual')",
+                        [(pid, tid) for pid in ids])
+    for tid in (m.remove_tag_ids or []):
+        con.execute(f"DELETE FROM photo_tags WHERE tag_id=? AND photo_id IN ({q})", (tid, *ids))
+    con.commit()
+
 
 @app.patch("/api/photo/{pid}")
 def update_meta(pid: int, m: MetaIn):
@@ -317,83 +385,266 @@ def update_meta(pid: int, m: MetaIn):
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r:
         raise HTTPException(404)
-    fields = {k: v for k, v in m.dict().items()
-              if k in ("description", "taken_at", "lat", "lng", "favorited", "rating", "trashed") and v is not None}
-    if "trashed" in fields:
-        fields["trashed_at"] = int(time.time()) if fields["trashed"] else None
-    if fields:
-        con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in fields)} WHERE id=?",
-                    (*fields.values(), pid))
-    for t in (m.add_tags or []):
-        t = t.strip()
-        if not t:
-            continue
-        con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (t,))
-        tid = con.execute("SELECT id FROM tags WHERE name=?", (t,)).fetchone()["id"]
-        con.execute("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'manual')", (pid, tid))
-    for tid in (m.remove_tag_ids or []):
-        con.execute("DELETE FROM photo_tags WHERE photo_id=? AND tag_id=?", (pid, tid))
-    con.commit()
+    _apply_meta(con, [pid], m)
     if m.write_exif:
         images.write_exif_jpeg(PATHS.media / r["rel_path"],
                                description=m.description, taken_at=m.taken_at, lat=m.lat, lng=m.lng)
     return photo(pid)
 
 
+class BatchIn(MetaIn):
+    ids: list[int]
+
+@app.patch("/api/photos")
+def update_many(b: BatchIn):
+    """Same as PATCH /api/photo/{id}, applied to every selected photo at once."""
+    if b.ids:
+        _apply_meta(db.connect(), b.ids, b)
+    return {"ok": True, "n": len(b.ids)}
+
+
+class KeywordsIn(BaseModel):
+    ids: list[int]
+
+@app.post("/api/keywords")
+def keywords(body: KeywordsIn):
+    """Keywords on a selection, with how many of the selected photos carry each."""
+    id_list = body.ids
+    if not id_list:
+        return []
+    q = ",".join("?" * len(id_list))
+    return [dict(r) for r in db.connect().execute(
+        f"SELECT t.id, t.name, COUNT(*) n FROM tags t JOIN photo_tags pt ON pt.tag_id=t.id "
+        f"WHERE pt.photo_id IN ({q}) GROUP BY t.id ORDER BY t.name", id_list)]
+
+
 # ---- edit image ------------------------------------------------------------
+# Develop settings are kept as JSON on the photo and always rendered from the
+# pristine original, so re-opening a photo in Develop picks up where it left off.
 class EditIn(BaseModel):
     rotate: float | None = None
-    crop: list[float] | None = None      # [x1,y1,x2,y2] as fractions
+    crop: list[float] | None = None      # [x1,y1,x2,y2] as fractions of the rotated image
     brightness: float | None = None
     contrast: float | None = None
     saturation: float | None = None
     grayscale: bool | None = None
 
-@app.post("/api/photo/{pid}/edit")
-def edit_image(pid: int, e: EditIn):
-    con = db.connect()
-    r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
-    if not r or r["is_video"]:
-        raise HTTPException(400, "לא ניתן לערוך")
+
+def _is_neutral(ops: dict) -> bool:
+    return (not ops.get("rotate") and not ops.get("grayscale")
+            and ops.get("crop") in (None, [0, 0, 1, 1])
+            and all(ops.get(k) in (None, 1, 1.0) for k in ("brightness", "contrast", "saturation")))
+
+
+def _refresh_file(con, r, src: Path, **extra):
+    images.thumb_path(r["sha256"]).unlink(missing_ok=True)
+    new_sha = images.sha256_file(src)
+    w, h = images.dimensions(src)
+    cols = {"sha256": new_sha, "bytes": src.stat().st_size, "width": w, "height": h, **extra}
+    con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in cols)} WHERE id=?", (*cols.values(), r["id"]))
+    con.commit()
+    images.make_thumb(src, new_sha)
+
+
+def _render(con, r, ops: dict):
+    import json, shutil
     src = PATHS.media / r["rel_path"]
     orig = r["orig_backup"]
     if not orig:  # keep the untouched original once
         bdir = PATHS.media / ".originals"; bdir.mkdir(exist_ok=True)
         bpath = bdir / f"{r['id']}_{r['filename']}"
         if not bpath.exists():
-            import shutil; shutil.copy2(src, bpath)
+            shutil.copy2(src, bpath)
         orig = str(bpath.relative_to(PATHS.media))
-    images.apply_edit(PATHS.media / orig, e.dict(exclude_none=True), src)  # edit from pristine original
-    new_sha = images.sha256_file(src)
-    old_sha = r["sha256"]
-    images.thumb_path(old_sha).unlink(missing_ok=True)
-    w, h = images.dimensions(src)
-    con.execute("UPDATE photos SET sha256=?, bytes=?, width=?, height=?, edited=1, orig_backup=? WHERE id=?",
-                (new_sha, src.stat().st_size, w, h, orig, pid))
-    con.commit()
-    images.make_thumb(src, new_sha)
+    if _is_neutral(ops):  # everything back at zero -> just restore the original
+        shutil.copy2(PATHS.media / orig, src)
+        _refresh_file(con, r, src, edited=0, orig_backup=orig, edit_ops=None)
+        return
+    images.apply_edit(PATHS.media / orig, ops, src)
+    _refresh_file(con, r, src, edited=1, orig_backup=orig, edit_ops=json.dumps(ops))
+
+
+def _editable(con, pid):
+    r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r or r["is_video"]:
+        raise HTTPException(400, "לא ניתן לערוך")
+    return r
+
+
+@app.post("/api/photo/{pid}/edit")
+def edit_image(pid: int, e: EditIn):
+    con = db.connect()
+    _render(con, _editable(con, pid), e.dict(exclude_none=True))
     return {"ok": True}
+
+
+class RotateIn(BaseModel):
+    degrees: int  # +90 clockwise, -90 counter-clockwise
+
+@app.post("/api/photo/{pid}/rotate")
+def rotate_image(pid: int, body: RotateIn):
+    """Grid/Loupe rotate buttons: folded into the develop settings so a later
+    Develop edit keeps the rotation (and the crop turns with the photo)."""
+    import json
+    con = db.connect()
+    r = _editable(con, pid)
+    ops = json.loads(r["edit_ops"]) if r["edit_ops"] else {}
+    d = 90 if body.degrees > 0 else -90
+    ops["rotate"] = (float(ops.get("rotate") or 0) + d + 180) % 360 - 180
+    c = ops.get("crop")
+    if c and len(c) == 4:
+        x1, y1, x2, y2 = c
+        ops["crop"] = [1 - y2, x1, 1 - y1, x2] if d > 0 else [y1, 1 - x2, y2, 1 - x1]
+    _render(con, r, ops)
+    return photo(pid)
+
 
 @app.post("/api/photo/{pid}/revert")
 def revert_image(pid: int):
+    import shutil
     con = db.connect()
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r or not r["orig_backup"]:
         raise HTTPException(400, "אין גרסה מקורית")
-    import shutil
     src = PATHS.media / r["rel_path"]
     shutil.copy2(PATHS.media / r["orig_backup"], src)
-    images.thumb_path(r["sha256"]).unlink(missing_ok=True)
-    new_sha = images.sha256_file(src); w, h = images.dimensions(src)
-    con.execute("UPDATE photos SET sha256=?, width=?, height=?, edited=0 WHERE id=?", (new_sha, w, h, pid))
-    con.commit(); images.make_thumb(src, new_sha)
+    _refresh_file(con, r, src, edited=0, edit_ops=None)
+    return {"ok": True}
+
+
+@app.post("/api/photo/{pid}/reveal")
+def reveal(pid: int):
+    """Lightroom's "Show in Explorer": open the folder with the file selected."""
+    import subprocess
+    r = db.connect().execute("SELECT rel_path FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r:
+        raise HTTPException(404)
+    subprocess.Popen(["explorer", "/select,", str(PATHS.media / r["rel_path"])])
+    return {"ok": True}
+
+
+@app.get("/original/{pid}")
+def original(pid: int):
+    """The untouched original (what Develop previews its settings on top of)."""
+    r = db.connect().execute("SELECT rel_path, orig_backup FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r:
+        raise HTTPException(404)
+    p = PATHS.media / (r["orig_backup"] or r["rel_path"])
+    if not p.exists():
+        raise HTTPException(404)
+    return FileResponse(p)
+
+
+# ---- collections (albums) --------------------------------------------------
+class CollectionIn(BaseModel):
+    name: str
+    ids: list[int] = []
+
+class IdsIn(BaseModel):
+    ids: list[int]
+
+class RenameIn(BaseModel):
+    name: str
+
+@app.post("/api/albums")
+def create_album(body: CollectionIn):
+    con = db.connect()
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(400, "שם ריק")
+    if con.execute("SELECT 1 FROM albums WHERE name=?", (name,)).fetchone():
+        raise HTTPException(409, "כבר קיים אוסף בשם הזה")
+    aid = con.execute("INSERT INTO albums(name,kind) VALUES(?, 'album')", (name,)).lastrowid
+    con.executemany("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", [(i, aid) for i in body.ids])
+    con.commit()
+    return {"id": aid}
+
+@app.post("/api/album/{aid}/add")
+def album_add(aid: int, body: IdsIn):
+    con = db.connect()
+    con.executemany("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", [(i, aid) for i in body.ids])
+    con.commit()
+    return {"ok": True}
+
+@app.post("/api/album/{aid}/remove")
+def album_remove(aid: int, body: IdsIn):
+    con = db.connect()
+    con.executemany("DELETE FROM photo_albums WHERE photo_id=? AND album_id=?", [(i, aid) for i in body.ids])
+    con.commit()
+    return {"ok": True}
+
+@app.post("/api/album/{aid}/rename")
+def album_rename(aid: int, body: RenameIn):
+    con = db.connect()
+    name = body.name.strip()
+    if con.execute("SELECT 1 FROM albums WHERE name=? AND id<>?", (name, aid)).fetchone():
+        raise HTTPException(409, "כבר קיים אוסף בשם הזה")
+    con.execute("UPDATE albums SET name=? WHERE id=?", (name, aid))
+    con.commit()
+    return {"ok": True}
+
+@app.delete("/api/album/{aid}")
+def album_delete(aid: int):
+    """Deletes the collection only; its photos stay in the catalog."""
+    con = db.connect()
+    con.execute("DELETE FROM photo_albums WHERE album_id=?", (aid,))
+    con.execute("DELETE FROM albums WHERE id=?", (aid,))
+    con.commit()
+    return {"ok": True}
+
+
+# ---- import from folder / export -------------------------------------------
+@app.get("/api/scan-folder")
+def scan_folder(path: str, recursive: int = 1):
+    if not Path(path).is_dir():
+        raise HTTPException(404, "התיקייה לא נמצאה")
+    files = importer.scan_folder(path, bool(recursive))
+    known = {(r["filename"], r["bytes"]) for r in db.connect().execute("SELECT filename, bytes FROM photos")}
+    for f in files:  # Lightroom's "suspected duplicate": same name + size already in the catalog
+        f["dup"] = (f["name"], f["bytes"]) in known
+    return {"files": files}
+
+
+@app.get("/api/local-thumb")
+def local_thumb(path: str):
+    p = Path(path)
+    if p.suffix.lower() not in images.IMAGE_EXT or not p.is_file():
+        return Response(status_code=204)
+    data = images.small_preview(p)
+    return Response(data, media_type="image/jpeg") if data else Response(status_code=204)
+
+
+class ImportFolderIn(BaseModel):
+    paths: list[str]
+    keywords: list[str] = []
+    album: str | None = None
+
+@app.post("/api/import-folder")
+def start_import_folder(body: ImportFolderIn):
+    if not body.paths:
+        raise HTTPException(400, "לא נבחרו קבצים")
+    kws = [k.strip() for k in body.keywords if k.strip()]
+    _start("import", importer.run_folder_import, body.paths, kws, (body.album or "").strip() or None)
+    return {"ok": True}
+
+
+class ExportIn(BaseModel):
+    ids: list[int]
+    dest: str
+    originals: bool = False
+    long_edge: int | None = None
+    quality: int = 100
+
+@app.post("/api/export")
+def start_export(body: ExportIn):
+    if not body.ids or not body.dest.strip():
+        raise HTTPException(400, "חסרים פריטים או תיקיית יעד")
+    _start("export", importer.run_export, body.ids, body.dest.strip(), body.originals,
+           body.long_edge, max(10, min(100, body.quality)))
     return {"ok": True}
 
 
 # ---- people ----------------------------------------------------------------
-class RenameIn(BaseModel):
-    name: str
-
 @app.post("/api/person/{pid}/rename")
 def rename_person(pid: int, body: RenameIn):
     con = db.connect()
@@ -405,6 +656,31 @@ def rename_person(pid: int, body: RenameIn):
         con.commit()
         return {"id": dup["id"], "merged": True}
     con.execute("UPDATE people SET name=? WHERE id=?", (body.name, pid))
+    con.commit()
+    return {"id": pid}
+
+
+@app.get("/api/clusters")
+def clusters():
+    """Face groups nobody has named yet (Lightroom's "Unnamed People")."""
+    return [dict(r) for r in db.connect().execute(
+        "SELECT f.cluster_id id, COUNT(DISTINCT f.photo_id) n, "
+        "(SELECT f2.id FROM faces f2 WHERE f2.cluster_id=f.cluster_id ORDER BY f2.det_score DESC LIMIT 1) cover_face "
+        "FROM faces f WHERE f.cluster_id IS NOT NULL AND f.person_id IS NULL "
+        "GROUP BY f.cluster_id HAVING n>=2 ORDER BY n DESC LIMIT 300").fetchall()]
+
+
+@app.post("/api/cluster/{cid}/name")
+def name_cluster(cid: int, body: RenameIn):
+    con = db.connect()
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(400, "שם ריק")
+    con.execute("INSERT OR IGNORE INTO people(name,source) VALUES(?, 'manual')", (name,))
+    pid = con.execute("SELECT id FROM people WHERE name=?", (name,)).fetchone()["id"]
+    con.execute("UPDATE faces SET person_id=? WHERE cluster_id=?", (pid, cid))
+    con.execute("UPDATE people SET cover_face_id=COALESCE(cover_face_id, (SELECT id FROM faces WHERE cluster_id=? "
+                "ORDER BY det_score DESC LIMIT 1)) WHERE id=?", (cid, pid))
     con.commit()
     return {"id": pid}
 
