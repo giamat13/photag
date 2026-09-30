@@ -18,6 +18,7 @@ OutputBaseFilename=photagSetup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=app\ui\icon.ico
 UninstallDisplayName=photag
 UninstallDisplayIcon={app}\photag.exe
 

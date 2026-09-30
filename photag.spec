@@ -18,4 +18,5 @@ a = Analysis(["photag.py"], pathex=[], binaries=binaries, datas=datas,
              hiddenimports=hiddenimports, hookspath=[], runtime_hooks=[], excludes=[])
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="photag",
-          console=False, disable_windowed_traceback=False, upx=True)
+          console=False, disable_windowed_traceback=False, upx=True,
+          icon="app/ui/icon.ico")

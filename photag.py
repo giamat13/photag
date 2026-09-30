@@ -55,12 +55,26 @@ def _wait_up(timeout=15):
     return False
 
 
+ICON = Path(__file__).resolve().parent / "app" / "ui" / "icon.ico"  # bundled next to the UI in the EXE too
+
+
+def _own_taskbar_identity():
+    """Give the process its own AppUserModelID so Windows shows photag's icon
+    (not python.exe's) and doesn't group the window with other Python apps."""
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("photag.app")
+    except Exception:
+        pass
+
+
 def main():
+    _own_taskbar_identity()
     threading.Thread(target=_serve, daemon=True).start()
     _wait_up()
     import webview
     webview.create_window("photag", URL, width=1280, height=860)
-    webview.start()
+    webview.start(icon=str(ICON) if ICON.exists() else None)
 
 
 if __name__ == "__main__":

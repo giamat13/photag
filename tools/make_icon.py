@@ -102,3 +102,8 @@ canvas.alpha_composite(hl)
 out = canvas.resize((512, 512), Image.LANCZOS)
 out.save(OUT, optimize=True)
 print("wrote", OUT)
+
+# Windows icon (window/taskbar, EXE, installer): every size Explorer and the taskbar ask for
+ico = OUT.with_suffix(".ico")
+out.save(ico, sizes=[(16, 16), (20, 20), (24, 24), (32, 32), (40, 40), (48, 48), (64, 64), (128, 128), (256, 256)])
+print("wrote", ico)

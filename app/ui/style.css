@@ -76,8 +76,7 @@ input[type=range]:hover::-webkit-slider-thumb{background:#e6e6e6}
 .toppanel{position:relative;height:54px;flex:none;display:flex;align-items:center;gap:20px;padding:0 18px;
   background:linear-gradient(#1f1f1f,#171717);border-bottom:1px solid #0e0e0e}
 .identity{display:flex;align-items:center;gap:11px;min-width:0}
-.lrmark{width:30px;height:30px;border-radius:5px;background:#001e36;border:1.5px solid #31a8ff;color:#31a8ff;display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:14px;direction:ltr;flex:none}
+.lrmark{width:34px;height:34px;flex:none;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
 .idtext b{display:block;font-weight:400;font-size:15px;color:#9a9a9a;letter-spacing:.2px}
 .activity{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t3);margin-top:2px;cursor:pointer}
 .act-bar{width:150px;height:5px;background:#333;border-radius:3px;overflow:hidden}
