@@ -531,3 +531,39 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 [dir=ltr] .im-arrow{transform:scaleX(-1)}
 /* back/forward chevrons are drawn for RTL; mirror them in LTR */
 [dir=ltr] svg:has(> use[href="#i-prev"]),[dir=ltr] svg:has(> use[href="#i-next"]){transform:scaleX(-1)}
+
+/* ---------- video player (Loupe) ---------- */
+.vp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;user-select:none}
+#loupe-media .vp video{width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;box-shadow:none;cursor:pointer}
+.vp.idle{cursor:none}
+.vp-bar{position:absolute;inset-inline:0;bottom:0;padding:34px 14px 8px;background:linear-gradient(transparent,rgba(0,0,0,.78));transition:opacity .25s}
+.vp.idle .vp-bar{opacity:0;pointer-events:none}
+.vp-seek{position:relative;height:18px;cursor:pointer;touch-action:none}
+.vp-seek::before,.vp-buf,.vp-played{content:"";position:absolute;left:0;top:7px;height:3px;border-radius:2px;pointer-events:none;transition:height .12s,top .12s}
+.vp-seek::before{width:100%;background:rgba(255,255,255,.26)}
+.vp-buf{background:rgba(255,255,255,.38)}
+.vp-played{background:var(--acc)}
+.vp-seek:hover::before,.vp-seek:hover .vp-buf,.vp-seek:hover .vp-played,.vp.scrub .vp-played,.vp.scrub .vp-buf,.vp.scrub .vp-seek::before{height:5px;top:6px}
+.vp-knob{position:absolute;top:3px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#fff;transform:scale(0);transition:transform .12s;pointer-events:none}
+.vp-seek:hover .vp-knob,.vp.scrub .vp-knob{transform:scale(1)}
+.vp-tip{position:absolute;bottom:24px;transform:translateX(-50%);padding:3px;background:rgba(18,18,18,.94);border:1px solid #000;border-radius:3px;text-align:center;pointer-events:none;color:#fff;font-size:11.5px;font-variant-numeric:tabular-nums}
+.vp-tip canvas{display:block;width:160px;background:#111;margin-bottom:2px}
+.vp-row{position:relative;display:flex;align-items:center;gap:2px;color:#eee}
+.vp-row button{position:relative;width:32px;height:30px;padding:0;background:transparent;border:0;color:#e8e8e8;border-radius:3px}
+.vp-row button:hover{background:rgba(255,255,255,.14);color:#fff}
+.vp-row button.on{color:var(--acc)}
+.vp-row .vp-rate{width:auto;padding:0 8px;font-variant-numeric:tabular-nums;font-size:12.5px}
+.vp-row .n10{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:8px;font-weight:700;pointer-events:none}
+.vp-time{margin-inline-start:8px;font-size:12px;color:#ddd;font-variant-numeric:tabular-nums}
+.vp-time b{font-weight:400;color:#fff}
+.vp-vol{width:80px;--track:#666;margin:0 6px}
+.vp-menu{position:absolute;bottom:38px;transform:translateX(-50%);min-width:70px;padding:4px 0;background:#2f2f2f;border:1px solid #111;box-shadow:0 6px 20px rgba(0,0,0,.5);z-index:3}
+.vp-menu div{padding:3px 16px;text-align:center;font-variant-numeric:tabular-nums;cursor:default}
+.vp-menu div:hover{background:#4a6f9c;color:#fff}
+.vp-menu div.on{color:#fff;background:#555}
+.vp-err{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,0,0,.88);color:#ddd;font-size:14px}
+.vp:fullscreen .vp-bar{padding-bottom:18px}
+.vp-time{white-space:nowrap}
+/* the file-info overlay gets out of the way while the controls are hidden during playback */
+.loupe-info{transition:opacity .25s}
+.v-loupe:has(.vp.idle) .loupe-info{opacity:0}

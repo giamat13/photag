@@ -512,6 +512,27 @@ def cast():
     return {"ok": True}
 
 
+@app.post("/api/photo/{pid}/open-external")
+def open_external(pid: int):
+    """Open a video in VLC when it's installed (it plays nearly everything the
+    built-in player can't), otherwise in the system's default player."""
+    import os, shutil, subprocess, sys
+    r = db.connect().execute("SELECT rel_path FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r or not (PATHS.media / r["rel_path"]).exists():
+        raise HTTPException(404)
+    path = str(PATHS.media / r["rel_path"])
+    vlc = shutil.which("vlc") or next((c for c in (
+        os.path.join(os.environ.get("ProgramFiles", ""), "VideoLAN", "VLC", "vlc.exe"),
+        os.path.join(os.environ.get("ProgramFiles(x86)", ""), "VideoLAN", "VLC", "vlc.exe")) if os.path.isfile(c)), None)
+    if vlc:
+        subprocess.Popen([vlc, path])
+        return {"player": "vlc"}
+    if sys.platform == "win32":
+        os.startfile(path)
+        return {"player": "default"}
+    raise err(501, "לא נמצא נגן חיצוני")
+
+
 @app.post("/api/photo/{pid}/reveal")
 def reveal(pid: int):
     """Lightroom's "Show in Explorer": open the folder with the file selected."""

@@ -620,7 +620,7 @@ function setView(v){
   S.prevView = S.view==='people'?S.prevView:S.view; S.view=v;
   ['grid','loupe','compare','survey','people'].forEach(k=>$('#v-'+k).classList.toggle('hidden', k!==v));
   $('#v-empty').classList.add('hidden');
-  if(v!=='loupe'){ $('#loupe-media').innerHTML=''; }
+  if(v!=='loupe'){ closeLoupeMedia(); }
   if(v==='grid'){ layoutGrid(true); scrollToAct(); $('#v-grid').focus({preventScroll:true}); if(!S.list.length){ $('#v-empty').classList.remove('hidden'); renderEmpty(); } }
   if(v==='loupe') renderLoupe();
   if(v==='compare') renderCompare();
@@ -628,13 +628,182 @@ function setView(v){
   if(v==='people') renderPeople();
   renderToolbar(); renderRight(); updateNavigator();
 }
+// ---------- video player: custom controls over <video> ----------
+// Decoding is the browser's (H.264/MP4 and friends); everything you see and use is ours:
+// seek bar with buffered range and hover preview, ±10 s, volume, speed, loop, frame step,
+// picture-in-picture, fullscreen, and "open in VLC" for formats we can't play.
+const VP = {el:null, v:null, pv:null, frame:1/30, raf:0, idleT:0, act:null};
+const RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+const mmss = s => { s = Math.max(0, Math.floor(isFinite(s) ? s : 0)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = String(s%60).padStart(2,'0');
+  return h ? `${h}:${String(m).padStart(2,'0')}:${x}` : `${m}:${x}`; };
+
+function vpDestroy(){
+  if(!VP.el) return;
+  if(document.fullscreenElement===VP.el) document.exitFullscreen().catch(()=>{});
+  try{ VP.v.pause(); VP.v.removeAttribute('src'); VP.v.load(); }catch{}
+  if(VP.pv){ VP.pv.removeAttribute('src'); VP.pv.load(); VP.pv = null; }
+  cancelAnimationFrame(VP.raf); clearTimeout(VP.idleT);
+  VP.el.remove(); VP.el = VP.v = VP.act = null;
+}
+function closeLoupeMedia(){ vpDestroy(); const m=$('#loupe-media'); m.innerHTML=''; m.dataset.id=''; }
+const openExternal = id => send('POST', `/api/photo/${id}/open-external`)
+  .then(r=>{ if(r.player==='default') toast(t('נפתח בנגן ברירת המחדל של המערכת')); });
+
+function mountPlayer(m, p){
+  vpDestroy();
+  const el = document.createElement('div'); el.className = 'vp paused'; el.dir = 'ltr';
+  const b = (k, inner, title, cls='') => `<button data-vp="${k}" class="${cls}" title="${esc(title)}" aria-label="${esc(title)}">${inner}</button>`;
+  const volTip = t('עוצמת קול (↑ ↓)');
+  el.innerHTML = `
+    <video src="${mediaUrl(p.id)}" playsinline preload="auto" autoplay></video>
+    <div class="vp-err hidden"><span>${t('הפורמט הזה לא מתנגן בתוך האפליקציה.')}</span><button class="primary" data-vp="ext">${t('פתח בנגן חיצוני')}</button></div>
+    <div class="vp-bar">
+      <div class="vp-seek"><div class="vp-buf"></div><div class="vp-played"></div><div class="vp-knob"></div>
+        <div class="vp-tip hidden"><canvas width="160" height="90"></canvas><span></span></div></div>
+      <div class="vp-row">
+        ${b('play', I('play'), t('הפעל / השהה (רווח)'))}
+        ${b('back', I('rotl')+'<i class="n10">10</i>', t('10 שניות אחורה'))}
+        ${b('fwd', I('rotr')+'<i class="n10">10</i>', t('10 שניות קדימה'))}
+        <span class="vp-time"><b data-vp="cur">0:00</b> / <span data-vp="dur">0:00</span></span>
+        <span class="spacer"></span>
+        ${b('mute', I('vol'), t('השתק (M)'))}<input class="vp-vol" type="range" min="0" max="1" step="0.02" title="${esc(volTip)}" aria-label="${esc(volTip)}">
+        ${b('rate', '1×', t('מהירות ניגון'), 'vp-rate')}
+        ${b('loop', I('loop'), t('חזרה על הסרטון'))}
+        ${document.pictureInPictureEnabled ? b('pip', I('pip'), t('תמונה בתוך תמונה')) : ''}
+        ${b('ext', I('external'), t('פתח בנגן חיצוני (VLC אם מותקן)'))}
+        ${b('full', I('full'), t('מסך מלא (F)'))}
+      </div>
+    </div>`;
+  m.appendChild(el);
+  const q = s => el.querySelector(s), v = q('video'), btn = k => q(`button[data-vp=${k}]`);
+  const seek = q('.vp-seek'), played = q('.vp-played'), buf = q('.vp-buf'), knob = q('.vp-knob');
+  const cur = q('[data-vp=cur]'), dur = q('[data-vp=dur]'), vol = q('.vp-vol'), tip = q('.vp-tip');
+  VP.el = el; VP.v = v; VP.frame = 1/30;
+  v.volume = pref.get('vol', 1); v.muted = pref.get('muted', false); v.playbackRate = pref.get('rate', 1);
+
+  // --- state -> UI
+  const pct = f => (clamp(f, 0, 1) * 100) + '%';
+  const paint = ()=>{ const f = v.duration ? v.currentTime / v.duration : 0; played.style.width = pct(f); knob.style.left = pct(f); cur.textContent = mmss(v.currentTime); };
+  const paintBuf = ()=>{ let end = 0; for(let i=0;i<v.buffered.length;i++) if(v.buffered.start(i) <= v.currentTime + .5) end = Math.max(end, v.buffered.end(i));
+    buf.style.width = pct(v.duration ? end / v.duration : 0); };
+  const tick = ()=>{ if(VP.el!==el) return; paint(); if(!v.paused && !v.ended) VP.raf = requestAnimationFrame(tick); };
+  const syncPlay = ()=>{ btn('play').innerHTML = I(v.paused ? 'play' : 'pause'); el.classList.toggle('paused', v.paused); };
+  const syncVol = ()=>{ btn('mute').innerHTML = I(v.muted || v.volume===0 ? 'mute' : 'vol'); vol.value = v.muted ? 0 : v.volume; };
+  const syncRate = ()=>{ btn('rate').textContent = v.playbackRate + '×'; };
+  const idleSoon = ()=>{ clearTimeout(VP.idleT); el.classList.remove('idle');
+    if(!v.paused) VP.idleT = setTimeout(()=>{ if(!v.paused && !q('.vp-menu')) el.classList.add('idle'); }, 2500); };
+  v.addEventListener('loadedmetadata', ()=>{ dur.textContent = mmss(v.duration); paint(); paintBuf(); });
+  v.addEventListener('durationchange', ()=>{ dur.textContent = mmss(v.duration); });
+  v.addEventListener('timeupdate', ()=>{ paint(); paintBuf(); });
+  v.addEventListener('progress', paintBuf);
+  v.addEventListener('play', ()=>{ syncPlay(); cancelAnimationFrame(VP.raf); tick(); idleSoon(); });
+  v.addEventListener('pause', ()=>{ syncPlay(); idleSoon(); });
+  v.addEventListener('ended', ()=>{ syncPlay(); idleSoon(); });
+  v.addEventListener('volumechange', ()=>{ syncVol(); pref.set('vol', v.volume); pref.set('muted', v.muted); });
+  v.addEventListener('ratechange', ()=>{ syncRate(); pref.set('rate', v.playbackRate); });
+  v.addEventListener('error', ()=>q('.vp-err').classList.remove('hidden'));
+  el.addEventListener('mousemove', idleSoon); el.addEventListener('mousedown', idleSoon);
+  el.addEventListener('mouseleave', ()=>{ if(!v.paused) el.classList.add('idle'); });
+  syncPlay(); syncVol(); syncRate();
+
+  // real frame duration (for frame stepping), measured from the first playing frames
+  if('requestVideoFrameCallback' in v){
+    const ds = []; let last = null;
+    const cb = (_n, meta)=>{ if(VP.el!==el) return;
+      if(last!=null && meta.mediaTime>last) ds.push(meta.mediaTime - last); last = meta.mediaTime;
+      if(ds.length < 12) v.requestVideoFrameCallback(cb);
+      else { ds.sort((a,c)=>a-c); const med = ds[ds.length>>1]; if(med>0.004 && med<0.2) VP.frame = med; } };
+    v.addEventListener('play', ()=>v.requestVideoFrameCallback(cb), {once:true});
+  }
+
+  // --- actions (also used by the keyboard)
+  const toggle = ()=>{ if(v.paused || v.ended) v.play().catch(()=>{}); else v.pause(); };
+  const rel = s => { v.currentTime = clamp(v.currentTime + s, 0, v.duration || 0); paint(); };
+  const step = d => { v.pause(); v.currentTime = clamp(v.currentTime + d*VP.frame, 0, v.duration || 0); paint(); };
+  const setVol = d => { v.muted = false; v.volume = clamp(Math.round((v.volume + d)*100)/100, 0, 1); };
+  const mute = ()=>{ v.muted = !v.muted; if(!v.muted && v.volume===0) v.volume = .5; };
+  const full = ()=>{ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); else el.requestFullscreen?.().catch(()=>{}); };
+  const rate = d => { const i = RATES.indexOf(v.playbackRate), j = clamp((i<0 ? RATES.indexOf(1) : i) + d, 0, RATES.length-1);
+    v.playbackRate = RATES[j]; toast(RATES[j] + '×', 900); };
+  VP.act = {toggle, rel, step, vol:setVol, mute, full, rate};
+
+  const rateMenu = ()=>{ const old = q('.vp-menu'); if(old){ old.remove(); return; }
+    const menu = document.createElement('div'); menu.className = 'vp-menu';
+    menu.innerHTML = RATES.map(r=>`<div data-r="${r}" class="${r===v.playbackRate?'on':''}">${r}×</div>`).join('');
+    const bt = btn('rate'); menu.style.left = (bt.offsetLeft + bt.offsetWidth/2) + 'px';
+    menu.addEventListener('click', ev=>{ const r = ev.target.closest('[data-r]'); if(r) v.playbackRate = +r.dataset.r; menu.remove(); idleSoon(); });
+    q('.vp-row').appendChild(menu); };
+
+  el.addEventListener('click', e=>{
+    const bt = e.target.closest('button[data-vp]');
+    if(!e.target.closest('.vp-menu') && !(bt && bt.dataset.vp==='rate')) q('.vp-menu')?.remove();
+    if(bt){
+      switch(bt.dataset.vp){
+        case 'play': toggle(); break;            case 'back': rel(-10); break;     case 'fwd': rel(10); break;
+        case 'mute': mute(); break;              case 'rate': rateMenu(); break;   case 'full': full(); break;
+        case 'ext': openExternal(p.id); break;
+        case 'loop': v.loop = !v.loop; bt.classList.toggle('on', v.loop); break;
+        case 'pip': if(document.pictureInPictureElement) document.exitPictureInPicture(); else v.requestPictureInPicture().catch(()=>{}); break;
+      }
+      bt.blur();   // keep Space for play/pause instead of re-clicking the focused button
+      return;
+    }
+    if(e.target===v) toggle();
+  });
+  el.addEventListener('dblclick', e=>{ if(e.target===v) full(); });
+  vol.addEventListener('input', ()=>{ v.muted = false; v.volume = +vol.value; });
+
+  // --- seek bar: click / drag to scrub, hover for a time + frame preview
+  const ratioAt = e => { const r = seek.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width, 0, 1); };
+  const seekTo = f => { if(v.duration) v.currentTime = f * v.duration; paint(); };
+  let scrubbing = false, pvWant = null, pvBusy = false;
+  const pvGo = ()=>{ const pv = VP.pv;
+    if(!pv || pv.readyState < 1 || Math.abs(pv.currentTime - pvWant) < .05){ pvBusy = false; return; }
+    pvBusy = true; pv.currentTime = pvWant; };
+  const preview = tm => {
+    if(!VP.pv){
+      const pv = document.createElement('video'); pv.muted = true; pv.preload = 'auto'; pv.src = v.currentSrc || v.src;
+      pv.addEventListener('seeked', ()=>{ const c = tip.querySelector('canvas');
+        c.height = Math.round(c.width * (pv.videoHeight||9) / (pv.videoWidth||16));
+        c.getContext('2d').drawImage(pv, 0, 0, c.width, c.height);
+        pvBusy = false; if(pvWant!=null && Math.abs(pv.currentTime - pvWant) > .25) pvGo(); });
+      VP.pv = pv;
+    }
+    pvWant = tm; if(!pvBusy) pvGo();
+  };
+  const hover = f => { if(!v.duration) return;
+    tip.classList.remove('hidden');
+    const w = seek.getBoundingClientRect().width, tw = tip.offsetWidth || 170;
+    tip.style.left = clamp(f * w, tw/2, w - tw/2) + 'px';
+    tip.querySelector('span').textContent = mmss(f * v.duration);
+    preview(f * v.duration); };
+  seek.addEventListener('pointerdown', e=>{ if(e.button!==0) return; scrubbing = true; el.classList.add('scrub'); seek.setPointerCapture(e.pointerId); seekTo(ratioAt(e)); });
+  seek.addEventListener('pointermove', e=>{ const f = ratioAt(e); if(scrubbing) seekTo(f); hover(f); });
+  seek.addEventListener('pointerup', ()=>{ scrubbing = false; el.classList.remove('scrub'); });
+  seek.addEventListener('pointerleave', ()=>{ if(!scrubbing) tip.classList.add('hidden'); });
+}
+// keyboard while a video is open in the Loupe; returns true when the key was ours
+function vpKey(e){
+  if(!VP.act || S.view!=='loupe') return false;
+  const A = VP.act, c = e.code, sh = e.shiftKey;
+  if(c==='Space' || c==='KeyK') A.toggle();
+  else if(sh && (c==='ArrowLeft' || c==='ArrowRight')) A.rel(c==='ArrowLeft' ? -10 : 10);
+  else if(c==='Comma' || c==='Period') { if(sh) A.rate(c==='Comma' ? -1 : 1); else A.step(c==='Comma' ? -1 : 1); }
+  else if(c==='ArrowUp' || c==='ArrowDown') A.vol(c==='ArrowUp' ? .1 : -.1);
+  else if(c==='KeyM') A.mute();
+  else if(c==='KeyF') A.full();
+  else return false;
+  e.preventDefault(); return true;
+}
+
 function renderLoupe(){
   const p=actPhoto(), m=$('#loupe-media');
   if(!p){ m.innerHTML=''; $('#loupe-info').innerHTML=''; return; }
   if(m.dataset.id!=String(p.id) || m.dataset.v!=String(VER[p.id]||'')){
     m.dataset.id=p.id; m.dataset.v=VER[p.id]||''; m.classList.remove('zoom');
-    m.innerHTML = p.is_video ? `<video src="${mediaUrl(p.id)}" controls autoplay></video>` : `<img src="${mediaUrl(p.id)}" alt="" draggable="false">`;
-    const img=m.querySelector('img'); if(img) img.onload=()=>drawHisto(img);
+    vpDestroy();
+    if(p.is_video){ m.innerHTML=''; mountPlayer(m, p); histoFromThumb(); }
+    else { m.innerHTML = `<img src="${mediaUrl(p.id)}" alt="" draggable="false">`; const img=m.querySelector('img'); if(img) img.onload=()=>drawHisto(img); }
   }
   const info=$('#loupe-info');
   info.classList.toggle('hidden', !S.loupeInfo);
@@ -664,7 +833,7 @@ $('#loupe-media').addEventListener('mousedown', e=>{   // drag to pan when zoome
   const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); setTimeout(()=>m._dragged=false); };
   addEventListener('mousemove',mv); addEventListener('mouseup',up);
 });
-$('#v-loupe').addEventListener('dblclick', e=>{ if(!$('#loupe-media').classList.contains('zoom')) setView('grid'); });
+$('#v-loupe').addEventListener('dblclick', e=>{ if(e.target.closest('.vp')) return; if(!$('#loupe-media').classList.contains('zoom')) setView('grid'); });
 
 let CMP_CAND=null;
 function renderCompare(){
@@ -956,6 +1125,7 @@ async function setModule(m){
   $$('#modules [data-mod]').forEach(b=>b.classList.toggle('on', b.dataset.mod===m));
   if(m==='develop'){
     if(S.act==null && S.list.length) selectOnly(S.list[0].id);
+    closeLoupeMedia();
     ['grid','loupe','compare','survey','people','empty'].forEach(k=>$('#v-'+k).classList.add('hidden'));
     $('#v-develop').classList.remove('hidden');
     devOpen();
@@ -1128,6 +1298,7 @@ function ssStart(){
   let list = S.sel.size>1 ? S.list.filter(p=>S.sel.has(p.id)) : S.list;
   list = list.filter(p=>!p.is_video); if(!list.length) return toast(t('אין תמונות להצגה'));
   SS.list=list; SS.i=Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
+  if(S.view==='loupe') closeLoupeMedia();   // a video in the Loupe must not keep playing behind the slideshow
   $('#slideshow').classList.remove('hidden'); ssShow(); ssTimer();
   document.documentElement.requestFullscreen?.().catch(()=>{});
 }
@@ -1145,7 +1316,8 @@ window.ssToggle=()=>{ SS.playing=!SS.playing; ssTimer(); };
 // Cast = Windows' own Connect flyout (Win+K): pick a TV / wireless display, then choose Duplicate.
 window.ssCast=()=>send('POST','/api/cast');
 window.ssStop=()=>{ clearInterval(SS.t); $('#slideshow').classList.add('hidden'); $('#ss-a').classList.remove('on'); $('#ss-b').classList.remove('on');
-  if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); };
+  if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  if(S.view==='loupe' && S.mod==='library') renderLoupe(); };
 $('#slideshow').addEventListener('mousemove', ()=>{ const s=$('#slideshow'); s.classList.add('ui'); clearTimeout(s._h); s._h=setTimeout(()=>s.classList.remove('ui'), 1800); });
 
 // ---------- panels / lights out ----------
@@ -1225,6 +1397,7 @@ function shortcuts(){
     <h4>${t("בחירה")}</h4>${k('Ctrl+A',t('בחר הכול'))}${k('Ctrl+D',t('בטל בחירה'))}${k(t('Ctrl+לחיצה'),t('הוסף לבחירה'))}${k(t('Shift+לחיצה'),t('בחר טווח'))}${k('← → ↑ ↓',t('מעבר בין תמונות'))}${k('Delete',t('העבר לאשפה'))}
     <h4>${t("ממשק")}</h4>${k('Tab',t('הסתר לוחות צד'))}${k('Shift+Tab',t('הסתר את כל הלוחות'))}${k('F5 / F6',t('לוח עליון / רצועת תמונות'))}${k('F7 / F8',t('לוח ימני / שמאלי'))}${k('T',t('סרגל כלים'))}${k('L',t('כבה אורות'))}${k('J',t('סגנון תאים'))}${k('I',t('מידע בזכוכית מגדלת'))}${k('\\\\',t('סרגל סינון / לפני-אחרי'))}${k('Ctrl+L',t('הפעל/השבת מסננים'))}${k('Ctrl+F',t('חיפוש טקסט'))}${k(t('Z / רווח'),t('זום 1:1'))}
     <h4>${t("קבצים")}</h4>${k('Ctrl+Shift+I',t('ייבוא'))}${k('Ctrl+Shift+E',t('ייצוא'))}${k('Ctrl+N',t('אוסף חדש'))}${k('Ctrl+[ / ]',t('סיבוב'))}${k('Ctrl+R',t('הצג בסייר'))}${k('Ctrl+S',t('שמור מטא-נתונים לקובץ'))}${k('Ctrl+K',t('הוסף מילות מפתח'))}${k('R',t('חיתוך (פיתוח)'))}
+    <h4>${t("וידאו")}</h4>${k('Space / K',t('הפעל / השהה'))}${k('Shift+← / →',t('דילוג 10 שניות'))}${k(', / .',t('פריים אחורה / קדימה'))}${k('Shift+, / .',t('מהירות ניגון'))}${k('↑ / ↓',t('עוצמת קול'))}${k('M',t('השתק'))}${k('F',t('מסך מלא'))}
   </div></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`);
 }
 
@@ -1510,6 +1683,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   if(e.altKey) return;
+  if(vpKey(e)) return;
   switch(code){
     case 'KeyG': setView('grid'); return;
     case 'KeyE': setView('loupe'); return;
