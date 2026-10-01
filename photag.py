@@ -39,16 +39,54 @@ if "--backup" in sys.argv:       # headless: used by the Windows scheduled task,
     sys.stdout.flush(); sys.stderr.flush()
     os._exit(_rc)                # leave at once: nothing stays in memory after a background backup
 
-import uvicorn
+_T0 = time.time()
+LOG = Path(os.environ.get("APPDATA") or Path.home()) / "photag" / "startup.log"
 
-from app.server import app
+
+def _log(msg: str):
+    """Start-up diary (%APPDATA%\\photag\\startup.log): when each step happened, so a start that
+    hangs or fails can be diagnosed."""
+    try:
+        LOG.parent.mkdir(parents=True, exist_ok=True)
+        if msg.startswith("photag starting") and LOG.exists() and LOG.stat().st_size > 200_000:
+            LOG.write_text("", "utf-8")
+        with open(LOG, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} +{time.time() - _T0:6.1f}s  {msg}\n")
+    except OSError:
+        pass
+
+
+def _fatal(title: str, detail: str):
+    """The EXE has no console: say what went wrong in a message box and keep the details in the log."""
+    import traceback
+    _log(f"FATAL: {title}\n{detail}\n{traceback.format_exc()}")
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, f"{title}\n\n{detail}\n\nDetails: {LOG}", "photag", 0x10)
+    except Exception:
+        pass
+    sys.exit(1)
+
+
+_log(f"photag starting (frozen={getattr(sys, 'frozen', False)}, python {sys.version.split()[0]}, pid {os.getpid()})")
+try:
+    import uvicorn
+    from app.server import app
+except Exception as e:
+    _fatal("photag could not load its components", f"{type(e).__name__}: {e}")
+_log("components loaded")
 
 HOST, PORT = "127.0.0.1", int(os.environ.get("PHOTAG_PORT", 8756))
 URL = f"http://{HOST}:{PORT}"
 
 
 def _serve():
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    try:
+        _log(f"starting the local server on {HOST}:{PORT}")
+        uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    except BaseException as e:           # e.g. the port is taken by another program
+        _log(f"server stopped: {type(e).__name__}: {e}")
+        raise
 
 
 def _wait_up(timeout=15):
@@ -59,9 +97,11 @@ def _wait_up(timeout=15):
     while time.time() < end:
         try:
             with socket.create_connection((HOST, PORT), timeout=1):
+                _log("server is listening")
                 return True
         except OSError:
             time.sleep(0.2)
+    _log(f"server did not start listening within {timeout}s")
     return False
 
 
@@ -84,10 +124,17 @@ def main():
         _serve()
         return
     threading.Thread(target=_serve, daemon=True).start()
-    _wait_up()
-    import webview
-    webview.create_window("photag", URL, width=1280, height=860)
-    webview.start(icon=str(ICON) if ICON.exists() else None)
+    if not _wait_up(60):                         # a cold first start unpacks and loads a lot: allow a minute
+        _fatal("photag could not start its local server",
+               f"Nothing answered on port {PORT}. Another program may be using it, or antivirus is blocking photag.")
+    try:
+        import webview
+        webview.create_window("photag", URL, width=1280, height=860)
+        _log("opening the window")
+        webview.start(icon=str(ICON) if ICON.exists() else None)
+    except Exception as e:
+        _fatal("photag could not open its window", f"{type(e).__name__}: {e} (is the Microsoft Edge WebView2 runtime installed?)")
+    _log("window closed, exiting")
 
 
 if __name__ == "__main__":
