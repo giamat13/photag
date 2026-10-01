@@ -103,7 +103,8 @@ photag היא תוכנה חופשית ברישיון **GNU General Public Licens
 - **משקולות זיהוי הפנים** (InsightFace `buffalo_l`) — יורדות בהרצה הראשונה, **לשימוש לא‑מסחרי / מחקר בלבד** לפי תנאי המפתחים שלהן. אם מפיצים
   גרסה מסחרית צריך להחליף את המודל.
 - **אריחי המפה** — מגיעים מ‑OpenStreetMap (© תורמי OpenStreetMap, ‏ODbL) ודורשים אינטרנט.
-- ספריות פייתון נוספות (FastAPI, Pillow, NumPy ועוד) ו‑Leaflet נשארות תחת הרישיונות שלהן.
+- ספריות פייתון נוספות (FastAPI, Pillow, NumPy ועוד), Leaflet והגופנים נשארים תחת הרישיונות שלהם. הרשימה המלאה, כולל הצעת קוד מקור ל‑ffmpeg,
+  ב‑[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) (נוצרת בפקודה `python tools/gen_notices.py`).
 
 ## זרימת עבודה
 1. הגדרות → ודאו את מיקום הספרייה.

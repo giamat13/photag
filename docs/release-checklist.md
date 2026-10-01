@@ -8,7 +8,7 @@
 - **[בוצע] נבחר GPL‑3.0 (חינם, קוד פתוח).** `LICENSE` במאגר, סעיף «רישיון» ב‑README, עמוד רישיון במתקין (והקובץ מותקן ליד התוכנה), שורה בחלון «אודות», והערת רישיון בראש `photag.py`.
 - **[מצב] משקולות זיהוי הפנים (InsightFace `buffalo_l`) לשימוש לא‑מסחרי / מחקר בלבד.** מתאים לאפליקציה חינמית; ה‑README מציין זאת. אם בעתיד תהיה גרסה מסחרית — להחליף מודל. כדאי לאמת את נוסח הרישיון העדכני שלהם לפני פרסום.
 - **[מצב] ffmpeg (build GPL של `imageio-ffmpeg`) נארז באפליקציה** — תואם ל‑GPL‑3.0. עדיין נדרש: להזכיר אותו ב‑`THIRD_PARTY_NOTICES` עם קישור לקוד המקור (ה‑README כבר מקשר), ולוודא שהגרסה שנארזת אכן GPL (לא LGPL) לפי הרישיון שמופיע ב‑`imageio_ffmpeg`.
-- **[מומלץ מאוד] קובץ הודעות צד שלישי** (`THIRD_PARTY_NOTICES`): FastAPI, uvicorn, pywebview, Pillow, NumPy, SciPy, ONNX Runtime, InsightFace, ffmpeg, וגם הגופנים Heebo ו‑Frank Ruhl Libre (SIL OFL — צריך לצרף את נוסח הרישיון).
+- **[בוצע, לבדוק לפני שחרור] `THIRD_PARTY_NOTICES.md`** נוצר (`tools/gen_notices.py` מרענן את טבלת החבילות), מותקן עם התוכנה, ו‑`app/ui/fonts/OFL.txt` מצורף לגופנים. לאמת: שורות זכויות היוצרים של הגופנים, נוסח הרישיון של InsightFace, וגרסת ה‑ffmpeg שנארזת בבנייה (ה‑build של gyan.dev הוא GPLv3, אומת מתוך `ffmpeg -version`). FastAPI, uvicorn, pywebview, Pillow, NumPy, SciPy, ONNX Runtime, InsightFace, ffmpeg, וגם הגופנים Heebo ו‑Frank Ruhl Libre (SIL OFL — צריך לצרף את נוסח הרישיון).
 - **[מומלץ מאוד] שם ומיתוג:** האפליקציה משתמשת בשם "Lightroom Classic" רק בהקשר תיאורי (ייבוא `.lrcat`, "בהשראת"). לא להשתמש בלוגו/בשם של Adobe ולא לרמוז על שיוך. השם photag עצמו נקי.
 - **[מומלץ מאוד] פרטיות:** לתעד ב‑README שתיוג AI שולח תמונות ממוזערות לספק שהמשתמש בחר (ורק כשהוא מפעיל), ושכל השאר מקומי. HandBrake אינו מצורף (GPL) — המשתמש מתקין בנפרד, וזה בסדר.
 
