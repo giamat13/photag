@@ -37,7 +37,7 @@ def _read_pointer() -> dict:
 
 def _write_pointer(**updates) -> None:
     """Merge into the pointer file rather than overwrite it -> unrelated
-    settings (library_root, vision_model, ...) don't clobber each other."""
+    settings don't clobber each other."""
     data = _read_pointer()
     for k, v in updates.items():
         if v is None:
@@ -57,16 +57,6 @@ def set_library_root(path: str | os.PathLike) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     _write_pointer(library_root=str(root))
     return root
-
-
-def get_vision_model_override() -> str | None:
-    """User-chosen Ollama vision model for tagging, or None for auto (largest
-    installed model that fits available RAM/VRAM — see tagging._choose_model)."""
-    return _read_pointer().get("vision_model") or None
-
-
-def set_vision_model_override(name: str | None) -> None:
-    _write_pointer(vision_model=name or None)
 
 
 class Paths:
@@ -89,9 +79,5 @@ PATHS = Paths()
 # Face clustering: cosine distance, scipy average-linkage, cut at this height.
 FACE_CLUSTER_THRESHOLD = 0.38
 FACE_MODEL = "buffalo_l"
-# Ollama vision model for content tags (optional; skipped if Ollama is down).
-OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
-OLLAMA_VISION_MODEL = os.environ.get("OLLAMA_VISION_MODEL", "llava")
-
 # Photos sit in the trash this many days before being deleted for good.
 TRASH_RETENTION_DAYS = 60

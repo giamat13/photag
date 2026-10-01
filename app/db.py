@@ -77,6 +77,12 @@ CREATE TABLE IF NOT EXISTS photo_tags(
   PRIMARY KEY(photo_id, tag_id)
 );
 
+-- automatic tagging (autotag.py): CLIP embedding per photo (float16 x 512),
+-- re-computed when the file's sha changes; NULL emb = unreadable image
+CREATE TABLE IF NOT EXISTS clip_emb(photo_id INTEGER PRIMARY KEY, sha256 TEXT, emb BLOB);
+-- automatic keywords the user removed by hand -> never re-added
+CREATE TABLE IF NOT EXISTS autotag_rejected(photo_id INTEGER, tag TEXT, PRIMARY KEY(photo_id, tag));
+
 -- extra Takeout artifacts so nothing from the ZIP is lost
 CREATE TABLE IF NOT EXISTS memory_titles(title TEXT);
 CREATE TABLE IF NOT EXISTS shared_comments(
@@ -106,6 +112,11 @@ def init_db():
             con.execute(f"ALTER TABLE photos ADD COLUMN {col}")
         except sqlite3.OperationalError:
             pass  # ponytail: column already exists on upgraded DBs
+    # Ollama tagging was removed: drop the tags it produced (mostly echoed prompt
+    # examples like "תגית1"); automatic keywords now come from autotag.py.
+    if con.execute("SELECT 1 FROM photo_tags WHERE source LIKE 'ollama%' LIMIT 1").fetchone():
+        con.execute("DELETE FROM photo_tags WHERE source LIKE 'ollama%'")
+        con.execute("DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM photo_tags)")
     con.commit()
     return con
 

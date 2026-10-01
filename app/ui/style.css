@@ -441,7 +441,7 @@ body.hide-film .edge-b::after{border-top:0;border-bottom:5px solid #5a5a5a}
 
 /* ---------- modals ---------- */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:80}
-.modal-box{background:#333;border:1px solid #111;box-shadow:0 20px 60px rgba(0,0,0,.6);min-width:420px;max-width:92vw;max-height:88vh;overflow:auto;border-radius:2px}
+.modal-box{background:#333;border:1px solid #111;box-shadow:0 20px 60px rgba(0,0,0,.6);min-width:420px;max-width:min(760px,92vw);max-height:88vh;overflow:auto;border-radius:2px}
 .modal-box h3{margin:0;padding:10px 16px;font-size:13px;font-weight:400;color:var(--t1);background:#2a2a2a;border-bottom:1px solid #1c1c1c}
 .modal-box .mb{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .modal-box .mb p{margin:0;color:var(--t3);line-height:1.6}

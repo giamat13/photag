@@ -1,9 +1,9 @@
 # PyInstaller spec -> single Windows EXE.  Build:  pyinstaller photag.spec
 # Output: dist/photag.exe
-# Note: buffalo_l (~300MB) and Ollama models download at runtime, not bundled.
+# Note: buffalo_l (~300MB) and the CLIP tagging model (~600MB) download at runtime, not bundled.
 from PyInstaller.utils.hooks import collect_all, collect_data_files
 
-datas = [("app/ui", "app/ui")]
+datas = [("app/ui", "app/ui"), ("app/label_stats.json", "app")]
 binaries = []
 hiddenimports = ["uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto",
                  "uvicorn.protocols.websockets.auto", "uvicorn.lifespan.on"]

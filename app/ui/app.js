@@ -100,12 +100,12 @@ async function setSource(src, {push=true, keepSel=false}={}){
   if(S.view==='people') setView('grid');
 }
 async function fetchSource(){
-  const src = S.src, q = S.F.qf==='any' ? S.F.q : '';
+  const src = S.src, q = S.F.qf!=='name' ? S.F.q : '';
   let rows;
   if(src.kind==='all' && !q) rows = S.all;
   else {
-    const p = new URLSearchParams({limit:10000000, ...srcParams(src)}); if(q) p.set('q', q);
-    rows = (await api('/api/photos?'+p)).map(r=>S.byId.get(r.id) || r);
+    const p = new URLSearchParams({limit:10000000, ...srcParams(src)}); if(q) p.set(S.F.qf==='smart' ? 'smart' : 'q', q);
+    rows = (await api('/api/photos?'+p)).map(r=>{ const o=S.byId.get(r.id) || r; o.score = r.score; return o; });
     if(S.src!==src) return;   // clicked elsewhere meanwhile
   }
   if(src.kind==='smart'){ const f = SMART.find(x=>x[0]===src.id); rows = rows.filter(f[2]); }
@@ -154,7 +154,8 @@ function applyFilter({keepScroll=true}={}){
     rows = rows.filter(p=>passAttr(p) && passMeta(p));
   }
   const cmp = SORTS[S.sort][1];
-  rows = rows.slice().sort(S.asc ? cmp : (a,b)=>cmp(b,a));
+  rows = S.F.q && S.F.qf==='smart' ? rows.slice().sort((a,b)=>(b.score||0)-(a.score||0))   // best matches first
+       : rows.slice().sort(S.asc ? cmp : (a,b)=>cmp(b,a));
   S.list = rows;
   S.idx = new Map(rows.map((p,i)=>[p.id,i]));
   for(const id of [...S.sel]) if(!S.idx.has(id)) S.sel.delete(id);
@@ -464,8 +465,8 @@ function renderFilterBar(){
   if(S.fb==='meta') renderMetaBrowser();
   $('#fb-state').innerHTML = filterActive() ? (S.F.on ? '<b>מסנן פעיל</b>' : 'המסנן כבוי') : '';
 }
-$('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf==='any') fetchSource(); else applyFilter(); }, 250));
-$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; if(S.F.q) fetchSource(); };
+$('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
+$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; $('#ft-q').placeholder = S.F.qf==='smart' ? 'kids playing on the beach' : 'חיפוש'; if(S.F.q) fetchSource(); };
 function renderMetaBrowser(){
   const base = S.base;
   $('#fb-meta').innerHTML = META_COLS.map(([k,title,fn], ci)=>{
@@ -806,21 +807,22 @@ const renderRight = debounce(async ()=>{
   if(S.mod==='develop') return;
   if(S.view!=='loupe') histoFromThumb();
   const ids=targets(), p=actPhoto();
-  const [detail, kws] = await Promise.all([
+  const [detail, kws, sug] = await Promise.all([
     p ? api('/api/photo/'+p.id) : null,
     ids.length ? send('POST','/api/keywords',{ids}) : [],
+    p && ids.length===1 ? api(`/api/photo/${p.id}/suggest`).catch(()=>[]) : [],
   ]);
   if(p && actPhoto()?.id!==p.id) return;
   DETAIL=detail;
-  renderKeywording(ids, kws); renderKwList(kws, ids.length); renderMeta(ids, detail);
+  renderKeywording(ids, kws, sug); renderKwList(kws, ids.length); renderMeta(ids, detail);
 }, 90);
 
-function renderKeywording(ids, kws){
+function renderKeywording(ids, kws, content=[]){
   const el=$('#p-kwing');
   if(!ids.length){ el.innerHTML='<div class="hint">בחרו תמונות כדי לתייג אותן.</div>'; return; }
   const txt = kws.map(k=>k.name + (k.n<ids.length?' *':'')).join(', ');
   const top = S.tags.slice(0,30).map(t=>t.name);
-  const sug = [...new Set([...S.recentKw, ...top])].filter(n=>!kws.some(k=>k.name===n && k.n===ids.length)).slice(0,9);
+  const sug = [...new Set([...content, ...S.recentKw, ...top])].filter(n=>!kws.some(k=>k.name===n && k.n===ids.length)).slice(0,9);
   el.innerHTML = `<div class="lbl-sub">מילות מפתח${ids.length>1?` · ${num(ids.length)} תמונות (* = רק בחלק מהן)`:''}</div>
     <label class="kwbox"><textarea id="kw-text" spellcheck="false" placeholder="הקלידו מילות מפתח מופרדות בפסיקים">${esc(txt)}</textarea></label>
     <label class="kwadd"><input id="kw-add" placeholder="לחצו כאן כדי להוסיף מילות מפתח"></label>
@@ -1192,23 +1194,19 @@ async function catalogSettings(){
   $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); closeModal(); toast('הקטלוג הוחלף'); await reloadAll(); };
 }
 async function preferences(){
-  modal(`<h3>העדפות · זיהוי ותיוג</h3><div class="mb"><p>טוען…</p></div>`);
-  const [s, vm] = await Promise.all([api('/api/status'), api('/api/vision-models')]);
-  const ol = !s.ollama ? ['stat-off','Ollama לא זמין — התקינו אותו כדי לקבל תגיות אוטומטיות.']
-    : !s.ollama_vision_model ? ['stat-warn','Ollama רץ, אבל אין מודל ראייה. הריצו: <code>ollama pull llava</code>']
-    : !s.ollama_vision_model_fits ? ['stat-warn',`המודל <b>${esc(s.ollama_vision_model)}</b> גדול מהזיכרון הפנוי.`]
-    : ['stat-ok',`מחובר · מודל <b>${esc(s.ollama_vision_model)}</b>`];
+  const s=await api('/api/status'), at=s.autotag;
+  const tagState = !at.model_ready ? ['stat-off','המודל יורד אוטומטית (כ‑600MB, פעם אחת) בהרצה הראשונה.']
+    : at.pending ? ['stat-warn',`${num(at.pending)} תמונות ממתינות לתיוג`] : ['stat-ok',`מעודכן · ${num(at.embedded)} תמונות נותחו`];
   modal(`<h3>העדפות · זיהוי ותיוג</h3><div class="mb">
-    <p>הכול רץ מקומית במחשב — שום תמונה לא נשלחת לשירות חיצוני.</p>
+    <p>הכול רץ מקומית במחשב — שום תמונה לא נשלחת לשירות חיצוני, ואין צורך להתקין שום דבר.</p>
     <div class="pathrow"><span>זיהוי פנים</span><span>InsightFace · ${num(s.counts.faces)} פרצופים זוהו עד כה</span></div>
-    <div class="pathrow"><span>תיוג חכם</span><span class="${ol[0]}">${ol[1]}</span></div>
-    ${vm.models.length?`<label class="fld"><span>מודל תיוג</span><select id="vision-model"><option value="">אוטומטי (הגדול ביותר שנכנס בזיכרון)</option>
-      ${vm.models.map(m=>`<option value="${esc(m.name)}" ${vm.override===m.name?'selected':''}>${esc(m.name)} · ${(m.size/1024**3).toFixed(1)}GB</option>`).join('')}</select></label>`:''}
-  </div><div class="mf">
-    ${s.ollama_vision_model && !s.ollama_vision_model_fits?`<button id="pf-small">התקן ${esc(s.ollama_recommended_small_model)}</button>`:''}
-    <button onclick="closeModal()">סגור</button>${vm.models.length?'<button class="primary" id="pf-save">שמור</button>':''}</div>`);
-  $('#pf-save') && ($('#pf-save').onclick=async()=>{ await send('POST','/api/settings/vision-model',{model:$('#vision-model').value||null}); closeModal(); toast('נשמר'); });
-  $('#pf-small') && ($('#pf-small').onclick=()=>{ closeModal(); runJob('/api/pull-model','pull_model','התקנת מודל',{model:s.ollama_recommended_small_model}); });
+    <div class="pathrow"><span>מילות מפתח אוטומטיות</span><span class="${tagState[0]}">${tagState[1]}</span></div>
+    <p>מילות המפתח (באנגלית) נבחרות מתוך אוצר מילים קבוע לפי תוכן התמונה (CLIP), ומקומות לפי GPS. התיוג רץ לבד אחרי כל ייבוא.
+      מילת מפתח אוטומטית שמחקתם לא תחזור. חיפוש חכם: מסנן ספרייה ← טקסט ← „חיפוש חכם לפי תוכן".</p>
+  </div><div class="mf"><button onclick="closeModal()">סגור</button>
+    <button id="pf-faces">זהה פנים</button><button class="primary" id="pf-tag">תייג עכשיו</button></div>`);
+  $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces','זיהוי פנים'); };
+  $('#pf-tag').onclick=()=>{ closeModal(); runJob('/api/autotag','tags','תיוג אוטומטי'); };
 }
 async function memories(){
   const m=await api('/api/memories'), t=m.titles||[], c=m.comments||[];
@@ -1365,6 +1363,7 @@ async function pollJob(name, label){
     if(['import','faces','tags'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
+      if(name==='import' && p.state==='done') setTimeout(()=>pollJob('tags','תיוג אוטומטי'), 600);
       if(S.view==='people') renderPeople();
     }
     return;
@@ -1399,7 +1398,7 @@ const MENUS = [
     ['הצג סרגל סינון', '\\', ()=>{ $('#filterbar').classList.toggle('hidden'); }, null, ()=>!$('#filterbar').classList.contains('hidden')],
     sep,
     ['זיהוי פנים', '', ()=>runJob('/api/faces','faces','זיהוי פנים')],
-    ['תיוג חכם (Ollama)', '', ()=>runJob('/api/tags','tags','תיוג חכם')],
+    ['תיוג אוטומטי', '', ()=>runJob('/api/autotag','tags','תיוג אוטומטי')],
     sep,
     ['זיכרונות ותגובות מ‑Google...', '', memories],
   ]],
@@ -1563,7 +1562,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setView('grid');
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
-  [['import','ייבוא'],['faces','זיהוי פנים'],['tags','תיוג חכם'],['pull_model','התקנת מודל'],['export','ייצוא']].forEach(async ([n,l])=>{
+  [['import','ייבוא'],['faces','זיהוי פנים'],['tags','תיוג אוטומטי'],['export','ייצוא']].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}
   });
 })();
