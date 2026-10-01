@@ -197,6 +197,14 @@ def start_import(body: ImportIn):
     return {"ok": True}
 
 
+@app.post("/api/import/cancel")
+def cancel_import():
+    p = JOBS.get("import")
+    if p:
+        p.cancel = True
+    return {"ok": True}
+
+
 # ---- updates from GitHub releases ------------------------------------------------
 class SkipIn(BaseModel):
     version: str

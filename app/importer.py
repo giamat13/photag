@@ -152,6 +152,30 @@ class Progress:
                 "result": self.result, "extra": self.extra}
 
 
+class ImportStats:
+    """Live numbers for the import screen: what was added, skipped, failed or missing, how much data, the current file."""
+
+    def __init__(self, progress, source: str, bytes_total: int = 0):
+        self.p = progress
+        self.d = {"source": source, "t0": time.time(), "added": 0, "duplicates": 0, "failed": 0, "missing": 0,
+                  "bytes": 0, "bytes_total": bytes_total, "album": "", "current": "", "failures": []}
+        self.publish()
+
+    def publish(self):
+        self.p.extra = {**self.d, "failures": list(self.d["failures"])}
+
+    def item(self, status: str, name: str = "", nbytes: int = 0, album: str | None = None):
+        key = {"added": "added", "duplicate": "duplicates", "failed": "failed", "missing": "missing"}[status]
+        self.d[key] += 1
+        self.d["bytes"] += nbytes
+        self.d["current"] = name
+        if album is not None:
+            self.d["album"] = album
+        if status in ("failed", "missing") and len(self.d["failures"]) < 30:
+            self.d["failures"].append(name)
+        self.publish()
+
+
 _PART_RE = re.compile(r"^(?P<stem>.+)-(?P<n>\d{3,})\.zip$", re.I)
 
 
@@ -183,7 +207,11 @@ def run_import(zip_paths, progress: Progress):
     progress.state = "scanning"; progress.say("Reading the ZIP structure…")
     try:
         _do_import(zip_paths, con, progress)
-        progress.state = "done"; progress.say("Import complete")
+        progress.state = "done"
+        if progress.cancel:
+            progress.say_parts(("Import cancelled", {}), ("{n} items imported", {"n": progress.extra.get("added", 0)}))
+        else:
+            progress.say("Import complete")
     except Exception as e:  # surface to UI instead of dying silently
         progress.fail("Import failed: {error}", error=str(e))
         raise
@@ -246,10 +274,14 @@ def _import_zips(zfs, con, progress):
             pass
 
     total_media = sum(len(v) for f in folders.values() for v in f["media"].values())
+    total_bytes = sum(zf.getinfo(n).file_size for f in folders.values() for v in f["media"].values() for zf, n in v)
     progress.total = total_media
     progress.state = "importing"
+    stats = ImportStats(progress, "takeout", total_bytes)
 
     for album, f in folders.items():
+        if progress.cancel:
+            break
         album_id = _upsert_album(con, f["album_meta"], album)
         pairs = match_sidecars(list(f["media"]), list(f["json"]))
         for base, items in f["media"].items():
@@ -261,11 +293,14 @@ def _import_zips(zfs, con, progress):
                 except Exception:
                     meta = {}
             for zf, entry in items:                       # the same name in two parts: both are looked at (identical files dedupe)
+                if progress.cancel:
+                    break
                 progress.done += 1
                 if progress.done % 25 == 0:
                     progress.say("{album} — {done}/{total}", album=album, done=progress.done, total=progress.total)
                     con.commit()
-                _ingest_media(con, zf, entry, base, album_id, meta)
+                status, nbytes = _ingest_media(con, zf, entry, base, album_id, meta)
+                stats.item(status, base, nbytes, album)
     con.commit()
 
 
@@ -309,13 +344,15 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
         sha = h.hexdigest()
     except Exception:
         if tmp.exists(): tmp.unlink()
-        return
+        return "failed", 0
 
     row = con.execute("SELECT id FROM photos WHERE sha256=?", (sha,)).fetchone()
     if row:
         photo_id = row["id"]
+        size, status = tmp.stat().st_size, "duplicate"
         tmp.unlink(missing_ok=True)
     else:
+        status = "added"
         sub = PATHS.media / (str(year) if year else "unknown")
         sub.mkdir(parents=True, exist_ok=True)
         dest = _unique_dest(sub / _safe_component(base))
@@ -332,6 +369,7 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
              meta.get("description") or None, 1 if meta.get("favorited") else 0,
              1 if meta.get("trashed") else 0, meta.get("url"), int(time.time()))).lastrowid
         images.make_thumb(dest, sha)
+        size = dest.stat().st_size
 
     con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (photo_id, album_id))
     for p in (meta.get("people") or []):
@@ -342,6 +380,7 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
         pid = con.execute("SELECT id FROM people WHERE name=?", (nm,)).fetchone()["id"]
         con.execute("INSERT OR IGNORE INTO photo_people(photo_id,person_id,source) VALUES(?,?, 'takeout')",
                     (photo_id, pid))
+    return status, size
 
 
 # ---------- import from a folder / memory card (Lightroom "Copy") ----------
@@ -409,17 +448,33 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
         con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (k,))
         tag_ids.append(con.execute("SELECT id FROM tags WHERE name=?", (k,)).fetchone()["id"])
     added = dupes = 0
+    total_bytes = 0
+    for path in paths:
+        try:
+            total_bytes += Path(path).stat().st_size
+        except OSError:
+            pass
+    stats = ImportStats(progress, "folder", total_bytes)
     try:
         for path in paths:
+            if progress.cancel:
+                break
             progress.done += 1
             if progress.done % 10 == 0:
                 progress.say("{done}/{total}", done=progress.done, total=progress.total)
                 con.commit()
             src = Path(path)
             if not src.is_file():
+                stats.item("missing", src.name)
                 continue
-            photo_id, new = _ingest_file(con, src)
+            try:
+                size = src.stat().st_size
+                photo_id, new = _ingest_file(con, src)
+            except Exception:                          # one unreadable file never stops the rest
+                stats.item("failed", src.name)
+                continue
             added += new; dupes += not new
+            stats.item("added" if new else "duplicate", src.name, size)
             if album_id:
                 con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (photo_id, album_id))
             for tid in tag_ids:
@@ -427,8 +482,9 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
                             (photo_id, tid))
         con.commit()
         progress.state = "done"
-        progress.say_parts(("{n} items imported", {"n": added}),
-                           *([("{n} already in catalog", {"n": dupes})] if dupes else []))
+        progress.say_parts(*([("Import cancelled", {})] if progress.cancel else []), ("{n} items imported", {"n": added}),
+                           *([("{n} already in catalog", {"n": dupes})] if dupes else []),
+                           *([("{n} files could not be imported", {"n": stats.d["failed"]})] if stats.d["failed"] else []))
     except Exception as e:
         con.commit()
         progress.fail("Import failed: {error}", error=str(e))
@@ -523,7 +579,10 @@ def run_lrcat_import(path: str, progress: Progress):
 
         progress.state = "importing"; progress.total = len(imgs); progress.done = 0
         added = dupes = missing = 0
+        stats = ImportStats(progress, "lightroom", sum(Path(r["path"]).stat().st_size for r in imgs if Path(r["path"]).is_file()))
         for r in imgs:
+            if progress.cancel:
+                break
             progress.done += 1
             if progress.done % 10 == 0:
                 progress.say("Lightroom — {done}/{total}", done=progress.done, total=progress.total)
@@ -531,10 +590,17 @@ def run_lrcat_import(path: str, progress: Progress):
             src = Path(r["path"])
             if not src.is_file():
                 missing += 1
+                stats.item("missing", src.name)
                 continue
             lat, lng = gps.get(r["id"], (None, None))
-            pid, new = _ingest_file(con, src, taken=_lr_time(r["captureTime"]), lat=lat, lng=lng)
+            try:
+                size = src.stat().st_size
+                pid, new = _ingest_file(con, src, taken=_lr_time(r["captureTime"]), lat=lat, lng=lng)
+            except Exception:
+                stats.item("failed", src.name)
+                continue
             added += new; dupes += not new
+            stats.item("added" if new else "duplicate", src.name, size)
             pick = int(r["pick"] or 0)
             fields = {"rating": int(r["rating"] or 0), "flag": 1 if pick > 0 else -1 if pick < 0 else 0,
                       "label": LR_LABELS.get((r["colorLabels"] or "").strip().lower()),
@@ -560,7 +626,7 @@ def run_lrcat_import(path: str, progress: Progress):
                 con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (pid, aid))
         con.commit()
         progress.state = "done"
-        progress.say_parts(("{n} items imported from Lightroom", {"n": added}),
+        progress.say_parts(*([("Import cancelled", {})] if progress.cancel else []), ("{n} items imported from Lightroom", {"n": added}),
                            *([("{n} already in catalog", {"n": dupes})] if dupes else []),
                            *([("{n} files missing from disk", {"n": missing})] if missing else []))
     except Exception as e:

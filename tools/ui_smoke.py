@@ -125,6 +125,23 @@ try:
         check("sizes are shown in GB / TB, not 19000 MB", ev("[fsize(19e9), fsize(5e11), fsize(2e12), fsize(5e8), fsize(2e4)]") == ["17.7 GB", "465.7 GB", "1.82 TB", "476.8 MB", "20 KB"] and "GB" in zt, ev("[fsize(19e9), fsize(5e11), fsize(2e12)]"))
         # the file dialog says C:/x/a.zip and the server C:\x\a.zip: they are the SAME file (a part must not be listed twice)
         check("a ZIP chosen in the dialog and the same one found by the server are one entry", ev(r"zkey('C:/Users/me/takeout-1-001.zip') === zkey('c:\\users\\me\\Takeout-1-001.ZIP')"))
+        # the job screen: one screen for every background job (import has the most detail)
+        ev("(()=>{ closeModal(); const x = {source:'takeout', t0: Date.now()/1000 - 20, added: 120, duplicates: 30, failed: 1, missing: 0, bytes: 3e9, bytes_total: 9e9, album: 'Trip', current: 'IMG_1.jpg', failures: ['bad.jpg']};"
+           " JOBSCR.last = {state:'importing', done:150, total:500, msg:'', extra:x}; JOBSCR.t0 = {}; JOBSCR.fin = {}; jobScreenOpen('import', 'Import'); })()")
+        pg.wait_for_timeout(400)
+        jt = ev("document.querySelector('#modal-box').innerText")
+        check("import job screen: files, data, speed, time left, added / already in catalog / failed, current file, failures",
+              all(k in jt for k in ("150 of 500", "GB", "files/s", "MB/s", "Estimated time left", "Added", "Already in catalog", "Failed", "IMG_1.jpg", "bad.jpg", "Cancel")) and not HEB.search(jt), jt[:90].replace(chr(10), " "))
+        ev("document.querySelector('#ims-bg').click()")
+        ev("(()=>{ JOBSCR.last = {state:'importing', done:40, total:200, msg:'', extra:{}}; JOBSCR.t0 = {}; JOBSCR.fin = {}; jobScreenOpen('faces', 'Face Detection'); })()")
+        pg.wait_for_timeout(400)
+        jt = ev("document.querySelector('#modal-box').innerText")
+        check("a generic job (face detection): progress, speed in photos/s, time elapsed and left; no Cancel it does not have",
+              all(k in jt for k in ("40 of 200", "photos/s", "Time elapsed", "Estimated time left")) and "Cancel" not in jt and "Added" not in jt, jt[:90].replace(chr(10), " "))
+        ev("(()=>{ JOBSCR.last = {state:'done', done:200, total:200, msg:'Done', parts:null, extra:{}}; jobScreenUpdate('faces', JOBSCR.last); })()")
+        pg.wait_for_timeout(300)
+        check("when the job is finished the screen shows the result and a Close button", ev("!!document.querySelector('#ims-close')") and "Total time" in ev("document.querySelector('#modal-box').innerText"))
+        ev("closeModal(); JOBSCR.open = false")
         # a part added by mistake can be removed again; "Remove all" empties the list; the missing-part warning follows
         pg.click('[data-zrm="1"]')
         pg.wait_for_timeout(300)

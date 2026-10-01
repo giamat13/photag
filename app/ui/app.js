@@ -1901,12 +1901,85 @@ async function libraryMoveNotice(){
   return true;
 }
 
+// ---------- job screen: click the progress line in the corner for numbers, speed and time left (import has the most detail) ----------
+const JOBSCR = {open: false, name: '', label: '', last: null, samples: [], t0: {}, fin: {}};
+const JOB_CANCEL = {import: '/api/import/cancel', aitag: '/api/aitag/cancel', compress: '/api/compress/cancel'};
+const JOB_UNIT = {import: 'files', compress: 'files', export: 'files', faces: 'photos', aitag: 'photos', backup: 'bytes', update: 'bytes'};
+function jobScreenOpen(name, label){
+  JOBSCR.open = true; JOBSCR.name = name; JOBSCR.label = label; JOBSCR.samples = [];
+  modal(`<h3 id="ims-title">${esc(label)}</h3><div class="mb ims">
+    <div class="cpg-file" id="ims-cur"></div>
+    <div class="cpg-bar"><i id="ims-fill"></i><span id="ims-pct">0%</span></div>
+    <div class="ims-grid" id="ims-grid"></div>
+    <svg class="ims-spark" id="ims-spark" viewBox="0 0 300 44" preserveAspectRatio="none"></svg>
+    <div class="hint" id="ims-fail" style="padding:0"></div>
+  </div><div class="mf"><span class="spacer"></span><button id="ims-bg">${t('Continue in background')}</button>${JOB_CANCEL[name] ? `<button id="ims-cancel" class="danger">${t('Cancel')}</button>` : ''}</div>`);
+  $('#ims-bg').onclick = ()=>{ JOBSCR.open = false; closeModal(); };
+  if($('#ims-cancel')) $('#ims-cancel').onclick = async ()=>{ $('#ims-cancel').disabled = true; $('#ims-cancel').textContent = t('Cancelling…'); await send('POST', JOB_CANCEL[name]); };
+  jobScreenUpdate(name, JOBSCR.last);
+}
+function jobScreenUpdate(name, p){
+  if(p && name === JOBSCR.name) JOBSCR.last = p;
+  if(!JOBSCR.open || name !== JOBSCR.name) return;
+  p = JOBSCR.last;
+  if(!document.getElementById('ims-fill')){ JOBSCR.open = false; return; }             // another dialog took the place
+  if(!p) return;
+  const x = p.extra || {}, now = Date.now(), finished = ['done', 'error'].includes(p.state), isImport = name === 'import';
+  if(!JOBSCR.t0[name] || (JOBSCR.fin[name] && !finished)){ JOBSCR.t0[name] = now; delete JOBSCR.fin[name]; }          // a new run starts the clock again
+  if(finished && !JOBSCR.fin[name]) JOBSCR.fin[name] = now;
+  const t0 = isImport && x.t0 ? x.t0 * 1000 : JOBSCR.t0[name], el = Math.max(0.001, ((JOBSCR.fin[name] || now) - t0) / 1000);
+  const total = p.total || 0, done = p.done || 0, bytes = isImport ? (x.bytes || 0) : (JOB_UNIT[name] === 'bytes' ? done : 0), btotal = isImport ? (x.bytes_total || 0) : (JOB_UNIT[name] === 'bytes' ? total : 0);
+  if(!finished && total) JOBSCR.samples.push([now, bytes, done]);
+  JOBSCR.samples = JOBSCR.samples.slice(-90);
+  // speed over the last ~10 seconds (falls back to the average since the start)
+  const recent = JOBSCR.samples.filter(s => now - s[0] <= 10000), a = recent[0], b = recent[recent.length - 1];
+  const win = a && b && b[0] > a[0] ? (b[0] - a[0]) / 1000 : 0;
+  const rateB = win ? (b[1] - a[1]) / win : bytes / el, rateF = win ? (b[2] - a[2]) / win : done / el;
+  const avgB = bytes / el, avgF = done / el;
+  const pct = total ? Math.min(100, done / total * 100) : 0;
+  const left = !finished && pct > 1 ? (btotal && rateB > 0 ? (btotal - bytes) / rateB : (rateF > 0 ? (total - done) / rateF : null)) : null;
+  const src = {takeout: t('Import from Google Takeout'), folder: t('Import from a folder or memory card'), lightroom: t('Import from Lightroom')}[x.source] || JOBSCR.label;
+  const cancelled = finished && p.msg && /cancel/i.test(p.msg);
+  $('#ims-title').textContent = p.state === 'error' ? `${JOBSCR.label}: ${t('Failed')}` : finished ? `${JOBSCR.label}: ${cancelled ? t('Cancelled') : t('Done')}` : (isImport ? src : JOBSCR.label);
+  $('#ims-fill').style.width = (finished && p.state !== 'error' ? 100 : pct).toFixed(1) + '%';
+  $('#ims-pct').textContent = !total && !finished ? '…' : (finished ? '' : Math.floor(pct) + '%');
+  const msg = p.error_key ? t(p.error_key, p.vars) : p.parts ? p.parts.map(q => t(q.key, q.vars)).join(' · ') : p.key ? t(p.key, p.vars) : (p.msg || '');
+  $('#ims-cur').innerHTML = finished || !isImport ? esc(msg) : `${x.album ? `<bdi>${esc(x.album)}</bdi> · ` : ''}<bdi>${esc(x.current || msg)}</bdi>`;
+  const unit = {files: t('files/s'), photos: t('photos/s'), bytes: ''}[JOB_UNIT[name] || 'files'];
+  const mbs = v => ltr((v / 1048576).toFixed(v >= 10485760 ? 1 : 2) + ' MB/s');
+  const speed = fin => JOB_UNIT[name] === 'bytes' ? mbs(fin ? avgB : rateB) : ltr((fin ? avgF : rateF).toFixed(1) + ' ' + unit) + (bytes ? ' · ' + mbs(fin ? avgB : rateB) : '');
+  const cards = [];
+  if(total && JOB_UNIT[name] !== 'bytes') cards.push([t('Progress'), t('{0} of {1}', [num(done), num(total)]), '']);
+  else cards.push([t('Progress'), finished ? '100%' : Math.floor(pct) + '%', '']);
+  if(isImport || btotal) cards.push([t('Data'), btotal ? `${fsize(bytes)} / ${fsize(btotal)}` : fsize(bytes), '']);
+  cards.push([t('Speed'), finished ? t('Average: {0}', [speed(true)]) : speed(false), '']);
+  cards.push([t('Time elapsed'), fmtDur(el), '']);
+  cards.push([finished ? t('Total time') : t('Estimated time left'), finished ? fmtDur(el) : left == null ? '…' : '~' + fmtDur(left), '']);
+  if(isImport){
+    cards.push([t('Added'), num(x.added || 0), 'ok']);
+    cards.push([t('Already in catalog'), num(x.duplicates || 0), '']);
+    cards.push([t('Failed'), num((x.failed || 0) + (x.missing || 0)), (x.failed || 0) + (x.missing || 0) ? 'bad' : '']);
+  }
+  $('#ims-grid').innerHTML = cards.map(([k, v, c]) => `<div class="ims-card ${c}"><span>${k}</span><b>${v}</b></div>`).join('');
+  // speed over time
+  const pts = JOBSCR.samples.map((s, i, arr) => i ? Math.max(0, (s[1] ? s[1] - arr[i - 1][1] : s[2] - arr[i - 1][2]) / Math.max(0.2, (s[0] - arr[i - 1][0]) / 1000)) : 0).slice(1);
+  const mx = Math.max(1, ...pts);
+  $('#ims-spark').innerHTML = pts.length > 1 ? `<polyline fill="none" stroke="var(--blue)" stroke-width="1.5" vector-effect="non-scaling-stroke" points="${pts.map((v, i) => `${(i / (pts.length - 1) * 300).toFixed(1)},${(42 - v / mx * 40).toFixed(1)}`).join(' ')}"/>` : '';
+  const fl = x.failures || [];
+  $('#ims-fail').innerHTML = fl.length ? `${t('Files that could not be imported')}: ${fl.slice(0, 6).map(n => `<bdi>${esc(n)}</bdi>`).join(', ')}${fl.length > 6 ? ' …' : ''}` : '';
+  if(finished && !document.getElementById('ims-close')){
+    $('.mf').innerHTML = `<span class="spacer"></span>${isImport && x.added ? `<button id="ims-show">${t('Show the imported photos')}</button>` : ''}<button class="primary" id="ims-close">${t('Close')}</button>`;
+    $('#ims-close').onclick = ()=>{ JOBSCR.open = false; closeModal(); };
+    if($('#ims-show')) $('#ims-show').onclick = ()=>{ JOBSCR.open = false; closeModal(); setSource(srcFromKey('prev')); };
+  }
+}
+
 // ---------- compression progress screen: percent, elapsed / remaining time, steps ----------
 const CPG = {alive: false};
 const fmtDur = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
   return ltr((h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0')); };
-function compressProgressOpen(items){
-  Object.assign(CPG, {alive: true, t0: Date.now(), n: items.length, items, ts: {}, f: 0});
+function compressProgressOpen(items, reopen){
+  Object.assign(CPG, {alive: true, n: items.length, items}, reopen && CPG.t0 ? {} : {t0: Date.now(), ts: {}, f: 0});
   modal(`<h3>${t('Compressing…')}</h3><div class="mb cpg">
     <div class="cpg-file" id="cpg-file"><bdi>${esc(items[0].filename)}</bdi></div>
     <div class="cpg-bar"><i id="cpg-fill"></i><span id="cpg-pct">0%</span></div>
@@ -2264,6 +2337,7 @@ async function runJob(url, name, label, body){ await send('POST', url, body); po
 async function pollJob(name, label){
   let p; try{ p=await api('/api/job/'+name); }catch{ return; }
   if(name==='compress') compressProgressUpdate(p);
+  jobScreenUpdate(name, p);
   const act=$('#activity'), bar=$('.act-bar');
   act.classList.remove('hidden');
   const pct = p.total ? Math.round(100*p.done/p.total) : null;
@@ -2271,7 +2345,7 @@ async function pollJob(name, label){
   bar.classList.toggle('indet', pct==null); $('#act-fill').style.width = (pct??0)+'%';
   const msg = p.parts ? p.parts.map(x=>t(x.key, x.vars)).join(' · ') : p.key ? t(p.key, p.vars) : (p.msg || p.state);
   act.title = `${label}: ${msg}`;
-  act.onclick = ()=>toast(`<b>${label}</b><br>${esc(msg)}${p.total?` (${num(p.done)}/${num(p.total)})`:''}`);
+  act.onclick = ()=>{ if(name==='compress' && CPG.items && CPG.items.length) compressProgressOpen(CPG.items, true); else jobScreenOpen(name, label); };
   if(['done','error','idle'].includes(p.state)){
     act.classList.add('hidden');
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
