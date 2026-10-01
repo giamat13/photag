@@ -1,5 +1,6 @@
 """FastAPI backend: catalog queries, media/thumbnail serving, metadata &
 image editing, and background jobs (import / faces)."""
+import os
 import threading
 import time
 from pathlib import Path
@@ -9,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, config
+from . import db, images, importer, faces, aitag, compress, config
 from .config import PATHS
 
 app = FastAPI(title="photag")
@@ -40,7 +41,7 @@ def _start_trash_purge():
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting"):
+        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing", "encoding", "verifying", "replacing"):
             raise err(409, "המשימה כבר רצה")
         prog = importer.Progress()
         prog.state = "starting"   # not "idle": a poll right after the start must not read the job as finished
@@ -123,6 +124,65 @@ def start_import(body: ImportIn):
         raise err(404, "קובץ ה-ZIP לא נמצא")
     _start("import", importer.run_import, body.zip_path)
     return {"ok": True}
+
+
+# ---- video compression (HandBrake) -------------------------------------------
+class CompressIn(BaseModel):
+    options: dict = {}
+
+class HandbrakePathIn(BaseModel):
+    path: str = ""
+
+
+def _open_url(url: str):
+    """Open a fixed, known URL in the default browser (PHOTAG_NO_OPEN=1 skips it, for tests)."""
+    if not os.environ.get("PHOTAG_NO_OPEN"):
+        import webbrowser
+        webbrowser.open(url)
+
+
+@app.get("/api/handbrake")
+def handbrake_status():
+    return compress.status()
+
+
+@app.post("/api/handbrake/open-page")
+def handbrake_open_page():
+    _open_url(compress.HANDBRAKE_PAGE)
+    return {"ok": True, "url": compress.HANDBRAKE_PAGE}
+
+
+@app.post("/api/handbrake/path")
+def handbrake_set_path(body: HandbrakePathIn):
+    p = body.path.strip().strip('"')
+    if p and not Path(p).is_file():
+        raise err(404, "הקובץ לא נמצא")
+    config.set_handbrake_path(p or None)
+    return compress.status()
+
+
+@app.post("/api/photo/{pid}/compress")
+def start_compress(pid: int, body: CompressIn):
+    _start("compress", compress.run_compress, pid, body.options)
+    return {"ok": True}
+
+
+@app.post("/api/compress/cancel")
+def cancel_compress():
+    p = JOBS.get("compress")
+    if p:
+        p.cancel = True
+    return {"ok": True}
+
+
+@app.post("/api/photo/{pid}/compress/restore")
+def compress_restore(pid: int):
+    """Swap back to the version saved before the last compression (and the compressed one becomes the backup)."""
+    try:
+        compress.restore_previous(pid)
+    except (LookupError, FileNotFoundError):
+        raise err(404, "אין גרסה קודמת לשחזור")
+    return photo(pid)
 
 
 # ---- AI tagging (OpenAI / Claude / Gemini / OpenRouter / any OpenAI-compatible API) ----
@@ -320,6 +380,7 @@ def photo(pid: int):
         "OR pe.id IN (SELECT person_id FROM faces WHERE photo_id=? AND person_id IS NOT NULL)", (pid, pid))]
     d["tags"] = [dict(x) for x in con.execute(
         "SELECT t.id,t.name FROM tags t JOIN photo_tags pt ON pt.tag_id=t.id WHERE pt.photo_id=?", (pid,))]
+    d["video_backups"] = con.execute("SELECT COUNT(*) FROM video_backups WHERE photo_id=?", (pid,)).fetchone()[0]
     d["faces"] = [dict(x) for x in con.execute(
         "SELECT id,x1,y1,x2,y2,person_id FROM faces WHERE photo_id=?", (pid,))]
     return d

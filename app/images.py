@@ -98,15 +98,18 @@ def make_thumb(src: Path, sha: str, size=512) -> Path | None:
 
 
 def _video_thumb(src: Path, out: Path, size: int) -> Path | None:
-    import shutil, subprocess
-    ff = shutil.which("ffmpeg")
+    import subprocess
+    from . import ffmpeg
+    ff = ffmpeg.exe()
     if not ff:
         return None
     try:
-        subprocess.run([ff, "-y", "-i", str(src), "-frames:v", "1",
-                        "-vf", f"scale={size}:-1", str(out)],
-                       capture_output=True, timeout=60)
-        return out if out.exists() else None
+        for seek in (["-ss", "1"], []):          # a frame a second in (the very first is often black), else the first
+            subprocess.run([ff, "-y", *seek, "-i", str(src), "-frames:v", "1", "-vf", f"scale={size}:-2", str(out)],
+                           capture_output=True, timeout=60, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if out.exists() and out.stat().st_size:
+                return out
+        return None
     except Exception:
         return None
 

@@ -77,6 +77,14 @@ CREATE TABLE IF NOT EXISTS photo_tags(
   PRIMARY KEY(photo_id, tag_id)
 );
 
+-- previous versions of a video, kept when it is compressed (or restored): the file under media/.originals
+CREATE TABLE IF NOT EXISTS video_backups(
+  id INTEGER PRIMARY KEY, photo_id INTEGER, backup_rel TEXT,
+  orig_rel TEXT, orig_filename TEXT, orig_sha TEXT, orig_bytes INTEGER,
+  created_at INTEGER, kind TEXT, report TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_vb_photo ON video_backups(photo_id);
+
 -- extra Takeout artifacts so nothing from the ZIP is lost
 CREATE TABLE IF NOT EXISTS memory_titles(title TEXT);
 CREATE TABLE IF NOT EXISTS shared_comments(

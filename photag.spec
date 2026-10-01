@@ -7,7 +7,7 @@ datas = [("app/ui", "app/ui")]
 binaries = []
 hiddenimports = ["uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto",
                  "uvicorn.protocols.websockets.auto", "uvicorn.lifespan.on"]
-for pkg in ("insightface", "onnxruntime", "pillow_heif", "scipy", "sklearn"):
+for pkg in ("insightface", "onnxruntime", "pillow_heif", "scipy", "sklearn", "imageio_ffmpeg"):
     try:
         d, b, h = collect_all(pkg)
         datas += d; binaries += b; hiddenimports += h

@@ -33,8 +33,10 @@ def purge_expired_trash(con, days: int = TRASH_RETENTION_DAYS):
             p.unlink(missing_ok=True)
         if r["orig_backup"]:
             (PATHS.media / r["orig_backup"]).unlink(missing_ok=True)
+        for b in con.execute("SELECT backup_rel FROM video_backups WHERE photo_id=?", (r["id"],)).fetchall():
+            (PATHS.media / b["backup_rel"]).unlink(missing_ok=True)
         pid = r["id"]
-        for table in ("photo_albums", "photo_people", "photo_tags", "faces"):
+        for table in ("photo_albums", "photo_people", "photo_tags", "faces", "video_backups"):
             con.execute(f"DELETE FROM {table} WHERE photo_id=?", (pid,))
         con.execute("DELETE FROM photos WHERE id=?", (pid,))
     if rows:
@@ -127,7 +129,8 @@ class Progress:
     def __init__(self):
         self.state = "idle"; self.done = 0; self.total = 0; self.msg = ""; self.error = None
         self.key = None; self.vars = {}; self.parts = None; self.error_key = None
-        self.cancel = False   # set by the UI to stop a long job (AI tagging)
+        self.cancel = False   # set by the UI to stop a long job (AI tagging, compression)
+        self.result = None    # structured outcome for the UI (e.g. the compression report)
 
     def say(self, key, **vars):
         self.key, self.vars, self.parts = key, vars, None
@@ -144,7 +147,8 @@ class Progress:
 
     def as_dict(self):
         return {"state": self.state, "done": self.done, "total": self.total, "msg": self.msg, "error": self.error,
-                "key": self.key, "vars": self.vars, "parts": self.parts, "error_key": self.error_key}
+                "key": self.key, "vars": self.vars, "parts": self.parts, "error_key": self.error_key,
+                "result": self.result}
 
 
 def run_import(zip_path: str, progress: Progress):
