@@ -426,7 +426,8 @@ def health(now: float | None = None) -> dict:
         overdue = bool(s["enabled"] and last is not None and now - last > max(2 * interval, interval + 6 * 3600))
     return {"enabled": s["enabled"], "last_success": last, "never": last is None, "overdue": overdue, "folder_error": ferr,
             "last_attempt": st.get("last_attempt"), "last_by": st.get("last_by"),
-            "last_error": st.get("last_error"), "fail_count": st.get("fail_count", 0), "task": backup_task.status()}
+            "last_error": st.get("last_error"), "fail_count": st.get("fail_count", 0), "task": backup_task.status(),
+            "verify": st.get("last_verify")}
 
 
 def _create_snapshot(reason: str = "manual", progress=None, force_media: bool = False) -> dict:
@@ -592,6 +593,109 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
         shutil.rmtree(work, ignore_errors=True)
 
 
+
+# ------------------------------------------------------------------ checking the newest backup (read-only, never restores)
+VERIFY_EVERY = 7 * 86400         # the newest backup is checked once a week
+VERIFY_SAMPLE = 25               # photo files of the backup that are read in full (finds unreadable disk areas)
+
+
+def _verify_every() -> float:
+    ov = os.environ.get("PHOTAG_VERIFY_EVERY_SECONDS")       # tests
+    return float(ov) if ov else VERIFY_EVERY
+
+
+def verify_snapshot(m: dict) -> list[tuple[str, dict]]:
+    """Check one backup without changing anything. Returns the problems found as (message, values): empty = all fine.
+    ZIP checksums, the catalog inside it, and (when it has photo files) that the set is complete and readable."""
+    import random
+    name, d, bad = m["name"], backup_dir(), []
+    try:
+        with zipfile.ZipFile(d / name) as z:
+            if z.testzip() is not None:
+                return [("The backup {name} is damaged: its file does not pass the check", {"name": name})]
+            work = Path(tempfile.mkdtemp(prefix="photag-verify-"))
+            try:
+                z.extract("catalog.db", work)
+                con = sqlite3.connect(work / "catalog.db")
+                try:
+                    ok = con.execute("PRAGMA integrity_check").fetchone()[0]
+                finally:
+                    con.close()
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
+        if ok != "ok":
+            return [("The catalog inside the backup {name} is damaged", {"name": name})]
+    except Exception:                                  # bad ZIP, bad checksum, bad compressed data, unreadable disk...
+        if not (d / name).exists():
+            raise FileNotFoundError(name)            # deleted meanwhile (pruned): not a problem to report
+        return [("The backup {name} is damaged: its file does not pass the check", {"name": name})]
+    if m.get("includes_media"):
+        mdir = d / (m.get("media_dir") or MIRROR)
+        if not mdir.is_dir():
+            return [("The photo files of the backup {name} are missing from the backup folder", {"name": name})]
+        files = [p for p in mdir.rglob("*") if p.is_file() and not p.name.endswith(".part")]
+        want = (m.get("media") or {}).get("files")
+        if want is not None and len(files) != want:
+            bad.append(("The backup {name} should hold {want} photo files but {found} were found", {"name": name, "want": want, "found": len(files)}))
+        unreadable = 0
+        for p in random.sample(files, min(VERIFY_SAMPLE, len(files))):
+            try:
+                with open(p, "rb") as f:
+                    while f.read(1 << 20):
+                        pass
+            except OSError:
+                unreadable += 1
+        if unreadable:
+            bad.append(("{n} photo files of the backup {name} cannot be read", {"name": name, "n": unreadable}))
+    return bad
+
+
+def _newest_to_check() -> dict | None:
+    """The newest backup, including one so damaged that its manifest cannot even be read (that is exactly what must be reported)."""
+    d = backup_dir()
+    good = {m["name"]: m for m in list_snapshots()}
+    files = sorted((p for p in d.glob("photag-*.zip") if NAME_RE.match(p.name)), key=lambda p: p.name, reverse=True)
+    regular = [p for p in files if "-auto" in p.name or "-manual" in p.name]
+    for p in regular or files:
+        return good.get(p.name) or {"name": p.name, "created": p.stat().st_mtime, "reason": "manual", "includes_media": False}
+    return None
+
+
+def verify_last(by: str = "app") -> dict | None:
+    """Check the newest backup and remember the outcome (the app shows a warning when something is wrong). None = no backup yet."""
+    m = _newest_to_check()
+    if not m:
+        return None
+    try:
+        with background_mode():
+            problems = verify_snapshot(m)
+    except FileNotFoundError:
+        return None
+    r = {"at": time.time(), "name": m["name"], "created": m["created"], "ok": not problems, "by": by,
+         "problems": [{"key": k, "vars": v} for k, v in problems]}
+    st = get_state()
+    st["last_verify"] = r
+    tmp = STATE_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(st, indent=1), "utf-8")
+    os.replace(tmp, STATE_FILE)
+    return r
+
+
+def verify_due(now: float | None = None) -> bool:
+    lv = get_state().get("last_verify")
+    return not lv or (now or time.time()) - lv.get("at", 0) >= _verify_every()
+
+
+def verify_if_due(by: str = "app") -> dict | None:
+    """Once a week: check the newest backup. Skipped while a backup is being written (it would look half-finished)."""
+    if not verify_due() or folder_error():
+        return None
+    lock = backup_dir() / ".backup.lock"
+    if lock.exists() and not _lock_is_stale(lock):
+        return None
+    return verify_last(by)
+
+
 # ------------------------------------------------------------------ jobs (run through the server's job runner)
 def run_backup(reason: str, progress):
     try:
@@ -622,3 +726,20 @@ def run_restore(name: str, restore_media: bool, restore_settings: bool, overwrit
         progress.say_parts(*parts)
     except Exception as e:
         progress.fail("Restore failed: {error}", error=str(e)[:200])
+
+
+def run_verify(progress):
+    """The "Check the backup now" button."""
+    try:
+        progress.state = "verifying"; progress.say("Checking the newest backup…")
+        r = verify_last("manual")
+        progress.result = r
+        progress.state = "done"
+        if r is None:
+            progress.say("There is no backup to check yet")
+        elif r["ok"]:
+            progress.say("The backup check found no problems")
+        else:
+            progress.say_parts(*[(p["key"], p["vars"]) for p in r["problems"]])
+    except Exception as e:
+        progress.fail("Backup check failed: {error}", error=str(e)[:200])

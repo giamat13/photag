@@ -47,7 +47,7 @@ const S = {
   F:{on:true, q:'', qf:'any', flags:new Set(), rop:'>=', rating:0, labels:new Set(), kinds:new Set(),
      meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set()}},
   cell:pref.get('cellStyle','compact'), cellsz:pref.get('cellsz',180), loupeInfo:true, lights:0,
-  status:null, albums:[], folders:{root:'', folders:[]}, tags:[], people:[],
+  status:null, albums:[], folders:{root:'', folders:[]}, tags:[], people:[], searches:[],
   recentKw:pref.get('recentKw',[]),
 };
 const targets = () => (S.view==='grid' || S.view==='survey') && S.sel.size ? [...S.sel] : (S.act!=null ? [S.act] : []);
@@ -59,8 +59,8 @@ async function loadCatalog(){
   S.byId = new Map(S.all.map(p=>[p.id, p]));
 }
 async function loadSide(){
-  const [st, al, fo, tg, pe] = await Promise.all([api('/api/status'), api('/api/albums'), api('/api/folders'), api('/api/tags'), api('/api/people')]);
-  Object.assign(S, {status:st, albums:al, folders:fo, tags:tg, people:pe});
+  const [st, al, fo, tg, pe, se] = await Promise.all([api('/api/status'), api('/api/albums'), api('/api/folders'), api('/api/tags'), api('/api/people'), api('/api/searches')]);
+  Object.assign(S, {status:st, albums:al, folders:fo, tags:tg, people:pe, searches:se});
   renderCatalog(); renderFolders(); renderColls(); renderKwList();
 }
 
@@ -109,6 +109,7 @@ async function fetchSource(){
     if(S.src!==src) return;   // clicked elsewhere meanwhile
   }
   if(src.kind==='smart'){ const f = SMART.find(x=>x[0]===src.id); rows = rows.filter(f[2]); }
+  if(src.kind==='search') rows = rows.filter(searchPass(src.crit));
   S.base = rows;
   applyFilter();
 }
@@ -209,8 +210,22 @@ const onSelChange = () => { refreshCells(); renderFilm(); renderPath(); renderRi
   if(S.view==='loupe') renderLoupe(); else if(S.view==='compare') renderCompare(); else if(S.view==='survey') renderSurvey(); };
 
 // ---------- attribute changes (flags, stars, labels, quick collection, trash) ----------
-async function setAttr(fields, ids=targets(), {advance=false}={}){
+// Undo / redo (Ctrl+Z / Ctrl+Y) for flags, ratings, labels, the quick collection and moving to / restoring from the trash.
+// Each entry remembers the previous values of every photo it touched.
+const HIST = {undo:[], redo:[]};
+const histName = f => 'trashed' in f ? t('Trash') : 'quick' in f ? t('Quick Collection') : 'flag' in f ? t('Flag') : 'rating' in f ? t('Rating') : 'label' in f ? t('Color Label') : '';
+async function setAttr(fields, ids=targets(), {advance=false, record=true}={}){
   if(!ids.length) return;
+  if(record){
+    const prev = [];
+    for(const id of ids){
+      const p = S.byId.get(id) || S.base.find(x=>x.id===id); if(!p) continue;
+      const old = {}; let same = true;
+      for(const k of Object.keys(fields)){ old[k] = k==='trashed' ? (S.src.kind==='trash'?1:0) : k==='label' ? (p.label||'') : (p[k]||0); if(old[k]!==(fields[k]||(k==='label'?'':0))) same = false; }
+      if(!same) prev.push([id, old]);
+    }
+    if(prev.length){ HIST.undo.push({name:histName(fields), fields:{...fields}, prev}); if(HIST.undo.length>100) HIST.undo.shift(); HIST.redo.length = 0; }
+  }
   ids.forEach(id=>{ const p=S.byId.get(id) || S.base.find(x=>x.id===id); if(p) Object.assign(p, fields.label!==undefined?{...fields, label:fields.label||null}:fields); });
   await send('PATCH', '/api/photos', {ids, ...fields});
   if('trashed' in fields){ await reloadAll(); return; }
@@ -218,6 +233,22 @@ async function setAttr(fields, ids=targets(), {advance=false}={}){
   applyFilter();
   if(advance) moveAct(1);
 }
+async function histStep(dir){
+  const from = dir==='undo' ? HIST.undo : HIST.redo, to = dir==='undo' ? HIST.redo : HIST.undo;
+  const e = from.pop();
+  if(!e){ toast(t('Nothing to undo or redo'), 1400); return; }
+  to.push(e);
+  if(dir==='redo') await setAttr(e.fields, e.prev.map(x=>x[0]), {record:false});
+  else {
+    const groups = new Map();                                   // photos that had the same previous values go back in one request
+    for(const [id, old] of e.prev){ const k = JSON.stringify(old); (groups.get(k) || groups.set(k, {old, ids:[]}).get(k)).ids.push(id); }
+    for(const g of groups.values()) await setAttr(g.old, g.ids, {record:false});
+  }
+  const ids = e.prev.map(x=>x[0]).filter(id=>S.idx.has(id));      // show what changed
+  if(ids.length){ S.sel = new Set(ids); S.act = ids[0]; S.anchor = ids[0]; onSelChange(); scrollToAct(); }
+  toast(dir==='undo' ? t('Undone: {0}', [e.name]) : t('Redone: {0}', [e.name]));
+}
+const undo = () => histStep('undo'), redo = () => histStep('redo');
 const setFlag = (f, adv) => setAttr({flag:f}, undefined, {advance:adv});
 function toggleFlag(){ const p=actPhoto(); if(p) setFlag(p.flag===1?0:1); }
 const setRating = (r, adv) => setAttr({rating:r}, undefined, {advance:adv});
@@ -564,8 +595,11 @@ function renderColls(){
   const coll = a => row('album:'+a.id, I('coll'), a.name, a.n, `<button class="x" data-del="${a.id}" title="${t("Delete Collection")}">${I('close')}</button>`, 'ind');
   const smart = SMART.map(([k,n,f])=>row('smart:'+k, I('smart'), n, S.all.filter(f).length, '', 'ind')).join('');
   const people = S.people.map(p=>row('person:'+p.id, I('people'), p.name, (p.face_photos||0)+(p.tag_photos||0), '', 'ind')).join('');
+  const searches = S.searches.map(x=>row('search:'+x.id, I('smart'), x.name, S.all.filter(searchPass(x.criteria)).length,
+    `<button class="x" data-delsearch="${x.id}" title="${t("Delete")}">${I('close')}</button>`, 'ind')).join('');
   $('#p-colls').innerHTML =
     set('smart', t('Smart Collections'), smart) +
+    (S.searches.length ? set('search', t('Saved Searches'), searches) : '') +
     set('album', t('Collections'), al.filter(a=>a.kind==='album').map(coll).join('') || ("<div class=\"hint\">"+t("Drag photos here after creating a collection")+"</div>")) +
     (al.some(a=>a.kind==='people-share') ? set('shared', t('Shared Albums'), al.filter(a=>a.kind==='people-share').map(coll).join('')) : '') +
     (al.some(a=>a.kind==='year') ? set('year', t('By Year (Google)'), al.filter(a=>a.kind==='year').map(coll).join('')) : '') +
@@ -575,16 +609,24 @@ function renderColls(){
 function markSourceRows(){ const k=srcKey(S.src); $$('#left [data-src]').forEach(r=>r.classList.toggle('on', r.dataset.src===k)); }
 function srcFromKey(key){
   const [kind, id] = key.split(/:(.*)/s);
+  const sv = kind==='search' ? S.searches.find(x=>x.id==id) : null;
   const name = {all:t('All Photographs'), quick:t('Quick Collection'), prev:t('Previous Import'), trash:t('Trash')}[kind]
     || (kind==='folder' ? (id||t('(root)')) : kind==='smart' ? SMART.find(s=>s[0]===id)[1]
-      : kind==='album' ? S.albums.find(a=>a.id==id)?.name : kind==='person' ? S.people.find(p=>p.id==id)?.name : '');
-  return {kind, id: id===undefined ? null : (['album','person','tag','cluster'].includes(kind) ? +id : id), name};
+      : kind==='album' ? S.albums.find(a=>a.id==id)?.name : kind==='person' ? S.people.find(p=>p.id==id)?.name
+      : kind==='search' ? (sv ? sv.name : t('Search results')) : '');
+  const src = {kind, id: id===undefined ? null : (['album','person','tag','cluster'].includes(kind) ? +id : id), name};
+  if(kind==='search') src.crit = sv ? sv.criteria : SEARCH_TMP;
+  return src;
 }
 $('#left').addEventListener('click', async e=>{
   const del=e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); const a=S.albums.find(x=>x.id==del.dataset.del);
     if(!await confirmBox(`${t("Delete the collection “{0}”?", [esc(a.name)])}`, t('The photos themselves will stay in the catalog.'), t('Delete'))) return;
     await send('DELETE', '/api/album/'+a.id); if(S.src.kind==='album' && S.src.id===a.id) setSource(srcFromKey('all')); loadSide(); return; }
+  const ds=e.target.closest('[data-delsearch]');
+  if(ds){ e.stopPropagation(); const x=S.searches.find(v=>v.id==ds.dataset.delsearch);
+    if(!await confirmBox(t('Delete the saved search “{0}”?', [esc(x.name)]), t('The photos themselves will stay in the catalog.'), t('Delete'))) return;
+    await send('DELETE', '/api/searches/'+x.id); if(S.src.kind==='search' && S.src.id==x.id) setSource(srcFromKey('all')); loadSide(); return; }
   const st=e.target.closest('[data-set]');
   if(st){ const k=st.dataset.set; OPEN_SETS.has(k)?OPEN_SETS.delete(k):OPEN_SETS.add(k); pref.set('openSets',[...OPEN_SETS]); renderColls(); return; }
   const r=e.target.closest('[data-src]'); if(r){ if(S.mod!=='library') setModule('library'); setSource(srcFromKey(r.dataset.src)); }
@@ -622,6 +664,86 @@ $$('.pnl>h3').forEach(h=>h.addEventListener('click', e=>{
   const shut=pref.get('shut',{}); shut[p.dataset.p]=p.classList.contains('shut'); pref.set('shut', shut);
 }));
 (()=>{ const shut=pref.get('shut',{}); $$('.pnl').forEach(p=>p.classList.toggle('shut', !!shut[p.dataset.p])); })();
+
+// ---------- advanced search: dates, place on the map, file type and size; searches can be saved ----------
+let SEARCH_TMP = null;
+const SEARCH_RADII = [0.5, 1, 2, 5, 10, 25, 50, 100, 500];
+function searchEmpty(c){ return !c || !(c.from || c.to || (c.kind && c.kind!=='all') || (c.exts && c.exts.length) || c.minMB || c.maxMB || c.place); }
+function searchPass(c){
+  if(searchEmpty(c)) return ()=>true;
+  const from = c.from ? new Date(c.from+'T00:00:00').getTime()/1000 : null, to = c.to ? new Date(c.to+'T23:59:59').getTime()/1000 : null;
+  const min = c.minMB ? c.minMB*1048576 : 0, max = c.maxMB ? c.maxMB*1048576 : 0, exts = new Set((c.exts||[]).map(x=>x.toUpperCase()));
+  const pl = c.place, R = Math.PI/180;
+  return p=>{
+    if(from!=null && !(p.taken_at && p.taken_at>=from)) return false;
+    if(to!=null && !(p.taken_at && p.taken_at<=to)) return false;
+    if(c.kind==='photo' && p.is_video) return false;
+    if(c.kind==='video' && !p.is_video) return false;
+    if(exts.size && !exts.has(ext(p))) return false;
+    if(min && (p.bytes||0)<min) return false;
+    if(max && (p.bytes||0)>max) return false;
+    if(pl){
+      if(p.lat==null || p.lng==null) return false;
+      const a = Math.sin((p.lat-pl.lat)*R/2)**2 + Math.cos(pl.lat*R)*Math.cos(p.lat*R)*Math.sin((p.lng-pl.lng)*R/2)**2;
+      if(12742*Math.asin(Math.min(1, Math.sqrt(a))) > pl.km) return false;
+    }
+    return true;
+  };
+}
+function advancedSearch(){
+  const cur = S.src.kind==='search' ? S.src.crit : SEARCH_TMP;
+  const c = {from:'', to:'', kind:'all', exts:[], minMB:'', maxMB:'', place:null, ...(cur||{})};
+  const exts = [...new Set(S.all.map(ext))].filter(Boolean).sort();
+  let map = null, marker = null, circle = null;
+  const km = () => +$('#as-km').value;
+  const draw = () => {
+    if(!map || !$('#as-map')) return;
+    if(marker){ map.removeLayer(marker); marker = null; } if(circle){ map.removeLayer(circle); circle = null; }
+    if(c.place){ marker = L.marker([c.place.lat, c.place.lng], {icon: pinIcon(1), interactive:false}).addTo(map);
+      circle = L.circle([c.place.lat, c.place.lng], {radius: c.place.km*1000, color:'#4a90d9', weight:2, fillOpacity:.12}).addTo(map); }
+    $('#as-place-note').textContent = c.place ? t('{0} km around the chosen place', [c.place.km]) : t('Click the map to choose a place');
+  };
+  modal(`<h3>${t('Advanced Search')}</h3><div class="mb as">
+    <div class="two"><label class="fld"><span>${t('Date taken: from')}</span><input type="date" id="as-from" dir="ltr" value="${esc(c.from)}"></label>
+      <label class="fld"><span>${t('To')}</span><input type="date" id="as-to" dir="ltr" value="${esc(c.to)}"></label></div>
+    <div class="two"><label class="fld"><span>${t('Kind')}</span><select id="as-kind"><option value="all">${t('All')}</option><option value="photo">${t('Photos')}</option><option value="video">${t('Video')}</option></select></label>
+      <div class="fld"><span>${t('File Type')}</span><div class="chips" id="as-exts">${exts.map(x=>`<button type="button" class="tg ${c.exts.includes(x)?'on':''}" data-x="${esc(x)}">${esc(x)}</button>`).join('')}</div></div></div>
+    <div class="two"><label class="fld"><span>${t('File Size')} · ${t('at least (MB)')}</span><input type="number" id="as-min" min="0" step="any" dir="ltr" value="${esc(c.minMB)}"></label>
+      <label class="fld"><span>${t('at most (MB)')}</span><input type="number" id="as-max" min="0" step="any" dir="ltr" value="${esc(c.maxMB)}"></label></div>
+    <div class="fld"><span>${t('Near a place on the map')}</span>
+      <div id="as-map" class="as-map" dir="ltr"></div>
+      <div class="frow"><span class="hint" id="as-place-note" style="padding:0;flex:1"></span>
+        <select id="as-km">${SEARCH_RADII.map(r=>`<option value="${r}">${r} km</option>`).join('')}</select>
+        <button type="button" id="as-here" title="${t('Use the place of the selected photo')}">${I('pin')}</button><button type="button" id="as-noplace">${t('Clear')}</button></div></div>
+  </div><div class="mf"><button id="as-clear">${t('Clear Filter')}</button><span class="spacer"></span><button id="as-save">${t('Save')}…</button><button class="primary" id="as-go">${t('Search')}</button></div>`);
+  $('#as-kind').value = c.kind; $('#as-km').value = String(c.place ? c.place.km : 5);
+  const read = () => ({from:$('#as-from').value, to:$('#as-to').value, kind:$('#as-kind').value,
+    exts:$$('#as-exts .on').map(b=>b.dataset.x), minMB:+$('#as-min').value||'', maxMB:+$('#as-max').value||'', place:c.place ? {...c.place, km:km()} : null});
+  $('#as-exts').onclick = e=>{ const b=e.target.closest('[data-x]'); if(b) b.classList.toggle('on'); };
+  $('#as-km').onchange = ()=>{ if(c.place){ c.place.km = km(); draw(); } };
+  $('#as-noplace').onclick = ()=>{ c.place = null; draw(); };
+  $('#as-here').onclick = ()=>{ const p = actPhoto(); if(!p || p.lat==null){ toast(t('The selected photos have no location'), 2200); return; }
+    c.place = {lat:p.lat, lng:p.lng, km:km()}; map.setView([p.lat, p.lng], 11); draw(); };
+  const run = async save => {
+    const crit = read();
+    if(searchEmpty(crit)){ toast(t('Choose at least one search condition'), 2200); return; }
+    let name = null; SEARCH_TMP = crit;
+    if(save){ name = await promptBox(t('Name this search'), S.src.kind==='search' && S.src.id!=='tmp' ? S.src.name : ''); if(!name){ advancedSearch(); return; } }
+    closeModal();
+    if(name){
+      const r = await send('POST', '/api/searches', {name, criteria:crit}); OPEN_SETS.add('search'); pref.set('openSets', [...OPEN_SETS]);
+      await loadSide(); setSource({kind:'search', id:String(r.id), name, crit});
+    } else { SEARCH_TMP = crit; setSource({kind:'search', id:'tmp', name:t('Search results'), crit}); }
+    if(S.view!=='grid' && S.view!=='loupe') setView('grid');
+  };
+  $('#as-go').onclick = ()=>run(false);
+  $('#as-save').onclick = ()=>run(true);
+  $('#as-clear').onclick = ()=>{ SEARCH_TMP = null; closeModal(); if(S.src.kind==='search' && S.src.id==='tmp') setSource(srcFromKey('all')); };
+  map = L.map('as-map', {zoomControl:true, worldCopyJump:true}).setView(c.place ? [c.place.lat, c.place.lng] : [31.8, 35.0], c.place ? 10 : 3);
+  mapTiles(()=>{ const n = $('#as-place-note'); if(n) n.textContent = t('No internet connection, so map tiles can\'t load. The pins are still shown.'); }).addTo(map);
+  map.on('click', e=>{ c.place = {lat:e.latlng.lat, lng:e.latlng.lng, km:km()}; draw(); });
+  setTimeout(()=>{ map.invalidateSize(); draw(); }, 60);
+}
 
 // ---------- navigator ----------
 let navZoom='fit';
@@ -1464,23 +1586,52 @@ async function catalogSettings(){
     <div class="pathrow"><span>${t("Media Files")}</span><code>${esc(s.media_path)}</code></div>
     <div class="pathrow"><span>${t("Catalog File")}</span><code>${esc(s.db_path)}</code></div>
     <div class="pathrow"><span>${t("Content")}</span><span>${t("{0} items · {1} videos · {2} collections · {3} people · {4} keywords · {5} in Trash", [num(c.photos), num(c.videos), num(c.albums), num(c.people), num(c.tags), num(c.trashed)])}</span></div>
-    <div class="pathrow"><span>${t("Trash")}</span><span>${t("Items are permanently deleted after {0} days", [s.trash_days])}</span></div>
+    <div class="pathrow"><span>${t("Trash")}</span><span>${t("Items are permanently deleted after {0} days", [`<input type="number" id="trash-days" min="1" max="3650" dir="ltr" style="width:70px" value="${s.trash_days}">`])}</span></div>
     <label class="fld"><span>${t("Different catalog location")}</span><div class="frow"><input type="text" id="lib-path" dir="ltr" value="${esc(s.library_root)}"><button id="lib-pick">${t("Choose...")}</button></div></label>
   </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button><button class="primary" id="lib-set">${t("Go to Catalog")}</button></div>`);
+  $('#trash-days').onchange=async e=>{
+    const days = Math.max(1, Math.min(3650, Math.round(+e.target.value) || s.trash_days));
+    e.target.value = days;
+    const n = (await api('/api/trash/preview?days='+days)).n;
+    if(n && !await confirmBox(t('Delete permanently?'), t('{0} items have been in the trash for more than {1} days and will be deleted permanently now. This cannot be undone.', [num(n), days]), t('Delete permanently'))){ e.target.value = s.trash_days; return; }
+    await send('POST', '/api/settings/trash', {days}); s.trash_days = days;
+    if(S.status) S.status.trash_days = days;
+    if(n){ await reloadAll(); toast(t('{0} items deleted permanently', [num(n)])); }
+  };
   $('#lib-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose catalog folder'))); if(r.path) $('#lib-path').value=r.path; };
-  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); closeModal(); toast(t('Catalog replaced')); await reloadAll(); };
+  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); HIST.undo.length = HIST.redo.length = 0; closeModal(); toast(t('Catalog replaced')); await reloadAll(); };
 }
 async function preferences(){
-  const s=await api('/api/status');
-  modal(`<h3>${t("Preferences · Face detection")}</h3><div class="mb">
+  const [s, ai] = await Promise.all([api('/api/status'), api('/api/auto-import')]);
+  modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
     <label class="chkrow"><input type="checkbox" id="pf-upd" ${pref.get('autoUpdate', true) ? 'checked' : ''}> ${t('Check for updates automatically once a day')}</label>
+    <div class="lbl-sub" style="padding:0">${t('Automatic import')}</div>
+    <label class="chkrow"><input type="checkbox" id="ai-on"> ${t('Import new photos automatically from a folder')}</label>
+    <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
+    <label class="chkrow"><input type="checkbox" id="ai-existing"> ${t('Also import the photos already in the folder')}</label>
+    <div class="hint" style="padding:0" id="ai-status"></div>
   </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button>
     <button id="pf-ai">${t("AI tagging settings")}</button><button class="primary" id="pf-faces">${t("Detect Faces")}</button></div>`);
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
   $('#pf-ai').onclick=()=>{ closeModal(); aiSettings(); };
   $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('Face Detection')); };
+  let cur = ai;
+  const drawAi = () => {
+    $('#ai-on').checked = cur.enabled; $('#ai-folder').value = cur.folder;
+    const st = cur.state || {};
+    $('#ai-status').textContent = !cur.enabled ? '' : !cur.folder_ok ? t('The folder can\'t be reached right now. Import continues when it is available again.')
+      : st.total_added ? t('{0} photos were imported automatically since the app started', [num(st.total_added)]) : t('New photos are checked for once a minute.');
+  };
+  const save = async body => { try{ cur = await send('POST', '/api/auto-import', {...body, existing: $('#ai-existing').checked}); } catch(e){ toast(e.message); cur = await api('/api/auto-import'); } drawAi(); };
+  const pick = async () => { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(t('Choose the folder to import from'))); return r.path || null; };
+  $('#ai-on').onchange = async e => {
+    if(e.target.checked && !cur.folder){ const f = await pick(); if(!f){ drawAi(); return; } await save({folder: f, enabled: true}); }
+    else await save({enabled: e.target.checked});
+  };
+  $('#ai-pick').onclick = async () => { const f = await pick(); if(f) await save({folder: f, enabled: true}); };
+  drawAi();
 }
 // ---------- AI tagging: OpenAI / Claude / Gemini / OpenRouter / any OpenAI-compatible API ----------
 const AI_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openrouter', 'custom'];
@@ -1820,6 +1971,8 @@ async function backupDialog(){
     else if(h.last_error) L.push(['bad', t('The last backup failed: {0}', [h.last_error])]);
     if(h.overdue) L.push(['bad', t('No backup has been made since {0}. Check that the drive is connected and has free space.', [ltr(fdt(h.last_success))])]);
     else if(h.never && h.enabled) L.push(['warn', t('No backup yet: the first one will start soon, or click «Back up now».')]);
+    const v = h.verify;
+    if(v) L.push([v.ok ? 'ok' : 'bad', (v.ok ? t('The backup check found no problems') : t('The backup check found a problem:') + ' ' + v.problems.map(x=>t(x.key, x.vars)).join(' ')) + ' (' + ltr(fdt(v.at)) + ')']);
     if(h.enabled){
       if(!tk.supported) L.push(['', t('When run from source, backup only runs while the app is open.')]);
       else if(tk.registered) L.push(['ok', t('Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.')
@@ -1860,7 +2013,7 @@ async function backupDialog(){
     <label class="fld"><span>${t('Backups folder (preferably on another disk)')}</span>
       <div class="bk-path"><input id="bk-folder" readonly dir="ltr"><button id="bk-pick">${t('Choose…')}</button><button id="bk-reset">${t('Default')}</button></div></label>
     <div class="lbl-sub" style="padding:0">${t('Existing backups')}</div><div class="bk-list" id="bk-list"></div>
-  </div><div class="mf"><button class="primary" id="bk-now">${t('Back up now')}</button><span class="spacer"></span><button id="bk-close">${t('Close')}</button></div>`);
+  </div><div class="mf"><button class="primary" id="bk-now">${t('Back up now')}</button><button id="bk-check" title="${t('Checks that the newest backup can be read, without restoring anything. This also happens automatically once a week.')}">${t('Check the backup')}</button><span class="spacer"></span><button id="bk-close">${t('Close')}</button></div>`);
   draw();
   const save = async patch => { try{ i = await send('POST', '/api/backup/settings', patch); draw(); } catch(e){ toast(e.message); draw(); } };
   $('#bk-on').onchange = () => save({enabled: $('#bk-on').checked});
@@ -1870,6 +2023,7 @@ async function backupDialog(){
   $('#bk-pick').onclick = async () => { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(t('Choose a backup folder'))); if(r.path) save({folder: r.path}); };
   $('#bk-reset').onclick = () => save({folder: null});
   $('#bk-close').onclick = closeModal;
+  $('#bk-check').onclick = async () => { closeModal(); try{ await send('POST', '/api/backup/verify'); pollJob('backupcheck', t('Check the backup')); }catch(e){ toast(e.message); } };
   $('#bk-now').onclick = async () => { closeModal(); await send('POST', '/api/backup/run'); pollJob('backup', t('Backup')); };
   $('#bk-list').onclick = async e => {
     const r = e.target.closest('[data-restore]'), d = e.target.closest('[data-del]');
@@ -1895,22 +2049,40 @@ function backupRestoreDialog(m, i){
   };
 }
 
-// Tell the user at start-up (once a day) if automatic backups are not really happening.
+// Tell the user (once a day) if automatic backups are not really happening, or the weekly check of the newest backup found a problem.
 async function backupHealthNotice(){
   let i; try{ i = await api('/api/backup'); }catch{ return; }
-  const h = i.health || {};
-  if(!(h.overdue || h.last_error || h.folder_error) || !h.enabled) return;
+  const h = i.health || {}, v = h.verify;
+  const badCheck = v && !v.ok, badRun = h.enabled && (h.overdue || h.last_error || h.folder_error);
+  if(!badCheck && !badRun) return;
   const today = new Date().toDateString();
-  if(pref.get('bkNoticeDay', '') === today) return;
+  if(pref.get('bkNoticeDay', '') === today && !(badCheck && pref.get('bkVerifyAlerted', 0) !== v.at)) return;
   pref.set('bkNoticeDay', today);
-  const why = h.folder_error ? t('Can\'t reach the backup folder (e.g. the drive is disconnected): {0}', [h.folder_error])
+  if(badCheck) pref.set('bkVerifyAlerted', v.at);
+  const why = badCheck ? t('The backup check found a problem:') + ' ' + v.problems.map(x=>t(x.key, x.vars)).join(' ') + ' (' + ltr(fdt(v.at)) + ')'
+    : h.folder_error ? t('Can\'t reach the backup folder (e.g. the drive is disconnected): {0}', [h.folder_error])
     : h.last_error ? t('The last backup failed: {0}', [h.last_error])
     : t('No backup has been made since {0}. Check that the drive is connected and has free space.', [ltr(fdt(h.last_success))]);
-  modal(`<h3>${t('Automatic backup isn\'t working properly')}</h3><div class="mb"><p>${esc(why)}</p></div>
+  modal(`<h3>${badCheck ? t('The newest backup has a problem') : t('Automatic backup isn\'t working properly')}</h3><div class="mb"><p>${esc(why)}</p></div>
     <div class="mf"><button id="bn-settings">${t('Backup settings')}</button><span class="spacer"></span><button id="bn-close">${t('Close')}</button><button class="primary" id="bn-now">${t('Back up now')}</button></div>`);
   $('#bn-close').onclick = closeModal;
   $('#bn-settings').onclick = () => backupDialog();
   $('#bn-now').onclick = async () => { closeModal(); try{ await send('POST', '/api/backup/run'); pollJob('backup', t('Backup')); }catch(e){ toast(e.message); } };
+}
+
+// Once a minute: photos that the automatic import brought in appear by themselves, and a failed weekly backup check is reported.
+let BG_SEQ = null, BG_BUSY = false;
+async function backgroundTick(){
+  if(BG_BUSY) return; BG_BUSY = true;
+  try{
+    const b = await api('/api/background'), a = b.auto_import;
+    if(BG_SEQ === null) BG_SEQ = a.seq;
+    else if(a.seq !== BG_SEQ){
+      BG_SEQ = a.seq;
+      if(S.mod === 'library'){ await reloadAll(); toast(t('{0} new photos imported automatically', [num(a.last_added)]), 3500); }
+    }
+    if(b.verify && !b.verify.ok && pref.get('bkVerifyAlerted', 0) !== b.verify.at && $('#modal').classList.contains('hidden')) await backupHealthNotice();
+  }catch{} finally{ BG_BUSY = false; }
 }
 
 // The default data folder is now ...\Photag: offer to move a library that still sits in ...\PhotoManager (a rename, nothing is copied).
@@ -2216,9 +2388,9 @@ function shortcuts(){
   modal(`<h3>${t("Keyboard Shortcuts")}</h3><div class="mb"><div class="kgrid">
     <h4>${t("Views")}</h4>${k('G',t('Grid'))}${k('E',t('Loupe'))}${k('C',t('Compare'))}${k('N',t('Survey'))}${k('O',t('People'))}${k('D',t('Develop Module'))}${k('Ctrl+Enter',t('Slideshow'))}${k('Esc',t('Back / Exit'))}
     <h4>${t("Rating and Flagging")}</h4>${k('P',t('Flag as Pick'))}${k('X',t('Flag as Rejected'))}${k('U',t('Remove Flag'))}${k('`',t('Toggle Flag'))}${k('0–5',t('Star Rating'))}${k('[ / ]',t('Decrease / Increase Rating'))}${k('6–9',t('Label Red/Yellow/Green/Blue'))}${k(t('Shift+key'),t('Mark and Go to Next'))}${k('B',t('Quick Collection'))}${k('Ctrl+B',t('Show Quick Collection'))}
-    <h4>${t("Selection")}</h4>${k('Ctrl+A',t('Select All'))}${k('Ctrl+D',t('Deselect'))}${k(t('Ctrl+click'),t('Add to Selection'))}${k(t('Shift+click'),t('Select Range'))}${k('← → ↑ ↓',t('Move Between Photos'))}${k('Delete',t('Move to Trash'))}
+    <h4>${t("Selection")}</h4>${k('Ctrl+A',t('Select All'))}${k('Ctrl+D',t('Deselect'))}${k(t('Ctrl+click'),t('Add to Selection'))}${k(t('Shift+click'),t('Select Range'))}${k('← → ↑ ↓',t('Move Between Photos'))}${k('Delete',t('Move to Trash'))}${k('Ctrl+Z',t('Undo'))}${k('Ctrl+Y',t('Redo'))}
     <h4>${t("Interface")}</h4>${k('Tab',t('Hide Side Panels'))}${k('Shift+Tab',t('Hide All Panels'))}${k('F5 / F6',t('Top Panel / Filmstrip'))}${k('F7 / F8',t('Right / Left Panel'))}${k('T',t('Toolbar'))}${k('L',t('Lights Out'))}${k('J',t('Grid Cell Style'))}${k('I',t('Loupe Info'))}${k('\\\\',t('Filter Bar / Before-After'))}${k('Ctrl+L',t('Enable/Disable Filters'))}${k('Ctrl+F',t('Text Search'))}${k(t('Z / Space'),t('Zoom 1:1'))}
-    <h4>${t("Files")}</h4>${k('Ctrl+Shift+I',t('Import'))}${k('Ctrl+Shift+E',t('Export'))}${k('Ctrl+N',t('New Collection'))}${k('Ctrl+[ / ]',t('Rotation'))}${k('Ctrl+R',t('Show in Explorer'))}${k('Ctrl+S',t('Save Metadata to File'))}${k('Ctrl+K',t('Add Keywords'))}${k('R',t('Crop (Develop)'))}
+    <h4>${t("Files")}</h4>${k('Ctrl+Shift+I',t('Import'))}${k('Ctrl+Shift+E',t('Export'))}${k('Ctrl+N',t('New Collection'))}${k('Ctrl+Shift+F',t('Advanced Search'))}${k('Ctrl+[ / ]',t('Rotation'))}${k('Ctrl+R',t('Show in Explorer'))}${k('Ctrl+S',t('Save Metadata to File'))}${k('Ctrl+K',t('Add Keywords'))}${k('R',t('Crop (Develop)'))}
     <h4>${t("Video")}</h4>${k('Space / K',t('Play / Pause'))}${k('Shift+← / →',t('Skip 10 seconds'))}${k(', / .',t('Frame back / forward'))}${k('Shift+, / .',t('Playback speed'))}${k('↑ / ↓',t('Volume'))}${k('M',t('Mute'))}${k('F',t('Fullscreen'))}
   </div></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`);
 }
@@ -2401,6 +2573,7 @@ async function pollJob(name, label){
     act.classList.add('hidden');
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
+    if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
     if(['import','faces','aitag','compress','backup'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
@@ -2432,6 +2605,9 @@ const MENUS = [
     [t('Preferences...'), 'Ctrl+,', preferences],
   ]],
   [t('Edit'), [
+    [t('Undo'), 'Ctrl+Z', undo],
+    [t('Redo'), 'Ctrl+Y', redo],
+    sep,
     [t('Select All'), 'Ctrl+A', selectAll],
     [t('Deselect'), 'Ctrl+D', selectNone],
     [t('Invert Selection'), '', selectInvert],
@@ -2439,6 +2615,8 @@ const MENUS = [
   ]],
   [t('Library'), [
     [t('New Collection...'), 'Ctrl+N', newCollection],
+    sep,
+    [t('Advanced Search')+'...', 'Ctrl+Shift+F', advancedSearch],
     sep,
     [t('Show Quick Collection'), 'Ctrl+B', ()=>setSource(srcFromKey('quick'))],
     [t('Clear Quick Collection'), '', async()=>{ const ids=S.all.filter(p=>p.quick).map(p=>p.id); if(ids.length) await setAttr({quick:0}, ids); }],
@@ -2452,6 +2630,7 @@ const MENUS = [
   ]],
   [t('Photo'), [
     [t('Add to Quick Collection'), 'B', toggleQuick],
+    [t('Add to Collection'), '', collectionItems],
     [t('Show in Explorer'), 'Ctrl+R', reveal],
     sep,
     [t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)],
@@ -2510,9 +2689,20 @@ $('#menubar').innerHTML = MENUS.map(([n],i)=>`<button data-menu="${i}">${n}</but
 function openMenu(i){
   const b=$(`#menubar [data-menu="${i}"]`), pop=$('#menu-pop'), items=MENU_ITEMS=MENUS[i][1];
   $$('#menubar button').forEach(x=>x.classList.toggle('open', x===b));
-  pop.innerHTML = items.map((it,j)=>it===sep?'<hr>':`<div class="mi ${it[4]&&it[4]()?'chk':''}" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[1]||''}</span></div>`).join('');
+  pop.innerHTML = items.map((it,j)=>it===sep?'<hr>':`<div class="mi ${it[4]&&it[4]()?'chk':''} ${it[2]===collectionItems?'sub':''}" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[2]===collectionItems?(RTL?'◂':'▸'):(it[1]||'')}</span></div>`).join('');
   const r=b.getBoundingClientRect(); pop.style.top=r.bottom+'px'; if(RTL){ pop.style.right=(innerWidth-r.right)+'px'; pop.style.left='auto'; } else { pop.style.left=r.left+'px'; pop.style.right='auto'; }
   pop.classList.remove('hidden'); MENU_OPEN=i;
+}
+// "Add to Collection": a list of the collections plus "New Collection..." (shown as a fly-out next to the menu item)
+async function addToCollection(aid, ids=targets()){
+  if(!ids.length) return;
+  await send('POST', `/api/album/${aid}/add`, {ids});
+  toast(`${t("{0} photos added to “{1}”", [num(ids.length), esc(S.albums.find(a=>a.id===aid)?.name)])}`);
+  loadSide();
+}
+function collectionItems(){
+  return [[t('New Collection...'), '', newCollection], null,
+    ...S.albums.filter(a=>a.kind==='album').map(a=>[a.name, '', ()=>addToCollection(a.id)])];
 }
 // right-click menu on photos: the same popup as the menu bar, placed at the pointer
 function photoMenuItems(){
@@ -2530,6 +2720,7 @@ function photoMenuItems(){
   return [
     [t('Loupe'), 'E', ()=>setView('loupe')],
     [t('Add to Quick Collection'), 'B', toggleQuick],
+    [t('Add to Collection'), '', collectionItems],
     [t('Show in Explorer'), 'Ctrl+R', reveal],
     sep,
     ...(photos ? [[t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)], [t('Rotate Right'), 'Ctrl+]', ()=>rotateSel(90)], sep] : []),
@@ -2547,7 +2738,7 @@ function photoMenuItems(){
 }
 function openContextMenu(x, y){
   const pop=$('#menu-pop'), items=MENU_ITEMS=photoMenuItems();
-  pop.innerHTML = items.map((it,j)=>it===null?'<hr>':`<div class="mi" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[1]||''}</span></div>`).join('');
+  pop.innerHTML = items.map((it,j)=>it===null?'<hr>':`<div class="mi ${it[2]===collectionItems?'sub':''}" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[2]===collectionItems?(RTL?'◂':'▸'):(it[1]||'')}</span></div>`).join('');
   pop.classList.remove('hidden'); MENU_OPEN=-1;
   const w=pop.offsetWidth, h=pop.offsetHeight;
   pop.style.left=Math.max(0, Math.min(x, innerWidth-w-4))+'px'; pop.style.right='auto';
@@ -2561,10 +2752,22 @@ document.addEventListener('contextmenu', e=>{
   if(!S.sel.has(id)) selectOnly(id); else { S.act=id; }
   openContextMenu(e.clientX, e.clientY);
 });
-function closeMenu(){ $('#menu-pop').classList.add('hidden'); $$('#menubar button').forEach(x=>x.classList.remove('open')); MENU_OPEN=null; }
+let SUB_ITEMS=[];
+function openSubMenu(row){
+  const sub=$('#menu-sub'), items=SUB_ITEMS=MENU_ITEMS[+row.dataset.mi][2]();
+  sub.innerHTML = items.map((it,j)=>it===null?'<hr>':`<div class="mi" data-si="${j}"><span>${esc(it[0])}</span></div>`).join('');
+  sub.classList.remove('hidden');
+  const r=row.getBoundingClientRect(), w=sub.offsetWidth, h=sub.offsetHeight;
+  let x = RTL ? r.left-w : r.right; if(x<0 || x+w>innerWidth) x = RTL ? r.right : r.left-w;
+  sub.style.left=Math.max(0, Math.min(x, innerWidth-w-4))+'px'; sub.style.right='auto';
+  sub.style.top=Math.max(0, Math.min(r.top-4, innerHeight-h-4))+'px';
+}
+$('#menu-pop').addEventListener('mouseover', e=>{ const r=e.target.closest('.mi'); if(!r) return; if(r.classList.contains('sub')) openSubMenu(r); else $('#menu-sub').classList.add('hidden'); });
+$('#menu-sub').addEventListener('mousedown', e=>{ e.stopPropagation(); const it=e.target.closest('[data-si]'); if(!it) return; const f=SUB_ITEMS[+it.dataset.si][2]; closeMenu(); f(); });
+function closeMenu(){ $('#menu-sub').classList.add('hidden'); $('#menu-pop').classList.add('hidden'); $$('#menubar button').forEach(x=>x.classList.remove('open')); MENU_OPEN=null; }
 $('#menubar').addEventListener('mousedown', e=>{ const b=e.target.closest('[data-menu]'); if(!b) return; e.stopPropagation(); MENU_OPEN===+b.dataset.menu ? closeMenu() : openMenu(+b.dataset.menu); });
 $('#menubar').addEventListener('mouseover', e=>{ const b=e.target.closest('[data-menu]'); if(b && MENU_OPEN!=null && MENU_OPEN!==+b.dataset.menu) openMenu(+b.dataset.menu); });
-$('#menu-pop').addEventListener('mousedown', e=>{ e.stopPropagation(); const it=e.target.closest('[data-mi]'); if(!it) return; const f=MENU_ITEMS[+it.dataset.mi][2]; closeMenu(); f(); });
+$('#menu-pop').addEventListener('mousedown', e=>{ e.stopPropagation(); const it=e.target.closest('[data-mi]'); if(!it) return; const f=MENU_ITEMS[+it.dataset.mi][2]; if(f===collectionItems){ openSubMenu(it); return; } closeMenu(); f(); });
 document.addEventListener('mousedown', ()=>{ if(MENU_OPEN!=null) closeMenu(); });
 
 // ---------- buttons ----------
@@ -2591,6 +2794,7 @@ document.addEventListener('keydown', e=>{
   // ctrl combos
   if(ctrl){
     const map = {
+      KeyZ: ()=>{ if(S.mod==='library') shift ? redo() : undo(); }, KeyY: ()=>{ if(S.mod==='library') redo(); },
       KeyA: ()=>e.altKey?selectPicks():selectAll(), KeyD: selectNone, KeyB: ()=>setSource(srcFromKey('quick')), KeyN: newCollection,
       KeyL: ()=>{ S.F.on=!S.F.on; applyFilter(); toast(S.F.on?t('Filters enabled'):t('Filters disabled'), 1200); },
       KeyF: ()=>{ S.fb='text'; renderFilterBar(); $('#filterbar').classList.remove('hidden'); $('#ft-q').focus(); },
@@ -2599,6 +2803,7 @@ document.addEventListener('keydown', e=>{
       Slash: shortcuts, Enter: ssStart, Comma: preferences,
     };
     if(shift && code==='KeyI'){ e.preventDefault(); openImport('folder'); return; }
+    if(shift && code==='KeyF'){ e.preventDefault(); advancedSearch(); return; }
     if(shift && code==='KeyE'){ e.preventDefault(); openExport(); return; }
     if(map[code]){ e.preventDefault(); map[code](); }
     return;
@@ -2672,7 +2877,8 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   await fetchSource();
   setView('grid');
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
-  setTimeout(backupHealthNotice, 8000);   // quiet check on start-up; a window appears only when a newer release exists
+  setTimeout(backupHealthNotice, 8000);
+  setTimeout(backgroundTick, 3000); setInterval(backgroundTick, 60000);   // quiet check on start-up; a window appears only when a newer release exists
   // an empty catalog shows the empty-state screen with an Import button; it never jumps to the Import screen by itself
   // resume the activity indicator if a job is already running (e.g. after a reload)
   [['import',t('Import')],['faces',t('Face Detection')],['aitag',t('AI tagging')],['compress',t('Video compression')],['backup',t('Backup')],['export',t('Export')]].forEach(async ([n,l])=>{

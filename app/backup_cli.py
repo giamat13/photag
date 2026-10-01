@@ -26,6 +26,12 @@ def main(argv: list[str]) -> int:
     except Exception as e:                      # never crash silently
         _log(f"error: {e}")
         return 1
+    try:                                         # once a week the newest backup is also checked here (read-only)
+        v = backup.verify_if_due("task")
+        if v:
+            _log("backup check: " + ("no problems" if v["ok"] else "PROBLEMS: " + "; ".join(p["key"].format(**p["vars"]) for p in v["problems"])))
+    except Exception as e:
+        _log(f"backup check error: {e}")
     if r.get("ran"):
         _log(f"backup done: {r['name']} ({r['photos']} photos, media copied: {(r.get('media') or {}).get('copied', 0)}, peak RAM {backup.peak_ram_mb()} MB)")
         return 0

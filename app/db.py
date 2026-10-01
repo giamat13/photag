@@ -85,6 +85,16 @@ CREATE TABLE IF NOT EXISTS video_backups(
 );
 CREATE INDEX IF NOT EXISTS ix_vb_photo ON video_backups(photo_id);
 
+-- searches the user saved from Advanced Search (criteria = JSON)
+CREATE TABLE IF NOT EXISTS saved_searches(
+  id INTEGER PRIMARY KEY, name TEXT UNIQUE, criteria TEXT, created_at INTEGER
+);
+
+-- files of the automatic-import folder that were already looked at (imported, duplicate or unreadable): never hashed twice
+CREATE TABLE IF NOT EXISTS auto_import_seen(
+  path TEXT PRIMARY KEY, size INTEGER, mtime INTEGER, failed INTEGER DEFAULT 0
+);
+
 -- extra Takeout artifacts so nothing from the ZIP is lost
 CREATE TABLE IF NOT EXISTS memory_titles(title TEXT);
 CREATE TABLE IF NOT EXISTS shared_comments(

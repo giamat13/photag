@@ -656,3 +656,15 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 .zrow{display:flex;align-items:center;gap:8px;justify-content:center;padding:2px 0}
 .zrm{border:0;background:transparent;color:var(--t3);cursor:pointer;padding:0 6px;font-size:13px}.zrm:hover{color:var(--red)}
 .zclear{color:var(--t3);cursor:pointer;text-decoration:underline;font-size:12px}
+
+/* fly-out menu (Add to Collection) */
+.menu-sub{z-index:91;max-height:60vh;overflow-y:auto}
+.menu-pop .mi.sub .k{direction:inherit;font-size:12px}
+/* advanced search */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.as{min-width:520px}
+.as input[type=date],.as input[type=number],.as select{height:24px}
+.as-map{height:230px;border:1px solid #1c1c1c;background:#262626}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips .tg{height:22px;padding:0 8px;background:#3a3a3a;color:#ccc}
+.chips .tg.on{background:#4a6f9c;color:#fff}

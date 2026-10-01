@@ -7,7 +7,9 @@ extracted) and de-duplicated by SHA-256 so a photo that appears in several
 album folders is stored once but belongs to every album.
 """
 import json
+import os
 import re
+import threading
 import time
 import zipfile
 from pathlib import Path
@@ -51,12 +53,33 @@ def delete_trashed_by_id(con, ids) -> int:
     return delete_forever(con, rows)
 
 
-def purge_expired_trash(con, days: int = TRASH_RETENTION_DAYS):
-    """Permanently delete photos that have sat in the trash for over `days`."""
+TRASH_DAYS_MIN, TRASH_DAYS_MAX = 1, 3650
+
+
+def trash_days(con) -> int:
+    """How many days a photo stays in the trash before it is deleted for good (a setting of the catalog, default 60)."""
+    try:
+        d = int(db.get_setting(con, "trash_days", TRASH_RETENTION_DAYS))
+    except (TypeError, ValueError):
+        d = TRASH_RETENTION_DAYS
+    return max(TRASH_DAYS_MIN, min(TRASH_DAYS_MAX, d))
+
+
+def set_trash_days(con, days: int) -> int:
+    days = max(TRASH_DAYS_MIN, min(TRASH_DAYS_MAX, int(days)))
+    db.set_setting(con, "trash_days", days)
+    return days
+
+
+def expired_trash(con, days: int):
     cutoff = int(time.time()) - days * 86400
-    return delete_forever(con, con.execute(
-        "SELECT id, sha256, rel_path, orig_backup FROM photos "
-        "WHERE trashed=1 AND trashed_at IS NOT NULL AND trashed_at < ?", (cutoff,)).fetchall())
+    return con.execute("SELECT id, sha256, rel_path, orig_backup FROM photos "
+                       "WHERE trashed=1 AND trashed_at IS NOT NULL AND trashed_at < ?", (cutoff,)).fetchall()
+
+
+def purge_expired_trash(con, days: int | None = None):
+    """Permanently delete photos that have sat in the trash for over `days` (the catalog's setting by default)."""
+    return delete_forever(con, expired_trash(con, trash_days(con) if days is None else days))
 
 
 def _album_kind(name: str) -> str:
@@ -443,6 +466,103 @@ def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, b
          taken, int(time.time()), lat, lng, int(time.time()))).lastrowid
     images.make_thumb(dest, sha)
     return photo_id, True
+
+
+# ---------- automatic import: new photos in a chosen folder (e.g. where the phone syncs) come in by themselves ----------
+AUTO = {"seq": 0, "running": False, "last_run": None, "last_added": 0, "total_added": 0, "error": None}   # for the UI (/api/background)
+_AUTO_LOCK = threading.Lock()
+
+
+def auto_settle_seconds() -> float:
+    """A file must have been left alone this long before it is imported (a phone may still be writing it)."""
+    return float(os.environ.get("PHOTAG_AUTOIMPORT_SETTLE", 15))
+
+
+def _auto_walk(folder: str):
+    """(path, size, mtime) of every media file under the folder."""
+    for root, dirs, names in os.walk(folder):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for n in names:
+            if n.startswith(".") or Path(n).suffix.lower() not in MEDIA_EXT:
+                continue
+            p = os.path.join(root, n)
+            try:
+                st = os.stat(p)
+            except OSError:
+                continue
+            yield p, st.st_size, int(st.st_mtime)
+
+
+def folder_conflict(folder: str) -> bool:
+    """The auto-import folder must not be the library itself (or inside it, or contain it): that would re-import its own files."""
+    try:
+        f, r = Path(folder).resolve(), PATHS.root.resolve()
+    except OSError:
+        return False
+    return f == r or r in f.parents or f in r.parents
+
+
+def baseline_auto_import(con, folder: str) -> int:
+    """Remember what the folder holds right now as already seen, so only photos that arrive later are imported."""
+    n = 0
+    rows = []
+    for p, size, mtime in _auto_walk(folder):
+        rows.append((p, size, mtime)); n += 1
+        if len(rows) >= 500:
+            con.executemany("INSERT OR REPLACE INTO auto_import_seen(path,size,mtime,failed) VALUES(?,?,?,0)", rows); rows = []
+    con.executemany("INSERT OR REPLACE INTO auto_import_seen(path,size,mtime,failed) VALUES(?,?,?,0)", rows)
+    con.commit()
+    return n
+
+
+def run_auto_import(folder: str, progress: Progress) -> dict:
+    """One pass over the folder: import files that are new (not seen before at this size/date) and have settled.
+    Duplicates of photos already in the catalog are recognised by their content and not stored twice."""
+    con = db.connect()
+    added = dupes = failed = 0
+    try:
+        progress.state = "scanning"
+        seen = {r["path"]: (r["size"], r["mtime"]) for r in con.execute("SELECT path,size,mtime FROM auto_import_seen")}
+        now, settle = time.time(), auto_settle_seconds()
+        todo = [(p, size, mtime) for p, size, mtime in _auto_walk(folder)
+                if seen.get(p) != (size, mtime) and size > 0 and now - mtime >= settle]
+        progress.state = "importing"; progress.total = len(todo); progress.done = 0
+        for p, size, mtime in todo:
+            progress.done += 1
+            try:
+                _, new = _ingest_file(con, Path(p))
+                added += new; dupes += not new
+                bad = 0
+            except Exception:                              # unreadable (still being copied, damaged): not retried until it changes
+                failed += 1; bad = 1
+            con.execute("INSERT OR REPLACE INTO auto_import_seen(path,size,mtime,failed) VALUES(?,?,?,?)", (p, size, mtime, bad))
+            if progress.done % 20 == 0:
+                con.commit()
+        con.commit()
+        progress.state = "done"
+        progress.result = {"added": added, "duplicates": dupes, "failed": failed}
+        return progress.result
+    finally:
+        con.close()
+
+
+def auto_import_tick(folder: str, progress: Progress):
+    """Job body: run a pass and publish the outcome in AUTO for the UI."""
+    with _AUTO_LOCK:
+        AUTO["running"] = True
+    try:
+        r = run_auto_import(folder, progress)
+        with _AUTO_LOCK:
+            AUTO.update(last_run=time.time(), error=None)
+            if r["added"]:
+                AUTO["seq"] += 1; AUTO["last_added"] = r["added"]; AUTO["total_added"] += r["added"]
+    except Exception as e:
+        progress.state = "error"
+        with _AUTO_LOCK:
+            AUTO.update(last_run=time.time(), error=str(e)[:200])
+    finally:
+        with _AUTO_LOCK:
+            AUTO["running"] = False
 
 
 def mark_import_start(con):

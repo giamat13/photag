@@ -50,6 +50,8 @@ def _backup_loop():
             # catches up on a missed day right after start-up; after a failure it retries every 30 minutes
             if backup.auto_due() is None and not _other_job_running():
                 _start("backup", backup.run_backup, "auto")
+            elif not _other_job_running():
+                backup.verify_if_due("app")           # once a week: is the newest backup still intact?
         except Exception:
             pass
         time.sleep(float(os.environ.get("PHOTAG_BACKUP_TICK", 300)))
@@ -57,14 +59,31 @@ def _backup_loop():
 
 def _trash_purge_loop():
     while True:
-        importer.purge_expired_trash(db.init_db())
-        time.sleep(24 * 3600)
+        try:
+            importer.purge_expired_trash(db.init_db())
+        except Exception:
+            pass
+        time.sleep(float(os.environ.get("PHOTAG_TRASH_TICK", 3600)))
+
+
+def _auto_import_loop():
+    """Automatic import: every minute, bring in photos that appeared in the chosen folder (never while another task runs)."""
+    time.sleep(float(os.environ.get("PHOTAG_AUTOIMPORT_DELAY", 20)))
+    while True:
+        try:
+            s = config.get_auto_import()
+            if s.get("enabled") and s.get("folder") and Path(s["folder"]).is_dir() and not _other_job_running():
+                _start("autoimport", importer.auto_import_tick, s["folder"])
+        except Exception:
+            pass
+        time.sleep(float(os.environ.get("PHOTAG_AUTOIMPORT_TICK", 60)))
 
 
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
     threading.Thread(target=_backup_loop, daemon=True).start()
+    threading.Thread(target=_auto_import_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
     except Exception:
@@ -90,6 +109,68 @@ def job(name: str):
     return p.as_dict() if p else {"state": "idle"}
 
 
+@app.get("/api/background")
+def background():
+    """What the window polls once a minute: did the automatic import bring in photos, did the weekly backup check find a problem."""
+    return {"auto_import": dict(importer.AUTO), "verify": backup.get_state().get("last_verify")}
+
+
+# ---- automatic import from a folder ------------------------------------------------
+class AutoImportIn(BaseModel):
+    enabled: bool | None = None
+    folder: str | None = None
+    existing: bool = False        # also import what the folder already holds (default: only what arrives from now on)
+
+
+@app.get("/api/auto-import")
+def auto_import_info():
+    s = config.get_auto_import()
+    return {"enabled": bool(s.get("enabled")), "folder": s.get("folder") or "",
+            "folder_ok": bool(s.get("folder")) and Path(s["folder"]).is_dir(), "state": dict(importer.AUTO)}
+
+
+@app.post("/api/auto-import")
+def auto_import_set(body: AutoImportIn):
+    s = dict(config.get_auto_import())
+    con = db.connect()
+    if body.folder is not None:
+        f = body.folder.strip().strip('"')
+        if f and not Path(f).is_dir():
+            raise err(404, "Folder not found")
+        if f and importer.folder_conflict(f):
+            raise err(400, "Choose a folder outside the photag library")
+        s["folder"] = f or None
+    if body.enabled is not None:
+        s["enabled"] = body.enabled
+    if s.get("enabled") and not s.get("folder"):
+        raise err(400, "Folder not found")
+    if s.get("enabled") and s.get("folder") and db.get_setting(con, "auto_import_baseline") != s["folder"]:
+        if not body.existing:
+            importer.baseline_auto_import(con, s["folder"])       # what is there now stays where it is; only new photos come in
+        db.set_setting(con, "auto_import_baseline", s["folder"])
+    config.set_auto_import(s)
+    return auto_import_info()
+
+
+# ---- the trash ---------------------------------------------------------------------
+class TrashDaysIn(BaseModel):
+    days: int
+
+
+@app.get("/api/trash/preview")
+def trash_preview(days: int):
+    """How many photos in the trash would be deleted for good if the limit were `days` days."""
+    return {"n": len(importer.expired_trash(db.connect(), max(importer.TRASH_DAYS_MIN, days)))}
+
+
+@app.post("/api/settings/trash")
+def set_trash_days(body: TrashDaysIn):
+    con = db.connect()
+    days = importer.set_trash_days(con, body.days)
+    n = importer.purge_expired_trash(con, days)
+    return {"days": days, "deleted": n}
+
+
 # ---- status / settings -----------------------------------------------------
 @app.get("/api/status")
 def status():
@@ -108,7 +189,7 @@ def status():
             "tags": c("SELECT COUNT(*) FROM tags"),
             "trashed": c("SELECT COUNT(*) FROM photos WHERE trashed=1"),
         },
-        "trash_days": config.TRASH_RETENTION_DAYS,
+        "trash_days": importer.trash_days(con),
         "version": __version__,
         "legacy_library": config.legacy_library_in_use(),
         "target_library": str(config.TARGET_LIBRARY),
@@ -282,6 +363,13 @@ def backup_settings(body: BackupSettingsIn):
 @app.post("/api/backup/run")
 def backup_run():
     _start("backup", backup.run_backup, "manual")
+    return {"ok": True}
+
+
+@app.post("/api/backup/verify")
+def backup_verify():
+    """Check the newest backup now (read-only)."""
+    _start("backupcheck", backup.run_verify)
     return {"ok": True}
 
 
@@ -601,7 +689,7 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
                      "OR p.id IN (SELECT pp.photo_id FROM photo_people pp JOIN people pe ON pe.id=pp.person_id WHERE pe.name LIKE ?))")
         args += [f"%{q}%"] * 4
     sql = (f"SELECT p.id,p.filename,p.is_video,p.taken_at,p.favorited,p.rating,p.width,p.height,"
-           f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.trashed_at,p.rel_path,"
+           f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.trashed_at,p.rel_path,p.lat,p.lng,"
            f"EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=p.id) has_kw "
            f"FROM photos p{joins} WHERE {' AND '.join(where)} "
            f"ORDER BY p.taken_at DESC, p.id DESC LIMIT ? OFFSET ?")
@@ -998,6 +1086,46 @@ def album_delete(aid: int):
     con = db.connect()
     con.execute("DELETE FROM photo_albums WHERE album_id=?", (aid,))
     con.execute("DELETE FROM albums WHERE id=?", (aid,))
+    con.commit()
+    return {"ok": True}
+
+
+# ---- saved searches (Advanced Search) ------------------------------------------------
+class SearchIn(BaseModel):
+    name: str
+    criteria: dict
+
+
+@app.get("/api/searches")
+def searches():
+    import json
+    out = []
+    for r in db.connect().execute("SELECT id,name,criteria FROM saved_searches ORDER BY name"):
+        try:
+            out.append({"id": r["id"], "name": r["name"], "criteria": json.loads(r["criteria"])})
+        except ValueError:
+            pass
+    return out
+
+
+@app.post("/api/searches")
+def save_search(body: SearchIn):
+    import json
+    name = body.name.strip()
+    if not name:
+        raise err(400, "Empty name")
+    con = db.connect()
+    con.execute("INSERT INTO saved_searches(name,criteria,created_at) VALUES(?,?,?) "
+                "ON CONFLICT(name) DO UPDATE SET criteria=excluded.criteria",
+                (name, json.dumps(body.criteria, ensure_ascii=False), int(time.time())))
+    con.commit()
+    return {"id": con.execute("SELECT id FROM saved_searches WHERE name=?", (name,)).fetchone()["id"]}
+
+
+@app.delete("/api/searches/{sid}")
+def delete_search(sid: int):
+    con = db.connect()
+    con.execute("DELETE FROM saved_searches WHERE id=?", (sid,))
     con.commit()
     return {"ok": True}
 

@@ -32,6 +32,14 @@ The interface is available in 17 languages (English by default). A Hebrew versio
   from the same place share one pin with a count); click a pin to see the photos. With nothing selected, all photos in view are shown. The
   metadata panel has a small map for the selected photo. The map is Leaflet, bundled with the app; **tiles are loaded from OpenStreetMap, so
   an internet connection is needed** (offline you see the pins on an empty background), and the tiles you view are requested from their servers.
+- **Undo and redo** (`Ctrl+Z` / `Ctrl+Y`) — moving to the trash, ratings, flags, color labels and the Quick Collection.
+- **Add to Collection** from the right-click menu (a list of the collections and "New Collection...").
+- **Advanced search** (Library → Advanced Search, `Ctrl+Shift+F`) — date range, near a place on the map, file type and size; searches can
+  be saved (they live in the catalog and appear under "Saved Searches").
+- **Automatic import from a folder** (Preferences) — new photos that appear in a chosen folder (for example where your phone syncs to) are
+  imported in the background, once a minute, without duplicates; what was already there is skipped unless you ask for it.
+- **Weekly backup check** — once a week the newest backup is checked (ZIP, catalog inside it, photo files; read-only) and a warning appears if
+  something is broken. The trash is emptied after 60 days by default; the number of days is a setting (Catalog Settings).
 - **Asks before deleting** — moving to the trash (with a "don't ask again" option; it is always restorable), going back to the original
   file, deleting a collection, a backup or an API key.
 - **Automatic updates** — at start-up photag checks the GitHub releases (`giamat13/photag`); if a newer one exists, a window shows "What's
