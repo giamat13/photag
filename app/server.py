@@ -36,6 +36,10 @@ def _trash_purge_loop():
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
+    try:
+        updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
+    except Exception:
+        pass
     threading.Thread(target=_trash_purge_loop, daemon=True).start()
 
 
@@ -147,6 +151,22 @@ def update_check(force: int = 0):
     # packaged EXE only; the dry-run test mode (never launches anything) behaves like it so the whole flow can be tested
     info["frozen"] = bool(getattr(__import__("sys"), "frozen", False)) or bool(os.environ.get("PHOTAG_UPDATE_DRY_RUN"))
     return info
+
+
+@app.get("/api/update/whatsnew")
+def update_whatsnew(current: int = 0):
+    """After an update: the notes of the version that was just installed (from GitHub). With current=1: the running version's notes."""
+    n = updater.pending_notice()
+    ver = (n["updated"] or {}).get("to") if n["updated"] and not current else __version__
+    out = {"updated": n["updated"], "failed": n["failed"], "current": __version__}
+    out["notes"] = updater.whats_new(ver) if (ver and (current or n["updated"])) else None
+    return out
+
+
+@app.post("/api/update/whatsnew/ack")
+def update_whatsnew_ack():
+    updater.ack_notice()
+    return {"ok": True}
 
 
 @app.post("/api/update/open-page")

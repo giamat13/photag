@@ -1,5 +1,7 @@
 ; Inno Setup script -> installer_output\photagSetup.exe
 ; Build:  ISCC.exe installer.iss   (after: pyinstaller photag.spec)
+; Updates install OVER the existing app (never uninstall-then-install), so an update that is interrupted
+; leaves the previous program in place; see app\updater.py ("Interrupted updates").
 ; Per-user install (no admin). Photos/catalog live in %USERPROFILE%\photag (or the older
 ; %USERPROFILE%\PhotoManager from before the rename, which keeps being used) and
 ; are NOT touched by install or uninstall.
@@ -46,4 +48,18 @@ Filename: "{app}\photag.exe"; Flags: nowait; Check: IsUpdateRun
 function IsUpdateRun: Boolean;
 begin
   Result := ExpandConstant('{param:update|0}') = '1';
+end;
+
+// The in-app updater saves a copy of the running program before it starts this installer. When all files are in place
+// we write done.flag; if it is missing afterwards (power loss, killed installer) the app puts the saved copy back.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  D: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    D := ExpandConstant('{localappdata}\photag\update');
+    ForceDirectories(D);
+    SaveStringToFile(D + '\done.flag', '{#MyAppVersion}', False);
+  end;
 end;

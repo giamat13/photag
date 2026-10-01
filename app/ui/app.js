@@ -1804,12 +1804,46 @@ async function updateCheck(manual){
   updateDialog(info);
 }
 
+// After an update the app shows the release notes of the new version (fetched from GitHub); an update that
+// did not finish says so, and that nothing was lost. Returns true when it showed something.
+async function whatsNew(manual){
+  let r;
+  try{ r = await api('/api/update/whatsnew' + (manual ? '?current=1' : '')); } catch(e){ if(manual) toast(e.message); return false; }
+  const notesHtml = n => !n ? '' : n.error
+    ? `<p class="hint" style="padding:0">${t('לא ניתן להביא את פירוט הגרסה מ‑GitHub ({0}).', [n.error])}</p><button class="linkbtn" id="wn-page">${t('פתח את דף השחרור')}</button>`
+    : (n.notes && n.notes.trim() ? `<div class="upd-notes">${mdLite(n.notes)}</div>` : `<span class="hint" style="padding:0">${t('אין פירוט לגרסה הזו.')}</span>`);
+  const close = async ()=>{ closeModal(); if(!manual) await send('POST', '/api/update/whatsnew/ack'); };
+  const wire = ()=>{ $('#wn-close').onclick = close; if($('#wn-page')) $('#wn-page').onclick = ()=>send('POST', '/api/update/open-page'); };
+  if(!manual && r.failed){
+    modal(`<h3>${t('העדכון לא הושלם')}</h3><div class="mb upd">
+      <p>${t('העדכון לגרסה {0} לא הסתיים (למשל המחשב כבה באמצע, או שההתקנה נסגרה).', [ltr(String(r.failed.to || ''))])}</p>
+      <p>${r.failed.restored ? t('הגרסה הקודמת הוחזרה אוטומטית.') : t('הגרסה הקודמת נשארה במקומה ועובדת כרגיל.')}</p>
+      <p>${t('התמונות, הקטלוג וההגדרות שלכם לא נפגעו. אפשר לנסות שוב מתפריט עזרה ← בדוק עדכונים.')}</p>
+    </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('סגור')}</button></div>`);
+    wire(); return true;
+  }
+  if(!manual && r.updated){
+    modal(`<h3>${t('עודכנת לגרסה {0}', [ltr(String(r.updated.to))])}</h3><div class="mb upd">
+      <p>${t('העדכון הסתיים. התמונות והנתונים שלכם נשארו כמו שהיו.')}</p>
+      <div class="lbl-sub" style="padding:0">${t('מה חדש')}</div>${notesHtml(r.notes)}
+    </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('סגור')}</button></div>`);
+    wire(); return true;
+  }
+  if(manual){
+    modal(`<h3>${t('מה חדש בגרסה {0}', [ltr(String(r.current))])}</h3><div class="mb upd">${notesHtml(r.notes)}</div>
+      <div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('סגור')}</button></div>`);
+    wire(); return true;
+  }
+  return false;
+}
+
 function updateDialog(info){
   const auto = info.can_install && info.frozen;
   modal(`<h3>${t('עדכון זמין')}</h3><div class="mb upd">
     <p>${t('גרסה {0} זמינה. הגרסה המותקנת: {1}.', [ltr(info.latest), ltr(info.current)])}</p>
     <div class="lbl-sub" style="padding:0">${t('מה חדש')}</div>
     <div class="upd-notes">${info.notes.trim() ? mdLite(info.notes) : `<span class="hint" style="padding:0">${t('אין פירוט לגרסה הזו.')}</span>`}</div>
+    ${auto ? `<p class="hint" style="padding:0">${t('העדכון מותקן על הגרסה הקיימת. התמונות והנתונים שלכם לא נוגעים בו, ואם הוא יופסק באמצע (למשל המחשב ייכבה) הגרסה הקודמת תוחזר אוטומטית.')}</p>` : ''}
     <div id="up-prog" class="hidden"><div class="progress"><i id="up-bar"></i></div></div>
     <div class="hint" id="up-msg" style="padding:0;min-height:16px"></div>
   </div><div class="mf"><button id="up-skip">${t('דלג על גרסה זו')}</button><span class="spacer"></span>
@@ -2110,6 +2144,7 @@ const MENUS = [
   [t('עזרה'), [
     [t('קיצורי מקשים'), 'Ctrl+/', shortcuts],
     [t('בדוק עדכונים...'), '', ()=>updateCheck(true)],
+    [t('מה חדש בגרסה הזו...'), '', ()=>whatsNew(true)],
     [t('אודות photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('גרסה {0}', [ltr(S.status?.version || '')])}</p><p>${t("ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`)],
   ]],
 ];
@@ -2231,7 +2266,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
-  setTimeout(()=>updateCheck(false), 2500);   // quiet check on start-up; a window appears only when a newer release exists
+  setTimeout(async ()=>{ if(!(await whatsNew(false))) updateCheck(false); }, 2500);   // quiet check on start-up; a window appears only when a newer release exists
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
   [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['aitag',t('תיוג AI')],['compress',t('דחיסת וידאו')],['export',t('ייצוא')]].forEach(async ([n,l])=>{

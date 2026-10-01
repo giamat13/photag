@@ -5,6 +5,17 @@ download() : fetches the installer asset and VERIFIES it (size and SHA-256 from 
              or from a "<asset>.sha256" file next to it) before it is ever run
 launch()   : starts the Inno Setup installer silently with /update=1 (which restarts the app afterwards)
              and exits; from source (not the packaged EXE) it opens the release page instead
+reconcile(): at every start-up, settles an update that was started earlier (see "Interrupted updates")
+whats_new(): the release notes of one version, straight from GitHub
+
+Interrupted updates (power loss, the installer being killed, the PC shutting down mid-way):
+  * the update is installed OVER the existing app (no uninstall first), so the app is never "removed";
+    your photos, catalog and settings live outside the program folder and are never touched
+  * before the installer starts, the running program file is copied to %LOCALAPPDATA%\\photag\\update\\rollback
+    and verified; a journal (pending.json) says what was about to happen
+  * the installer writes done.flag when it has finished copying the new version
+  * if the flag is missing the update did not finish: the next start of the app -- or, if the program itself is
+    broken, a RunOnce script that Windows runs at the next sign-in -- puts the saved program file back
 
 Safety: the installer is only ever downloaded from this repository's release URLs, and an asset with no
 checksum is never installed automatically (the user is sent to the release page instead).
@@ -13,6 +24,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -110,6 +122,14 @@ def can_install(info: dict) -> bool:
     return bool(a and a["url"].startswith(ALLOWED_DOWNLOAD) and (a["sha256"] or a["sha256_url"]))
 
 
+def state_dir() -> Path:
+    """Where the update journal, the rollback copy and the installer's done.flag live (survives restarts)."""
+    env = os.environ.get("PHOTAG_UPDATE_STATE_DIR")
+    d = Path(env) if env else Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "photag" / "update"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def download_dir() -> Path:
     d = Path(tempfile.gettempdir()) / "photag-update"
     d.mkdir(parents=True, exist_ok=True)
@@ -157,17 +177,209 @@ def run_download(progress):
         progress.fail("ההורדה נכשלה: {error}", error=str(e)[:200])
 
 
+# ------------------------------------------------------------------ safe install: journal, rollback copy, recovery
+RUNONCE_KEY = r"Software\Microsoft\Windows\CurrentVersion\RunOnce"
+RUNONCE_NAME = "photag-update-recovery"
+STALE_AFTER = 10 * 60          # a started update with no done.flag after this long is treated as failed
+
+RECOVER_PS1 = r"""param([string]$StateDir, [int]$WaitPid = 0, [switch]$NoLaunch)
+# photag: put the previous program file back if an update did not finish (see app/updater.py)
+$ErrorActionPreference = 'Stop'
+$log = Join-Path $StateDir 'recovery.log'
+function Log($m) { Add-Content -Path $log -Value ("{0} {1}" -f (Get-Date -Format s), $m) }
+$pj = Join-Path $StateDir 'pending.json'
+if (-not (Test-Path $pj)) { exit 0 }
+try { $j = Get-Content $pj -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Log "unreadable journal: $_"; exit 1 }
+if ($WaitPid -gt 0) { try { Wait-Process -Id $WaitPid -Timeout 60 } catch { } }
+$deadline = (Get-Date).AddMinutes(5)       # an installer that is still running gets time to finish
+while ((Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'photagSetup*' }) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
+if (Test-Path (Join-Path $StateDir 'done.flag')) { Log 'update finished, nothing to restore'; exit 0 }
+if (-not (Test-Path $j.backup)) { Log 'no rollback copy found'; exit 1 }
+$have = ''
+if (Test-Path $j.exe) { $have = (Get-FileHash $j.exe -Algorithm SHA256).Hash.ToLower() }
+if ($have -ne $j.exe_sha) {
+  Log ('restoring the previous version ' + $j.from_version)
+  $tmp = $j.exe + '.restore'
+  Copy-Item $j.backup $tmp -Force
+  Move-Item $tmp $j.exe -Force
+  Log 'restored'
+} else { Log 'installed program is the previous version and intact' }
+Remove-Item $pj -Force
+if (-not $NoLaunch) { Start-Process $j.exe }
+"""
+
+
+def _sha(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(1 << 20):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _exe_path() -> Path:
+    env = os.environ.get("PHOTAG_UPDATE_FAKE_EXE")          # tests: a stand-in for the installed program
+    return Path(env) if env else Path(sys.executable)
+
+
+def _write_json(path: Path, obj: dict):
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=1), "utf-8")
+    os.replace(tmp, path)                                    # all or nothing, even if the power goes now
+
+
+def _runonce(set_it: bool, script: Path | None = None, state: Path | None = None):
+    if sys.platform != "win32" or os.environ.get("PHOTAG_UPDATE_DRY_RUN"):
+        return
+    import winreg
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUNONCE_KEY) as k:
+        if set_it:
+            cmd = (f'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{script}" -StateDir "{state}"')
+            winreg.SetValueEx(k, RUNONCE_NAME, 0, winreg.REG_SZ, cmd)
+        else:
+            try:
+                winreg.DeleteValue(k, RUNONCE_NAME)
+            except FileNotFoundError:
+                pass
+
+
+def prepare_rollback(installer: Path, to_version: str) -> dict:
+    """Everything that makes an interrupted update harmless. Raises (and starts nothing) if it cannot be done."""
+    d = state_dir()
+    exe = _exe_path()
+    if not exe.is_file():
+        raise UpdateError("program file not found")
+    rb = d / "rollback"
+    shutil.rmtree(rb, ignore_errors=True)
+    rb.mkdir()
+    backup = rb / "photag.exe"
+    shutil.copy2(exe, backup)
+    sha = _sha(exe)
+    if _sha(backup) != sha:
+        raise UpdateError("rollback copy does not match the program file")
+    (d / "done.flag").unlink(missing_ok=True)
+    (d / "just_failed.json").unlink(missing_ok=True)
+    script = d / "recover.ps1"
+    script.write_text(RECOVER_PS1, "utf-8-sig")             # BOM: Windows PowerShell 5 reads it as UTF-8
+    journal = {"from_version": __version__, "to_version": to_version, "installer": str(installer), "exe": str(exe),
+               "backup": str(backup), "exe_sha": sha, "started": time.time(), "pid": os.getpid()}
+    _write_json(d / "pending.json", journal)
+    _runonce(True, script, d)
+    return journal
+
+
+def _clear_pending(d: Path, keep_flag: bool = False):
+    (d / "pending.json").unlink(missing_ok=True)
+    shutil.rmtree(d / "rollback", ignore_errors=True)
+    if not keep_flag:
+        (d / "done.flag").unlink(missing_ok=True)
+    _runonce(False)
+
+
+def reconcile() -> dict:
+    """Run at every start. Settles an update that was started earlier:
+    updated        - the installer finished and this is the new version (the UI shows "what's new")
+    in_progress    - started a moment ago, the installer may still be running: leave everything alone
+    failed_intact  - it never finished, but the previous program is intact: nothing to restore
+    restoring      - it never finished and the program file is not the old one: a recovery script puts it back"""
+    d = state_dir()
+    pj = d / "pending.json"
+    if not pj.exists():
+        return {"state": "none"}
+    try:
+        j = json.loads(pj.read_text("utf-8"))
+    except Exception:
+        pj.unlink(missing_ok=True)
+        return {"state": "none"}
+    flag = d / "done.flag"
+    if flag.exists():
+        if parse_version(__version__) >= parse_version(j.get("to_version", "")):
+            _write_json(d / "just_updated.json", {"from": j.get("from_version"), "to": j.get("to_version")})
+            _clear_pending(d)
+            return {"state": "updated", "from": j.get("from_version"), "to": j.get("to_version")}
+        return {"state": "in_progress"}
+    if time.time() - j.get("started", 0) < STALE_AFTER:
+        return {"state": "in_progress"}
+    exe = Path(j.get("exe", ""))
+    if exe.is_file() and _sha(exe) == j.get("exe_sha"):
+        _write_json(d / "just_failed.json", {"to": j.get("to_version"), "restored": False})
+        _clear_pending(d)
+        return {"state": "failed_intact"}
+    script = d / "recover.ps1"
+    if not script.exists():
+        script.write_text(RECOVER_PS1, "utf-8-sig")
+    if os.environ.get("PHOTAG_UPDATE_DRY_RUN"):
+        return {"state": "restoring", "dry_run": True}
+    _write_json(d / "just_failed.json", {"to": j.get("to_version"), "restored": True})
+    subprocess.Popen(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", str(script),
+                      "-StateDir", str(d), "-WaitPid", str(os.getpid())],
+                     creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0), close_fds=True)
+    threading.Timer(1.5, lambda: os._exit(0)).start()      # the script waits for this process, puts the old file back, restarts the app
+    return {"state": "restoring"}
+
+
+_notes_cache: dict[str, dict] = {}
+
+
+def whats_new(version: str) -> dict:
+    """Release notes of one version, fetched from GitHub (tag v<version>)."""
+    out = {"version": version, "notes": "", "page": f"https://github.com/{REPO}/releases", "published": None, "error": None}
+    if version in _notes_cache:
+        return _notes_cache[version]
+    try:
+        rel = json.loads(_get(f"{API}/repos/{REPO}/releases/tags/v{version}"))
+    except urllib.error.HTTPError as e:
+        out["error"] = f"HTTP {e.code}"
+        return out
+    except Exception as e:
+        out["error"] = str(getattr(e, "reason", e))[:200]
+        return out
+    out.update(notes=rel.get("body") or "", page=rel.get("html_url") or out["page"], published=rel.get("published_at"))
+    _notes_cache[version] = out
+    return out
+
+
+def pending_notice() -> dict:
+    """What the UI should tell the user after a restart: {"updated": {...}|None, "failed": {...}|None}."""
+    d = state_dir()
+    read = lambda n: (json.loads((d / n).read_text("utf-8")) if (d / n).exists() else None)
+    try:
+        return {"updated": read("just_updated.json"), "failed": read("just_failed.json")}
+    except Exception:
+        return {"updated": None, "failed": None}
+
+
+def ack_notice():
+    d = state_dir()
+    for n in ("just_updated.json", "just_failed.json"):
+        (d / n).unlink(missing_ok=True)
+
+
 def launch(path: str) -> dict:
-    """Run the downloaded installer and quit so it can replace the files."""
+    """Run the downloaded installer and quit so it can replace the files -- after making an interrupted install harmless."""
     p = Path(path)
     if not p.is_file() or p.parent != download_dir():
         raise UpdateError("not a downloaded update")
-    if os.environ.get("PHOTAG_UPDATE_DRY_RUN"):
+    dry = bool(os.environ.get("PHOTAG_UPDATE_DRY_RUN"))
+    if dry and not os.environ.get("PHOTAG_UPDATE_FAKE_EXE"):
         return {"mode": "dry-run", "path": str(p)}
-    if not getattr(sys, "frozen", False):
+    if not dry and not getattr(sys, "frozen", False):
         return {"mode": "page"}                      # running from source: nothing to replace
-    flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    subprocess.Popen([str(p), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/update=1"],
-                     creationflags=flags, close_fds=True)
+    m = re.search(r"photagSetup-(.+)\.exe$", p.name, re.I)
+    journal = prepare_rollback(p, m.group(1) if m else "")
+    if dry:
+        return {"mode": "dry-run", "path": str(p), "journal": journal}
+    d = state_dir()
+    args = [str(p), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/update=1", f"/LOG={d / 'installer.log'}"]
+    # detached and outside this process's job object: closing the app (or the updater window) must not stop the installer
+    flags = (getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+    try:
+        try:
+            subprocess.Popen(args, creationflags=flags | 0x01000000, close_fds=True)         # CREATE_BREAKAWAY_FROM_JOB
+        except OSError:
+            subprocess.Popen(args, creationflags=flags, close_fds=True)
+    except Exception as e:
+        _clear_pending(d)                            # nothing started: nothing to roll back
+        raise UpdateError(str(e))
     threading.Timer(1.0, lambda: os._exit(0)).start()
     return {"mode": "installing"}
