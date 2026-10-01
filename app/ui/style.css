@@ -646,3 +646,7 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 .cmp-sum{padding:8px 12px;background:#2a2a2a;border:1px solid #1e1e1e;border-radius:3px}
 .cmp-sum ul{margin:4px 0 0;padding-inline-start:18px;color:var(--t2)}
 .cmp-sum li{margin:2px 0}
+
+.zrow{display:flex;align-items:center;gap:8px;justify-content:center;padding:2px 0}
+.zrm{border:0;background:transparent;color:var(--t3);cursor:pointer;padding:0 6px;font-size:13px}.zrm:hover{color:var(--red)}
+.zclear{color:var(--t3);cursor:pointer;text-decoration:underline;font-size:12px}

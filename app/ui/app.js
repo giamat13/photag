@@ -2135,6 +2135,14 @@ function openImport(mode){
   if(IM.mode==='folder' && IM.path && !IM.files.length) scanImport();
 }
 function closeImport(){ $('#import').classList.add('hidden'); }
+// part numbers missing in a Takeout set (takeout-<stamp>-001.zip, -002.zip, ...), per export
+function zipGaps(zips){
+  const sets = new Map();
+  for(const z of zips){ const m = /^(.+)-(\d{3,})\.zip$/i.exec(z.name); if(m){ const k = m[1].toLowerCase(); if(!sets.has(k)) sets.set(k, new Set()); sets.get(k).add(+m[2]); } }
+  const gaps = new Set();
+  for(const s of sets.values()) for(let n = 1; n < Math.max(...s); n++) if(!s.has(n)) gaps.add(n);
+  return [...gaps].sort((a, b) => a - b);
+}
 function renderImport(){
   const el=$('#import'), folder=IM.mode==='folder', lr=IM.mode==='lrcat', li=IM.lrinfo;
   const shown = IM.files.filter(f=>IM.show==='all' || !f.dup);
@@ -2174,7 +2182,8 @@ function renderImport(){
       : lr ? `<div class="im-grid"><div class="im-empty">${IM.lrloading?t('Reading the catalog…'):!li?t('Choose a Lightroom Classic catalog from the “Source” panel.')
           : `<b dir="ltr">${esc(IM.lrcat)}</b><br>${t("{0} photos · {1} keywords · {2} collections · {3}", [num(li.images), num(li.keywords), num(li.collections), fsize(li.bytes)])}
              ${li.missing?`<br><span style="color:var(--yellow)">${t("{0} files referenced by the catalog were not found on disk and will not be imported.", [num(li.missing)])}</span>`:''}`}</div></div>`
-      : `<div class="im-grid"><div class="im-empty">${IM.zips.length ? `${IM.zips.map(z=>`<div dir="ltr"><b>${esc(z.name)}</b> · ${fsize(z.bytes)}</div>`).join('')}
+      : `<div class="im-grid"><div class="im-empty">${IM.zips.length ? `${IM.zips.map((z,i)=>`<div class="zrow" dir="ltr"><b>${esc(z.name)}</b> · ${fsize(z.bytes)}<button class="zrm" data-zrm="${i}" title="${t('Remove this file from the import')}">✕</button></div>`).join('')}
+          <div><a class="zclear" data-zclear>${t('Remove all')}</a></div>
           ${IM.zipFound ? `<br>${t('{0} more parts from the same folder were added.', [num(IM.zipFound)])}` : ''}
           ${IM.zipMissing.length ? `<br><span style="color:var(--yellow)">${t('Part {0} is missing: photos that are only in it will not be imported. You can import it later; photos that were already imported are skipped.', [IM.zipMissing.map(n=>String(n).padStart(3,'0')).join(', ')])}</span>` : ''}
           <br><br>${t("Import will keep albums, dates, locations, favorites, people tags and memories. Photos already in the catalog will not be duplicated.")}`
@@ -2214,13 +2223,17 @@ $('#import').addEventListener('click', async e=>{
   if(tg.closest('#im-zip')){
     const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('Choose Google Takeout ZIP files')));
     if(!(r.files||[]).length) return;
-    const picked = new Map(); r.files.forEach(f => picked.set(f.path.toLowerCase(), f));
-    let info = {parts:[], missing:[]}; try{ info = await api('/api/takeout/parts?path='+encodeURIComponent(r.files[0].path)); }catch{}
-    const added = info.parts.filter(p => !picked.has(p.path.toLowerCase())).length;
-    info.parts.forEach(p => picked.set(p.path.toLowerCase(), p));
+    const picked = new Map(IM.zips.map(z => [z.path.toLowerCase(), z]));          // choosing again ADDS to the list
+    r.files.forEach(f => picked.set(f.path.toLowerCase(), f));
+    const before = picked.size;
+    let info = {parts:[]}; try{ info = await api('/api/takeout/parts?path='+encodeURIComponent(r.files[0].path)); }catch{}
+    info.parts.forEach(p => { if(!picked.has(p.path.toLowerCase())) picked.set(p.path.toLowerCase(), p); });
     IM.zips = [...picked.values()].sort((a,b)=>a.name.localeCompare(b.name));
-    IM.zipFound = added; IM.zipMissing = info.missing || [];
+    IM.zipFound = picked.size - before; IM.zipMissing = zipGaps(IM.zips);
     renderImport(); return; }
+  const zrm = tg.closest('[data-zrm]');                                              // a part added by mistake: take it out again
+  if(zrm){ IM.zips.splice(+zrm.dataset.zrm, 1); IM.zipFound = 0; IM.zipMissing = zipGaps(IM.zips); renderImport(); return; }
+  if(tg.closest('[data-zclear]')){ IM.zips = []; IM.zipFound = 0; IM.zipMissing = []; renderImport(); return; }
   if(tg.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat&title='+encodeURIComponent(t('Choose Lightroom catalog'))); if(!r.path) return;
     IM.lrcat=r.path; IM.lrinfo=null; IM.lrloading=true; renderImport();
     try{ IM.lrinfo=await api('/api/lrcat-info?'+new URLSearchParams({path:r.path})); } finally { IM.lrloading=false; renderImport(); } return; }

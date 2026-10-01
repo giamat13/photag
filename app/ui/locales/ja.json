@@ -796,5 +796,7 @@
  "Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.": "takeout.google.com（Google Photos）からライブラリをダウンロードしてください。ファイルは展開せず、そのまま読み込まれます。大きなエクスポートは複数の ZIP ファイル（…-001.zip、…-002.zip）に分かれます。すべて選択しても 1 つだけ選択しても構いません。同じフォルダ内の他のパーツは自動的に追加されます。",
  "Part {0} is missing: photos that are only in it will not be imported. You can import it later; photos that were already imported are skipped.": "パート {0} が見つかりません。そこにしかない写真はインポートされません。後でインポートできます。インポート済みの写真はスキップされます。",
  "{0} ZIP files · {1}": "ZIP ファイル {0} 個 · {1}",
- "{0} more parts from the same folder were added.": "同じフォルダから {0} 個のパーツが追加されました。"
+ "{0} more parts from the same folder were added.": "同じフォルダから {0} 個のパーツが追加されました。",
+ "Remove all": "すべて削除",
+ "Remove this file from the import": "このファイルをインポートから削除"
 }

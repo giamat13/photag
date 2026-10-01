@@ -796,5 +796,7 @@
  "Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.": "Lade deine Mediathek von takeout.google.com (Google Photos) herunter. Die Dateien werden direkt gelesen, ohne sie zu entpacken. Ein großer Export besteht aus mehreren ZIP-Dateien (…-001.zip, …-002.zip): Wähle alle aus oder nur eine, die übrigen Teile im selben Ordner werden automatisch hinzugefügt.",
  "Part {0} is missing: photos that are only in it will not be imported. You can import it later; photos that were already imported are skipped.": "Teil {0} fehlt: Fotos, die nur darin enthalten sind, werden nicht importiert. Du kannst ihn später importieren; bereits importierte Fotos werden übersprungen.",
  "{0} ZIP files · {1}": "{0} ZIP-Dateien · {1}",
- "{0} more parts from the same folder were added.": "{0} weitere Teile aus demselben Ordner wurden hinzugefügt."
+ "{0} more parts from the same folder were added.": "{0} weitere Teile aus demselben Ordner wurden hinzugefügt.",
+ "Remove all": "Alle entfernen",
+ "Remove this file from the import": "Diese Datei aus dem Import entfernen"
 }

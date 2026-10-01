@@ -796,5 +796,7 @@
  "Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.": "अपनी लाइब्रेरी takeout.google.com (Google Photos) से डाउनलोड करें। फ़ाइलें बिना एक्सट्रैक्ट किए सीधे पढ़ी जाती हैं। बड़ा एक्सपोर्ट कई ZIP फ़ाइलों (…-001.zip, …-002.zip) में आता है: सभी चुनें, या सिर्फ़ एक, और उसी फ़ोल्डर के बाकी हिस्से अपने-आप जुड़ जाते हैं।",
  "Part {0} is missing: photos that are only in it will not be imported. You can import it later; photos that were already imported are skipped.": "भाग {0} मौजूद नहीं है: जो फ़ोटो सिर्फ़ उसी में हैं, वे इंपोर्ट नहीं होंगी। आप इसे बाद में इंपोर्ट कर सकते हैं; जो फ़ोटो पहले ही इंपोर्ट हो चुकी हैं, उन्हें छोड़ दिया जाता है।",
  "{0} ZIP files · {1}": "{0} ZIP फ़ाइलें · {1}",
- "{0} more parts from the same folder were added.": "उसी फ़ोल्डर के {0} और भाग जोड़े गए।"
+ "{0} more parts from the same folder were added.": "उसी फ़ोल्डर के {0} और भाग जोड़े गए।",
+ "Remove all": "सभी हटाएँ",
+ "Remove this file from the import": "इस फ़ाइल को आयात से हटाएँ"
 }

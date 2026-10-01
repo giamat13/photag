@@ -122,6 +122,16 @@ try:
         check("Takeout screen lists the parts, the total, the added parts and the missing-part warning (English)",
               "takeout-1-001.zip" in zt and "2 ZIP files" in zt and "1 more parts" in zt and "Part 002 is missing" in zt and not HEB.search(zt), zt[:100].replace(chr(10), " "))
         check("with parts chosen the Import button is enabled", not ev("document.querySelector('#im-go').disabled"))
+        # a part added by mistake can be removed again; "Remove all" empties the list; the missing-part warning follows
+        pg.click('[data-zrm="1"]')
+        pg.wait_for_timeout(300)
+        zt = ev("document.querySelector('#import').innerText")
+        check("removing one part: it disappears, the others stay, the missing-part warning goes away", "takeout-1-003.zip" not in zt and "takeout-1-001.zip" in zt and "Part 002 is missing" not in zt and "2 ZIP files" not in zt, zt[:80].replace(chr(10), " "))
+        ev("IM.zips.push({path:'C:\\t\\takeout-1-003.zip', name:'takeout-1-003.zip', bytes: 3e9}); IM.zipMissing = zipGaps(IM.zips); renderImport()")
+        check("zipGaps finds part 002 missing between 001 and 003", ev("zipGaps(IM.zips)") == [2])
+        pg.click("[data-zclear]")
+        pg.wait_for_timeout(300)
+        check("Remove all: the list is empty and Import is disabled", ev("IM.zips.length") == 0 and ev("document.querySelector('#im-go').disabled"))
         ev("document.querySelector('#import').classList.add('hidden')")
         ev("(()=>{ setView('grid'); S.sel.clear(); S.sel.add(%d); S.act=%d; onSelChange(); trashSelected(); })()" % (img, img))
         pg.wait_for_selector("#cb-yes", timeout=5000)

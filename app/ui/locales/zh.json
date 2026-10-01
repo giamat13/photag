@@ -796,5 +796,7 @@
  "Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.": "请从 takeout.google.com（Google Photos）下载您的图库。文件将被直接读取，无需解压。较大的导出内容会分成多个 ZIP 文件（…-001.zip、…-002.zip）：可以全部选择，也可以只选一个，同一文件夹中的其他部分会自动添加。",
  "Part {0} is missing: photos that are only in it will not be imported. You can import it later; photos that were already imported are skipped.": "缺少第 {0} 部分：仅存在于该部分的照片将不会被导入。您可以稍后再导入；已导入的照片会被跳过。",
  "{0} ZIP files · {1}": "{0} 个 ZIP 文件 · {1}",
- "{0} more parts from the same folder were added.": "已添加同一文件夹中的另外 {0} 个部分。"
+ "{0} more parts from the same folder were added.": "已添加同一文件夹中的另外 {0} 个部分。",
+ "Remove all": "全部移除",
+ "Remove this file from the import": "从导入中移除此文件"
 }

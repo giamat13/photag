@@ -796,5 +796,7 @@
  "Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.": "نزّل مكتبتك من takeout.google.com (Google Photos). تُقرأ الملفات مباشرة دون استخراجها. يأتي التصدير الكبير في عدة ملفات ZIP (…-001.zip، …-002.zip): اخترها جميعًا أو اختر ملفًا واحدًا فقط، وتُضاف الأجزاء الأخرى الموجودة في المجلد نفسه تلقائيًا.",
  "Part {0} is missing: photos that are only in it will not be imported. You can import it later; photos that were already imported are skipped.": "الجزء {0} مفقود: لن تُستورد الصور الموجودة فيه فقط. يمكنك استيراده لاحقًا؛ وتُتخطى الصور التي استُوردت من قبل.",
  "{0} ZIP files · {1}": "{0} ملفات ZIP · {1}",
- "{0} more parts from the same folder were added.": "تمت إضافة {0} أجزاء أخرى من المجلد نفسه."
+ "{0} more parts from the same folder were added.": "تمت إضافة {0} أجزاء أخرى من المجلد نفسه.",
+ "Remove all": "إزالة الكل",
+ "Remove this file from the import": "إزالة هذا الملف من الاستيراد"
 }
