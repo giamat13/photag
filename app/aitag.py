@@ -286,13 +286,13 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
     try:
         key = _key(provider)
         if provider != "custom" and not key:
-            return progress.fail("לא הוגדר מפתח API לספק שנבחר")
-        progress.state = "preparing"; progress.say("מתחבר לספק ה‑AI…")
+            return progress.fail("No API key is set for the selected provider")
+        progress.state = "preparing"; progress.say("Connecting to the AI provider…")
         model = cfg["model"]
         if not model:
             model = pick_auto(provider, list_models(provider, key, cfg["base_url"]))
             if not model:
-                return progress.fail("לא נמצא מודל מתאים. בחרו מודל ידנית בהגדרות תיוג AI")
+                return progress.fail("No suitable model found. Choose a model manually in AI tagging settings")
         where, args = "is_video=0 AND trashed=0", []
         if ids:
             where += f" AND id IN ({','.join('?' * len(ids))})"; args += ids
@@ -300,9 +300,9 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
             where += " AND NOT EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=photos.id)"
         todo = con.execute(f"SELECT id, sha256, rel_path FROM photos WHERE {where} ORDER BY taken_at DESC", args).fetchall()
         if not todo:
-            progress.state = "done"; return progress.say("אין תמונות לתיוג")
+            progress.state = "done"; return progress.say("No photos to tag")
         progress.state = "tagging"; progress.total = len(todo); progress.done = 0
-        progress.say("מתייג עם {model} · {done}/{total}", model=model, done=0, total=len(todo))
+        progress.say("Tagging with {model} · {done}/{total}", model=model, done=0, total=len(todo))
         cancelled = lambda: bool(getattr(progress, "cancel", False))
 
         def work(row):
@@ -335,11 +335,11 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                             for g in futs:
                                 g.cancel()
                             con.commit()
-                            return progress.fail("תיוג AI נעצר: {error}", error=last_err)
+                            return progress.fail("AI tagging stopped: {error}", error=last_err)
                     except Exception as e:                      # a photo we couldn't read: skip it
                         fails += 1; last_err = str(e)
                     progress.done = ok + fails
-                    progress.say("מתייג עם {model} · {done}/{total}", model=model, done=progress.done, total=len(todo))
+                    progress.say("Tagging with {model} · {done}/{total}", model=model, done=progress.done, total=len(todo))
                     if progress.done % 10 == 0:
                         con.commit()
                     if cancelled():
@@ -358,13 +358,13 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                 con.commit()
         progress.state = "done"
         if cancelled():
-            progress.say_parts(("התיוג הופסק", {}), ("תויגו {n} תמונות", {"n": ok}))
+            progress.say_parts(("Tagging was stopped", {}), ("Tagged {n} photos", {"n": ok}))
         else:
-            progress.say_parts(("תויגו {n} תמונות עם {model}", {"n": ok, "model": model}),
-                               *([("{n} נכשלו", {"n": fails})] if fails else []))
+            progress.say_parts(("Tagged {n} photos with {model}", {"n": ok, "model": model}),
+                               *([("{n} failed", {"n": fails})] if fails else []))
     except AIError as e:
         con.commit()
-        progress.fail("תיוג AI נכשל: {error}", error=str(e))
+        progress.fail("AI tagging failed: {error}", error=str(e))
     except Exception as e:
         con.commit()
-        progress.fail("תיוג AI נכשל: {error}", error=str(e))
+        progress.fail("AI tagging failed: {error}", error=str(e))

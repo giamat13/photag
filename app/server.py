@@ -74,7 +74,7 @@ def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
         if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing", "encoding", "verifying", "replacing", "downloading", "backing_up", "restoring"):
-            raise err(409, "המשימה כבר רצה")
+            raise err(409, "The task is already running")
         prog = importer.Progress()
         prog.state = "starting"   # not "idle": a poll right after the start must not read the job as finished
         JOBS[name] = prog
@@ -158,7 +158,7 @@ class ImportIn(BaseModel):
 @app.post("/api/import")
 def start_import(body: ImportIn):
     if not Path(body.zip_path).exists():
-        raise err(404, "קובץ ה-ZIP לא נמצא")
+        raise err(404, "The ZIP file was not found")
     _start("import", importer.run_import, body.zip_path)
     return {"ok": True}
 
@@ -232,7 +232,7 @@ def backup_settings(body: BackupSettingsIn):
         s = backup.set_settings(body.model_dump(exclude_unset=True))
         threading.Thread(target=backup_task.ensure, args=(s["enabled"],), daemon=True).start()
     except OSError:
-        raise err(400, "אי אפשר לכתוב לתיקייה שנבחרה")
+        raise err(400, "Can't write to the selected folder")
     return backup_info()
 
 
@@ -245,9 +245,9 @@ def backup_run():
 @app.post("/api/backup/restore")
 def backup_restore(body: RestoreIn):
     if _other_job_running("backup"):
-        raise err(409, "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב")
+        raise err(409, "Another task is currently running. Wait for it to finish and try again")
     if not backup.NAME_RE.match(body.name) or not (backup.backup_dir() / body.name).is_file():
-        raise err(404, "הגיבוי לא נמצא")
+        raise err(404, "Backup not found")
     _start("backup", backup.run_restore, body.name, body.media, body.settings)
     return {"ok": True}
 
@@ -257,7 +257,7 @@ def backup_delete(name: str):
     try:
         backup.delete_snapshot(name)
     except ValueError:
-        raise err(404, "הגיבוי לא נמצא")
+        raise err(404, "Backup not found")
     return {"ok": True}
 
 
@@ -290,7 +290,7 @@ def update_install(body: InstallIn):
     try:
         return updater.launch(body.path)
     except updater.UpdateError:
-        raise err(400, "קובץ העדכון לא נמצא. הורידו אותו שוב")
+        raise err(400, "Update file not found. Download it again")
 
 
 # ---- video compression (HandBrake) -------------------------------------------
@@ -320,9 +320,9 @@ def handbrake_open_page():
 def handbrake_set_path(body: HandbrakePathIn):
     p = body.path.strip().strip('"')
     if p and not Path(p).is_file():
-        raise err(404, "הקובץ לא נמצא")
+        raise err(404, "File not found")
     if p and not compress.handbrake_version(p):
-        raise err(400, "הקובץ שנבחר לא נראה כמו HandBrakeCLI")
+        raise err(400, "The selected file doesn't look like HandBrakeCLI")
     config.set_handbrake_path(p or None)
     return compress.status()
 
@@ -349,7 +349,7 @@ def start_compress(pid: int, body: CompressIn):
 def start_compress_batch(body: CompressBatchIn):
     ids = list(dict.fromkeys(body.ids))
     if not ids:
-        raise err(400, "לא נבחרו קבצים")
+        raise err(400, "No files selected")
     _start("compress", compress.run_compress_batch, ids, body.video, body.image)
     return {"ok": True}
 
@@ -368,7 +368,7 @@ def compress_restore(pid: int):
     try:
         compress.restore_previous(pid)
     except (LookupError, FileNotFoundError):
-        raise err(404, "אין גרסה קודמת לשחזור")
+        raise err(404, "No previous version to restore")
     return photo(pid)
 
 
@@ -394,9 +394,9 @@ def _ai_call(fn, *a):
     try:
         return fn(*a)
     except aitag.AIError as e:
-        raise err(502, "שגיאה מספק ה‑AI: {error}", error=str(e))
+        raise err(502, "Error from the AI provider: {error}", error=str(e))
     except (ValueError, KeyError) as e:
-        raise err(400, "הגדרה לא תקינה: {error}", error=str(e))
+        raise err(400, "Invalid setting: {error}", error=str(e))
 
 
 @app.get("/api/ai/settings")
@@ -425,7 +425,7 @@ def ai_models(body: AiProbeIn):
 @app.post("/api/aitag")
 def start_aitag(body: AiTagIn):
     if not body.ids and not body.only_untagged:
-        raise err(400, "לא נבחרו תמונות לתיוג")
+        raise err(400, "No photos selected for tagging")
     _start("aitag", aitag.run_aitag, body.ids, body.only_untagged)
     return {"ok": True}
 
@@ -650,7 +650,7 @@ def _raw_jpeg(p: Path):
         try:
             images.open_image(p).save(out, "JPEG", quality=92)   # oriented, cached
         except Exception:
-            raise err(415, "לא נמצאה תצוגה מקדימה בקובץ ה‑RAW")
+            raise err(415, "No preview found in the RAW file")
     return FileResponse(out, media_type="image/jpeg")
 
 
@@ -784,9 +784,9 @@ def _render(con, r, ops: dict):
 def _editable(con, pid):
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r or r["is_video"]:
-        raise err(400, "לא ניתן לערוך")
+        raise err(400, "Cannot edit")
     if images.is_raw(Path(r["rel_path"])):
-        raise err(400, "עריכת קובצי RAW לא נתמכת — ייצאו JPEG וערכו אותו")
+        raise err(400, "Editing RAW files is not supported — export a JPEG and edit that")
     return r
 
 
@@ -824,7 +824,7 @@ def revert_image(pid: int):
     con = db.connect()
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r or not r["orig_backup"]:
-        raise err(400, "אין גרסה מקורית")
+        raise err(400, "No original version")
     src = PATHS.media / r["rel_path"]
     shutil.copy2(PATHS.media / r["orig_backup"], src)
     _refresh_file(con, r, src, edited=0, edit_ops=None)
@@ -837,7 +837,7 @@ def cast():
     TV or wireless display. Windows owns the discovery and the connection."""
     import sys
     if sys.platform != "win32":
-        raise err(501, "שידור למסך זמין רק ב-Windows")
+        raise err(501, "Casting is only available on Windows")
     import ctypes
     key = ctypes.windll.user32.keybd_event
     VK_LWIN, VK_K, KEYUP = 0x5B, 0x4B, 0x2
@@ -863,7 +863,7 @@ def open_external(pid: int):
     if sys.platform == "win32":
         os.startfile(path)
         return {"player": "default"}
-    raise err(501, "לא נמצא נגן חיצוני")
+    raise err(501, "No external player found")
 
 
 @app.post("/api/photo/{pid}/reveal")
@@ -907,9 +907,9 @@ def create_album(body: CollectionIn):
     con = db.connect()
     name = body.name.strip()
     if not name:
-        raise err(400, "שם ריק")
+        raise err(400, "Empty name")
     if con.execute("SELECT 1 FROM albums WHERE name=?", (name,)).fetchone():
-        raise err(409, "כבר קיים אוסף בשם הזה")
+        raise err(409, "A collection with this name already exists")
     aid = con.execute("INSERT INTO albums(name,kind) VALUES(?, 'album')", (name,)).lastrowid
     con.executemany("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", [(i, aid) for i in body.ids])
     con.commit()
@@ -934,7 +934,7 @@ def album_rename(aid: int, body: RenameIn):
     con = db.connect()
     name = body.name.strip()
     if con.execute("SELECT 1 FROM albums WHERE name=? AND id<>?", (name, aid)).fetchone():
-        raise err(409, "כבר קיים אוסף בשם הזה")
+        raise err(409, "A collection with this name already exists")
     con.execute("UPDATE albums SET name=? WHERE id=?", (name, aid))
     con.commit()
     return {"ok": True}
@@ -953,7 +953,7 @@ def album_delete(aid: int):
 @app.get("/api/scan-folder")
 def scan_folder(path: str, recursive: int = 1):
     if not Path(path).is_dir():
-        raise err(404, "התיקייה לא נמצאה")
+        raise err(404, "Folder not found")
     files = importer.scan_folder(path, bool(recursive))
     known = {(r["filename"], r["bytes"]) for r in db.connect().execute("SELECT filename, bytes FROM photos")}
     for f in files:  # Lightroom's "suspected duplicate": same name + size already in the catalog
@@ -976,16 +976,16 @@ class LrcatIn(BaseModel):
 @app.get("/api/lrcat-info")
 def lrcat_info(path: str):
     if not Path(path).is_file():
-        raise err(404, "הקטלוג לא נמצא")
+        raise err(404, "Catalog not found")
     try:
         return importer.lrcat_info(path)
     except Exception as e:
-        raise err(400, "לא ניתן לקרוא את הקטלוג: {error}", error=str(e))
+        raise err(400, "Cannot read the catalog: {error}", error=str(e))
 
 @app.post("/api/import-lrcat")
 def start_import_lrcat(body: LrcatIn):
     if not Path(body.path).is_file():
-        raise err(404, "הקטלוג לא נמצא")
+        raise err(404, "Catalog not found")
     _start("import", importer.run_lrcat_import, body.path)
     return {"ok": True}
 
@@ -998,7 +998,7 @@ class ImportFolderIn(BaseModel):
 @app.post("/api/import-folder")
 def start_import_folder(body: ImportFolderIn):
     if not body.paths:
-        raise err(400, "לא נבחרו קבצים")
+        raise err(400, "No files selected")
     kws = [k.strip() for k in body.keywords if k.strip()]
     _start("import", importer.run_folder_import, body.paths, kws, (body.album or "").strip() or None)
     return {"ok": True}
@@ -1014,7 +1014,7 @@ class ExportIn(BaseModel):
 @app.post("/api/export")
 def start_export(body: ExportIn):
     if not body.ids or not body.dest.strip():
-        raise err(400, "חסרים פריטים או תיקיית יעד")
+        raise err(400, "Missing items or destination folder")
     _start("export", importer.run_export, body.ids, body.dest.strip(), body.originals,
            body.long_edge, max(10, min(100, body.quality)))
     return {"ok": True}
@@ -1051,7 +1051,7 @@ def name_cluster(cid: int, body: RenameIn):
     con = db.connect()
     name = body.name.strip()
     if not name:
-        raise err(400, "שם ריק")
+        raise err(400, "Empty name")
     con.execute("INSERT OR IGNORE INTO people(name,source) VALUES(?, 'manual')", (name,))
     pid = con.execute("SELECT id FROM people WHERE name=?", (name,)).fetchone()["id"]
     con.execute("UPDATE faces SET person_id=? WHERE cluster_id=?", (pid, cid))

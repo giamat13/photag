@@ -58,7 +58,8 @@ The interface is available in 17 languages (English by default). A Hebrew versio
 
 ## Languages
 English (default), עברית, العربية, Русский, Español, Français, Deutsch, Italiano, Português, Nederlands, Polski, Українська, Türkçe, 中文,
-日本語, 한국어, हिन्दी — View → Language. Every UI string is a (Hebrew) key; translations are in `app/ui/locales/<code>.json`.
+日本語, 한국어, हिन्दी — View → Language. English is the base language: every UI string is an English key, and the translations (Hebrew included) are in `app/ui/locales/<code>.json`.
+`py -3.12 tools/ui_smoke.py` checks the language handling in a real browser.
 ```bat
 python tools\i18n.py extract   REM after changing UI text: rebuilds locales\_keys.json
 python tools\i18n.py check     REM checks that every language file is complete and the {placeholders} are intact

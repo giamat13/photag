@@ -155,12 +155,12 @@ class Progress:
 def run_import(zip_path: str, progress: Progress):
     con = db.init_db()
     mark_import_start(con)
-    progress.state = "scanning"; progress.say("קורא את מבנה ה-ZIP…")
+    progress.state = "scanning"; progress.say("Reading the ZIP structure…")
     try:
         _do_import(zip_path, con, progress)
-        progress.state = "done"; progress.say("הייבוא הושלם")
+        progress.state = "done"; progress.say("Import complete")
     except Exception as e:  # surface to UI instead of dying silently
-        progress.fail("הייבוא נכשל: {error}", error=str(e))
+        progress.fail("Import failed: {error}", error=str(e))
         raise
     finally:
         con.commit()
@@ -391,11 +391,11 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
                             (photo_id, tid))
         con.commit()
         progress.state = "done"
-        progress.say_parts(("יובאו {n} פריטים", {"n": added}),
-                           *([("{n} כבר היו בקטלוג", {"n": dupes})] if dupes else []))
+        progress.say_parts(("{n} items imported", {"n": added}),
+                           *([("{n} already in catalog", {"n": dupes})] if dupes else []))
     except Exception as e:
         con.commit()
-        progress.fail("הייבוא נכשל: {error}", error=str(e))
+        progress.fail("Import failed: {error}", error=str(e))
 
 
 # ---------- import a Lightroom Classic catalog (.lrcat) ----------
@@ -459,7 +459,7 @@ def lrcat_info(path: str) -> dict:
 def run_lrcat_import(path: str, progress: Progress):
     con = db.init_db()
     mark_import_start(con)
-    progress.state = "scanning"; progress.say("קורא את קטלוג Lightroom…")
+    progress.state = "scanning"; progress.say("Reading the Lightroom catalog…")
     try:
         lr = _lr_open(path)
         imgs = _lr_images(lr)
@@ -524,12 +524,12 @@ def run_lrcat_import(path: str, progress: Progress):
                 con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (pid, aid))
         con.commit()
         progress.state = "done"
-        progress.say_parts(("יובאו {n} פריטים מ‑Lightroom", {"n": added}),
-                           *([("{n} כבר היו בקטלוג", {"n": dupes})] if dupes else []),
-                           *([("{n} קבצים חסרים בדיסק", {"n": missing})] if missing else []))
+        progress.say_parts(("{n} items imported from Lightroom", {"n": added}),
+                           *([("{n} already in catalog", {"n": dupes})] if dupes else []),
+                           *([("{n} files missing from disk", {"n": missing})] if missing else []))
     except Exception as e:
         con.commit()
-        progress.fail("ייבוא מ‑Lightroom נכשל: {error}", error=str(e))
+        progress.fail("Import from Lightroom failed: {error}", error=str(e))
 
 
 def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
@@ -556,9 +556,9 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
                 shutil.copy2(src, _unique_dest(out_dir / name))
             else:
                 images.export_resized(src, _unique_dest(out_dir / (Path(name).stem + ".jpg")), long_edge, quality)
-        progress.state = "done"; progress.say("יוצאו {n} פריטים אל {folder}", n=progress.done, folder=str(out_dir))
+        progress.state = "done"; progress.say("{n} items exported to {folder}", n=progress.done, folder=str(out_dir))
     except Exception as e:
-        progress.fail("הייצוא נכשל: {error}", error=str(e))
+        progress.fail("Export failed: {error}", error=str(e))
 
 
 if __name__ == "__main__":  # ponytail self-check for the fiddly matcher

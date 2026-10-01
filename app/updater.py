@@ -142,20 +142,20 @@ def run_download(progress):
     try:
         info = check(force=True)
         if not info["available"]:
-            return progress.fail("אין עדכון זמין")
+            return progress.fail("No update available")
         if not can_install(info):
-            return progress.fail("אי אפשר לאמת את קובץ ההתקנה אוטומטית. הורידו אותו מדף השחרור")
+            return progress.fail("The installer can't be verified automatically. Download it from the release page")
         a = info["asset"]
         want = _expected_sha(a)
         if not want:
-            return progress.fail("אי אפשר לאמת את קובץ ההתקנה אוטומטית. הורידו אותו מדף השחרור")
+            return progress.fail("The installer can't be verified automatically. Download it from the release page")
         dest = download_dir() / f"photagSetup-{info['latest']}.exe"
         part = dest.with_suffix(".part")
         for old in download_dir().glob("photagSetup-*"):          # leftovers of earlier updates
             if old != part:
                 old.unlink(missing_ok=True)
         progress.state = "downloading"; progress.total = a.get("size") or 0; progress.done = 0
-        progress.say("מוריד עדכון… {pct}%", pct=0)
+        progress.say("Downloading update… {pct}%", pct=0)
         h = hashlib.sha256()
         req = urllib.request.Request(a["url"], headers={"User-Agent": f"photag/{__version__}"})
         with urllib.request.urlopen(req, timeout=30, context=ssl_context()) as r, open(part, "wb") as f:
@@ -163,19 +163,19 @@ def run_download(progress):
                 progress.total = int(r.headers.get("Content-Length") or 0)
             while chunk := r.read(1 << 20):
                 f.write(chunk); h.update(chunk); progress.done += len(chunk)
-                progress.say("מוריד עדכון… {pct}%", pct=int(100 * progress.done / progress.total) if progress.total else 0)
+                progress.say("Downloading update… {pct}%", pct=int(100 * progress.done / progress.total) if progress.total else 0)
         size = part.stat().st_size
         if a.get("size") and size != a["size"]:
             part.unlink(missing_ok=True)
-            return progress.fail("הקובץ שהורד חלקי ({got} מתוך {want} בתים)", got=size, want=a["size"])
+            return progress.fail("The downloaded file is incomplete ({got} of {want} bytes)", got=size, want=a["size"])
         if h.hexdigest() != want:
             part.unlink(missing_ok=True)
-            return progress.fail("הקובץ שהורד לא תואם לחתימה (SHA-256). הוא נמחק ולא הותקן")
+            return progress.fail("The downloaded file does not match its signature (SHA-256). It was deleted and not installed")
         os.replace(part, dest)
         progress.result = {"path": str(dest), "version": info["latest"], "sha256": want, "bytes": size}
-        progress.state = "done"; progress.say("העדכון הורד ואומת")
+        progress.state = "done"; progress.say("Update downloaded and verified")
     except Exception as e:
-        progress.fail("ההורדה נכשלה: {error}", error=str(e)[:200])
+        progress.fail("Download failed: {error}", error=str(e)[:200])
 
 
 # ------------------------------------------------------------------ safe install: journal, rollback copy, recovery

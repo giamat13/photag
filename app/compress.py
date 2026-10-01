@@ -290,17 +290,17 @@ def run_compress(pid: int, raw_options: dict, progress):
         o = normalize(raw_options)
         row = con.execute("SELECT * FROM photos WHERE id=? AND is_video=1", (pid,)).fetchone()
         if not row:
-            return progress.fail("הקובץ אינו סרטון")
+            return progress.fail("The file is not a video")
         src_path = PATHS.media / row["rel_path"]
         if src_path.suffix.lower() not in VIDEO_OK:
-            return progress.fail("סוג הקובץ הזה לא נתמך לדחיסה ({ext})", ext=src_path.suffix.lower())
+            return progress.fail("This file type is not supported for compression ({ext})", ext=src_path.suffix.lower())
         exe = find_handbrake()
         if not exe:
-            return progress.fail("HandBrakeCLI לא נמצא. התקינו אותו ונסו שוב")
+            return progress.fail("HandBrakeCLI was not found. Install it and try again")
         if not ffmpeg.available():
-            return progress.fail("חסר ffmpeg לאימות התוצאה. הריצו: pip install imageio-ffmpeg")
+            return progress.fail("ffmpeg is missing for verifying the result. Run: pip install imageio-ffmpeg")
 
-        progress.state = "probing"; progress.total = 0; progress.say("בודק את הסרטון המקורי…")
+        progress.state = "probing"; progress.total = 0; progress.say("Checking the original video…")
         src = _measure(src_path, cancelled)
         if cancelled():
             return _cancelled(progress)
@@ -309,7 +309,7 @@ def run_compress(pid: int, raw_options: dict, progress):
         tmp = tdir / f"{pid}_{int(time.time())}.mp4"
 
         progress.state = "encoding"; progress.total = 1000; progress.done = 0
-        progress.say("דוחס… {pct}%", pct=0)
+        progress.say("Compressing… {pct}%", pct=0)
         p = subprocess.Popen(build_args(exe, str(src_path), str(tmp), o), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              stdin=subprocess.DEVNULL, creationflags=NO_WIN)
         tail: list[bytes] = []
@@ -327,7 +327,7 @@ def run_compress(pid: int, raw_options: dict, progress):
                         if m.group(2):
                             progress.extra = {**progress.extra, "fps": float(m.group(2)),
                                               "eta": int(m.group(3)) * 3600 + int(m.group(4)) * 60 + int(m.group(5))}
-                        progress.done = int(pct * 10); progress.say("דוחס… {pct}%", pct=int(pct))
+                        progress.done = int(pct * 10); progress.say("Compressing… {pct}%", pct=int(pct))
                     elif line.strip():
                         tail.append(line[-300:]); del tail[:-8]
         t = threading.Thread(target=reader, daemon=True); t.start()
@@ -340,9 +340,9 @@ def run_compress(pid: int, raw_options: dict, progress):
         if cancelled():
             return _cancelled(progress)
         if p.returncode != 0 or not tmp.exists() or tmp.stat().st_size == 0:
-            return progress.fail("HandBrake נכשל: {error}", error=b" | ".join(tail[-3:]).decode("utf-8", "replace")[:300])
+            return progress.fail("HandBrake failed: {error}", error=b" | ".join(tail[-3:]).decode("utf-8", "replace")[:300])
 
-        progress.state = "verifying"; progress.total = 0; progress.say("מאמת את התוצאה…")
+        progress.state = "verifying"; progress.total = 0; progress.say("Verifying the result…")
         out = _measure(tmp, cancelled)
         changed_fps = o["fps_mode"] != "same" and abs((out["fps"] or 0) - (src["fps"] or 0)) > 0.01
         ssim = ffmpeg.ssim(str(tmp), str(src_path), cancel=cancelled, fps=out["fps"] if changed_fps else None)
@@ -355,19 +355,19 @@ def run_compress(pid: int, raw_options: dict, progress):
                       saved=src["bytes"] - out["bytes"], ratio=round(out["bytes"] / src["bytes"], 4))
         if not result["ok"]:
             bad = [c["id"] for c in checks if not c["ok"]]
-            return progress.fail("התוצאה לא עברה אימות ({checks}), הקובץ המקורי לא שונה", checks=", ".join(bad))
+            return progress.fail("The result failed verification ({checks}); the original file was not changed", checks=", ".join(bad))
 
-        progress.state = "replacing"; progress.say("שומר גיבוי ומחליף את הקובץ…")
+        progress.state = "replacing"; progress.say("Saving backup and replacing the file…")
         _install(con, pid, tmp, None, "compress", result)
         tmp = None
         result["applied"] = True
         progress.state = "done"
-        progress.say_parts(("הסרטון נדחס ל‑{pct}% מהגודל", {"pct": round(result["ratio"] * 100)}),
-                           ("הגרסה הקודמת נשמרה בגיבויים", {}))
+        progress.say_parts(("Video compressed to {pct}% of its size", {"pct": round(result["ratio"] * 100)}),
+                           ("The previous version was saved in the backups", {}))
     except DuplicateError:
-        progress.fail("תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה")
+        progress.fail("An image identical to the result already exists in the library; the original file was not changed")
     except Exception as e:
-        progress.fail("הדחיסה נכשלה: {error}", error=str(e))
+        progress.fail("Compression failed: {error}", error=str(e))
     finally:
         if tmp and tmp.exists():
             tmp.unlink(missing_ok=True)
@@ -375,7 +375,7 @@ def run_compress(pid: int, raw_options: dict, progress):
 
 def _cancelled(progress):
     progress.state = "done"
-    progress.say("הדחיסה בוטלה")
+    progress.say("Compression was cancelled")
 
 
 # ================================================================== photos
@@ -467,18 +467,18 @@ def run_compress_image(pid: int, raw_options: dict, progress):
         o = normalize_image(raw_options)
         row = con.execute("SELECT * FROM photos WHERE id=? AND is_video=0", (pid,)).fetchone()
         if not row:
-            return progress.fail("הקובץ אינו תמונה")
+            return progress.fail("The file is not an image")
         src_path = PATHS.media / row["rel_path"]
         ext = src_path.suffix.lower()
         if ext not in IMAGE_OK:
-            return progress.fail("סוג הקובץ הזה לא נתמך לדחיסה ({ext})", ext=ext)
+            return progress.fail("This file type is not supported for compression ({ext})", ext=ext)
         if not ffmpeg.available():
-            return progress.fail("חסר ffmpeg לאימות התוצאה. הריצו: pip install imageio-ffmpeg")
+            return progress.fail("ffmpeg is missing for verifying the result. Run: pip install imageio-ffmpeg")
 
-        progress.state = "probing"; progress.total = 0; progress.say("בודק את התמונה המקורית…")
+        progress.state = "probing"; progress.total = 0; progress.say("Checking the original photo…")
         src = _read_meta(src_path)
         if src["frames"] > 1:
-            return progress.fail("תמונה מונפשת לא נתמכת לדחיסה")
+            return progress.fail("Animated images are not supported for compression")
         if cancelled():
             return _cancelled(progress)
         tdir = PATHS.media / ".compress_tmp"
@@ -486,12 +486,12 @@ def run_compress_image(pid: int, raw_options: dict, progress):
         out_ext = ".png" if ext == ".bmp" else ext
         tmp = tdir / f"{pid}_{int(time.time())}{out_ext}"
 
-        progress.state = "encoding"; progress.total = 0; progress.say("דוחס…")
+        progress.state = "encoding"; progress.total = 0; progress.say("Compressing…")
         done = _encode_image(src_path, tmp, o)
         if cancelled():
             return _cancelled(progress)
 
-        progress.state = "verifying"; progress.say("מאמת את התוצאה…")
+        progress.state = "verifying"; progress.say("Verifying the result…")
         out = _read_meta(tmp)
         ssim = ffmpeg.ssim(str(tmp), str(src_path), cancel=cancelled)
         if cancelled():
@@ -504,19 +504,19 @@ def run_compress_image(pid: int, raw_options: dict, progress):
                       saved=s_bytes - o_bytes, ratio=round(o_bytes / s_bytes, 4),
                       failed=[c["id"] for c in checks if not c["ok"]])
         if not result["ok"]:
-            return progress.fail("התוצאה לא עברה אימות ({checks}), הקובץ המקורי לא שונה", checks=", ".join(result["failed"]))
+            return progress.fail("The result failed verification ({checks}); the original file was not changed", checks=", ".join(result["failed"]))
 
-        progress.state = "replacing"; progress.say("שומר גיבוי ומחליף את הקובץ…")
+        progress.state = "replacing"; progress.say("Saving backup and replacing the file…")
         _install(con, pid, tmp, None, "compress", result)
         tmp = None
         result["applied"] = True
         progress.state = "done"
-        progress.say_parts(("התמונה נדחסה ל‑{pct}% מהגודל", {"pct": round(result["ratio"] * 100)}),
-                           ("הגרסה הקודמת נשמרה בגיבויים", {}))
+        progress.say_parts(("Image compressed to {pct}% of its size", {"pct": round(result["ratio"] * 100)}),
+                           ("The previous version was saved in the backups", {}))
     except DuplicateError:
-        progress.fail("תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה")
+        progress.fail("An image identical to the result already exists in the library; the original file was not changed")
     except Exception as e:
-        progress.fail("הדחיסה נכשלה: {error}", error=str(e))
+        progress.fail("Compression failed: {error}", error=str(e))
     finally:
         if tmp and tmp.exists():
             tmp.unlink(missing_ok=True)
@@ -542,7 +542,7 @@ class _Sub(importer.Progress):
         if self.state in _BUSY:
             p.state = self.state
         p.extra = {**self.extra, "i": self.idx, "n": self.n, "name": self.name, "kind": self.kind}
-        p.say_parts(("קובץ {i} מתוך {n}: {name}", {"i": self.idx + 1, "n": self.n, "name": self.name}), (key, vars))
+        p.say_parts(("File {i} of {n}: {name}", {"i": self.idx + 1, "n": self.n, "name": self.name}), (key, vars))
 
 
 def run_compress_batch(ids: list[int], video_options: dict, image_options: dict, progress):
@@ -565,11 +565,11 @@ def run_compress_batch(ids: list[int], video_options: dict, image_options: dict,
                 "status": "running", "src_bytes": row["bytes"]}
         items.append(item)
         if (row["is_video"] and ext not in VIDEO_OK) or (not row["is_video"] and ext not in IMAGE_OK):
-            item.update(status="skipped", error_key="סוג הקובץ הזה לא נתמך לדחיסה ({ext})", error_vars={"ext": ext})
+            item.update(status="skipped", error_key="This file type is not supported for compression ({ext})", error_vars={"ext": ext})
             progress.done = (i + 1) * 1000
             continue
         if row["is_video"] and not hb:
-            item.update(status="skipped", error_key="HandBrakeCLI לא נמצא. התקינו אותו ונסו שוב", error_vars={})
+            item.update(status="skipped", error_key="HandBrakeCLI was not found. Install it and try again", error_vars={})
             progress.done = (i + 1) * 1000
             continue
         sub = _Sub(progress, i, n, row["filename"], item["kind"])
@@ -593,7 +593,7 @@ def run_compress_batch(ids: list[int], video_options: dict, image_options: dict,
     result.update(applied=bool(counts.get("done")), saved=saved, counts=counts, cancelled=bool(progress.cancel))
     progress.state = "done"
     if progress.cancel:
-        progress.say_parts(("הדחיסה בוטלה", {}), ("נדחסו {n} קבצים", {"n": counts.get("done", 0)}))
+        progress.say_parts(("Compression was cancelled", {}), ("Compressed {n} files", {"n": counts.get("done", 0)}))
     else:
-        progress.say_parts(("נדחסו {n} קבצים", {"n": counts.get("done", 0)}),
-                           *([("{n} קבצים לא נדחסו", {"n": n - counts.get("done", 0)})] if n > counts.get("done", 0) else []))
+        progress.say_parts(("Compressed {n} files", {"n": counts.get("done", 0)}),
+                           *([("{n} files were not compressed", {"n": n - counts.get("done", 0)})] if n > counts.get("done", 0) else []))

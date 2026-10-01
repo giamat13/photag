@@ -76,11 +76,11 @@
     </div>
   </div>
   <nav class="modules" id="modules">
-    <button data-mod="library" class="on">ספרייה</button><span>|</span>
-    <button data-mod="develop">פיתוח</button><span>|</span>
-    <button data-mod="slideshow">מצגת</button>
+    <button data-mod="library" class="on">Library</button><span>|</span>
+    <button data-mod="develop">Develop</button><span>|</span>
+    <button data-mod="slideshow">Slideshow</button>
   </nav>
-  <button class="edge-t" data-toggle="top" title="הסתר/הצג את הלוח העליון (F5)"></button>
+  <button class="edge-t" data-toggle="top" title="Hide/Show Top Panel (F5)"></button>
 </header>
 
 <div id="ws" class="ws">
@@ -88,46 +88,46 @@
   <aside id="left" class="side left dimmable">
     <div class="side-scroll">
       <section class="pnl" data-p="nav">
-        <h3><span>ניווט</span><em class="nav-modes"><a data-zoom="fit" class="on">התאם</a><a data-zoom="1">1:1</a></em></h3>
+        <h3><span>Navigator</span><em class="nav-modes"><a data-zoom="fit" class="on">Fit</a><a data-zoom="1">1:1</a></em></h3>
         <div class="pbody"><div id="navigator" class="navigator"><img id="nav-img" alt=""><div id="nav-rect" class="nav-rect hidden"></div></div></div>
       </section>
       <div class="lib-only">
-        <section class="pnl" data-p="catalog"><h3><span>קטלוג</span></h3><div class="pbody"><div class="rows" id="p-catalog"></div></div></section>
-        <section class="pnl" data-p="folders"><h3><span>תיקיות</span></h3><div class="pbody"><div class="rows" id="p-folders"></div></div></section>
-        <section class="pnl" data-p="colls"><h3><span>אוספים</span><button class="hbtn" id="new-coll" title="אוסף חדש (Ctrl+N)"><svg class="ic"><use href="#i-plus"/></svg></button></h3>
+        <section class="pnl" data-p="catalog"><h3><span>Catalog</span></h3><div class="pbody"><div class="rows" id="p-catalog"></div></div></section>
+        <section class="pnl" data-p="folders"><h3><span>Folders</span></h3><div class="pbody"><div class="rows" id="p-folders"></div></div></section>
+        <section class="pnl" data-p="colls"><h3><span>Collections</span><button class="hbtn" id="new-coll" title="New Collection (Ctrl+N)"><svg class="ic"><use href="#i-plus"/></svg></button></h3>
           <div class="pbody"><div class="rows" id="p-colls"></div></div></section>
       </div>
       <div class="dev-only">
-        <section class="pnl" data-p="presets"><h3><span>הגדרות קבועות</span></h3><div class="pbody"><div class="rows" id="p-presets"></div></div></section>
-        <section class="pnl" data-p="history"><h3><span>היסטוריה</span></h3><div class="pbody"><div class="rows" id="p-history"></div></div></section>
+        <section class="pnl" data-p="presets"><h3><span>Presets</span></h3><div class="pbody"><div class="rows" id="p-presets"></div></div></section>
+        <section class="pnl" data-p="history"><h3><span>History</span></h3><div class="pbody"><div class="rows" id="p-history"></div></div></section>
       </div>
     </div>
     <div class="side-foot lib-only">
-      <button id="btn-import">ייבוא...</button>
-      <button id="btn-export">ייצוא...</button>
+      <button id="btn-import">Import...</button>
+      <button id="btn-export">Export...</button>
     </div>
     <div class="side-foot dev-only">
-      <button id="btn-copy-prev" title="החל את ההגדרות של התמונה הקודמת שנערכה">קודם</button>
-      <button id="btn-dev-reset">אפס</button>
+      <button id="btn-copy-prev" title="Apply the settings of the previously edited photo">Previous</button>
+      <button id="btn-dev-reset">Reset</button>
     </div>
   </aside>
-  <button class="edge edge-l" data-toggle="left" title="הסתר/הצג לוח (F7)"></button>
+  <button class="edge edge-l" data-toggle="left" title="Hide/Show Panel (F7)"></button>
 
   <!-- CENTER -->
   <main id="center" class="center">
     <div id="filterbar" class="filterbar lib-only">
       <div class="fb-row">
-        <span class="fb-title">מסנן ספרייה :</span>
+        <span class="fb-title">Library Filter:</span>
         <nav class="fb-tabs" id="fb-tabs">
-          <a data-fb="text">טקסט</a><a data-fb="attr">מאפיינים</a><a data-fb="meta">מטא-נתונים</a><a data-fb="none" class="on">ללא</a>
+          <a data-fb="text">Text</a><a data-fb="attr">Attribute</a><a data-fb="meta">Metadata</a><a data-fb="none" class="on">None</a>
         </nav>
         <span class="spacer"></span>
         <span class="fb-state" id="fb-state"></span>
       </div>
       <div class="fb-panel hidden" id="fb-text">
-        <label>טקסט</label>
-        <select id="ft-field"><option value="any">כל שדה בר חיפוש</option><option value="name">שם קובץ</option></select>
-        <label class="ft-box"><svg class="ic"><use href="#i-search"/></svg><input id="ft-q" type="search" placeholder="חיפוש"></label>
+        <label>Text</label>
+        <select id="ft-field"><option value="any">Any Searchable Field</option><option value="name">File Name</option></select>
+        <label class="ft-box"><svg class="ic"><use href="#i-search"/></svg><input id="ft-q" type="search" placeholder="Search"></label>
       </div>
       <div class="fb-panel hidden" id="fb-attr"></div>
       <div class="fb-panel meta hidden" id="fb-meta"></div>
@@ -140,51 +140,51 @@
       <div id="v-survey" class="v-survey hidden"></div>
       <div id="v-people" class="v-people hidden"></div>
       <div id="v-map" class="v-map hidden" dir="ltr"><div id="map-canvas"></div><div id="map-note" class="map-note"></div></div>
-      <div id="v-develop" class="v-develop hidden"><div id="dev-canvas" class="dev-canvas"><img id="dev-img" alt=""></div><div id="crop-ov" class="crop-ov hidden"></div><div id="dev-badge" class="dev-badge hidden">לפני</div></div>
+      <div id="v-develop" class="v-develop hidden"><div id="dev-canvas" class="dev-canvas"><img id="dev-img" alt=""></div><div id="crop-ov" class="crop-ov hidden"></div><div id="dev-badge" class="dev-badge hidden">Before</div></div>
       <div id="v-empty" class="v-empty hidden"></div>
     </div>
 
     <div id="toolbar" class="toolbar"></div>
   </main>
 
-  <button class="edge edge-r" data-toggle="right" title="הסתר/הצג לוח (F8)"></button>
+  <button class="edge edge-r" data-toggle="right" title="Hide/Show Panel (F8)"></button>
   <!-- RIGHT PANEL -->
   <aside id="right" class="side right dimmable">
     <div class="side-scroll">
       <section class="pnl" data-p="histo">
-        <h3><span>היסטוגרמה</span></h3>
+        <h3><span>Histogram</span></h3>
         <div class="pbody histo"><canvas id="histo" width="300" height="120"></canvas><div class="histo-meta" id="histo-meta"></div></div>
       </section>
       <div class="lib-only">
-        <section class="pnl" data-p="kwing"><h3><span>תיוג מילות מפתח</span></h3><div class="pbody" id="p-kwing"></div></section>
-        <section class="pnl" data-p="kwlist"><h3><span>רשימת מילות מפתח</span></h3><div class="pbody" id="p-kwlist"></div></section>
-        <section class="pnl" data-p="meta"><h3><span>מטא-נתונים</span></h3><div class="pbody" id="p-meta"></div></section>
+        <section class="pnl" data-p="kwing"><h3><span>Keywording</span></h3><div class="pbody" id="p-kwing"></div></section>
+        <section class="pnl" data-p="kwlist"><h3><span>Keyword List</span></h3><div class="pbody" id="p-kwlist"></div></section>
+        <section class="pnl" data-p="meta"><h3><span>Metadata</span></h3><div class="pbody" id="p-meta"></div></section>
       </div>
       <div class="dev-only">
         <div class="toolstrip" id="dev-tools">
-          <button data-tool="crop" title="כלי חיתוך (R)"><svg class="ic"><use href="#i-crop"/></svg></button>
+          <button data-tool="crop" title="Crop Tool (R)"><svg class="ic"><use href="#i-crop"/></svg></button>
         </div>
-        <section class="pnl" data-p="basic"><h3><span>בסיסי</span></h3><div class="pbody" id="p-basic"></div></section>
-        <section class="pnl" data-p="transform"><h3><span>טרנספורמציה</span></h3><div class="pbody" id="p-transform"></div></section>
+        <section class="pnl" data-p="basic"><h3><span>Basic</span></h3><div class="pbody" id="p-basic"></div></section>
+        <section class="pnl" data-p="transform"><h3><span>Transform</span></h3><div class="pbody" id="p-transform"></div></section>
       </div>
     </div>
     <div class="side-foot lib-only">
-      <button id="btn-sync-meta" title="העתק את התיאור והדירוג של התמונה הפעילה לכל הנבחרות">סנכרן מטא-נתונים</button>
+      <button id="btn-sync-meta" title="Copy the caption and rating of the active photo to all selected photos">Synchronize Metadata</button>
     </div>
     <div class="side-foot dev-only">
-      <button id="btn-dev-revert" title="חזרה לקובץ המקורי">חזרה למקור</button>
-      <button id="btn-dev-apply" class="primary">החל</button>
+      <button id="btn-dev-revert" title="Revert to Original File">Revert</button>
+      <button id="btn-dev-apply" class="primary">Apply</button>
     </div>
   </aside>
 </div>
 
 <!-- filmstrip -->
 <footer id="filmstrip" class="filmstrip dimmable">
-  <button class="edge-b" data-toggle="film" title="הסתר/הצג רצועת תמונות (F6)"></button>
+  <button class="edge-b" data-toggle="film" title="Hide/Show Filmstrip (F6)"></button>
   <div class="fs-head">
-    <button class="fs-ic" id="fs-grid" title="רשת (G)"><svg class="ic"><use href="#i-grid"/></svg></button>
-    <button class="fs-ic" id="fs-back" title="מקור קודם"><svg class="ic"><use href="#i-prev"/></svg></button>
-    <button class="fs-ic" id="fs-fwd" title="מקור הבא"><svg class="ic"><use href="#i-next"/></svg></button>
+    <button class="fs-ic" id="fs-grid" title="Grid (G)"><svg class="ic"><use href="#i-grid"/></svg></button>
+    <button class="fs-ic" id="fs-back" title="Previous Source"><svg class="ic"><use href="#i-prev"/></svg></button>
+    <button class="fs-ic" id="fs-fwd" title="Next Source"><svg class="ic"><use href="#i-next"/></svg></button>
     <div class="fs-path" id="fs-path"></div>
     <span class="spacer"></span>
     <div class="fs-filter" id="fs-filter"></div>
@@ -196,12 +196,12 @@
 <div id="slideshow" class="slideshow hidden">
   <img id="ss-a" alt=""><img id="ss-b" alt="">
   <div class="ss-bar" id="ss-bar">
-    <button onclick="ssStep(-1)" aria-label="הקודמת"><svg class="ic"><use href="#i-prev"/></svg></button>
-    <button id="ss-pp" onclick="ssToggle()" aria-label="השהה"><svg class="ic"><use href="#i-pause"/></svg></button>
-    <button onclick="ssStep(1)" aria-label="הבאה"><svg class="ic"><use href="#i-next"/></svg></button>
+    <button onclick="ssStep(-1)" aria-label="Previous"><svg class="ic"><use href="#i-prev"/></svg></button>
+    <button id="ss-pp" onclick="ssToggle()" aria-label="Pause"><svg class="ic"><use href="#i-pause"/></svg></button>
+    <button onclick="ssStep(1)" aria-label="Next"><svg class="ic"><use href="#i-next"/></svg></button>
     <span id="ss-count"></span>
-    <button onclick="ssCast()" title="שידור למסך (Win+K)" aria-label="שידור למסך (Win+K)"><svg class="ic"><use href="#i-cast"/></svg></button>
-    <button onclick="ssStop()" aria-label="סגור"><svg class="ic"><use href="#i-close"/></svg></button>
+    <button onclick="ssCast()" title="Cast to screen (Win+K)" aria-label="Cast to screen (Win+K)"><svg class="ic"><use href="#i-cast"/></svg></button>
+    <button onclick="ssStop()" aria-label="Close"><svg class="ic"><use href="#i-close"/></svg></button>
   </div>
 </div>
 

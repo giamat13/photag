@@ -3,10 +3,10 @@
     python tools/i18n.py extract   # rebuild app/ui/locales/_keys.json from the source
     python tools/i18n.py check     # verify every locales/<code>.json against it
 
-The UI is written in Hebrew; every string shown to the user is a key, either
-wrapped in t('...') in app.js, static text in index.html, or a key passed to
-say()/say_parts()/fail()/err() in the backend. A locale file maps each key to
-its translation and must keep {placeholders} and HTML entities intact.
+English is the base language: every string shown to the user is an English key, either wrapped in t('...') in
+app.js, static text in index.html, or a key passed to say()/say_parts()/fail()/err() in the backend. English needs
+no file; every other language (Hebrew included) has app/ui/locales/<code>.json mapping each key to its translation,
+keeping {placeholders} and HTML entities intact.
 """
 import json
 import re
@@ -19,6 +19,10 @@ UI = ROOT / "app" / "ui"
 LOCALES = UI / "locales"
 KEYS = LOCALES / "_keys.json"
 HEB = re.compile(r"[֐-׿]")
+LETTERS = re.compile(r"[A-Za-z]{2,}")
+# static text in index.html that is a name, not a sentence to translate
+STATIC_IGNORE = {"photag"}
+BACKEND_FILES = ("server.py", "importer.py", "faces.py", "aitag.py", "compress.py", "updater.py", "backup.py")
 
 
 def _js_keys() -> set[str]:
@@ -33,18 +37,32 @@ def _js_keys() -> set[str]:
 
 
 class _Static(HTMLParser):
+    """Text nodes and title / placeholder / aria-label attributes of index.html (not scripts, styles or icons)."""
+    SKIP = {"script", "style", "svg", "symbol", "title"}
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.keys = set()
+        self.stack = []
+
+    def _add(self, s):
+        s = s.strip()
+        if s and LETTERS.search(s) and s not in STATIC_IGNORE:
+            self.keys.add(s)
 
     def handle_starttag(self, tag, attrs):
+        self.stack.append(tag)
         for k, v in attrs:
-            if k in ("title", "placeholder", "aria-label") and v and HEB.search(v):
-                self.keys.add(v.strip())
+            if k in ("title", "placeholder", "aria-label") and v:
+                self._add(v)
+
+    def handle_endtag(self, tag):
+        while self.stack and self.stack.pop() != tag:
+            pass
 
     def handle_data(self, data):
-        if HEB.search(data):
-            self.keys.add(data.strip())
+        if not self.SKIP & set(self.stack):
+            self._add(data)
 
 
 def _html_keys() -> set[str]:
@@ -55,11 +73,11 @@ def _html_keys() -> set[str]:
 
 def _py_keys() -> set[str]:
     keys = set()
-    pat = re.compile(r"""(?:\.say|\.fail|\berr\(\d+,)\s*\(?\s*"([^"]*)"|\(\s*"([^"]*[֐-׿][^"]*)",\s*\{""")
-    for f in ("server.py", "importer.py", "faces.py", "aitag.py", "compress.py", "updater.py"):
+    pat = re.compile(r'''(?:\.say|\.fail|err\(\d+,)\s*\(?\s*"([^"]*)"|\(\s*"([^"]*[A-Za-z][^"]* [^"]*)",\s*\{|error_key=\s*"([^"]*)"|"error_key":\s*"([^"]*)"''')
+    for f in BACKEND_FILES:
         for m in pat.finditer((ROOT / "app" / f).read_text("utf-8")):
-            k = m.group(1) or m.group(2)
-            if k and (HEB.search(k) or "{" in k):
+            k = m.group(1) or m.group(2) or m.group(3) or m.group(4)
+            if k and (LETTERS.search(k) or "{" in k):
                 keys.add(k)
     return keys
 
@@ -85,7 +103,8 @@ def check() -> bool:
         missing = [k for k in keys if not isinstance(d.get(k), str) or not d[k].strip()]
         extra = [k for k in d if k not in keys]
         bad = [k for k in keys if k in d and isinstance(d[k], str) and _tokens(k) != _tokens(d[k])]
-        hebrew = [k for k in keys if isinstance(d.get(k), str) and HEB.search(d[k])]
+        # a translation into another language must not still be Hebrew (Hebrew itself, of course, is)
+        hebrew = [] if f.stem == "he" else [k for k in keys if isinstance(d.get(k), str) and HEB.search(d[k])]
         status = "OK" if not (missing or bad or hebrew) else "PROBLEMS"
         ok &= status == "OK"
         print(f"{f.name:8s} {status}: {len(d)} entries, {len(missing)} missing, {len(bad)} placeholder mismatches, "

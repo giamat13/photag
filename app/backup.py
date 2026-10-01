@@ -209,7 +209,7 @@ def _mirror_media(progress=None) -> dict:
         copied += 1; nbytes += n
         if progress:
             progress.done = nbytes
-            progress.say("מעתיק קבצי תמונות וסרטונים… {done} מתוך {total} קבצים", done=copied, total=len(todo))
+            progress.say("Copying photo and video files… {done} of {total} files", done=copied, total=len(todo))
             if getattr(progress, "cancel", False):
                 break
     return {"files": len(files), "copied": copied, "bytes_copied": nbytes}
@@ -355,7 +355,7 @@ def _create_snapshot(reason: str = "manual", progress=None) -> dict:
         final = d / f"{base}-{n}.zip"; n += 1
     work = Path(tempfile.mkdtemp(prefix="photag-backup-", dir=d))
     try:
-        if progress: progress.say("יוצר עותק של הקטלוג…")
+        if progress: progress.say("Creating a copy of the catalog…")
         tmpdb = work / "catalog.db"
         src = db.connect()
         dst = sqlite3.connect(tmpdb)
@@ -374,7 +374,7 @@ def _create_snapshot(reason: str = "manual", progress=None) -> dict:
         settings = {k: v for k, v in config.read_all().items() if k not in ("library_root", "update_skipped", "backup")}
         media = None
         if s["include_media"] and reason in ("auto", "manual"):
-            if progress: progress.say("מעתיק קבצי תמונות…")
+            if progress: progress.say("Copying photo files…")
             media = _mirror_media(progress)
         manifest = {"created": now, "reason": reason, "app_version": __version__, "includes_media": bool(media),
                     "media": media, **counts}
@@ -418,7 +418,7 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
         raise FileNotFoundError(name)
     work = Path(tempfile.mkdtemp(prefix="photag-restore-"))
     try:
-        if progress: progress.say("בודק את הגיבוי…")
+        if progress: progress.say("Checking the backup…")
         with zipfile.ZipFile(path) as z:
             if z.testzip() is not None:
                 raise RuntimeError("zip is damaged")
@@ -429,9 +429,9 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
         try:
             if snap.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise RuntimeError("catalog in the backup is damaged")
-            if progress: progress.say("שומר עותק ביטחון של המצב הנוכחי…")
+            if progress: progress.say("Saving a safety copy of the current state…")
             safety = create_snapshot("before-restore")        # restoring is itself undoable
-            if progress: progress.say("משחזר את הקטלוג…")
+            if progress: progress.say("Restoring the catalog…")
             live = db.connect()
             try:
                 snap.backup(live)                             # one transaction: all or nothing
@@ -456,7 +456,7 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
                     shutil.copy2(src, tmp); os.replace(tmp, out); copied += 1
                 if progress and i % 20 == 0:
                     progress.done = i + 1
-                    progress.say("מחזיר קבצי תמונות… {done} מתוך {total}", done=i + 1, total=len(files))
+                    progress.say("Restoring photo files… {done} of {total}", done=i + 1, total=len(files))
         con = db.connect()
         try:
             rels = [r[0] for r in con.execute("SELECT rel_path FROM photos")]
@@ -472,30 +472,30 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
 # ------------------------------------------------------------------ jobs (run through the server's job runner)
 def run_backup(reason: str, progress):
     try:
-        progress.state = "backing_up"; progress.say("יוצר גיבוי…")
+        progress.state = "backing_up"; progress.say("Creating a backup…")
         with background_mode():                       # never slow down the app while it backs up
             m = create_tracked(reason, "app", progress)
         progress.result = m
         progress.state = "done"
-        progress.say_parts(("הגיבוי נשמר", {}), ("{n} תמונות בקטלוג", {"n": m["photos"]}))
+        progress.say_parts(("Backup saved", {}), ("{n} photos in the catalog", {"n": m["photos"]}))
     except BusyError:
-        progress.fail("גיבוי אחר רץ כרגע, נסו שוב בעוד כמה דקות")
+        progress.fail("Another backup is running right now, try again in a few minutes")
     except NoSpaceError as e:
-        progress.fail("אין מספיק מקום פנוי בדיסק של הגיבויים: צריך {need} MB, פנויים {free} MB. בחרו תיקייה בדיסק אחר",
+        progress.fail("Not enough free space on the backup disk: {need} MB needed, {free} MB free. Choose a folder on another disk",
                       need=round(e.need / 1048576), free=round(e.free / 1048576))
     except Exception as e:
-        progress.fail("הגיבוי נכשל: {error}", error=str(e)[:200])
+        progress.fail("Backup failed: {error}", error=str(e)[:200])
 
 
 def run_restore(name: str, restore_media: bool, restore_settings: bool, progress):
     try:
-        progress.state = "restoring"; progress.say("משחזר מגיבוי…")
+        progress.state = "restoring"; progress.say("Restoring from backup…")
         r = restore_snapshot(name, restore_media, restore_settings, progress)
         progress.result = r
         progress.state = "done"
-        parts = [("הקטלוג שוחזר", {}), ("{n} תמונות", {"n": r["photos"]})]
+        parts = [("Catalog restored", {}), ("{n} photos", {"n": r["photos"]})]
         if r["missing_files"]:
-            parts.append(("{n} קבצי תמונות חסרים בתיקייה", {"n": r["missing_files"]}))
+            parts.append(("{n} photo files are missing from the folder", {"n": r["missing_files"]}))
         progress.say_parts(*parts)
     except Exception as e:
-        progress.fail("השחזור נכשל: {error}", error=str(e)[:200])
+        progress.fail("Restore failed: {error}", error=str(e)[:200])

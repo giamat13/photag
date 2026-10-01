@@ -22,13 +22,13 @@ const ext = p => (p.filename.split('.').pop()||'').toUpperCase();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function debounce(fn, ms){ let h; return (...a)=>{ clearTimeout(h); h=setTimeout(()=>fn(...a), ms); }; }
 function toast(msg, ms=2600){ const tg=$('#toast'); tg.innerHTML=msg; tg.classList.remove('hidden'); clearTimeout(tg._h); tg._h=setTimeout(()=>tg.classList.add('hidden'), ms); }
-window.addEventListener('unhandledrejection', e=>toast(t('שגיאה: ')+esc(e.reason?.message||e.reason)));
+window.addEventListener('unhandledrejection', e=>toast(t('Error: ')+esc(e.reason?.message||e.reason)));
 const pref = {
   get(k, d){ try{ const v=localStorage.getItem('pm.'+k); return v==null ? d : JSON.parse(v); }catch{ return d; } },
   set(k, v){ try{ localStorage.setItem('pm.'+k, JSON.stringify(v)); }catch{} },
 };
 
-const LABELS = [['red',t('אדום'),'6'],['yellow',t('צהוב'),'7'],['green',t('ירוק'),'8'],['blue',t('כחול'),'9'],['purple',t('סגול'),'']];
+const LABELS = [['red',t('Red'),'6'],['yellow',t('Yellow'),'7'],['green',t('Green'),'8'],['blue',t('Blue'),'9'],['purple',t('Purple'),'']];
 const LNAME = Object.fromEntries(LABELS.map(([k,n])=>[k,n]));
 const lcol = k => `var(--${k})`;
 // photo/media urls carry a version so edited photos don't come back stale from the browser cache
@@ -39,7 +39,7 @@ const mediaUrl = id => `/media/${id}${VER[id]?'?v='+VER[id]:''}`;
 // ---------- state ----------
 const S = {
   mod:'library', view:'grid', prevView:'grid',
-  src:{kind:'all', name:t('כל התמונות')}, hist:[], histPos:-1,
+  src:{kind:'all', name:t('All Photographs')}, hist:[], histPos:-1,
   all:[], byId:new Map(), base:[], list:[], idx:new Map(),
   sel:new Set(), act:null, anchor:null,
   sort:pref.get('sort','capture'), asc:pref.get('asc',false),
@@ -67,14 +67,14 @@ async function loadSide(){
 // ---------- sources (what the grid shows) ----------
 const MONTH_S = 30*86400;
 const SMART = [
-  ['red',   t('תווית אדומה'),          p=>p.label==='red'],
-  ['five',  t('חמישה כוכבים'),         p=>p.rating===5],
-  ['picks', t('נבחרו (דגל)'),           p=>p.flag===1],
-  ['month', t('החודש האחרון'),          p=>(p.taken_at||0) > Date.now()/1000 - MONTH_S],
-  ['video', t('קובצי וידאו'),           p=>!!p.is_video],
-  ['nokw',  t('ללא מילות מפתח'),        p=>!p.has_kw],
-  ['edited',t('ערוכות'),                p=>!!p.edited],
-  ['fav',   t('מועדפים מ‑Google'),      p=>!!p.favorited],
+  ['red',   t('Red Label'),          p=>p.label==='red'],
+  ['five',  t('Five Stars'),         p=>p.rating===5],
+  ['picks', t('Picks (Flag)'),           p=>p.flag===1],
+  ['month', t('Last Month'),          p=>(p.taken_at||0) > Date.now()/1000 - MONTH_S],
+  ['video', t('Video Files'),           p=>!!p.is_video],
+  ['nokw',  t('No Keywords'),        p=>!p.has_kw],
+  ['edited',t('Edited'),                p=>!!p.edited],
+  ['fav',   t('Favorites from Google'),      p=>!!p.favorited],
 ];
 function srcKey(s){ return s.kind + (s.id!=null ? ':'+s.id : ''); }
 function srcParams(s){
@@ -114,9 +114,9 @@ async function fetchSource(){
 }
 
 // ---------- filtering + sorting ----------
-const yearOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getFullYear()) : t('ללא');
-const monthOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getMonth()+1).padStart(2,'0') : t('ללא');
-const orientOf = p => !p.width||!p.height ? t('לא ידוע') : p.width>p.height*1.05 ? t('לרוחב') : p.height>p.width*1.05 ? t('לאורך') : t('ריבועי');
+const yearOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getFullYear()) : t('None');
+const monthOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getMonth()+1).padStart(2,'0') : t('None');
+const orientOf = p => !p.width||!p.height ? t('Unknown') : p.width>p.height*1.05 ? t('Landscape') : p.height>p.width*1.05 ? t('Portrait') : t('Square');
 const flagKey = p => p.flag===1 ? 'pick' : p.flag===-1 ? 'rej' : 'none';
 function passAttr(p){
   const F = S.F;
@@ -129,7 +129,7 @@ function passAttr(p){
   if(F.kinds.size && !((F.kinds.has('photo')&&!p.is_video) || (F.kinds.has('video')&&p.is_video) || (F.kinds.has('edited')&&p.edited))) return false;
   return true;
 }
-const META_COLS = [['year',t('תאריך'),yearOf],['month',t('חודש'),monthOf],['ext',t('סוג קובץ'),ext],['orient',t('כיוון'),orientOf]];
+const META_COLS = [['year',t('Date'),yearOf],['month',t('Month'),monthOf],['ext',t('File Type'),ext],['orient',t('Orientation'),orientOf]];
 function passMeta(p, upto=META_COLS.length){
   for(let i=0;i<upto;i++){ const [k,,fn]=META_COLS[i]; const set=S.F.meta[k]; if(set.size && !set.has(fn(p))) return false; }
   return true;
@@ -138,13 +138,13 @@ function filterActive(){
   const F=S.F; return !!(F.q || F.flags.size || F.rating || F.labels.size || F.kinds.size || Object.values(F.meta).some(s=>s.size));
 }
 const SORTS = {
-  capture:[t('זמן צילום'), (a,b)=>(a.taken_at||0)-(b.taken_at||0) || a.id-b.id],
-  import: [t('סדר הוספה'), (a,b)=>(a.imported_at||0)-(b.imported_at||0) || a.id-b.id],
-  name:   [t('שם קובץ'),   (a,b)=>a.filename.localeCompare(b.filename, I18N.locale, {numeric:true})],
-  rating: [t('דירוג'),     (a,b)=>(a.rating||0)-(b.rating||0) || (a.taken_at||0)-(b.taken_at||0)],
-  pick:   [t('דגל'),       (a,b)=>(a.flag||0)-(b.flag||0) || (a.taken_at||0)-(b.taken_at||0)],
-  label:  [t('תווית צבע'), (a,b)=>lrank(a)-lrank(b) || (a.taken_at||0)-(b.taken_at||0)],
-  size:   [t('גודל קובץ'), (a,b)=>(a.bytes||0)-(b.bytes||0)],
+  capture:[t('Capture Time'), (a,b)=>(a.taken_at||0)-(b.taken_at||0) || a.id-b.id],
+  import: [t('Added Order'), (a,b)=>(a.imported_at||0)-(b.imported_at||0) || a.id-b.id],
+  name:   [t('File Name'),   (a,b)=>a.filename.localeCompare(b.filename, I18N.locale, {numeric:true})],
+  rating: [t('Rating'),     (a,b)=>(a.rating||0)-(b.rating||0) || (a.taken_at||0)-(b.taken_at||0)],
+  pick:   [t('Flag'),       (a,b)=>(a.flag||0)-(b.flag||0) || (a.taken_at||0)-(b.taken_at||0)],
+  label:  [t('Color Label'), (a,b)=>lrank(a)-lrank(b) || (a.taken_at||0)-(b.taken_at||0)],
+  size:   [t('File Size'), (a,b)=>(a.bytes||0)-(b.bytes||0)],
 };
 const lrank = p => p.label ? LABELS.findIndex(l=>l[0]===p.label) : 9;
 function applyFilter({keepScroll=true}={}){
@@ -215,25 +215,25 @@ function toggleQuick(){
   const ids=targets(); if(!ids.length) return;
   const on = !(S.byId.get(ids[0])||{}).quick;
   setAttr({quick:on?1:0}, ids);
-  toast(on ? `${t("נוסף לאוסף המהיר ({0})", [num(ids.length)])}` : t('הוסר מהאוסף המהיר'));
+  toast(on ? `${t("Added to Quick Collection ({0})", [num(ids.length)])}` : t('Removed from Quick Collection'));
 }
 async function trashSelected(){
   const ids=targets(); if(!ids.length) return;
   const restore = S.src.kind==='trash';
   if(!restore && !pref.get('trashNoAsk', false)){      // deleting always asks first (restoring does not)
     const days = S.status?.trash_days || 60;
-    const ok = await confirmBox(t('להעביר לאשפה?'),
-      `${t('{0} פריטים יועברו לאשפה. אפשר לשחזר אותם משם, והם יימחקו לצמיתות אחרי {1} יום.', [num(ids.length), days])}
-       <br><label class="chkrow" style="margin-top:12px"><input type="checkbox" id="cb-never"> ${t('אל תשאל שוב על העברה לאשפה')}</label>`, t('העבר לאשפה'));
+    const ok = await confirmBox(t('Move to trash?'),
+      `${t('{0} items will be moved to the trash. You can restore them from there, and they will be permanently deleted after {1} days.', [num(ids.length), days])}
+       <br><label class="chkrow" style="margin-top:12px"><input type="checkbox" id="cb-never"> ${t('Don\'t ask again about moving to trash')}</label>`, t('Move to Trash'));
     if(!ok) return;
     if(CB_NEVER) pref.set('trashNoAsk', true);
   }
   await setAttr({trashed: restore?0:1}, ids);
-  toast(restore ? `${t("שוחזרו {0} פריטים", [num(ids.length)])}` : `${t("הועברו לאשפה {0} פריטים · נמחקים לצמיתות אחרי {1} יום", [num(ids.length), S.status?.trash_days||60])}`);
+  toast(restore ? `${t("{0} items restored", [num(ids.length)])}` : `${t("{0} items moved to Trash · permanently deleted after {1} days", [num(ids.length), S.status?.trash_days||60])}`);
 }
 async function rotateSel(deg){
   const ids = targets().filter(id=>!(S.byId.get(id)||{}).is_video); if(!ids.length) return;
-  toast(t('מסובב…'), 1200);
+  toast(t('Rotating…'), 1200);
   for(const id of ids){
     const d = await send('POST', `/api/photo/${id}/rotate`, {degrees:deg});
     const p = S.byId.get(id); if(p) Object.assign(p, {width:d.width, height:d.height, edited:d.edited});
@@ -257,9 +257,9 @@ function renderAll(){
 }
 function renderEmpty(){
   const e=$('#v-empty');
-  if(!S.all.length && S.src.kind==='all') e.innerHTML = `<b>${t("הקטלוג ריק")}</b><div>${t("ייבאו תמונות מתיקייה, מכרטיס זיכרון או מ‑Google Takeout.")}</div><button class="primary" onclick="openImport()">${t("ייבוא...")}</button>`;
-  else if(S.base.length) e.innerHTML = `<b>${t("אין תמונות שתואמות למסנן")}</b><div>${t("{0} תמונות במקור הזה מוסתרות על ידי המסנן.", [num(S.base.length)])}</div><button onclick="clearFilters()">${t("נקה מסנן")}</button>`;
-  else e.innerHTML = `<b>${t("אין כאן תמונות")}</b>`;
+  if(!S.all.length && S.src.kind==='all') e.innerHTML = `<b>${t("The catalog is empty")}</b><div>${t("Import photos from a folder, a memory card or Google Takeout.")}</div><button class="primary" onclick="openImport()">${t("Import...")}</button>`;
+  else if(S.base.length) e.innerHTML = `<b>${t("No photos match the filter")}</b><div>${t("{0} photos in this source are hidden by the filter.", [num(S.base.length)])}</div><button onclick="clearFilters()">${t("Clear Filter")}</button>`;
+  else e.innerHTML = `<b>${t("No photos here")}</b>`;
 }
 
 // ---------- grid (virtualized) ----------
@@ -320,13 +320,13 @@ function fillCell(c, p, i){
   const bx = (G.cw - c._w)/2, by = S.cell==='xp' ? G.cw*.22 + (G.cw*.58 - c._h)/2 : G.cw*.15 + (G.cw*.65 - c._h)/2;
   const badges = [p.has_kw && I('kw'), p.edited && I('dev')].filter(Boolean);
   c.querySelector('.ov').innerHTML =
-    `<button class="flag ${p.flag===1?'pick':p.flag===-1?'rej':''}" data-a="flag" title="${t("דגל (P / X / U)")}">${I(p.flag===-1?'reject':'flag')}</button>
-     <button class="qc ${p.quick?'on':''}" data-a="qc" title="${t("אוסף מהיר (B)")}">${I('dot')}</button>
-     <button class="rot l" data-a="rotl" title="${t("סובב שמאלה (Ctrl+[)")}">${I('rotl')}</button>
-     <button class="rot r" data-a="rotr" title="${t("סובב ימינה (Ctrl+])")}">${I('rotr')}</button>
+    `<button class="flag ${p.flag===1?'pick':p.flag===-1?'rej':''}" data-a="flag" title="${t("Flag (P / X / U)")}">${I(p.flag===-1?'reject':'flag')}</button>
+     <button class="qc ${p.quick?'on':''}" data-a="qc" title="${t("Quick Collection (B)")}">${I('dot')}</button>
+     <button class="rot l" data-a="rotl" title="${t("Rotate Left (Ctrl+[)")}">${I('rotl')}</button>
+     <button class="rot r" data-a="rotr" title="${t("Rotate Right (Ctrl+])")}">${I('rotr')}</button>
      <div class="stars ${r?'':'none'}">${stars}</div>
      ${badges.length?`<div class="badges" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-end:${Math.round(bx+4)}px">${badges.map(b=>`<i>${b}</i>`).join('')}</div>`:''}
-     ${p.is_video?`<span class="dur" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-start:${Math.round(bx+4)}px">${I('play')}${t("וידאו")}</span>`:''}`;
+     ${p.is_video?`<span class="dur" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-start:${Math.round(bx+4)}px">${I('play')}${t("Video")}</span>`:''}`;
 }
 function refreshCells(){ for(const [i,c] of G.cells){ const p=S.list[i]; if(p) fillCell(c,p,i); } }
 function scrollToAct(){
@@ -408,7 +408,7 @@ $('#fs-inner').addEventListener('dragstart', e=>{ const c=e.target.closest('.fc'
   e.dataTransfer.setData('text/x-pm-ids', JSON.stringify([...S.sel])); });
 function renderPath(){
   const n=S.list.length, s=S.sel.size, p=actPhoto();
-  $('#fs-path').innerHTML = `<b>${esc(S.src.name)}</b> ${t(": {0} תמונות", [num(n)])}${S.base.length!==n?` ${t("(מתוך {0})", [num(S.base.length)])}`:''}${s?` ${t("/ {0} נבחרו", [num(s)])}`:''}${p?` / <b dir="ltr">${esc(p.filename)}</b>`:''}`;
+  $('#fs-path').innerHTML = `<b>${esc(S.src.name)}</b> ${t(": {0} photos", [num(n)])}${S.base.length!==n?` ${t("(of {0})", [num(S.base.length)])}`:''}${s?` ${t("/ {0} selected", [num(s)])}`:''}${p?` / <b dir="ltr">${esc(p.filename)}</b>`:''}`;
 }
 $('#fs-grid').onclick = ()=>{ if(S.mod!=='library') setModule('library'); setView('grid'); };
 $('#fs-back').onclick = ()=>{ if(S.histPos>0){ S.histPos--; setSource(S.hist[S.histPos], {push:false}); } };
@@ -420,18 +420,18 @@ function attrControls(small){
   const flag = (k, ic, tg) => `<button class="tg ${F.flags.has(k)?'on':''}" data-ff="${k}" title="${tg}">${ic}</button>`;
   const stars = `<span class="fstars" data-fr>${[1,2,3,4,5].map(n=>`<b data-n="${n}" class="${n<=F.rating?'on':''}">★</b>`).join('')}</span>`;
   const labs = LABELS.map(([k,n])=>`<button class="tg lab ${F.labels.has(k)?'on':''}" data-fl="${k}" title="${n}"><span class="sw" style="background:${lcol(k)}"></span></button>`).join('')
-    + `<button class="tg lab ${F.labels.has('none')?'on':''}" data-fl="none" title="${t("ללא תווית")}"><span class="sw" style="background:#555"></span></button>`;
-  const flags = flag('pick', I('flag'), t('נבחרו')) + flag('none', `<svg class="ic"><use href="#i-flag"/></svg>`.replace('ic"','ic" style="opacity:.45"'), t('ללא דגל')) + flag('rej', I('reject'), t('נדחו'));
-  if(small) return `<span>${t("סינון:")}</span>${flags}<span class="tb-sep"></span>
+    + `<button class="tg lab ${F.labels.has('none')?'on':''}" data-fl="none" title="${t("No Label")}"><span class="sw" style="background:#555"></span></button>`;
+  const flags = flag('pick', I('flag'), t('Picks')) + flag('none', `<svg class="ic"><use href="#i-flag"/></svg>`.replace('ic"','ic" style="opacity:.45"'), t('Unflagged')) + flag('rej', I('reject'), t('Rejects'));
+  if(small) return `<span>${t("Filter:")}</span>${flags}<span class="tb-sep"></span>
     <select class="op" data-fop><option ${F.rop==='>='?'selected':''} value=">=">≥</option><option ${F.rop==='<='?'selected':''} value="<=">≤</option><option ${F.rop==='='?'selected':''} value="=">=</option></select>${stars}<span class="tb-sep"></span>${labs}
-    <button class="tg ${F.on?'':'on'}" data-foff title="${t("הפעל/השבת מסננים (Ctrl+L)")}">${F.on?t('מופעל'):t('כבוי')}</button>`;
-  return `<div class="attr-grp"><span>${t("דגל")}</span>${flags}</div>
-    <div class="attr-grp"><span>${t("דירוג")}</span><select class="op" data-fop><option ${F.rop==='>='?'selected':''} value=">=">≥</option><option ${F.rop==='<='?'selected':''} value="<=">≤</option><option ${F.rop==='='?'selected':''} value="=">=</option></select>${stars}</div>
-    <div class="attr-grp"><span>${t("צבע")}</span>${labs}</div>
-    <div class="attr-grp"><span>${t("סוג")}</span>
-      <button class="tg ${F.kinds.has('photo')?'on':''}" data-fk="photo" title="${t("תמונות")}">${I('photos')}</button>
-      <button class="tg ${F.kinds.has('video')?'on':''}" data-fk="video" title="${t("וידאו")}">${I('play')}</button>
-      <button class="tg ${F.kinds.has('edited')?'on':''}" data-fk="edited" title="${t("ערוכות")}">${I('dev')}</button></div>`;
+    <button class="tg ${F.on?'':'on'}" data-foff title="${t("Enable/Disable Filters (Ctrl+L)")}">${F.on?t('On'):t('Off')}</button>`;
+  return `<div class="attr-grp"><span>${t("Flag")}</span>${flags}</div>
+    <div class="attr-grp"><span>${t("Rating")}</span><select class="op" data-fop><option ${F.rop==='>='?'selected':''} value=">=">≥</option><option ${F.rop==='<='?'selected':''} value="<=">≤</option><option ${F.rop==='='?'selected':''} value="=">=</option></select>${stars}</div>
+    <div class="attr-grp"><span>${t("Color")}</span>${labs}</div>
+    <div class="attr-grp"><span>${t("Kind")}</span>
+      <button class="tg ${F.kinds.has('photo')?'on':''}" data-fk="photo" title="${t("Photos")}">${I('photos')}</button>
+      <button class="tg ${F.kinds.has('video')?'on':''}" data-fk="video" title="${t("Video")}">${I('play')}</button>
+      <button class="tg ${F.kinds.has('edited')?'on':''}" data-fk="edited" title="${t("Edited")}">${I('dev')}</button></div>`;
 }
 function renderFsFilter(){ $('#fs-filter').innerHTML = attrControls(true); }
 function bindAttrControls(root){
@@ -470,7 +470,7 @@ function renderFilterBar(){
   $('#fb-meta').classList.toggle('hidden', S.fb!=='meta');
   if(S.fb==='attr') $('#fb-attr').innerHTML = attrControls(false);
   if(S.fb==='meta') renderMetaBrowser();
-  $('#fb-state').innerHTML = filterActive() ? (S.F.on ? ("<b>"+t("מסנן פעיל")+"</b>") : t('המסנן כבוי')) : '';
+  $('#fb-state').innerHTML = filterActive() ? (S.F.on ? ("<b>"+t("Filter active")+"</b>") : t('Filter off')) : '';
 }
 $('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
 $('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; if(S.F.q) fetchSource(); };
@@ -481,9 +481,9 @@ function renderMetaBrowser(){
     for(const p of base) if(passMeta(p, ci)){ const v=fn(p); counts.set(v, (counts.get(v)||0)+1); }
     const vals = [...counts.entries()].sort((a,b)=> k==='year'||k==='month' ? b[0].localeCompare(a[0]) : b[1]-a[1]);
     const set=S.F.meta[k];
-    const label = v => k==='month' && v!==t('ללא') ? new Date(2000, +v-1, 1).toLocaleDateString(I18N.locale,{month:'long'}) : v;
+    const label = v => k==='month' && v!==t('None') ? new Date(2000, +v-1, 1).toLocaleDateString(I18N.locale,{month:'long'}) : v;
     return `<div class="mcol"><h4>${title}</h4><div class="mlist">
-      <div class="row ${set.size?'':'on'}" data-mk="${k}" data-mv=""><span class="nm">${t("הכול ({0})", [vals.length])}</span><span class="n">${num([...counts.values()].reduce((a,b)=>a+b,0))}</span></div>
+      <div class="row ${set.size?'':'on'}" data-mk="${k}" data-mv=""><span class="nm">${t("All ({0})", [vals.length])}</span><span class="n">${num([...counts.values()].reduce((a,b)=>a+b,0))}</span></div>
       ${vals.map(([v,n])=>`<div class="row ${set.has(v)?'on':''}" data-mk="${k}" data-mv="${esc(v)}"><span class="nm">${esc(label(v))}</span><span class="n">${num(n)}</span></div>`).join('')}
     </div></div>`;
   }).join('');
@@ -509,16 +509,16 @@ function renderCatalog(){
   const q=S.all.filter(p=>p.quick).length;
   const prev = st.last_import ? S.all.filter(p=>(p.imported_at||0)>=st.last_import).length : 0;
   $('#p-catalog').innerHTML =
-    row('all', I('photos'), t('כל התמונות'), S.all.length) +
-    row('quick', I('coll'), t('אוסף מהיר +'), q) +
-    (st.last_import ? row('prev', I('import'), t('ייבוא קודם'), prev) : '') +
-    row('trash', I('trash'), t('אשפה'), st.counts.trashed);
+    row('all', I('photos'), t('All Photographs'), S.all.length) +
+    row('quick', I('coll'), t('Quick Collection +'), q) +
+    (st.last_import ? row('prev', I('import'), t('Previous Import'), prev) : '') +
+    row('trash', I('trash'), t('Trash'), st.counts.trashed);
   markSourceRows();
 }
 function renderFolders(){
   const f=S.folders;
-  $('#p-folders').innerHTML = `<div class="vol" title="${esc(f.root)}">${I('drive')}<span>${t("ספרייה")}</span><span class="path">${esc(f.root)}</span></div>` +
-    (f.folders.map(x=>row('folder:'+x.name, I('folder'), x.name || t('(שורש)'), x.n, '', 'ind')).join('') || ("<div class=\"hint\">"+t("אין תיקיות עדיין")+"</div>"));
+  $('#p-folders').innerHTML = `<div class="vol" title="${esc(f.root)}">${I('drive')}<span>${t("Library")}</span><span class="path">${esc(f.root)}</span></div>` +
+    (f.folders.map(x=>row('folder:'+x.name, I('folder'), x.name || t('(root)'), x.n, '', 'ind')).join('') || ("<div class=\"hint\">"+t("No folders yet")+"</div>"));
   markSourceRows();
 }
 const OPEN_SETS = new Set(pref.get('openSets', ['smart','album']));
@@ -528,29 +528,29 @@ function renderColls(){
     const open=OPEN_SETS.has(key);
     return `<div class="row set" data-set="${key}"><span class="tw">${open?'▼':'◀'}</span>${I('set')}<span class="nm">${title}</span></div>` + (open ? items : '');
   };
-  const coll = a => row('album:'+a.id, I('coll'), a.name, a.n, `<button class="x" data-del="${a.id}" title="${t("מחק אוסף")}">${I('close')}</button>`, 'ind');
+  const coll = a => row('album:'+a.id, I('coll'), a.name, a.n, `<button class="x" data-del="${a.id}" title="${t("Delete Collection")}">${I('close')}</button>`, 'ind');
   const smart = SMART.map(([k,n,f])=>row('smart:'+k, I('smart'), n, S.all.filter(f).length, '', 'ind')).join('');
   const people = S.people.map(p=>row('person:'+p.id, I('people'), p.name, (p.face_photos||0)+(p.tag_photos||0), '', 'ind')).join('');
   $('#p-colls').innerHTML =
-    set('smart', t('אוספים חכמים'), smart) +
-    set('album', t('אוספים'), al.filter(a=>a.kind==='album').map(coll).join('') || ("<div class=\"hint\">"+t("גררו תמונות לכאן אחרי יצירת אוסף")+"</div>")) +
-    (al.some(a=>a.kind==='people-share') ? set('shared', t('אלבומים משותפים'), al.filter(a=>a.kind==='people-share').map(coll).join('')) : '') +
-    (al.some(a=>a.kind==='year') ? set('year', t('לפי שנה (Google)'), al.filter(a=>a.kind==='year').map(coll).join('')) : '') +
-    (S.people.length ? set('people', t('אנשים'), people) : '');
+    set('smart', t('Smart Collections'), smart) +
+    set('album', t('Collections'), al.filter(a=>a.kind==='album').map(coll).join('') || ("<div class=\"hint\">"+t("Drag photos here after creating a collection")+"</div>")) +
+    (al.some(a=>a.kind==='people-share') ? set('shared', t('Shared Albums'), al.filter(a=>a.kind==='people-share').map(coll).join('')) : '') +
+    (al.some(a=>a.kind==='year') ? set('year', t('By Year (Google)'), al.filter(a=>a.kind==='year').map(coll).join('')) : '') +
+    (S.people.length ? set('people', t('People'), people) : '');
   markSourceRows();
 }
 function markSourceRows(){ const k=srcKey(S.src); $$('#left [data-src]').forEach(r=>r.classList.toggle('on', r.dataset.src===k)); }
 function srcFromKey(key){
   const [kind, id] = key.split(/:(.*)/s);
-  const name = {all:t('כל התמונות'), quick:t('אוסף מהיר'), prev:t('ייבוא קודם'), trash:t('אשפה')}[kind]
-    || (kind==='folder' ? (id||t('(שורש)')) : kind==='smart' ? SMART.find(s=>s[0]===id)[1]
+  const name = {all:t('All Photographs'), quick:t('Quick Collection'), prev:t('Previous Import'), trash:t('Trash')}[kind]
+    || (kind==='folder' ? (id||t('(root)')) : kind==='smart' ? SMART.find(s=>s[0]===id)[1]
       : kind==='album' ? S.albums.find(a=>a.id==id)?.name : kind==='person' ? S.people.find(p=>p.id==id)?.name : '');
   return {kind, id: id===undefined ? null : (['album','person','tag','cluster'].includes(kind) ? +id : id), name};
 }
 $('#left').addEventListener('click', async e=>{
   const del=e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); const a=S.albums.find(x=>x.id==del.dataset.del);
-    if(!await confirmBox(`${t("למחוק את האוסף „{0}\"?", [esc(a.name)])}`, t('התמונות עצמן יישארו בקטלוג.'), t('מחק'))) return;
+    if(!await confirmBox(`${t("Delete the collection “{0}”?", [esc(a.name)])}`, t('The photos themselves will stay in the catalog.'), t('Delete'))) return;
     await send('DELETE', '/api/album/'+a.id); if(S.src.kind==='album' && S.src.id===a.id) setSource(srcFromKey('all')); loadSide(); return; }
   const st=e.target.closest('[data-set]');
   if(st){ const k=st.dataset.set; OPEN_SETS.has(k)?OPEN_SETS.delete(k):OPEN_SETS.add(k); pref.set('openSets',[...OPEN_SETS]); renderColls(); return; }
@@ -559,7 +559,7 @@ $('#left').addEventListener('click', async e=>{
 $('#left').addEventListener('dblclick', async e=>{
   const r=e.target.closest('[data-src^="album:"]'); if(!r) return;
   const a=S.albums.find(x=>'album:'+x.id===r.dataset.src);
-  const n=await promptBox(t('שינוי שם אוסף'), a.name); if(!n || n===a.name) return;
+  const n=await promptBox(t('Rename Collection'), a.name); if(!n || n===a.name) return;
   await send('POST', `/api/album/${a.id}/rename`, {name:n}); await loadSide(); if(S.src.kind==='album'&&S.src.id===a.id){ S.src.name=n; renderPath(); }
 });
 // drag photos onto a collection / the Quick Collection
@@ -568,13 +568,13 @@ $('#left').addEventListener('dragleave', e=>{ const r=e.target.closest('.drop');
 $('#left').addEventListener('drop', async e=>{
   const r=e.target.closest('[data-src^="album:"],[data-src="quick"]'); $$('#left .drop').forEach(x=>x.classList.remove('drop')); if(!r) return;
   e.preventDefault(); const ids=JSON.parse(e.dataTransfer.getData('text/x-pm-ids')||'[]'); if(!ids.length) return;
-  if(r.dataset.src==='quick'){ await setAttr({quick:1}, ids); toast(`${t("נוספו {0} לאוסף המהיר", [num(ids.length)])}`); return; }
+  if(r.dataset.src==='quick'){ await setAttr({quick:1}, ids); toast(`${t("{0} added to Quick Collection", [num(ids.length)])}`); return; }
   const aid=+r.dataset.src.split(':')[1];
-  await send('POST', `/api/album/${aid}/add`, {ids}); toast(`${t("נוספו {0} תמונות ל„{1}\"", [num(ids.length), esc(S.albums.find(a=>a.id===aid)?.name)])}`); loadSide();
+  await send('POST', `/api/album/${aid}/add`, {ids}); toast(`${t("{0} photos added to “{1}”", [num(ids.length), esc(S.albums.find(a=>a.id===aid)?.name)])}`); loadSide();
 });
 async function newCollection(){
   const ids=[...S.sel];
-  const n=await promptBox(t('צור אוסף'), '', ids.length?`<label class="check" style="padding:0"><input type="checkbox" id="nc-sel" checked> ${t("כלול את התמונות שנבחרו ({0})", [num(ids.length)])}</label>`:'');
+  const n=await promptBox(t('Create Collection'), '', ids.length?`<label class="check" style="padding:0"><input type="checkbox" id="nc-sel" checked> ${t("Include the selected photos ({0})", [num(ids.length)])}</label>`:'');
   if(!n) return;
   const inc = ids.length && PB_CHECKED;
   const r = await send('POST', '/api/albums', {name:n, ids: inc ? ids : []});
@@ -656,32 +656,32 @@ function vpDestroy(){
 }
 function closeLoupeMedia(){ vpDestroy(); const m=$('#loupe-media'); m.innerHTML=''; m.dataset.id=''; }
 const openExternal = id => send('POST', `/api/photo/${id}/open-external`)
-  .then(r=>{ if(r.player==='default') toast(t('נפתח בנגן ברירת המחדל של המערכת')); });
+  .then(r=>{ if(r.player==='default') toast(t('Opened in the system\'s default player')); });
 
 function mountPlayer(m, p){
   vpDestroy();
   const el = document.createElement('div'); el.className = 'vp paused'; el.dir = 'ltr';
   const b = (k, inner, title, cls='') => `<button data-vp="${k}" class="${cls}" title="${esc(title)}" aria-label="${esc(title)}">${inner}</button>`;
-  const volTip = t('עוצמת קול (↑ ↓)');
+  const volTip = t('Volume (↑ ↓)');
   el.innerHTML = `
     <video src="${mediaUrl(p.id)}" playsinline preload="auto" autoplay></video>
-    <div class="vp-err hidden"><span>${t('הפורמט הזה לא מתנגן בתוך האפליקציה.')}</span><button class="primary" data-vp="ext">${t('פתח בנגן חיצוני')}</button></div>
+    <div class="vp-err hidden"><span>${t('This format can\'t be played inside the app.')}</span><button class="primary" data-vp="ext">${t('Open in external player')}</button></div>
     <div class="vp-bar">
       <div class="vp-seek"><div class="vp-buf"></div><div class="vp-played"></div><div class="vp-knob"></div>
         <div class="vp-tip hidden"><canvas width="160" height="90"></canvas><span></span></div></div>
       <div class="vp-row">
-        ${b('play', I('play'), t('הפעל / השהה (רווח)'))}
-        ${b('back', I('rotl')+'<i class="n10">10</i>', t('10 שניות אחורה'))}
-        ${b('fwd', I('rotr')+'<i class="n10">10</i>', t('10 שניות קדימה'))}
+        ${b('play', I('play'), t('Play / Pause (Space)'))}
+        ${b('back', I('rotl')+'<i class="n10">10</i>', t('Back 10 seconds'))}
+        ${b('fwd', I('rotr')+'<i class="n10">10</i>', t('Forward 10 seconds'))}
         <span class="vp-time"><b data-vp="cur">0:00</b> / <span data-vp="dur">0:00</span></span>
         <span class="spacer"></span>
-        ${b('mute', I('vol'), t('השתק (M)'))}<input class="vp-vol" type="range" min="0" max="1" step="0.02" title="${esc(volTip)}" aria-label="${esc(volTip)}">
-        ${b('rate', '1×', t('מהירות ניגון'), 'vp-rate')}
-        ${b('loop', I('loop'), t('חזרה על הסרטון'))}
-        ${document.pictureInPictureEnabled ? b('pip', I('pip'), t('תמונה בתוך תמונה')) : ''}
-        ${b('compress', I('compress'), t('דחוס את הסרטון (HandBrake)'))}
-        ${b('ext', I('external'), t('פתח בנגן חיצוני (VLC אם מותקן)'))}
-        ${b('full', I('full'), t('מסך מלא (F)'))}
+        ${b('mute', I('vol'), t('Mute (M)'))}<input class="vp-vol" type="range" min="0" max="1" step="0.02" title="${esc(volTip)}" aria-label="${esc(volTip)}">
+        ${b('rate', '1×', t('Playback speed'), 'vp-rate')}
+        ${b('loop', I('loop'), t('Loop video'))}
+        ${document.pictureInPictureEnabled ? b('pip', I('pip'), t('Picture in picture')) : ''}
+        ${b('compress', I('compress'), t('Compress Video (HandBrake)'))}
+        ${b('ext', I('external'), t('Open in external player (VLC if installed)'))}
+        ${b('full', I('full'), t('Fullscreen (F)'))}
       </div>
     </div>`;
   m.appendChild(el);
@@ -818,7 +818,7 @@ function renderLoupe(){
   }
   const info=$('#loupe-info');
   info.classList.toggle('hidden', !S.loupeInfo);
-  info.innerHTML = `<b>${esc(p.filename)}</b><span>${fdate(p.taken_at)}</span><br><span dir="ltr">${p.width&&p.height?p.width+' × '+p.height:''}  ${fsize(p.bytes)}</span>${p.flag===-1?("<br><span>"+t("נדחתה")+"</span>"):''}`;
+  info.innerHTML = `<b>${esc(p.filename)}</b><span>${fdate(p.taken_at)}</span><br><span dir="ltr">${p.width&&p.height?p.width+' × '+p.height:''}  ${fsize(p.bytes)}</span>${p.flag===-1?("<br><span>"+t("Rejected")+"</span>"):''}`;
   filmScrollTo(S.idx.get(p.id)??0);
 }
 function zoomLoupe(on, fx=.5, fy=.5){
@@ -852,7 +852,7 @@ function renderCompare(){
   let b = CMP_CAND && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : ([...S.sel].find(id=>id!==a.id) ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
   CMP_CAND=b;
   const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt=""></div>`:'<div class="cmp"></div>';
-  $('#v-compare').innerHTML = pane(a,t('בחירה'),'sel') + pane(S.byId.get(b)||S.base.find(x=>x.id===b),t('מועמד'),'');
+  $('#v-compare').innerHTML = pane(a,t('Selection'),'sel') + pane(S.byId.get(b)||S.base.find(x=>x.id===b),t('Candidate'),'');
 }
 $('#v-compare').addEventListener('click', e=>{ const c=e.target.closest('.cmp:not(.sel)'); if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; renderCompare(); } });
 function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; renderCompare(); }
@@ -867,40 +867,40 @@ function renderSurvey(){
   for(let cols=1; cols<=n; cols++){ const rows=Math.ceil(n/cols), s=Math.min((W-(cols-1)*10)/cols, (H-(rows-1)*10)/rows); if(s>best[2]) best=[cols,rows,s]; }
   const [cols, rows] = best, bw=Math.floor((W-(cols-1)*10)/cols), bh=Math.floor((H-(rows-1)*10)/rows);
   el.innerHTML = ids.map(id=>{ const p=S.byId.get(id)||S.base.find(x=>x.id===id);
-    return `<div class="sv ${id===S.act?'act':''}" data-id="${id}" style="width:${bw}px;height:${bh}px"><img src="${bw>300?mediaUrl(id):thumbUrl(id)}" alt=""><button class="x" data-x title="${t("הסר מהסקירה")}">${I('close')}</button></div>`; }).join('');
+    return `<div class="sv ${id===S.act?'act':''}" data-id="${id}" style="width:${bw}px;height:${bh}px"><img src="${bw>300?mediaUrl(id):thumbUrl(id)}" alt=""><button class="x" data-x title="${t("Remove from Survey")}">${I('close')}</button></div>`; }).join('');
 }
 $('#v-survey').addEventListener('click', e=>{ const c=e.target.closest('.sv'); if(!c) return; const id=+c.dataset.id;
   if(e.target.closest('[data-x]')){ S.sel.delete(id); if(S.act===id) S.act=[...S.sel][0]??null; onSelChange(); return; }
   S.act=id; onSelChange(); });
 
 async function renderPeople(){
-  const el=$('#v-people'); el.innerHTML=("<div class=\"hint\">"+t("טוען…")+"</div>");
+  const el=$('#v-people'); el.innerHTML=("<div class=\"hint\">"+t("Loading…")+"</div>");
   const [people, clusters] = await Promise.all([api('/api/people'), api('/api/clusters')]);
   S.people=people;
   const face = src => src ? `<img loading="lazy" src="${src}" alt="">` : I('people');
-  el.innerHTML = `<h2>${t("אנשים עם שם")} <span>${num(people.length)}</span></h2>
+  el.innerHTML = `<h2>${t("Named People")} <span>${num(people.length)}</span></h2>
     <div class="pgrid">${people.map(p=>`<div class="pc" data-person="${p.id}"><div class="face">${face(p.cover_face?'/face/'+p.cover_face:p.cover_photo?thumbUrl(p.cover_photo):'')}</div>
-      <div class="nm" title="${t("לחיצה כפולה לשינוי שם")}">${esc(p.name)}</div><div class="ct">${num((p.face_photos||0)+(p.tag_photos||0))}</div></div>`).join('') || ("<div class=\"hint\">"+t("עוד אין אנשים עם שם.")+"</div>")}</div>
-    <h2>${t("אנשים ללא שם")} <span>${num(clusters.length)}</span></h2>
+      <div class="nm" title="${t("Double-click to rename")}">${esc(p.name)}</div><div class="ct">${num((p.face_photos||0)+(p.tag_photos||0))}</div></div>`).join('') || ("<div class=\"hint\">"+t("There are no named people yet.")+"</div>")}</div>
+    <h2>${t("Unnamed People")} <span>${num(clusters.length)}</span></h2>
     ${clusters.length ? `<div class="pgrid">${clusters.map(c=>`<div class="pc" data-cluster="${c.id}"><div class="face">${face(c.cover_face?'/face/'+c.cover_face:'')}</div>
-      <input placeholder="?" data-name-cluster="${c.id}" title="${t("הקלידו שם ולחצו Enter")}"><div class="ct">${num(c.n)}</div></div>`).join('')}</div>`
-      : `<div class="hint">${S.status?.counts.faces ? t('כל קבוצות הפנים קיבלו שם.') : t('עוד לא הורץ זיהוי פנים. ספרייה ← זיהוי פנים.')}</div>`}`;
+      <input placeholder="?" data-name-cluster="${c.id}" title="${t("Type a name and press Enter")}"><div class="ct">${num(c.n)}</div></div>`).join('')}</div>`
+      : `<div class="hint">${S.status?.counts.faces ? t('All face groups have been named.') : t('Face detection has not been run yet. Library → Face Detection.')}</div>`}`;
 }
 $('#v-people').addEventListener('click', e=>{
   const face=e.target.closest('.face'); if(!face) return;
   const pc=face.closest('.pc');
   if(pc.dataset.person){ const p=S.people.find(x=>x.id==pc.dataset.person); setSource({kind:'person', id:p.id, name:p.name}); setView('grid'); }
-  else setSource({kind:'cluster', id:+pc.dataset.cluster, name:t('אדם ללא שם')}).then(()=>setView('grid'));
+  else setSource({kind:'cluster', id:+pc.dataset.cluster, name:t('Unnamed person')}).then(()=>setView('grid'));
 });
 $('#v-people').addEventListener('dblclick', async e=>{
   const nm=e.target.closest('.nm'); if(!nm) return; const id=+nm.closest('.pc').dataset.person, p=S.people.find(x=>x.id===id);
-  const n=await promptBox(t('שינוי שם'), p.name); if(!n) return;
-  await send('POST', `/api/person/${id}/rename`, {name:n}); toast(t('השם עודכן')); await loadSide(); renderPeople();
+  const n=await promptBox(t('Rename'), p.name); if(!n) return;
+  await send('POST', `/api/person/${id}/rename`, {name:n}); toast(t('Name updated')); await loadSide(); renderPeople();
 });
 $('#v-people').addEventListener('keydown', async e=>{
   const inp=e.target.closest('[data-name-cluster]'); if(!inp || e.key!=='Enter') return;
   const n=inp.value.trim(); if(!n) return;
-  await send('POST', `/api/cluster/${inp.dataset.nameCluster}/name`, {name:n}); toast(`${t("נקרא „{0}\"", [esc(n)])}`); await loadSide(); renderPeople();
+  await send('POST', `/api/cluster/${inp.dataset.nameCluster}/name`, {name:n}); toast(`${t("Named “{0}”", [esc(n)])}`); await loadSide(); renderPeople();
 });
 
 // ---------- map: pins for the photos you selected (Leaflet, bundled; tiles from OpenStreetMap) ----------
@@ -925,7 +925,7 @@ async function renderMapView(){
   const note = $('#map-note'); note.className = 'map-note'; note.textContent = '';
   if(!MAP){
     MAP = L.map('map-canvas', {zoomControl: true, worldCopyJump: true}).setView([31.8, 35.0], 3);
-    mapTiles(()=>{ const n = $('#map-note'); n.classList.add('show', 'warn'); n.textContent = t('אין חיבור לאינטרנט, ולכן אריחי המפה לא נטענים. הנקודות עדיין מוצגות.'); }).addTo(MAP);
+    mapTiles(()=>{ const n = $('#map-note'); n.classList.add('show', 'warn'); n.textContent = t('No internet connection, so map tiles can\'t load. The pins are still shown.'); }).addTo(MAP);
     MAPLAYER = L.layerGroup().addTo(MAP);
   }
   MAP.invalidateSize();
@@ -941,15 +941,15 @@ async function renderMapView(){
   for(const [, ps] of groups){
     const m = L.marker([ps[0].lat, ps[0].lng], {icon: pinIcon(ps.length), title: ps.length === 1 ? ps[0].filename : ''}).addTo(MAPLAYER);
     m.bindPopup(()=>`<div class="mp-pop" dir="auto"><div class="mp-grid">${ps.slice(0, 12).map(p=>`<img src="${thumbUrl(p.id)}" data-pid="${p.id}" title="${esc(p.filename)}" alt="">`).join('')}</div>
-      <div class="mp-cap">${ps.length === 1 ? `<bdi>${esc(ps[0].filename)}</bdi> · ${fdate(ps[0].taken_at)}` : t('{0} תמונות במקום הזה', [num(ps.length)])}</div></div>`, {minWidth: 190, maxWidth: 320});
+      <div class="mp-cap">${ps.length === 1 ? `<bdi>${esc(ps[0].filename)}</bdi> · ${fdate(ps[0].taken_at)}` : t('{0} photos at this place', [num(ps.length)])}</div></div>`, {minWidth: 190, maxWidth: 320});
     bounds.push([ps[0].lat, ps[0].lng]);
   }
   if(bounds.length === 1) MAP.setView(bounds[0], 14);
   else if(bounds.length) MAP.fitBounds(bounds, {padding: [50, 50], maxZoom: 15});
-  MAPINFO = r.points.length ? t('{0} תמונות על המפה, {1} מקומות', [num(r.points.length), num(groups.size)]) + (r.without ? ' · ' + t('{0} בלי מיקום', [num(r.without)]) : '')
-    : t('לתמונות הנבחרות אין מיקום');
+  MAPINFO = r.points.length ? t('{0} photos on the map, {1} places', [num(r.points.length), num(groups.size)]) + (r.without ? ' · ' + t('{0} without location', [num(r.without)]) : '')
+    : t('The selected photos have no location');
   const inf = $('#map-info'); if(inf) inf.textContent = MAPINFO;
-  if(!r.points.length){ note.classList.add('show'); note.textContent = t('לתמונות שנבחרו אין מיקום GPS. אפשר להוסיף קו רוחב וקו אורך בלוח המטא-נתונים בצד.'); }
+  if(!r.points.length){ note.classList.add('show'); note.textContent = t('The selected photos have no GPS location. You can add a latitude and longitude in the metadata panel on the side.'); }
 }
 $('#v-map').addEventListener('click', e=>{
   const im = e.target.closest('[data-pid]'); if(!im) return;
@@ -959,31 +959,31 @@ $('#v-map').addEventListener('click', e=>{
 // ---------- toolbar ----------
 function tbViews(){
   const b=(v,ic,tg)=>`<button class="tb-btn ${S.view===v?'on':''}" data-view="${v}" title="${tg}">${I(ic)}</button>`;
-  return `<div class="tb-grp">${b('grid','grid',t('תצוגת רשת (G)'))}${b('loupe','loupe',t('זכוכית מגדלת (E)'))}${b('compare','compare',t('השוואה (C)'))}${b('survey','survey',t('סקירה (N)'))}${b('people','face',t('אנשים (O)'))}${b('map','pin',t('מפה: תמונות שנבחרו על המפה'))}</div>`;
+  return `<div class="tb-grp">${b('grid','grid',t('Grid View (G)'))}${b('loupe','loupe',t('Loupe (E)'))}${b('compare','compare',t('Compare (C)'))}${b('survey','survey',t('Survey (N)'))}${b('people','face',t('People (O)'))}${b('map','pin',t('Map: selected photos on the map'))}</div>`;
 }
 function tbAttrs(){
   const p=actPhoto(), r=p?.rating||0;
-  return `<div class="tb-grp"><button class="tb-btn tb-flag pick ${p?.flag===1?'on':''}" data-t="pick" title="${t("סמן כנבחרת (P)")}">${I('flag')}</button>
-    <button class="tb-btn tb-flag rej ${p?.flag===-1?'on':''}" data-t="rej" title="${t("סמן כנדחית (X)")}">${I('reject')}</button></div>
-    <span class="tb-sep"></span><span class="tb-stars">${[1,2,3,4,5].map(n=>`<b data-star="${n}" class="${n<=r?'on':''}" title="${t("{0} (מקש {1})", [n, n])}">★</b>`).join('')}</span>
+  return `<div class="tb-grp"><button class="tb-btn tb-flag pick ${p?.flag===1?'on':''}" data-t="pick" title="${t("Flag as Pick (P)")}">${I('flag')}</button>
+    <button class="tb-btn tb-flag rej ${p?.flag===-1?'on':''}" data-t="rej" title="${t("Flag as Rejected (X)")}">${I('reject')}</button></div>
+    <span class="tb-sep"></span><span class="tb-stars">${[1,2,3,4,5].map(n=>`<b data-star="${n}" class="${n<=r?'on':''}" title="${t("{0} (key {1})", [n, n])}">★</b>`).join('')}</span>
     <span class="tb-sep"></span><span class="tb-labs">${LABELS.map(([k,n,key])=>`<button data-lab="${k}" class="${p?.label===k?'on':''}" style="background:${lcol(k)}" title="${n}${key?` (${key})`:''}"></button>`).join('')}</span>
-    <span class="tb-sep"></span><div class="tb-grp"><button class="tb-btn" data-t="rotl" title="${t("סובב שמאלה (Ctrl+[)")}">${I('rotl')}</button><button class="tb-btn" data-t="rotr" title="${t("סובב ימינה (Ctrl+])")}">${I('rotr')}</button></div>`;
+    <span class="tb-sep"></span><div class="tb-grp"><button class="tb-btn" data-t="rotl" title="${t("Rotate Left (Ctrl+[)")}">${I('rotl')}</button><button class="tb-btn" data-t="rotr" title="${t("Rotate Right (Ctrl+])")}">${I('rotr')}</button></div>`;
 }
 function renderToolbar(){
   const tb=$('#toolbar');
   if(S.mod==='develop'){ const p=actPhoto();
-    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="${t("לפני/אחרי (\\)")}">${t("לפני / אחרי")}</button><span class="tb-sep"></span>
-      <button class="tb-btn ${DEV.crop?'on':''}" data-t="crop" title="${t("חיתוך (R)")}">${I('crop')}</button><span class="spacer"></span>
-      <span class="tb-info">${p?`<bdi>${esc(p.filename)}</bdi>`:''}${DEV.dirty?t(' · שינויים שלא הוחלו'):''}</span>`; return; }
+    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="${t("Before/After (\\)")}">${t("Before / After")}</button><span class="tb-sep"></span>
+      <button class="tb-btn ${DEV.crop?'on':''}" data-t="crop" title="${t("Crop (R)")}">${I('crop')}</button><span class="spacer"></span>
+      <span class="tb-info">${p?`<bdi>${esc(p.filename)}</bdi>`:''}${DEV.dirty?t(' · unapplied changes'):''}</span>`; return; }
   let h = tbViews() + '<span class="tb-sep"></span>';
-  if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">${t("מיון:")}</span><button class="tb-btn" data-t="asc" title="${S.asc?t('סדר עולה'):t('סדר יורד')}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
+  if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">${t("Sort:")}</span><button class="tb-btn" data-t="asc" title="${S.asc?t('Ascending'):t('Descending')}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
       <select data-t="sort">${Object.entries(SORTS).map(([k,[n]])=>`<option value="${k}" ${k===S.sort?'selected':''}>${n}</option>`).join('')}</select></div><span class="tb-sep"></span>` + tbAttrs() +
-      `<label class="tb-size"><span>${t("תמונות ממוזערות")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
-  else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("מידע (I)")}">${t("מידע")}</button>`;
-  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("החלף בחירה ומועמד")}">${t("החלף")}</button><button class="tb-btn" data-t="done" title="${t("סיום (Esc)")}">${t("סיום")}</button>`;
-  else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} תמונות בסקירה", [num(S.sel.size)])}</span>`;
+      `<label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
+  else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
+  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
+  else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} photos in Survey", [num(S.sel.size)])}</span>`;
   else if(S.view==='map') h += `<span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
-  else h += `<span class="spacer"></span><span class="tb-info">${t("הקלידו שם מתחת לפנים כדי לתת להן שם")}</span>`;
+  else h += `<span class="spacer"></span><span class="tb-info">${t("Type a name below the faces to name them")}</span>`;
   tb.innerHTML = h;
 }
 $('#toolbar').addEventListener('click', e=>{
@@ -1051,15 +1051,15 @@ const renderRight = debounce(async ()=>{
 
 function renderKeywording(ids, kws){
   const el=$('#p-kwing');
-  if(!ids.length){ el.innerHTML=("<div class=\"hint\">"+t("בחרו תמונות כדי לתייג אותן.")+"</div>"); return; }
+  if(!ids.length){ el.innerHTML=("<div class=\"hint\">"+t("Select photos to tag them.")+"</div>"); return; }
   const txt = kws.map(k=>k.name + (k.n<ids.length?' *':'')).join(', ');
   const top = S.tags.slice(0,30).map(tg=>tg.name);
   const sug = [...new Set([...S.recentKw, ...top])].filter(n=>!kws.some(k=>k.name===n && k.n===ids.length)).slice(0,9);
-  el.innerHTML = `<div class="lbl-sub">${t("מילות מפתח")}${ids.length>1?` ${t("· {0} תמונות (* = רק בחלק מהן)", [num(ids.length)])}`:''}</div>
-    <label class="kwbox"><textarea id="kw-text" spellcheck="false" placeholder="${t("הקלידו מילות מפתח מופרדות בפסיקים")}">${esc(txt)}</textarea></label>
-    <label class="kwadd"><input id="kw-add" placeholder="${t("לחצו כאן כדי להוסיף מילות מפתח")}"></label>
-    <div class="kwai"><button id="kw-ai" title="${esc(t('תייג בעזרת AI את התמונות שנבחרו'))}">${I('spark')}${t('תיוג AI')}</button><button id="kw-ai-cfg" class="cfg" title="${esc(t('הגדרות תיוג AI'))}" aria-label="${esc(t('הגדרות תיוג AI'))}">${I('dev')}</button></div>
-    <div class="lbl-sub" style="padding-top:8px">${t("הצעות למילות מפתח")}</div>
+  el.innerHTML = `<div class="lbl-sub">${t("Keywords")}${ids.length>1?` ${t("· {0} photos (* = only some of them)", [num(ids.length)])}`:''}</div>
+    <label class="kwbox"><textarea id="kw-text" spellcheck="false" placeholder="${t("Type keywords separated by commas")}">${esc(txt)}</textarea></label>
+    <label class="kwadd"><input id="kw-add" placeholder="${t("Click here to add keywords")}"></label>
+    <div class="kwai"><button id="kw-ai" title="${esc(t('Tag the selected photos using AI'))}">${I('spark')}${t('AI tagging')}</button><button id="kw-ai-cfg" class="cfg" title="${esc(t('AI tagging settings'))}" aria-label="${esc(t('AI tagging settings'))}">${I('dev')}</button></div>
+    <div class="lbl-sub" style="padding-top:8px">${t("Keyword Suggestions")}</div>
     <div class="kwsug">${sug.map(n=>`<a data-kwadd="${esc(n)}" title="${esc(n)}">${esc(n)}</a>`).join('')}</div>`;
   el._orig = kws; el._ids = ids;
 }
@@ -1098,17 +1098,17 @@ function renderKwList(selKws, nSel){
   selKws = selKws || el._sel || []; nSel = nSel ?? el._n ?? 0; el._sel=selKws; el._n=nSel;
   const on = new Map(selKws.map(k=>[k.id,k.n]));
   const tags = S.tags.filter(tg=>!KWF || tg.name.toLowerCase().includes(KWF));
-  el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="${t("סינון מילות מפתח")}" value="${esc(KWF)}"></div>
+  el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="${t("Keyword Filter")}" value="${esc(KWF)}"></div>
     <div class="kwrows">${tags.slice(0,800).map(tg=>{ const c=on.get(tg.id)||0;
-      return `<div class="row" data-kw="${tg.id}"><input type="checkbox" ${nSel&&c===nSel?'checked':''} ${nSel?'':'disabled'} data-part="${c&&c<nSel?1:0}" title="${nSel?t('הוסף/הסר לתמונות שנבחרו'):''}"><span class="nm">${esc(tg.name)}</span>
-        <button class="go" data-go="${tg.id}" title="${t("הצג תמונות עם מילת המפתח")}">${I('next')}</button><span class="n">${num(tg.n)}</span></div>`; }).join('')
-      || ("<div class=\"hint\">"+t("אין מילות מפתח עדיין. תייגו תמונות או הריצו תיוג חכם.")+"</div>")}</div>`;
+      return `<div class="row" data-kw="${tg.id}"><input type="checkbox" ${nSel&&c===nSel?'checked':''} ${nSel?'':'disabled'} data-part="${c&&c<nSel?1:0}" title="${nSel?t('Add/remove for selected photos'):''}"><span class="nm">${esc(tg.name)}</span>
+        <button class="go" data-go="${tg.id}" title="${t("Show photos with this keyword")}">${I('next')}</button><span class="n">${num(tg.n)}</span></div>`; }).join('')
+      || ("<div class=\"hint\">"+t("No keywords yet. Tag photos or run Smart Tagging.")+"</div>")}</div>`;
   $$('#p-kwlist [data-part="1"]').forEach(c=>c.indeterminate=true);
 }
 $('#p-kwlist').addEventListener('input', debounce(e=>{ if(e.target.id==='kw-filter'){ KWF=e.target.value.toLowerCase(); renderKwList(); $('#kw-filter').focus(); } }, 150));
 $('#p-kwlist').addEventListener('click', e=>{
   const go=e.target.closest('[data-go]');
-  if(go){ const tg=S.tags.find(x=>x.id==go.dataset.go); setSource({kind:'tag', id:tg.id, name:t('מילת מפתח: ')+tg.name}); return; }
+  if(go){ const tg=S.tags.find(x=>x.id==go.dataset.go); setSource({kind:'tag', id:tg.id, name:t('Keyword: ')+tg.name}); return; }
   const cb=e.target.closest('input[type=checkbox]');
   if(cb){ const tg=S.tags.find(x=>x.id==cb.closest('[data-kw]').dataset.kw);
     if(cb.checked) commitKeywords([tg.name], []); else commitKeywords([], [tg.id]); }
@@ -1117,39 +1117,39 @@ $('#p-kwlist').addEventListener('click', e=>{
 function renderMeta(ids, d){
   const el=$('#p-meta');
   if(SIDEMAP){ SIDEMAP.remove(); SIDEMAP = null; }
-  if(!ids.length || !d){ el.innerHTML=("<div class=\"hint\">"+t("לא נבחרה תמונה.")+"</div>"); return; }
+  if(!ids.length || !d){ el.innerHTML=("<div class=\"hint\">"+t("No photo selected.")+"</div>"); return; }
   const multi = ids.length>1;
   const sel = ids.map(id=>S.byId.get(id)).filter(Boolean);
   const same = k => sel.every(p=>(p[k]??null)===(sel[0][k]??null));
-  const MIX = ("<span class=\"mixed\">"+t("&lt;מעורב&gt;")+"</span>");
+  const MIX = ("<span class=\"mixed\">"+t("&lt;mixed&gt;")+"</span>");
   const rating = !multi || same('rating') ? (d.rating||0) : -1;
   const label = !multi || same('label') ? (d.label||'') : '*';
   const local = d.taken_at ? new Date(d.taken_at*1000 - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16) : '';
   const links = (arr, kind) => arr.length ? arr.map(a=>`<a data-src-link="${kind}:${a.id}">${esc(a.name)}</a>`).join(', ') : '—';
   el.innerHTML = `
-    ${multi?`<div class="lbl-sub">${t("{0} תמונות נבחרו — שינויים יחולו על כולן", [num(ids.length)])}</div>`:''}
-    <div class="kv"><span>${t("שם קובץ")}</span>${multi?MIX:`<span dir="ltr" title="${esc(d.filename)}">${esc(d.filename)}</span>`}</div>
-    <div class="kv"><span>${t("תיקייה")}</span>${multi&&!same('folder')?MIX:`<a data-src-link="folder:${esc(sel[0]?.folder??'')}">${esc(sel[0]?.folder||t('(שורש)'))}</a>`}</div>
-    <div class="kv"><span>${t("דירוג")}</span><span class="stars-in" id="m-stars">${[1,2,3,4,5].map(n=>`<b data-mr="${n}" class="${rating>=n?'on':''}">★</b>`).join('')}${rating<0?' '+MIX:''}</span></div>
-    <div class="kv"><span>${t("תווית")}</span><select id="m-label"><option value="">${t("ללא")}</option>${LABELS.map(([k,n])=>`<option value="${k}" ${label===k?'selected':''}>${n}</option>`).join('')}${label==='*'?("<option selected disabled>"+t("&lt;מעורב&gt;")+"</option>"):''}</select></div>
-    <div class="meta-sub">${t("תוכן")}</div>
-    <div class="kv tall"><span>${t("כיתוב")}</span><textarea id="m-desc" placeholder="${multi?t('<מעורב>'):''}">${multi?'':esc(d.description||'')}</textarea></div>
-    <div class="meta-sub">${t("צילום")}</div>
-    <div class="kv"><span>${t("זמן צילום")}</span>${multi?MIX:`<input id="m-date" type="datetime-local" value="${local}">`}</div>
-    <div class="kv"><span>${t("מידות")}</span>${multi?MIX:`<span dir="ltr">${d.width||'?'} × ${d.height||'?'}</span>`}</div>
-    <div class="kv"><span>${t("גודל קובץ")}</span>${multi?MIX:fsize(d.bytes)}</div>
-    <div class="kv"><span>${t("סוג")}</span>${multi&&!sel.every(p=>ext(p)===ext(sel[0]))?MIX:esc(ext(d))}${d.edited&&!multi?t(' · נערך'):''}</div>
-    <div class="meta-sub">${t("מיקום")}</div>
-    ${multi?`<div class="kv"><span>GPS</span>${MIX}</div><div class="btnrow"><button id="m-showmap">${I('pin')} ${t('הצג את התמונות שנבחרו על המפה')}</button></div>`:`
-    <div class="kv"><span>${t("קו רוחב")}</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>
-    <div class="kv"><span>${t("קו אורך")}</span><input id="m-lng" type="number" step="any" dir="ltr" value="${d.lng??''}"></div>
-    ${d.lat!=null?`<div class="mini-map" id="mini-map" dir="ltr" title="${t('לחצו כדי לפתוח את המפה הגדולה')}"></div>`:`<div class="hint">${t('אין מיקום לתמונה הזו. הקלידו קו רוחב וקו אורך כדי שתופיע על המפה.')}</div>`}
-    <div class="meta-sub">${t("קטלוג")}</div>
-    <div class="kv tall"><span>${t("אוספים")}</span><span style="white-space:normal">${links(d.albums,'album')}</span></div>
-    <div class="kv tall"><span>${t("אנשים")}</span><span style="white-space:normal">${links(d.people,'person')}</span></div>
-    <div class="kv"><span>${t("מועדף Google")}</span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="m-fav" ${d.favorited?'checked':''}></label></div>
-    <div class="kv"><span>${t("יובא")}</span>${fdate(d.imported_at)}</div>
-    <div class="btnrow"><button id="m-exif" title="${t("כתוב תיאור, תאריך ומיקום לתוך קובץ ה‑JPG (Ctrl+S)")}">${t("שמור מטא-נתונים לקובץ")}</button><button id="m-reveal" title="Ctrl+R">${t("הצג בסייר")}</button></div>`}`;
+    ${multi?`<div class="lbl-sub">${t("{0} photos selected — changes will apply to all of them", [num(ids.length)])}</div>`:''}
+    <div class="kv"><span>${t("File Name")}</span>${multi?MIX:`<span dir="ltr" title="${esc(d.filename)}">${esc(d.filename)}</span>`}</div>
+    <div class="kv"><span>${t("Folder")}</span>${multi&&!same('folder')?MIX:`<a data-src-link="folder:${esc(sel[0]?.folder??'')}">${esc(sel[0]?.folder||t('(root)'))}</a>`}</div>
+    <div class="kv"><span>${t("Rating")}</span><span class="stars-in" id="m-stars">${[1,2,3,4,5].map(n=>`<b data-mr="${n}" class="${rating>=n?'on':''}">★</b>`).join('')}${rating<0?' '+MIX:''}</span></div>
+    <div class="kv"><span>${t("Label")}</span><select id="m-label"><option value="">${t("None")}</option>${LABELS.map(([k,n])=>`<option value="${k}" ${label===k?'selected':''}>${n}</option>`).join('')}${label==='*'?("<option selected disabled>"+t("&lt;mixed&gt;")+"</option>"):''}</select></div>
+    <div class="meta-sub">${t("Content")}</div>
+    <div class="kv tall"><span>${t("Caption")}</span><textarea id="m-desc" placeholder="${multi?t('<mixed>'):''}">${multi?'':esc(d.description||'')}</textarea></div>
+    <div class="meta-sub">${t("Photo")}</div>
+    <div class="kv"><span>${t("Capture Time")}</span>${multi?MIX:`<input id="m-date" type="datetime-local" value="${local}">`}</div>
+    <div class="kv"><span>${t("Dimensions")}</span>${multi?MIX:`<span dir="ltr">${d.width||'?'} × ${d.height||'?'}</span>`}</div>
+    <div class="kv"><span>${t("File Size")}</span>${multi?MIX:fsize(d.bytes)}</div>
+    <div class="kv"><span>${t("Kind")}</span>${multi&&!sel.every(p=>ext(p)===ext(sel[0]))?MIX:esc(ext(d))}${d.edited&&!multi?t(' · edited'):''}</div>
+    <div class="meta-sub">${t("Location")}</div>
+    ${multi?`<div class="kv"><span>GPS</span>${MIX}</div><div class="btnrow"><button id="m-showmap">${I('pin')} ${t('Show the selected photos on the map')}</button></div>`:`
+    <div class="kv"><span>${t("Latitude")}</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>
+    <div class="kv"><span>${t("Longitude")}</span><input id="m-lng" type="number" step="any" dir="ltr" value="${d.lng??''}"></div>
+    ${d.lat!=null?`<div class="mini-map" id="mini-map" dir="ltr" title="${t('Click to open the large map')}"></div>`:`<div class="hint">${t('This photo has no location. Enter a latitude and longitude to make it appear on the map.')}</div>`}
+    <div class="meta-sub">${t("Catalog")}</div>
+    <div class="kv tall"><span>${t("Collections")}</span><span style="white-space:normal">${links(d.albums,'album')}</span></div>
+    <div class="kv tall"><span>${t("People")}</span><span style="white-space:normal">${links(d.people,'person')}</span></div>
+    <div class="kv"><span>${t("Google Favorite")}</span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="m-fav" ${d.favorited?'checked':''}></label></div>
+    <div class="kv"><span>${t("Imported")}</span>${fdate(d.imported_at)}</div>
+    <div class="btnrow"><button id="m-exif" title="${t("Write the description, date and location into the JPG file (Ctrl+S)")}">${t("Save Metadata to File")}</button><button id="m-reveal" title="Ctrl+R">${t("Show in Explorer")}</button></div>`}`;
   if(!multi && d.lat!=null && $('#mini-map')) drawMiniMap(d);
 }
 $('#p-meta').addEventListener('click', e=>{
@@ -1163,26 +1163,26 @@ $('#p-meta').addEventListener('click', e=>{
 $('#p-meta').addEventListener('change', async e=>{
   const ids=targets(), tg=e.target;
   if(tg.id==='m-label') setAttr({label:tg.value}, ids);
-  else if(tg.id==='m-desc'){ await send('PATCH','/api/photos',{ids, description:tg.value}); toast(t('הכיתוב נשמר'), 1200); }
+  else if(tg.id==='m-desc'){ await send('PATCH','/api/photos',{ids, description:tg.value}); toast(t('Caption saved'), 1200); }
   else if(tg.id==='m-fav'){ setAttr({favorited:tg.checked?1:0}, ids); }
   else if(tg.id==='m-date' && tg.value){ const ts=Math.floor(new Date(tg.value).getTime()/1000);
-    await send('PATCH','/api/photo/'+ids[0],{taken_at:ts}); const p=S.byId.get(ids[0]); if(p) p.taken_at=ts; applyFilter(); toast(t('זמן הצילום עודכן'), 1200); }
+    await send('PATCH','/api/photo/'+ids[0],{taken_at:ts}); const p=S.byId.get(ids[0]); if(p) p.taken_at=ts; applyFilter(); toast(t('Capture time updated'), 1200); }
   else if(tg.id==='m-lat' || tg.id==='m-lng'){ const lat=$('#m-lat').value, lng=$('#m-lng').value;
     if((lat==='')!==(lng==='')) return;
-    await send('PATCH','/api/photo/'+ids[0],{lat: lat===''?null:+lat, lng: lng===''?null:+lng}); toast(t('המיקום נשמר'), 1200); renderRight(); }
+    await send('PATCH','/api/photo/'+ids[0],{lat: lat===''?null:+lat, lng: lng===''?null:+lng}); toast(t('Location saved'), 1200); renderRight(); }
 });
 $('#p-meta').addEventListener('keydown', e=>{ if(e.target.id==='m-desc' && e.key==='Enter' && !e.shiftKey){ e.preventDefault(); e.target.blur(); } });
 async function saveMetaToFile(){
-  const d=DETAIL; if(!d || targets().length!==1) return toast(t('בחרו תמונה אחת'));
+  const d=DETAIL; if(!d || targets().length!==1) return toast(t('Select a single photo'));
   await send('PATCH','/api/photo/'+d.id,{description:d.description, taken_at:d.taken_at, lat:d.lat, lng:d.lng, write_exif:true});
-  toast(/\.jpe?g$/i.test(d.filename) ? t('המטא-נתונים נכתבו לקובץ') : t('כתיבה לקובץ נתמכת רק ב‑JPG'));
+  toast(/\.jpe?g$/i.test(d.filename) ? t('Metadata written to file') : t('Writing to file is supported for JPG only'));
 }
 async function reveal(){ const p=actPhoto(); if(p) await send('POST', `/api/photo/${p.id}/reveal`); }
 $('#btn-sync-meta').onclick = async ()=>{
-  const ids=targets(), d=DETAIL; if(ids.length<2 || !d) return toast(t('בחרו כמה תמונות; הערכים יועתקו מהתמונה הפעילה'));
+  const ids=targets(), d=DETAIL; if(ids.length<2 || !d) return toast(t('Select several photos; the values will be copied from the active photo'));
   await send('PATCH','/api/photos',{ids, description:d.description||'', rating:d.rating||0, label:d.label||''});
   ids.forEach(id=>{ const p=S.byId.get(id); if(p){ p.rating=d.rating||0; p.label=d.label||null; } });
-  toast(`${t("סונכרנו {0} תמונות", [num(ids.length)])}`); applyFilter();
+  toast(`${t("{0} photos synced", [num(ids.length)])}`); applyFilter();
 };
 
 // ---------- modules ----------
@@ -1212,26 +1212,26 @@ const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1]})
 const fac = (v, lo) => v>=0 ? 1+v/100 : 1+(v/100)*(1-lo);
 const unfac = (f, lo) => f==null ? 0 : Math.round(f>=1 ? (f-1)*100 : (f-1)/(1-lo)*100);
 const PRESETS = [
-  [t('ללא (איפוס טונים)'), {bri:0,con:0,sat:0,gray:false}],
-  [t('שחור-לבן'), {gray:true, con:10}],
-  [t('שחור-לבן בניגודיות גבוהה'), {gray:true, con:45, bri:5}],
-  [t('חי וצבעוני'), {sat:40, con:15}],
-  [t('מושתק'), {sat:-40, con:-10}],
-  [t('בהיר ואוורירי'), {bri:20, con:-15, sat:-10}],
-  [t('כהה ודרמטי'), {bri:-15, con:35, sat:-15}],
+  [t('None (reset tones)'), {bri:0,con:0,sat:0,gray:false}],
+  [t('Black & White'), {gray:true, con:10}],
+  [t('High-Contrast Black & White'), {gray:true, con:45, bri:5}],
+  [t('Vivid and Colorful'), {sat:40, con:15}],
+  [t('Muted'), {sat:-40, con:-10}],
+  [t('Light and Airy'), {bri:20, con:-15, sat:-10}],
+  [t('Dark and Dramatic'), {bri:-15, con:35, sat:-15}],
 ];
 async function devOpen(){
   const p=actPhoto();
   DEV.crop=false; DEV.before=false; DEV.dirty=false;
   if(!p){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); return; }
-  if(p.is_video){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); toast(t('עריכה זמינה לתמונות בלבד')); return; }
+  if(p.is_video){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); toast(t('Editing is available for photos only')); return; }
   DEV.id=p.id;
   const d=await api('/api/photo/'+p.id); if(DEV.id!==p.id) return;
   const o = d.edit_ops ? JSON.parse(d.edit_ops) : {};
   DEV.ops = {bri:unfac(o.brightness,.3), con:unfac(o.contrast,.3), sat:unfac(o.saturation,0), gray:!!o.grayscale,
              rot:o.rotate||0, crop:o.crop&&o.crop.length===4?o.crop:[0,0,1,1]};
   DEV.saved = JSON.stringify(DEV.ops);
-  DEV.hist=[{t:d.edited?t('הגדרות שמורות'):t('ייבוא'), ops:{...DEV.ops}}];
+  DEV.hist=[{t:d.edited?t('Saved Settings'):t('Import'), ops:{...DEV.ops}}];
   const img=$('#dev-img'); img.onload=()=>{ layoutDev(); drawHisto(img); };
   img.src = `/original/${p.id}${VER[p.id]?'?v='+VER[p.id]:''}`;
   renderDevPanels(); renderToolbar(); updateNavigator();
@@ -1267,24 +1267,24 @@ function devSet(changes, label){
 }
 function renderDevPanels(){
   const o=DEV.ops || NEUTRAL(), dis = DEV.id==null ? 'disabled' : '';
-  const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="${t("לחיצה כפולה לאיפוס")}"><output>${o[k]>0?'+':''}${o[k]}</output></div>`;
+  const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="${t("Double-click to reset")}"><output>${o[k]>0?'+':''}${o[k]}</output></div>`;
   $('#p-basic').innerHTML = `
-    <div class="dsec">${t("טיפול")}</div>
-    <div class="treat"><a data-gray="0" class="${o.gray?'':'on'}">${t("צבע")}</a><a data-gray="1" class="${o.gray?'on':''}">${t("שחור-לבן")}</a></div>
-    <div class="dsec">${t("טון")}</div>
-    ${sl('bri',t('חשיפה'),'exp')}${sl('con',t('ניגודיות'),'con')}
-    <div class="dsec">${t("נוכחות")}</div>
-    ${sl('sat',t('רוויה'),'sat')}`;
+    <div class="dsec">${t("Treatment")}</div>
+    <div class="treat"><a data-gray="0" class="${o.gray?'':'on'}">${t("Color")}</a><a data-gray="1" class="${o.gray?'on':''}">${t("Black & White")}</a></div>
+    <div class="dsec">${t("Tone")}</div>
+    ${sl('bri',t('Exposure'),'exp')}${sl('con',t('Contrast'),'con')}
+    <div class="dsec">${t("Presence")}</div>
+    ${sl('sat',t('Saturation'),'sat')}`;
   const fine = Math.round((o.rot - Math.round(o.rot/90)*90)*10)/10;
   $('#p-transform').innerHTML = `
-    <div class="dsl"><label for="d-straight">${t("יישור")}</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
+    <div class="dsl"><label for="d-straight">${t("Straighten")}</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
     <div class="btnrow90"><button data-rot="-90" ${dis}>${I('rotl')} 90°</button><button data-rot="90" ${dis}>90° ${I('rotr')}</button></div>
-    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('סיום חיתוך (Enter)'):t('חיתוך (R)')}</button><button data-t="cropreset" ${dis}>${t("אפס חיתוך")}</button></div>`;
+    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('Done Cropping (Enter)'):t('Crop (R)')}</button><button data-t="cropreset" ${dis}>${t("Reset Crop")}</button></div>`;
   $('#p-presets').innerHTML = PRESETS.map(([n],i)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${n}</span></div>`).join('');
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
 }
-const DLABEL = {bri:t('חשיפה'), con:t('ניגודיות'), sat:t('רוויה')};
+const DLABEL = {bri:t('Exposure'), con:t('Contrast'), sat:t('Saturation')};
 $('#right').addEventListener('input', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
@@ -1296,28 +1296,28 @@ $('#right').addEventListener('input', e=>{
 $('#right').addEventListener('change', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
-  devSet({}, k==='straight' ? `${t("יישור")} ${v>0?'+':''}${v}°` : `${DLABEL[k]} ${v>0?'+':''}${v}`);
+  devSet({}, k==='straight' ? `${t("Straighten")} ${v>0?'+':''}${v}°` : `${DLABEL[k]} ${v>0?'+':''}${v}`);
 });
 $('#right').addEventListener('dblclick', e=>{
   const k=e.target.dataset?.k; if(!k || DEV.id==null) return;
-  if(k==='straight') devSet({rot:Math.round(DEV.ops.rot/90)*90}, t('יישור 0°')); else devSet({[k]:0}, `${DLABEL[k]} 0`);
+  if(k==='straight') devSet({rot:Math.round(DEV.ops.rot/90)*90}, t('Straighten 0°')); else devSet({[k]:0}, `${DLABEL[k]} 0`);
 });
 $('#right').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
-  const g=e.target.closest('[data-gray]'); if(g){ const on=g.dataset.gray==='1'; if(on!==DEV.ops.gray) devSet({gray:on}, on?t('שחור-לבן'):t('צבע')); return; }
+  const g=e.target.closest('[data-gray]'); if(g){ const on=g.dataset.gray==='1'; if(on!==DEV.ops.gray) devSet({gray:on}, on?t('Black & White'):t('Color')); return; }
   const r=e.target.closest('[data-rot]'); if(r){ const d=+r.dataset.rot; const k=DEV.ops.crop, c = d>0 ? [1-k[3],k[0],1-k[1],k[2]] : [k[1],1-k[2],k[3],1-k[0]];
-    let rot=DEV.ops.rot+d; if(rot>180) rot-=360; if(rot<=-180) rot+=360; devSet({rot, crop:c}, d>0?t('סיבוב ימינה'):t('סיבוב שמאלה')); return; }
+    let rot=DEV.ops.rot+d; if(rot>180) rot-=360; if(rot<=-180) rot+=360; devSet({rot, crop:c}, d>0?t('Rotate Right'):t('Rotate Left')); return; }
   const tg=e.target.closest('[data-t]')?.dataset.t;
   if(tg==='crop') devCropToggle();
-  if(tg==='cropreset') devSet({crop:[0,0,1,1]}, t('איפוס חיתוך'));
+  if(tg==='cropreset') devSet({crop:[0,0,1,1]}, t('Reset Crop'));
   if(e.target.closest('[data-tool="crop"]')) devCropToggle();
 });
 $('#left').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
-  const pr=e.target.closest('[data-preset]'); if(pr){ const [n,o]=PRESETS[+pr.dataset.preset]; devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, ...o}, t('הגדרה קבועה: ')+n); return; }
+  const pr=e.target.closest('[data-preset]'); if(pr){ const [n,o]=PRESETS[+pr.dataset.preset]; devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, ...o}, t('Preset: ')+n); return; }
   const h=e.target.closest('[data-hist]'); if(h){ const s=DEV.hist[+h.dataset.hist]; devSet({...s.ops, crop:[...s.ops.crop]}); }
 });
-function devCropToggle(){ if(DEV.id==null) return; DEV.crop=!DEV.crop; if(!DEV.crop) devSet({}, t('חיתוך')); else { layoutDev(); renderDevPanels(); renderToolbar(); } }
+function devCropToggle(){ if(DEV.id==null) return; DEV.crop=!DEV.crop; if(!DEV.crop) devSet({}, t('Crop')); else { layoutDev(); renderDevPanels(); renderToolbar(); } }
 function devBefore(){ if(DEV.id==null) return; DEV.before=!DEV.before; layoutDev(); renderToolbar(); }
 $('#crop-ov').addEventListener('mousedown', e=>{
   e.preventDefault();
@@ -1340,7 +1340,7 @@ function devOpsToApi(o){
 async function devApply(silent){
   if(DEV.id==null) return;
   const id=DEV.id, ops={...DEV.ops};
-  if(!silent) toast(t('מחיל…'), 1500);
+  if(!silent) toast(t('Applying…'), 1500);
   await send('POST', `/api/photo/${id}/edit`, devOpsToApi(ops));
   const d=await api('/api/photo/'+id);
   const p=S.byId.get(id); if(p) Object.assign(p, {width:d.width, height:d.height, edited:d.edited, bytes:d.bytes});
@@ -1349,25 +1349,25 @@ async function devApply(silent){
   if(DEV.id===id){ DEV.saved=JSON.stringify(DEV.ops); DEV.dirty=false; renderToolbar(); }
   G.cells.forEach(c=>{ if(+c.dataset.id===id){ const img=c.querySelector('img'); if(img) img.src=thumbUrl(id); } });
   renderFilm(true); renderColls();
-  if(!silent) toast(t('ההגדרות הוחלו · המקור נשמר'));
+  if(!silent) toast(t('Settings applied · original kept'));
 }
 $('#btn-dev-apply').onclick = ()=>devApply();
-$('#btn-dev-reset').onclick = ()=>{ if(DEV.id!=null) devSet(NEUTRAL(), t('איפוס')); };
-$('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast(t('עוד לא הוחלו הגדרות על תמונה אחרת')); devSet({...DEV.last}, t('הגדרות קודמות')); };
+$('#btn-dev-reset').onclick = ()=>{ if(DEV.id!=null) devSet(NEUTRAL(), t('Reset')); };
+$('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast(t('No settings have been applied to another photo yet')); devSet({...DEV.last}, t('Previous Settings')); };
 $('#btn-dev-revert').onclick = async ()=>{
   if(DEV.id==null) return; const p=actPhoto();
-  if(!p?.edited){ devSet(NEUTRAL(), t('איפוס')); return; }
-  if(!await confirmBox(t('לחזור לקובץ המקורי?'), t('העריכות ששמורות בקובץ יימחקו והקובץ המקורי יוחזר.'), t('החזר את המקור'))) return;
+  if(!p?.edited){ devSet(NEUTRAL(), t('Reset')); return; }
+  if(!await confirmBox(t('Revert to the original file?'), t('The edits saved in the file will be deleted and the original file will be restored.'), t('Restore the original'))) return;
   await send('POST', `/api/photo/${DEV.id}/revert`); VER[DEV.id]=Date.now();
   Object.assign(p, {edited:0}); const d=await api('/api/photo/'+p.id); Object.assign(p,{width:d.width,height:d.height,bytes:d.bytes});
-  toast(t('הוחזר לקובץ המקורי')); renderFilm(true); devOpen();
+  toast(t('Reverted to the original file')); renderFilm(true); devOpen();
 };
 
 // ---------- slideshow ----------
 const SS={list:[], i:0, t:null, playing:true, cur:'a'};
 function ssStart(){
   let list = S.sel.size>1 ? S.list.filter(p=>S.sel.has(p.id)) : S.list;
-  list = list.filter(p=>!p.is_video); if(!list.length) return toast(t('אין תמונות להצגה'));
+  list = list.filter(p=>!p.is_video); if(!list.length) return toast(t('No photos to show'));
   SS.list=list; SS.i=Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
   if(S.view==='loupe') closeLoupeMedia();   // a video in the Loupe must not keep playing behind the slideshow
   $('#slideshow').classList.remove('hidden'); ssShow(); ssTimer();
@@ -1409,7 +1409,7 @@ let PB_CHECKED=false;   // state of an optional checkbox passed to promptBox via
 function promptBox(title, value='', extra=''){
   return new Promise(res=>{
     modal(`<h3>${esc(title)}</h3><form class="mb" id="pb-form"><input type="text" id="pb-in" value="${esc(value)}" autocomplete="off">${extra}</form>
-      <div class="mf"><button id="pb-cancel">${t("ביטול")}</button><button class="primary" id="pb-ok">${t("אישור")}</button></div>`);
+      <div class="mf"><button id="pb-cancel">${t("Cancel")}</button><button class="primary" id="pb-ok">${t("OK")}</button></div>`);
     const done=v=>{ PB_CHECKED = !!$('#modal-box input[type=checkbox]')?.checked; closeModal(); res(v); };
     $('#pb-form').onsubmit=e=>{ e.preventDefault(); done($('#pb-in').value.trim()||null); };
     $('#pb-ok').onclick=()=>done($('#pb-in').value.trim()||null);
@@ -1417,88 +1417,88 @@ function promptBox(title, value='', extra=''){
   });
 }
 let CB_NEVER = false;   // the optional "don't ask again" checkbox of the last confirmBox
-function confirmBox(title, text, ok=t('אישור')){
+function confirmBox(title, text, ok=t('OK')){
   return new Promise(res=>{
-    modal(`<h3>${title}</h3><div class="mb"><p>${text}</p></div><div class="mf"><button id="cb-no">${t("ביטול")}</button><button class="primary" id="cb-yes">${ok}</button></div>`);
+    modal(`<h3>${title}</h3><div class="mb"><p>${text}</p></div><div class="mf"><button id="cb-no">${t("Cancel")}</button><button class="primary" id="cb-yes">${ok}</button></div>`);
     $('#cb-yes').onclick=()=>{ CB_NEVER = !!$('#cb-never')?.checked; closeModal(); res(true); }; $('#cb-no').onclick=()=>{ closeModal(); res(false); };
   });
 }
 async function catalogSettings(){
   const s=await api('/api/status'), c=s.counts;
-  modal(`<h3>${t("הגדרות קטלוג")}</h3><div class="mb">
-    <p>${t("כל הקבצים נשמרים מקומית במחשב שלך. תמונות מיובאות מועתקות לתיקיית המדיה ומסודרות לפי שנת צילום. המקור של כל תמונה שנערכה נשמר בנפרד.")}</p>
-    <div class="pathrow"><span>${t("ספריית הקטלוג")}</span><code>${esc(s.library_root)}</code></div>
-    <div class="pathrow"><span>${t("קבצי מדיה")}</span><code>${esc(s.media_path)}</code></div>
-    <div class="pathrow"><span>${t("קובץ הקטלוג")}</span><code>${esc(s.db_path)}</code></div>
-    <div class="pathrow"><span>${t("תוכן")}</span><span>${t("{0} פריטים · {1} סרטונים · {2} אוספים · {3} אנשים · {4} מילות מפתח · {5} באשפה", [num(c.photos), num(c.videos), num(c.albums), num(c.people), num(c.tags), num(c.trashed)])}</span></div>
-    <div class="pathrow"><span>${t("אשפה")}</span><span>${t("פריטים נמחקים לצמיתות אחרי {0} יום", [s.trash_days])}</span></div>
-    <label class="fld"><span>${t("מיקום קטלוג אחר")}</span><div class="frow"><input type="text" id="lib-path" dir="ltr" value="${esc(s.library_root)}"><button id="lib-pick">${t("בחר...")}</button></div></label>
-  </div><div class="mf"><button onclick="closeModal()">${t("סגור")}</button><button class="primary" id="lib-set">${t("עבור לקטלוג")}</button></div>`);
-  $('#lib-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('בחר תיקיית קטלוג'))); if(r.path) $('#lib-path').value=r.path; };
-  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); closeModal(); toast(t('הקטלוג הוחלף')); await reloadAll(); };
+  modal(`<h3>${t("Catalog Settings")}</h3><div class="mb">
+    <p>${t("All files are stored locally on your computer. Imported photos are copied to the media folder and organized by capture year. The original of every edited photo is kept separately.")}</p>
+    <div class="pathrow"><span>${t("Catalog Library")}</span><code>${esc(s.library_root)}</code></div>
+    <div class="pathrow"><span>${t("Media Files")}</span><code>${esc(s.media_path)}</code></div>
+    <div class="pathrow"><span>${t("Catalog File")}</span><code>${esc(s.db_path)}</code></div>
+    <div class="pathrow"><span>${t("Content")}</span><span>${t("{0} items · {1} videos · {2} collections · {3} people · {4} keywords · {5} in Trash", [num(c.photos), num(c.videos), num(c.albums), num(c.people), num(c.tags), num(c.trashed)])}</span></div>
+    <div class="pathrow"><span>${t("Trash")}</span><span>${t("Items are permanently deleted after {0} days", [s.trash_days])}</span></div>
+    <label class="fld"><span>${t("Different catalog location")}</span><div class="frow"><input type="text" id="lib-path" dir="ltr" value="${esc(s.library_root)}"><button id="lib-pick">${t("Choose...")}</button></div></label>
+  </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button><button class="primary" id="lib-set">${t("Go to Catalog")}</button></div>`);
+  $('#lib-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose catalog folder'))); if(r.path) $('#lib-path').value=r.path; };
+  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); closeModal(); toast(t('Catalog replaced')); await reloadAll(); };
 }
 async function preferences(){
   const s=await api('/api/status');
-  modal(`<h3>${t("העדפות · זיהוי פנים")}</h3><div class="mb">
-    <p>${t("זיהוי הפנים רץ מקומית במחשב, בלי לשלוח תמונות. תיוג AI שולח תמונות ממוזערות לספק שבחרתם, רק כשמפעילים אותו.")}</p>
-    <div class="pathrow"><span>${t("זיהוי פנים")}</span><span>${t("InsightFace · {0} פרצופים זוהו עד כה", [num(s.counts.faces)])}</span></div>
-  </div><div class="mf"><button onclick="closeModal()">${t("סגור")}</button>
-    <button id="pf-ai">${t("הגדרות תיוג AI")}</button><button class="primary" id="pf-faces">${t("זהה פנים")}</button></div>`);
+  modal(`<h3>${t("Preferences · Face detection")}</h3><div class="mb">
+    <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
+    <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
+  </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button>
+    <button id="pf-ai">${t("AI tagging settings")}</button><button class="primary" id="pf-faces">${t("Detect Faces")}</button></div>`);
   $('#pf-ai').onclick=()=>{ closeModal(); aiSettings(); };
-  $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('זיהוי פנים')); };
+  $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('Face Detection')); };
 }
 // ---------- AI tagging: OpenAI / Claude / Gemini / OpenRouter / any OpenAI-compatible API ----------
 const AI_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openrouter', 'custom'];
-const aiShort = id => ({openai:'OpenAI', anthropic:'Claude', gemini:'Gemini', openrouter:'OpenRouter'})[id] || t('שרת מותאם אישית');
-const aiLabel = id => id==='custom' ? t('מותאם אישית (תואם OpenAI: Groq, Together, Ollama ועוד)')
-  : id==='openrouter' ? 'OpenRouter · ' + t('כל המודלים עם מפתח אחד')
+const aiShort = id => ({openai:'OpenAI', anthropic:'Claude', gemini:'Gemini', openrouter:'OpenRouter'})[id] || t('Custom server');
+const aiLabel = id => id==='custom' ? t('Custom (OpenAI-compatible: Groq, Together, Ollama and more)')
+  : id==='openrouter' ? 'OpenRouter · ' + t('All models with one key')
   : id==='anthropic' ? 'Claude (Anthropic)' : id==='gemini' ? 'Gemini (Google)' : 'OpenAI';
 
 async function aiSettings(){
   const s = await api('/api/ai/settings');
-  modal(`<h3>${t('הגדרות תיוג AI')}</h3><div class="mb">
-    <p>${t('מילות המפתח נוצרות על ידי ספק AI, עם המפתח שלכם. נשלחת תמונה ממוזערת (עד 512px) של כל תמונה שמתייגים, ורק כשמפעילים תיוג. המפתח נשמר מוצפן בחשבון ה‑Windows שלכם.')}</p>
-    <label class="fld"><span>${t('ספק')}</span><select id="ai-provider">${AI_PROVIDERS.map(id=>`<option value="${id}" ${id===s.provider?'selected':''}>${esc(aiLabel(id))}</option>`).join('')}</select></label>
-    <label class="fld hidden" id="ai-base-row"><span>${t('כתובת ה‑API (עד /v1)')}</span><input type="text" id="ai-base" dir="ltr" value="${esc(s.base_url)}" placeholder="http://localhost:11434/v1"></label>
-    <div class="fld"><span>${t('מפתח API')}</span>
-      <div class="frow"><input type="password" id="ai-key" dir="ltr" autocomplete="off" spellcheck="false"><button id="ai-key-del" class="hidden">${t('הסר מפתח')}</button></div>
+  modal(`<h3>${t('AI tagging settings')}</h3><div class="mb">
+    <p>${t('Keywords are generated by an AI provider, using your key. A small thumbnail (up to 512px) of each photo being tagged is sent, and only when you start tagging. The key is stored encrypted in your Windows account.')}</p>
+    <label class="fld"><span>${t('Provider')}</span><select id="ai-provider">${AI_PROVIDERS.map(id=>`<option value="${id}" ${id===s.provider?'selected':''}>${esc(aiLabel(id))}</option>`).join('')}</select></label>
+    <label class="fld hidden" id="ai-base-row"><span>${t('API address (up to /v1)')}</span><input type="text" id="ai-base" dir="ltr" value="${esc(s.base_url)}" placeholder="http://localhost:11434/v1"></label>
+    <div class="fld"><span>${t('API key')}</span>
+      <div class="frow"><input type="password" id="ai-key" dir="ltr" autocomplete="off" spellcheck="false"><button id="ai-key-del" class="hidden">${t('Remove key')}</button></div>
       <span class="hint" id="ai-key-hint" style="margin:0;padding:0"></span></div>
-    <div class="fld"><span>${t('מודל')}</span>
-      <label class="check" style="padding:0"><input type="radio" name="ai-m" value="auto"> ${t('אוטומטי (מומלץ): נבחר מודל זול ומהיר שמבין תמונות')}</label>
-      <label class="check" style="padding:0"><input type="radio" name="ai-m" value="manual"> ${t('בחירה ידנית')}</label>
-      <div class="frow"><input type="text" id="ai-model" list="ai-models" dir="ltr" autocomplete="off" spellcheck="false" placeholder="model-id"><datalist id="ai-models"></datalist><button id="ai-load">${t('טען רשימת מודלים')}</button></div></div>
-    <label class="fld"><span>${t('שפת מילות המפתח')}</span><select id="ai-lang">${LANGS.map(([c,n])=>`<option value="${c}" ${c===s.language?'selected':''}>${n}</option>`).join('')}</select></label>
+    <div class="fld"><span>${t('Model')}</span>
+      <label class="check" style="padding:0"><input type="radio" name="ai-m" value="auto"> ${t('Automatic (recommended): picks a cheap, fast model that understands images')}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ai-m" value="manual"> ${t('Choose manually')}</label>
+      <div class="frow"><input type="text" id="ai-model" list="ai-models" dir="ltr" autocomplete="off" spellcheck="false" placeholder="model-id"><datalist id="ai-models"></datalist><button id="ai-load">${t('Load model list')}</button></div></div>
+    <label class="fld"><span>${t('Keyword language')}</span><select id="ai-lang">${LANGS.map(([c,n])=>`<option value="${c}" ${c===s.language?'selected':''}>${n}</option>`).join('')}</select></label>
     <div class="hint" id="ai-status" style="min-height:18px;padding:0"></div>
-  </div><div class="mf"><button id="ai-close">${t('סגור')}</button><button id="ai-save" class="primary">${t('שמור')}</button></div>`);
+  </div><div class="mf"><button id="ai-close">${t('Close')}</button><button id="ai-save" class="primary">${t('Save')}</button></div>`);
   const q = id => $('#'+id), radio = v => $(`input[name=ai-m][value=${v}]`);
   const status = (msg, cls='') => { q('ai-status').textContent = msg; q('ai-status').className = 'hint ' + cls; };
   radio(s.model ? 'manual' : 'auto').checked = true; q('ai-model').value = s.model;
   const refresh = ()=>{
     const p = q('ai-provider').value, info = s.providers[p] || {};
     q('ai-base-row').classList.toggle('hidden', p!=='custom');
-    q('ai-key-hint').textContent = info.has_key ? t('מפתח שמור: {0}', [info.hint]) : p==='custom' ? t('מפתח אופציונלי (שרת מקומי בדרך כלל לא צריך)') : t('לא נשמר מפתח');
+    q('ai-key-hint').textContent = info.has_key ? t('Saved key: {0}', [info.hint]) : p==='custom' ? t('Optional key (a local server usually doesn\'t need one)') : t('No key saved');
     q('ai-key-del').classList.toggle('hidden', !info.has_key);
     q('ai-model').disabled = !radio('manual').checked;
   };
   refresh();
   q('ai-provider').onchange = ()=>{ radio('auto').checked = true; q('ai-model').value = ''; q('ai-models').innerHTML = ''; status(''); refresh(); };
   $$('input[name=ai-m]').forEach(r=>r.onchange = refresh);
-  q('ai-key-del').onclick = async ()=>{ const ok = await confirmBox(t('למחוק את מפתח ה‑API?'), t('המפתח יימחק מהמחשב הזה.'), t('מחק')); if(ok) await send('DELETE', '/api/ai/key/' + q('ai-provider').value); aiSettings(); };
+  q('ai-key-del').onclick = async ()=>{ const ok = await confirmBox(t('Delete the API key?'), t('The key will be deleted from this computer.'), t('Delete')); if(ok) await send('DELETE', '/api/ai/key/' + q('ai-provider').value); aiSettings(); };
   const probe = ()=>({provider:q('ai-provider').value, base_url:q('ai-base').value.trim(), api_key:q('ai-key').value.trim() || null});
   q('ai-load').onclick = async ()=>{
-    status(t('טוען…'));
+    status(t('Loading…'));
     try{
       const r = await send('POST', '/api/ai/models', probe());
       q('ai-models').innerHTML = r.models.map(m=>`<option value="${esc(m.id)}">${esc(m.name!==m.id ? m.name : '')}</option>`).join('');
-      status(t('נמצאו {0} מודלים · במצב אוטומטי ייבחר: {1}', [r.models.length, r.auto || '—']), 'ok');
+      status(t('Found {0} models · in Automatic mode this will be chosen: {1}', [r.models.length, r.auto || '—']), 'ok');
     }catch(e){ status(e.message, 'err'); }
   };
   q('ai-save').onclick = async ()=>{
     const manual = radio('manual').checked, model = q('ai-model').value.trim();
-    if(manual && !model) return status(t('הקלידו מזהה מודל, או בחרו אוטומטי'), 'err');
+    if(manual && !model) return status(t('Type a model ID, or choose Automatic'), 'err');
     try{
       await send('POST', '/api/ai/settings', {...probe(), model: manual ? model : '', language: q('ai-lang').value});
-      closeModal(); toast(t('ההגדרות נשמרו'));
+      closeModal(); toast(t('Settings saved'));
     }catch(e){ status(e.message, 'err'); }
   };
   q('ai-close').onclick = closeModal;
@@ -1510,42 +1510,42 @@ async function aiRun(){
   const sel = targets().filter(id=>!(S.byId.get(id)||{}).is_video);
   const untagged = S.all.filter(p=>!p.is_video && !p.has_kw).length;
   const name = esc(aiShort(s.provider));
-  modal(`<h3>${t('תיוג AI')}</h3><div class="mb">
-    <p>${t('{0} · מודל: {1}', [name, esc(s.model || t('אוטומטי'))])}</p>
+  modal(`<h3>${t('AI tagging')}</h3><div class="mb">
+    <p>${t('{0} · Model: {1}', [name, esc(s.model || t('Automatic'))])}</p>
     <div class="fld">
-      <label class="check" style="padding:0"><input type="radio" name="ai-scope" value="sel" ${sel.length?'checked':'disabled'}> ${t('התמונות שנבחרו ({0})', [num(sel.length)])}</label>
-      <label class="check" style="padding:0"><input type="radio" name="ai-scope" value="untagged" ${sel.length?'':'checked'} ${untagged?'':'disabled'}> ${t('כל התמונות ללא מילות מפתח ({0})', [num(untagged)])}</label></div>
-    <p>${t('תמונה ממוזערת של כל תמונה תישלח אל {0}. מילות מפתח שנוצרו קודם על ידי AI בתמונות האלה יוחלפו; מילות מפתח ידניות לא ייפגעו.', [name])}</p>
-  </div><div class="mf"><button id="air-cfg">${t('הגדרות')}</button><span class="spacer"></span><button id="air-cancel">${t('ביטול')}</button><button class="primary" id="air-go">${t('התחל תיוג')}</button></div>`);
+      <label class="check" style="padding:0"><input type="radio" name="ai-scope" value="sel" ${sel.length?'checked':'disabled'}> ${t('Selected photos ({0})', [num(sel.length)])}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ai-scope" value="untagged" ${sel.length?'':'checked'} ${untagged?'':'disabled'}> ${t('All photos without keywords ({0})', [num(untagged)])}</label></div>
+    <p>${t('A small thumbnail of each photo will be sent to {0}. Keywords previously created by AI on these photos will be replaced; manual keywords are not affected.', [name])}</p>
+  </div><div class="mf"><button id="air-cfg">${t('Settings')}</button><span class="spacer"></span><button id="air-cancel">${t('Cancel')}</button><button class="primary" id="air-go">${t('Start tagging')}</button></div>`);
   $('#air-cfg').onclick = ()=>{ closeModal(); aiSettings(); };
   $('#air-cancel').onclick = closeModal;
   $('#air-go').onclick = async ()=>{
     const scope = $('input[name=ai-scope]:checked')?.value; if(!scope) return;
     closeModal();
     await send('POST', '/api/aitag', scope==='sel' ? {ids:sel} : {only_untagged:true});
-    pollJob('aitag', t('תיוג AI'));
+    pollJob('aitag', t('AI tagging'));
   };
 }
 
 // ---------- video compression (HandBrake) ----------
 const ltr = s => '\u2066' + s + '\u2069';   // isolate numbers/Latin inside RTL text so "10.6 MB" doesn't flip
 const fmtBytes = b => ltr(b>=1073741824 ? (b/1073741824).toFixed(2)+' GB' : (b/1048576).toFixed(b>=104857600 ? 0 : 1)+' MB');
-const STRENGTH_LABELS = () => [t('חלשה מאוד'), t('חלשה'), t('בינונית'), t('חזקה'), t('חזקה מאוד')];
-const SPEED_LABELS = () => [t('איטי מאוד'), t('איטי'), t('קצת איטי'), t('בינוני'), t('קצת מהיר'), t('מהיר'), t('מהיר מאוד')];
-const GRADE_LABELS = () => ({excellent:t('כמעט זהה למקור'), very_good:t('טוב מאוד'), good:t('טוב'), noticeable:t('איבוד איכות מורגש')});
+const STRENGTH_LABELS = () => [t('Very weak'), t('Weak'), t('Medium'), t('Strong'), t('Very strong')];
+const SPEED_LABELS = () => [t('Very slow'), t('Slow'), t('A bit slow'), t('Medium'), t('A bit fast'), t('Fast'), t('Very fast')];
+const GRADE_LABELS = () => ({excellent:t('Almost identical to the original'), very_good:t('Very good'), good:t('Good'), noticeable:t('Noticeable quality loss')});
 let CMP_PID = null;
 
 function hbInstallDialog(st, retry){
-  modal(`<h3>${t('דחיסת סרטונים דורשת את HandBrake')}</h3><div class="mb">
-    <p>${t('HandBrake היא תוכנה חינמית שמבצעת את הדחיסה. התקינו את גרסת שורת הפקודה (HandBrakeCLI) מהאתר שלהם, ואז לחצו «בדוק שוב».')}</p>
-    <p class="hint" style="padding:0">${t('אפשר גם לשמור את HandBrakeCLI.exe בכל תיקייה ולבחור אותו ידנית.')}</p>
+  modal(`<h3>${t('Compressing videos requires HandBrake')}</h3><div class="mb">
+    <p>${t('HandBrake is a free app that does the compression. Install the command-line version (HandBrakeCLI) from their website, then click «Check again».')}</p>
+    <p class="hint" style="padding:0">${t('You can also keep HandBrakeCLI.exe in any folder and choose it manually.')}</p>
     <div class="hint err" id="hb-msg" style="padding:0;min-height:16px"></div>
-  </div><div class="mf"><button id="hb-pick">${t('בחר HandBrakeCLI.exe...')}</button><span class="spacer"></span>
-    <button id="hb-again">${t('בדוק שוב')}</button><button id="hb-open" class="primary">${t('פתח את דף ההתקנה')}</button><button id="hb-close">${t('סגור')}</button></div>`);
+  </div><div class="mf"><button id="hb-pick">${t('Choose HandBrakeCLI.exe...')}</button><span class="spacer"></span>
+    <button id="hb-again">${t('Check again')}</button><button id="hb-open" class="primary">${t('Open the installation page')}</button><button id="hb-close">${t('Close')}</button></div>`);
   $('#hb-open').onclick = ()=>send('POST', '/api/handbrake/open-page');
-  $('#hb-again').onclick = async ()=>{ const s = await api('/api/handbrake'); if(s.found){ closeModal(); retry(); } else $('#hb-msg').textContent = t('HandBrakeCLI עדיין לא נמצא.'); };
+  $('#hb-again').onclick = async ()=>{ const s = await api('/api/handbrake'); if(s.found){ closeModal(); retry(); } else $('#hb-msg').textContent = t('HandBrakeCLI is still not found.'); };
   $('#hb-pick').onclick = async ()=>{
-    const r = await api('/api/pick-file?kind=exe&title=' + encodeURIComponent(t('בחר את HandBrakeCLI.exe'))); if(!r.path) return;
+    const r = await api('/api/pick-file?kind=exe&title=' + encodeURIComponent(t('Choose HandBrakeCLI.exe'))); if(!r.path) return;
     try{ const s = await send('POST', '/api/handbrake/path', {path:r.path}); if(s.found){ closeModal(); retry(); } }
     catch(e){ $('#hb-msg').textContent = e.message; }
   };
@@ -1553,23 +1553,23 @@ function hbInstallDialog(st, retry){
 }
 
 // plain-words description of the current choices ("what was chosen for you"), shown under the sliders
-const QUALITY_TEXT = () => [t('איכות כמעט זהה למקור'), t('איכות גבוהה, ההבדל כמעט לא נראה'), t('איכות טובה, אפשר להבחין בהבדל קל בקטעים מפורטים'),
-  t('איכות נמוכה יותר, ייתכנו פגמים בקטעים מורכבים'), t('איכות נמוכה, פגמים נראים לעין')];
-const KIND_TEXT = () => [t('דחיסה יסודית ואיטית: אותה איכות בקובץ קטן יותר'), t('דחיסה מאוזנת בין מהירות לגודל הקובץ'),
-  t('דחיסה מהירה: מסיימים מהר, אבל הקובץ גדול יותר מהאפשרי')];
-const ENCODER_NOTE = () => ({x264:t('H.264: מתנגן בכל מכשיר'), x265:t('H.265: קובץ קטן יותר, אך נתמך פחות'), svt_av1:t('AV1: הקובץ הקטן ביותר, איטי ונתמך פחות')});
+const QUALITY_TEXT = () => [t('Quality almost identical to the original'), t('High quality, the difference is almost invisible'), t('Good quality, a slight difference may be noticeable in detailed scenes'),
+  t('Lower quality, artifacts may appear in complex scenes'), t('Low quality, artifacts are visible')];
+const KIND_TEXT = () => [t('Thorough, slow compression: same quality in a smaller file'), t('Compression balanced between speed and file size'),
+  t('Fast compression: finishes quickly, but the file is larger than it could be')];
+const ENCODER_NOTE = () => ({x264:t('H.264: plays on every device'), x265:t('H.265: smaller file, but less widely supported'), svt_av1:t('AV1: smallest file, slow and less widely supported')});
 function compressSummary(o, e, speedIdx){
   const frac = (o.quality - e.rf[0]) / (e.rf[1] - e.rf[0]);
   const quality = QUALITY_TEXT()[Math.max(0, Math.min(4, Math.floor(frac * 5)))];
   const lines = [
-    t('איכות: {0}', [o.max_height ? t('{0} (עד {1})', [quality, ltr(o.max_height + 'p')]) : quality]),
-    t('סוג הדחיסה: {0} · {1}', [KIND_TEXT()[speedIdx <= 2 ? 0 : speedIdx === 3 ? 1 : 2], ENCODER_NOTE()[o.encoder]]),
-    o.fps_mode === 'same' ? t('פריימים: כולם נשמרים')
-      : o.fps_mode === 'limit' ? t('פריימים: הקצב יוגבל ל‑{0} לשנייה (פריימים יוסרו)', [ltr(String(o.fps))])
-      : t('פריימים: קצב קבוע של {0} לשנייה (פריימים יוסרו או יוכפלו)', [ltr(String(o.fps))]),
-    o.audio === 'auto' ? t('אודיו: נשמר כמו שהוא (AAC), אחרת מומר ל‑AAC')
-      : o.audio === 'aac' ? t('אודיו: יומר ל‑AAC ב‑{0} kbps', [ltr(String(o.audio_bitrate))]) : t('אודיו: יוסר'),
-    t('הקובץ המקורי נשמר בגיבויים ואפשר להחזיר אותו'),
+    t('Quality: {0}', [o.max_height ? t('{0} (up to {1})', [quality, ltr(o.max_height + 'p')]) : quality]),
+    t('Compression type: {0} · {1}', [KIND_TEXT()[speedIdx <= 2 ? 0 : speedIdx === 3 ? 1 : 2], ENCODER_NOTE()[o.encoder]]),
+    o.fps_mode === 'same' ? t('Frames: all kept')
+      : o.fps_mode === 'limit' ? t('Frames: rate capped at {0} per second (frames will be removed)', [ltr(String(o.fps))])
+      : t('Frames: constant rate of {0} per second (frames will be removed or duplicated)', [ltr(String(o.fps))]),
+    o.audio === 'auto' ? t('Audio: kept as is (AAC), otherwise converted to AAC')
+      : o.audio === 'aac' ? t('Audio: converted to AAC at {0} kbps', [ltr(String(o.audio_bitrate))]) : t('Audio: removed'),
+    t('The original file was saved in backups and can be restored'),
   ];
   return lines.map(l => `<li>${esc(l)}</li>`).join('');
 }
@@ -1580,11 +1580,11 @@ const IMG_MAX_SIDES = [0, 4096, 3000, 2560, 2048, 1600, 1200];
 function compressSummaryImg(o){
   const frac = (IMG_Q[1] - o.quality) / (IMG_Q[1] - IMG_Q[0]);
   const lines = [
-    t('איכות: {0}', [QUALITY_TEXT()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]]),
-    o.max_side ? t('גודל התמונה יוקטן עד {0} פיקסלים בצלע הארוכה', [ltr(String(o.max_side))]) : t('גודל התמונה (בפיקסלים) לא ישתנה'),
-    t('PNG, BMP ו‑TIFF נדחסים ללא שום אובדן איכות; ההגדרה משפיעה על JPEG ו‑WebP'),
-    t('פרטי הצילום (EXIF), המיקום והכיוון נשמרים'),
-    t('הקובץ המקורי נשמר בגיבויים ואפשר להחזיר אותו'),
+    t('Quality: {0}', [QUALITY_TEXT()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]]),
+    o.max_side ? t('The image will be downscaled to at most {0} pixels on the long side', [ltr(String(o.max_side))]) : t('Image dimensions (in pixels) will not change'),
+    t('PNG, BMP and TIFF are compressed with no quality loss; this setting affects JPEG and WebP'),
+    t('Shooting details (EXIF), location and orientation are kept'),
+    t('The original file was saved in backups and can be restored'),
   ];
   return lines.map(l => `<li>${esc(l)}</li>`).join('');
 }
@@ -1597,7 +1597,7 @@ async function compressDialog(arg){
   const vids = items.filter(p => p.is_video && st.video_ext.includes(fx(p)));
   const imgs = items.filter(p => !p.is_video && st.image_ext.includes(fx(p)));
   const skipped = items.length - vids.length - imgs.length;
-  if(!vids.length && !imgs.length) return toast(items.length ? t('אין בבחירה קבצים שאפשר לדחוס (JPG, PNG, WebP, TIFF, BMP וסרטונים)') : t('בחרו תמונות או סרטונים כדי לדחוס'));
+  if(!vids.length && !imgs.length) return toast(items.length ? t('The selection has no files that can be compressed (JPG, PNG, WebP, TIFF, BMP and videos)') : t('Choose photos or videos to compress'));
   if(vids.length && !imgs.length && !st.found) return hbInstallDialog(st, ()=>compressDialog(ids));
   const hasV = vids.length > 0 && st.found, hasI = imgs.length > 0;
   const single = items.length === 1 ? await api('/api/photo/' + items[0].id) : null;
@@ -1611,47 +1611,47 @@ async function compressDialog(arg){
   oi.quality = Math.max(IMG_Q[0], Math.min(IMG_Q[1], +oi.quality || idef.quality));
   if(!IMG_MAX_SIDES.includes(+oi.max_side)) oi.max_side = 0;
 
-  const title = single ? (single.is_video ? t('דחיסת סרטון') : t('דחיסת תמונה')) : t('דחיסת קבצים');
+  const title = single ? (single.is_video ? t('Video compression') : t('Compress photo')) : t('Compress files');
   const head = single
     ? `<div class="cmp-file"><b dir="ltr">${esc(single.filename)}</b><span>${fmtBytes(single.bytes)}</span></div>`
-    : `<div class="cmp-file"><b>${t('{0} קבצים', [num(vids.length + imgs.length)])}</b><span>${[vids.length ? t('{0} סרטונים', [num(vids.length)]) : '', imgs.length ? t('{0} תמונות', [num(imgs.length)]) : ''].filter(Boolean).join(' · ')} · ${fmtBytes([...vids, ...imgs].reduce((a, p) => a + (p.bytes || 0), 0))}</span></div>`
-      + (skipped ? `<div class="hint warn" style="padding:0">${t('{0} קבצים מסוג שאינו נתמך ידולגו', [num(skipped)])}</div>` : '');
+    : `<div class="cmp-file"><b>${t('{0} files', [num(vids.length + imgs.length)])}</b><span>${[vids.length ? t('{0} videos', [num(vids.length)]) : '', imgs.length ? t('{0} photos', [num(imgs.length)]) : ''].filter(Boolean).join(' · ')} · ${fmtBytes([...vids, ...imgs].reduce((a, p) => a + (p.bytes || 0), 0))}</span></div>`
+      + (skipped ? `<div class="hint warn" style="padding:0">${t('{0} files of an unsupported type will be skipped', [num(skipped)])}</div>` : '');
   const sect = h => (hasV && hasI) ? `<div class="cmp-h">${h}</div>` : '';
 
-  const videoHtml = hasV ? `${sect(t('סרטונים'))}
-    <div class="cmp-sl"><div class="cmp-sl-h"><label for="cp-str">${t('עוצמת דחיסה')}</label><output id="cp-str-v"></output></div>
-      <input type="range" id="cp-str" step="1"><div class="cmp-ends"><span>${t('חלשה מאוד')}</span><span>${t('חזקה מאוד')}</span></div></div>
-    <div class="cmp-sl"><div class="cmp-sl-h"><label for="cp-spd">${t('מהירות')}</label><output id="cp-spd-v"></output></div>
-      <input type="range" id="cp-spd" min="0" max="6" step="1"><div class="cmp-ends"><span>${t('איטי וטוב')}</span><span>${t('מהיר ופחות טוב')}</span></div></div>
-    <div class="cmp-sum"><div class="lbl-sub" style="padding:0">${t('מה נבחר בשבילך')}</div><ul id="cp-sum"></ul></div>
-    <p class="hint" style="padding:0">${t('בקצב איטי המקודד משקיע יותר מאמץ: אותה איכות בקובץ קטן יותר, אבל זה לוקח יותר זמן.')}</p>
-    <button class="linkbtn" id="cp-adv-t">${t('מתקדם')} ▾</button>
+  const videoHtml = hasV ? `${sect(t('Videos'))}
+    <div class="cmp-sl"><div class="cmp-sl-h"><label for="cp-str">${t('Compression strength')}</label><output id="cp-str-v"></output></div>
+      <input type="range" id="cp-str" step="1"><div class="cmp-ends"><span>${t('Very weak')}</span><span>${t('Very strong')}</span></div></div>
+    <div class="cmp-sl"><div class="cmp-sl-h"><label for="cp-spd">${t('Speed')}</label><output id="cp-spd-v"></output></div>
+      <input type="range" id="cp-spd" min="0" max="6" step="1"><div class="cmp-ends"><span>${t('Slow and good')}</span><span>${t('Fast and less good')}</span></div></div>
+    <div class="cmp-sum"><div class="lbl-sub" style="padding:0">${t('What was chosen for you')}</div><ul id="cp-sum"></ul></div>
+    <p class="hint" style="padding:0">${t('At a slow speed the encoder works harder: same quality in a smaller file, but it takes longer.')}</p>
+    <button class="linkbtn" id="cp-adv-t">${t('Advanced')} ▾</button>
     <div id="cp-adv" class="hidden">
-      <label class="fld"><span>${t('מקודד')}</span><select id="cp-enc">${Object.entries(E).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join('')}</select></label>
-      <div class="two"><label class="fld"><span>${t('איכות (RF, נמוך = איכות גבוהה)')}</span><input type="number" id="cp-q" step="0.5" dir="ltr"></label>
-        <label class="fld"><span>${t('פרסט מהירות')}</span><select id="cp-pre"></select></label></div>
-      <div class="two"><label class="fld"><span>${t('רזולוציה מרבית')}</span><select id="cp-h"><option value="0">${t('ללא שינוי')}</option>${[2160,1440,1080,720,480].map(h=>`<option value="${h}">${h}p</option>`).join('')}</select></label>
-        <label class="fld"><span>${t('קצב פריימים')}</span><select id="cp-fm"><option value="same">${t('שמור כל פריים (ברירת מחדל)')}</option><option value="limit">${t('הגבל לקצב מרבי (מוריד פריימים)')}</option><option value="constant">${t('קצב קבוע (משנה פריימים)')}</option></select></label></div>
-      <label class="fld hidden" id="cp-fps-row"><span>${t('פריימים לשנייה')}</span><input type="number" id="cp-fps" min="1" max="240" step="0.001" dir="ltr">
-        <span class="hint warn" style="padding:0">${t('פריימים יוסרו מהסרטון. האימות יבדוק את מספר הפריימים לפי הקצב שבחרתם.')}</span></label>
-      <div class="two"><label class="fld"><span>${t('אודיו')}</span><select id="cp-au"><option value="auto">${t('שמור AAC, אחרת המר ל‑AAC')}</option><option value="aac">${t('המר ל‑AAC')}</option><option value="none">${t('הסר אודיו')}</option></select></label>
-        <label class="fld"><span>${t('קצב סיביות לאודיו (kbps)')}</span><input type="number" id="cp-ab" min="32" max="512" step="16" dir="ltr"></label></div>
+      <label class="fld"><span>${t('Encoder')}</span><select id="cp-enc">${Object.entries(E).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join('')}</select></label>
+      <div class="two"><label class="fld"><span>${t('Quality (RF, lower = higher quality)')}</span><input type="number" id="cp-q" step="0.5" dir="ltr"></label>
+        <label class="fld"><span>${t('Speed preset')}</span><select id="cp-pre"></select></label></div>
+      <div class="two"><label class="fld"><span>${t('Maximum resolution')}</span><select id="cp-h"><option value="0">${t('No change')}</option>${[2160,1440,1080,720,480].map(h=>`<option value="${h}">${h}p</option>`).join('')}</select></label>
+        <label class="fld"><span>${t('Frame rate')}</span><select id="cp-fm"><option value="same">${t('Keep every frame (default)')}</option><option value="limit">${t('Cap the frame rate (drops frames)')}</option><option value="constant">${t('Constant rate (changes frames)')}</option></select></label></div>
+      <label class="fld hidden" id="cp-fps-row"><span>${t('Frames per second')}</span><input type="number" id="cp-fps" min="1" max="240" step="0.001" dir="ltr">
+        <span class="hint warn" style="padding:0">${t('Frames will be removed from the video. Verification will check the frame count according to the rate you chose.')}</span></label>
+      <div class="two"><label class="fld"><span>${t('Audio')}</span><select id="cp-au"><option value="auto">${t('Keep AAC, otherwise convert to AAC')}</option><option value="aac">${t('Convert to AAC')}</option><option value="none">${t('Remove audio')}</option></select></label>
+        <label class="fld"><span>${t('Audio bitrate (kbps)')}</span><input type="number" id="cp-ab" min="32" max="512" step="16" dir="ltr"></label></div>
       <div class="hint" style="padding:0">HandBrake ${esc(st.version || '')} · <bdi dir="ltr">${esc(st.path)}</bdi></div>
     </div>` : '';
-  const hbNote = (vids.length && !st.found) ? `${sect(t('סרטונים'))}<div class="cmp-sum"><p class="hint warn" style="padding:0">${t('HandBrake לא מותקן, ולכן הסרטונים ידולגו.')}</p>
-    <button class="linkbtn" id="cp-hb">${t('פתח את דף ההתקנה')}</button></div>` : '';
-  const imageHtml = hasI ? `${sect(t('תמונות'))}
-    <div class="cmp-sl"><div class="cmp-sl-h"><label for="ci-str">${t('עוצמת דחיסה')}</label><output id="ci-str-v"></output></div>
-      <input type="range" id="ci-str" min="0" max="${IMG_Q[1] - IMG_Q[0]}" step="1"><div class="cmp-ends"><span>${t('חלשה מאוד')}</span><span>${t('חזקה מאוד')}</span></div></div>
-    <div class="cmp-sum"><div class="lbl-sub" style="padding:0">${t('מה נבחר בשבילך')}</div><ul id="ci-sum"></ul></div>
-    <button class="linkbtn" id="ci-adv-t">${t('מתקדם')} ▾</button>
+  const hbNote = (vids.length && !st.found) ? `${sect(t('Videos'))}<div class="cmp-sum"><p class="hint warn" style="padding:0">${t('HandBrake is not installed, so videos will be skipped.')}</p>
+    <button class="linkbtn" id="cp-hb">${t('Open the installation page')}</button></div>` : '';
+  const imageHtml = hasI ? `${sect(t('Photos'))}
+    <div class="cmp-sl"><div class="cmp-sl-h"><label for="ci-str">${t('Compression strength')}</label><output id="ci-str-v"></output></div>
+      <input type="range" id="ci-str" min="0" max="${IMG_Q[1] - IMG_Q[0]}" step="1"><div class="cmp-ends"><span>${t('Very weak')}</span><span>${t('Very strong')}</span></div></div>
+    <div class="cmp-sum"><div class="lbl-sub" style="padding:0">${t('What was chosen for you')}</div><ul id="ci-sum"></ul></div>
+    <button class="linkbtn" id="ci-adv-t">${t('Advanced')} ▾</button>
     <div id="ci-adv" class="hidden"><div class="two">
-      <label class="fld"><span>${t('איכות JPEG / WebP (גבוה = איכות גבוהה)')}</span><input type="number" id="ci-q" min="${IMG_Q[0]}" max="${IMG_Q[1]}" step="1" dir="ltr"></label>
-      <label class="fld"><span>${t('הצלע הארוכה מרבית')}</span><select id="ci-ms"><option value="0">${t('ללא שינוי')}</option>${IMG_MAX_SIDES.slice(1).map(v=>`<option value="${v}">${v}px</option>`).join('')}</select></label></div></div>` : '';
+      <label class="fld"><span>${t('JPEG / WebP quality (higher = better quality)')}</span><input type="number" id="ci-q" min="${IMG_Q[0]}" max="${IMG_Q[1]}" step="1" dir="ltr"></label>
+      <label class="fld"><span>${t('Longest side max')}</span><select id="ci-ms"><option value="0">${t('No change')}</option>${IMG_MAX_SIDES.slice(1).map(v=>`<option value="${v}">${v}px</option>`).join('')}</select></label></div></div>` : '';
   const restoreHtml = (single && single.video_backups)
-    ? `<div class="cmp-restore"><span>${single.is_video ? t('יש גרסה קודמת של הסרטון בגיבויים.') : t('יש גרסה קודמת של התמונה בגיבויים.')}</span><button id="cp-restore">${t('החזר גרסה קודמת')}</button></div>` : '';
+    ? `<div class="cmp-restore"><span>${single.is_video ? t('A previous version of the video exists in backups.') : t('A previous version of this image exists in backups.')}</span><button id="cp-restore">${t('Restore previous version')}</button></div>` : '';
   modal(`<h3>${title}</h3><div class="mb cmp">${head}${videoHtml}${hbNote}${imageHtml}${restoreHtml}
-  </div><div class="mf"><button id="cp-reset">${t('ברירת מחדל')}</button><span class="spacer"></span><button id="cp-cancel">${t('ביטול')}</button><button id="cp-go" class="primary">${t('התחל דחיסה')}</button></div>`);
+  </div><div class="mf"><button id="cp-reset">${t('Default')}</button><span class="spacer"></span><button id="cp-cancel">${t('Cancel')}</button><button id="cp-go" class="primary">${t('Start compression')}</button></div>`);
 
   const q = id => $('#' + id);
   let syncV = ()=>{}, syncI = ()=>{};
@@ -1699,7 +1699,7 @@ async function compressDialog(arg){
     syncI = src => {
       const frac = (IMG_Q[1] - oi.quality) / (IMG_Q[1] - IMG_Q[0]);
       if(src !== 'str') q('ci-str').value = IMG_Q[1] - oi.quality;
-      q('ci-str-v').textContent = `${STRENGTH_LABELS()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]} · ${ltr(t('איכות {0}', [oi.quality]))}`;
+      q('ci-str-v').textContent = `${STRENGTH_LABELS()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]} · ${ltr(t('{0} quality', [oi.quality]))}`;
       if(src !== 'q') q('ci-q').value = oi.quality;
       q('ci-ms').value = String(oi.max_side || 0);
       q('ci-sum').innerHTML = compressSummaryImg(oi);
@@ -1725,11 +1725,11 @@ async function compressDialog(arg){
     if(items.length === 1){
       const p = items[0]; CMP_PID = p.id;
       await send('POST', `/api/photo/${p.id}/compress`, {options: p.is_video ? o : oi});
-      pollJob('compress', p.is_video ? t('דחיסת וידאו') : t('דחיסת תמונה'));
+      pollJob('compress', p.is_video ? t('Video compression') : t('Compress photo'));
     } else {
       CMP_PID = null;
       await send('POST', '/api/compress/batch', {ids: [...(hasV ? vids : []), ...imgs].map(p => p.id), video: o, image: oi});
-      pollJob('compress', t('דחיסת קבצים'));
+      pollJob('compress', t('Compress files'));
     }
   };
 }
@@ -1741,29 +1741,29 @@ async function afterVideoChanged(pid){
 }
 async function compressRestore(pid){
   await send('POST', `/api/photo/${pid}/compress/restore`);
-  toast((S.byId.has(pid) && !S.byId.get(pid).is_video) ? t('הוחלפה הגרסה של התמונה') : t('הוחלפה הגרסה של הסרטון'));
+  toast((S.byId.has(pid) && !S.byId.get(pid).is_video) ? t('The photo\'s version was replaced') : t('Video version replaced'));
   await afterVideoChanged(pid);
 }
 
 function compressReport(r, pid){
   if(!r || !r.checks || !r.checks.length) return;
-  const names = {frames:t('מספר פריימים'), duration:t('אורך הסרטון'), resolution:t('רזולוציה'), audio:t('אודיו'), size:t('גודל קובץ'), ssim:t('דמיון לתמונה המקורית (SSIM)'), metadata:t('פרטי הצילום (EXIF) ופרופיל הצבע')};
+  const names = {frames:t('Frame count'), duration:t('Video length'), resolution:t('Resolution'), audio:t('Audio'), size:t('File Size'), ssim:t('Similarity to the original image (SSIM)'), metadata:t('Shooting details (EXIF) and color profile')};
   const img = r.kind === 'image';
-  const yn = v => v === 'yes' ? t('יש') : t('אין');
-  const detail = c => c.id==='frames' ? t('צפוי {0} · התקבל {1}', [ltr(String(c.expected)), ltr(num(c.actual))])
-    : c.id==='duration' ? t('סטייה {0} (מותר {1}) · מיכל {2} ms, וידאו {3} ms', [ltr(c.actual), ltr(c.expected), ltr(String(c.container_ms)), ltr(String(c.video_ms))])
-    : c.id==='resolution' ? t('צפוי {0} · התקבל {1}', [ltr(c.expected), ltr(c.actual)])
-    : c.id==='audio' ? t('צפוי {0} · התקבל {1}', [yn(c.expected), yn(c.actual)])
-    : c.id==='size' ? t('{0} ← {1}', [fmtBytes(r.src.bytes), fmtBytes(r.out.bytes)])
-    : c.id==='metadata' ? (c.ok ? t('נשמרו ללא שינוי') : t('השתנו'))
-    : img ? t('דמיון {0} · {1}', [ltr(String(c.mean)), GRADE_LABELS()[c.grade]])
-    : t('ממוצע {0} · הפריים הגרוע ביותר {1} · {2}', [ltr(String(c.mean)), ltr(String(c.min)), GRADE_LABELS()[c.grade]]);
+  const yn = v => v === 'yes' ? t('Yes') : t('None');
+  const detail = c => c.id==='frames' ? t('Expected {0} · got {1}', [ltr(String(c.expected)), ltr(num(c.actual))])
+    : c.id==='duration' ? t('Deviation {0} (allowed {1}) · container {2} ms, video {3} ms', [ltr(c.actual), ltr(c.expected), ltr(String(c.container_ms)), ltr(String(c.video_ms))])
+    : c.id==='resolution' ? t('Expected {0} · got {1}', [ltr(c.expected), ltr(c.actual)])
+    : c.id==='audio' ? t('Expected {0} · got {1}', [yn(c.expected), yn(c.actual)])
+    : c.id==='size' ? t('{0} → {1}', [fmtBytes(r.src.bytes), fmtBytes(r.out.bytes)])
+    : c.id==='metadata' ? (c.ok ? t('Saved unchanged') : t('Changed'))
+    : img ? t('Similarity {0} · {1}', [ltr(String(c.mean)), GRADE_LABELS()[c.grade]])
+    : t('Average {0} · worst frame {1} · {2}', [ltr(String(c.mean)), ltr(String(c.min)), GRADE_LABELS()[c.grade]]);
   const ok = r.applied;
-  modal(`<h3>${t('דוח דחיסה')}</h3><div class="mb">
-    <p style="color:${ok?'var(--green)':'var(--yellow)'}">${ok ? (img ? t('התמונה נדחסה. הגרסה הקודמת נשמרה בגיבויים.') : t('הסרטון נדחס. הגרסה הקודמת נשמרה בגיבויים.')) : t('הדחיסה לא הוחלה. הקובץ המקורי לא שונה.')}</p>
-    <p>${t('הגודל: {0} ← {1} ({2}% מהמקור)', [fmtBytes(r.src.bytes), fmtBytes(r.out.bytes), ltr(String(Math.round(r.ratio * 100)))])}</p>
+  modal(`<h3>${t('Compression report')}</h3><div class="mb">
+    <p style="color:${ok?'var(--green)':'var(--yellow)'}">${ok ? (img ? t('The image was compressed. The previous version is saved in backups.') : t('Video compressed. The previous version was saved in backups.')) : t('The compression was not applied. The original file was not changed.')}</p>
+    <p>${t('Size: {0} → {1} ({2}% of the original)', [fmtBytes(r.src.bytes), fmtBytes(r.out.bytes), ltr(String(Math.round(r.ratio * 100)))])}</p>
     <div>${r.checks.map(c=>`<div class="chk ${c.ok?'ok':'bad'}">${I(c.ok ? 'check' : 'close')}<b>${names[c.id]}</b><span>${esc(detail(c))}</span></div>`).join('')}</div>
-  </div><div class="mf">${ok ? `<button id="cr-restore">${t('החזר גרסה קודמת')}</button><span class="spacer"></span>` : ''}<button class="primary" id="cr-close">${t('סגור')}</button></div>`);
+  </div><div class="mf">${ok ? `<button id="cr-restore">${t('Restore previous version')}</button><span class="spacer"></span>` : ''}<button class="primary" id="cr-close">${t('Close')}</button></div>`);
   $('#cr-close').onclick = closeModal;
   if(ok) $('#cr-restore').onclick = async ()=>{ closeModal(); await compressRestore(pid); };
 }
@@ -1772,38 +1772,38 @@ function compressReport(r, pid){
 const fdt = ts => new Date(ts * 1000).toLocaleString(I18N.locale || undefined, {dateStyle: 'medium', timeStyle: 'short'});
 async function backupDialog(){
   let i = await api('/api/backup');
-  const INTERVALS = [[1, t('כל שעה')], [6, t('כל 6 שעות')], [12, t('כל 12 שעות')], [24, t('כל יום')], [72, t('כל 3 ימים')], [168, t('כל שבוע')], [720, t('כל 30 יום')]];
-  const REASON = () => ({auto: t('אוטומטי'), manual: t('ידני'), 'before-restore': t('לפני שחזור'), 'before-update': t('לפני עדכון')});
+  const INTERVALS = [[1, t('Every hour')], [6, t('Every 6 hours')], [12, t('Every 12 hours')], [24, t('Every day')], [72, t('Every 3 days')], [168, t('Every week')], [720, t('Every 30 days')]];
+  const REASON = () => ({auto: t('Automatic'), manual: t('Manual'), 'before-restore': t('Before restore'), 'before-update': t('Before update')});
   const status = () => {
-    const s = i.settings, last = i.last ? t('הגיבוי האחרון: {0}', [ltr(fdt(i.last))]) : t('עוד לא נעשה גיבוי');
-    const next = !s.enabled ? t('הגיבוי האוטומטי כבוי') : t('הגיבוי הבא: {0}', [ltr(fdt(Math.max(i.next, Date.now() / 1000)))]);
+    const s = i.settings, last = i.last ? t('Last backup: {0}', [ltr(fdt(i.last))]) : t('No backup yet');
+    const next = !s.enabled ? t('Automatic backup is off') : t('Next backup: {0}', [ltr(fdt(Math.max(i.next, Date.now() / 1000)))]);
     return `${last} · ${next}`;
   };
   const healthHtml = () => {
     const h = i.health || {}, tk = h.task || {}, L = [];
-    if(h.folder_error) L.push(['bad', t('אי אפשר להגיע לתיקיית הגיבויים (למשל הדיסק מנותק): {0}', [h.folder_error])]);
-    else if(h.last_error) L.push(['bad', t('הגיבוי האחרון נכשל: {0}', [h.last_error])]);
-    if(h.overdue) L.push(['bad', t('לא נעשה גיבוי מאז {0}. בדקו שהדיסק מחובר ושיש בו מקום.', [ltr(fdt(h.last_success))])]);
-    else if(h.never && h.enabled) L.push(['warn', t('עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».')]);
+    if(h.folder_error) L.push(['bad', t('Can\'t reach the backup folder (e.g. the drive is disconnected): {0}', [h.folder_error])]);
+    else if(h.last_error) L.push(['bad', t('The last backup failed: {0}', [h.last_error])]);
+    if(h.overdue) L.push(['bad', t('No backup has been made since {0}. Check that the drive is connected and has free space.', [ltr(fdt(h.last_success))])]);
+    else if(h.never && h.enabled) L.push(['warn', t('No backup yet: the first one will start soon, or click «Back up now».')]);
     if(h.enabled){
-      if(!tk.supported) L.push(['', t('בהרצה מקוד המקור הגיבוי רץ רק כשהאפליקציה פתוחה.')]);
-      else if(tk.registered) L.push(['ok', t('הגיבוי רץ גם כשהאפליקציה סגורה: משימת Windows בודקת כל שעה ובכל כניסה למחשב, משלימה ריצה שהוחמצה, רצה ברקע בעדיפות נמוכה ונסגרת מיד בסיום. בנוסף האפליקציה עצמה בודקת כשהיא פתוחה.')
-        + (tk.next_run ? ' ' + t('הבדיקה הבאה: {0}', [ltr(fdt(new Date(tk.next_run).getTime() / 1000))]) : '')]);
-      else L.push(['warn', t('משימת הגיבוי של Windows לא נרשמה: הגיבוי ירוץ רק כשהאפליקציה פתוחה.') + (tk.error ? ' (' + tk.error + ')' : '')]);
+      if(!tk.supported) L.push(['', t('When run from source, backup only runs while the app is open.')]);
+      else if(tk.registered) L.push(['ok', t('Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.')
+        + (tk.next_run ? ' ' + t('Next check: {0}', [ltr(fdt(new Date(tk.next_run).getTime() / 1000))]) : '')]);
+      else L.push(['warn', t('The Windows backup task was not registered: backup will only run while the app is open.') + (tk.error ? ' (' + tk.error + ')' : '')]);
     }
     return L.map(([c, x]) => `<div class="bk-h ${c}">${esc(x)}</div>`).join('');
   };
   const coverage = () => {
     const s = i.settings, cat = i.snapshots.reduce((a, m) => a + m.bytes, 0);
     return s.include_media
-      ? t('הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.',
+      ? t('The backup includes the catalog and all photos and videos ({0}). Backups folder size: {1} (of which media files {2}); free space on the backup drive: {3}.',
           [fmtBytes(i.media_bytes), fmtBytes(cat + i.mirror_bytes), fmtBytes(i.mirror_bytes), fmtBytes(i.free_bytes)])
-      : t('שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.');
+      : t('Note: the backup currently includes only the catalog (tags, albums, ratings) and not the photos and videos themselves, so it is small. Check «Also back up photo and video files» to back up everything.');
   };
   const rows = () => i.snapshots.length ? i.snapshots.map(m => `<div class="bk-row"><span class="bk-d">${ltr(fdt(m.created))}</span>
-      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} תמונות', [num(m.photos)])} · ${ltr(m.bytes < 1048576 ? Math.max(1, Math.round(m.bytes / 1024)) + ' KB' : (m.bytes / 1048576).toFixed(1) + ' MB')}${m.includes_media ? ' · ' + t('כולל תמונות וסרטונים') : ' · ' + t('קטלוג בלבד')}</span>
-      <button data-restore="${esc(m.name)}">${t('שחזר…')}</button><button data-del="${esc(m.name)}" title="${t('מחק')}">✕</button></div>`).join('')
-    : `<span class="hint" style="padding:0">${t('אין עדיין גיבויים.')}</span>`;
+      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} photos', [num(m.photos)])} · ${ltr(m.bytes < 1048576 ? Math.max(1, Math.round(m.bytes / 1024)) + ' KB' : (m.bytes / 1048576).toFixed(1) + ' MB')}${m.includes_media ? ' · ' + t('Includes photos and videos') : ' · ' + t('Catalog only')}</span>
+      <button data-restore="${esc(m.name)}">${t('Restore…')}</button><button data-del="${esc(m.name)}" title="${t('Delete')}">✕</button></div>`).join('')
+    : `<span class="hint" style="padding:0">${t('No backups yet.')}</span>`;
   const draw = () => {
     const s = i.settings;
     $('#bk-status').textContent = status();
@@ -1813,49 +1813,49 @@ async function backupDialog(){
     $('#bk-folder').value = i.folder; $('#bk-list').innerHTML = rows();
     $('#bk-int').disabled = $('#bk-keep').disabled = !s.enabled;
   };
-  modal(`<h3>${t('גיבוי ושחזור')}</h3><div class="mb bk">
+  modal(`<h3>${t('Backup and restore')}</h3><div class="mb bk">
     <div class="bk-status" id="bk-status"></div>
     <div class="bk-cover" id="bk-cover"></div>
     <div id="bk-health"></div>
-    <label class="chkrow"><input type="checkbox" id="bk-on"> ${t('גיבוי אוטומטי של הקטלוג וההגדרות')}</label>
-    <div class="two"><label class="fld"><span>${t('תדירות')}</span><select id="bk-int">${INTERVALS.map(([h, l]) => `<option value="${h}">${l}</option>`).join('')}</select></label>
-      <label class="fld"><span>${t('כמה גיבויים לשמור')}</span><input type="number" id="bk-keep" min="3" max="200" dir="ltr"></label></div>
-    <label class="chkrow"><input type="checkbox" id="bk-media"> ${t('לגבות גם את קבצי התמונות והסרטונים')}</label>
-    <div class="hint" style="padding:0">${t('הקטלוג כולל תיוגים, אלבומים, דירוגים, אנשים ועריכות. קבצי המדיה בנפח כ‑{0}: הגיבוי הראשון יעתיק את כולם, והבאים רק קבצים חדשים.', [fmtBytes(i.media_bytes)])}</div>
-    <label class="fld"><span>${t('תיקיית הגיבויים (עדיף דיסק אחר)')}</span>
-      <div class="bk-path"><input id="bk-folder" readonly dir="ltr"><button id="bk-pick">${t('בחר…')}</button><button id="bk-reset">${t('ברירת מחדל')}</button></div></label>
-    <div class="lbl-sub" style="padding:0">${t('גיבויים קיימים')}</div><div class="bk-list" id="bk-list"></div>
-  </div><div class="mf"><button class="primary" id="bk-now">${t('גבה עכשיו')}</button><span class="spacer"></span><button id="bk-close">${t('סגור')}</button></div>`);
+    <label class="chkrow"><input type="checkbox" id="bk-on"> ${t('Automatic backup of the catalog and settings')}</label>
+    <div class="two"><label class="fld"><span>${t('Frequency')}</span><select id="bk-int">${INTERVALS.map(([h, l]) => `<option value="${h}">${l}</option>`).join('')}</select></label>
+      <label class="fld"><span>${t('How many backups to keep')}</span><input type="number" id="bk-keep" min="3" max="200" dir="ltr"></label></div>
+    <label class="chkrow"><input type="checkbox" id="bk-media"> ${t('Also back up photo and video files')}</label>
+    <div class="hint" style="padding:0">${t('The catalog includes tags, albums, ratings, people and edits. The media files total about {0}: the first backup copies all of them, and later ones copy only new files.', [fmtBytes(i.media_bytes)])}</div>
+    <label class="fld"><span>${t('Backups folder (preferably on another disk)')}</span>
+      <div class="bk-path"><input id="bk-folder" readonly dir="ltr"><button id="bk-pick">${t('Choose…')}</button><button id="bk-reset">${t('Default')}</button></div></label>
+    <div class="lbl-sub" style="padding:0">${t('Existing backups')}</div><div class="bk-list" id="bk-list"></div>
+  </div><div class="mf"><button class="primary" id="bk-now">${t('Back up now')}</button><span class="spacer"></span><button id="bk-close">${t('Close')}</button></div>`);
   draw();
   const save = async patch => { try{ i = await send('POST', '/api/backup/settings', patch); draw(); } catch(e){ toast(e.message); draw(); } };
   $('#bk-on').onchange = () => save({enabled: $('#bk-on').checked});
   $('#bk-int').onchange = () => save({interval_hours: +$('#bk-int').value});
   $('#bk-keep').onchange = () => save({keep: +$('#bk-keep').value});
   $('#bk-media').onchange = () => save({include_media: $('#bk-media').checked});
-  $('#bk-pick').onclick = async () => { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(t('בחר תיקייה לגיבויים'))); if(r.path) save({folder: r.path}); };
+  $('#bk-pick').onclick = async () => { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(t('Choose a backup folder'))); if(r.path) save({folder: r.path}); };
   $('#bk-reset').onclick = () => save({folder: null});
   $('#bk-close').onclick = closeModal;
-  $('#bk-now').onclick = async () => { closeModal(); await send('POST', '/api/backup/run'); pollJob('backup', t('גיבוי')); };
+  $('#bk-now').onclick = async () => { closeModal(); await send('POST', '/api/backup/run'); pollJob('backup', t('Backup')); };
   $('#bk-list').onclick = async e => {
     const r = e.target.closest('[data-restore]'), d = e.target.closest('[data-del]');
     if(r) return backupRestoreDialog(i.snapshots.find(m => m.name === r.dataset.restore), i);
-    if(d){ const ok = await confirmBox(t('מחיקת גיבוי'), t('למחוק את הגיבוי הזה?')); if(ok) await send('DELETE', '/api/backup/' + encodeURIComponent(d.dataset.del)); backupDialog(); }
+    if(d){ const ok = await confirmBox(t('Delete backup'), t('Delete this backup?')); if(ok) await send('DELETE', '/api/backup/' + encodeURIComponent(d.dataset.del)); backupDialog(); }
   };
 }
 
 function backupRestoreDialog(m, i){
   const canMedia = m.includes_media && i.mirror;
-  modal(`<h3>${t('שחזור מגיבוי')}</h3><div class="mb bk">
-    <p>${t('הקטלוג (תיוגים, אלבומים, דירוגים, אנשים ועריכות) יוחזר למצב של {0}: {1} תמונות.', [ltr(fdt(m.created)), num(m.photos)])}</p>
-    <p>${t('לפני השחזור נשמר גיבוי של המצב הנוכחי, כך שאפשר לבטל את השחזור. קבצי תמונות אף פעם לא נמחקים בשחזור.')}</p>
-    <label class="chkrow ${canMedia ? '' : 'off'}"><input type="checkbox" id="rs-media" ${canMedia ? 'checked' : 'disabled'}> ${t('החזר גם קבצי תמונות שחסרים בתיקייה (מתוך הגיבוי)')}</label>
-    <label class="chkrow"><input type="checkbox" id="rs-set"> ${t('החזר גם את הגדרות ה‑AI והנתיב ל‑HandBrake')}</label>
-  </div><div class="mf"><button id="rs-cancel">${t('ביטול')}</button><span class="spacer"></span><button class="primary" id="rs-go">${t('שחזר')}</button></div>`);
+  modal(`<h3>${t('Restore from backup')}</h3><div class="mb bk">
+    <p>${t('The catalog (tags, albums, ratings, people and edits) will be restored to its state from {0}: {1} photos.', [ltr(fdt(m.created)), num(m.photos)])}</p>
+    <p>${t('A backup of the current state is saved before restoring, so you can undo the restore. Photo files are never deleted by a restore.')}</p>
+    <label class="chkrow ${canMedia ? '' : 'off'}"><input type="checkbox" id="rs-media" ${canMedia ? 'checked' : 'disabled'}> ${t('Also restore image files missing from the folder (from the backup)')}</label>
+    <label class="chkrow"><input type="checkbox" id="rs-set"> ${t('Also restore AI settings and the HandBrake path')}</label>
+  </div><div class="mf"><button id="rs-cancel">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="rs-go">${t('Restore')}</button></div>`);
   $('#rs-cancel').onclick = () => backupDialog();
   $('#rs-go').onclick = async () => {
     const body = {name: m.name, media: canMedia && $('#rs-media').checked, settings: $('#rs-set').checked};
     closeModal();
-    try{ await send('POST', '/api/backup/restore', body); pollJob('backup', t('שחזור מגיבוי')); } catch(e){ toast(e.message); }
+    try{ await send('POST', '/api/backup/restore', body); pollJob('backup', t('Restore from backup')); } catch(e){ toast(e.message); }
   };
 }
 
@@ -1867,14 +1867,14 @@ async function backupHealthNotice(){
   const today = new Date().toDateString();
   if(pref.get('bkNoticeDay', '') === today) return;
   pref.set('bkNoticeDay', today);
-  const why = h.folder_error ? t('אי אפשר להגיע לתיקיית הגיבויים (למשל הדיסק מנותק): {0}', [h.folder_error])
-    : h.last_error ? t('הגיבוי האחרון נכשל: {0}', [h.last_error])
-    : t('לא נעשה גיבוי מאז {0}. בדקו שהדיסק מחובר ושיש בו מקום.', [ltr(fdt(h.last_success))]);
-  modal(`<h3>${t('הגיבוי האוטומטי לא רץ כמו שצריך')}</h3><div class="mb"><p>${esc(why)}</p></div>
-    <div class="mf"><button id="bn-settings">${t('הגדרות גיבוי')}</button><span class="spacer"></span><button id="bn-close">${t('סגור')}</button><button class="primary" id="bn-now">${t('גבה עכשיו')}</button></div>`);
+  const why = h.folder_error ? t('Can\'t reach the backup folder (e.g. the drive is disconnected): {0}', [h.folder_error])
+    : h.last_error ? t('The last backup failed: {0}', [h.last_error])
+    : t('No backup has been made since {0}. Check that the drive is connected and has free space.', [ltr(fdt(h.last_success))]);
+  modal(`<h3>${t('Automatic backup isn\'t working properly')}</h3><div class="mb"><p>${esc(why)}</p></div>
+    <div class="mf"><button id="bn-settings">${t('Backup settings')}</button><span class="spacer"></span><button id="bn-close">${t('Close')}</button><button class="primary" id="bn-now">${t('Back up now')}</button></div>`);
   $('#bn-close').onclick = closeModal;
   $('#bn-settings').onclick = () => backupDialog();
-  $('#bn-now').onclick = async () => { closeModal(); try{ await send('POST', '/api/backup/run'); pollJob('backup', t('גיבוי')); }catch(e){ toast(e.message); } };
+  $('#bn-now').onclick = async () => { closeModal(); try{ await send('POST', '/api/backup/run'); pollJob('backup', t('Backup')); }catch(e){ toast(e.message); } };
 }
 
 // ---------- compression progress screen: percent, elapsed / remaining time, steps ----------
@@ -1883,16 +1883,16 @@ const fmtDur = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3
   return ltr((h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0')); };
 function compressProgressOpen(items){
   Object.assign(CPG, {alive: true, t0: Date.now(), n: items.length, items, ts: {}, f: 0});
-  modal(`<h3>${t('דוחס…')}</h3><div class="mb cpg">
+  modal(`<h3>${t('Compressing…')}</h3><div class="mb cpg">
     <div class="cpg-file" id="cpg-file"><bdi>${esc(items[0].filename)}</bdi></div>
     <div class="cpg-bar"><i id="cpg-fill"></i><span id="cpg-pct">0%</span></div>
-    <div class="cpg-stats"><span>${t('זמן שחלף')}: <b id="cpg-el">${fmtDur(0)}</b></span><span>${t('זמן משוער שנותר')}: <b id="cpg-eta">…</b></span><span id="cpg-fps"></span></div>
+    <div class="cpg-stats"><span>${t('Elapsed time')}: <b id="cpg-el">${fmtDur(0)}</b></span><span>${t('Estimated time remaining')}: <b id="cpg-eta">…</b></span><span id="cpg-fps"></span></div>
     <ul class="cpg-steps" id="cpg-steps"></ul>
     <div class="cpg-list" id="cpg-list"></div>
-    <p class="hint" style="padding:0">${t('אפשר להמשיך לעבוד באפליקציה בזמן הדחיסה.')}</p>
-  </div><div class="mf"><span class="spacer"></span><button id="cpg-bg">${t('המשך ברקע')}</button><button id="cpg-cancel">${t('בטל דחיסה')}</button></div>`);
+    <p class="hint" style="padding:0">${t('You can keep working in the app while compression runs.')}</p>
+  </div><div class="mf"><span class="spacer"></span><button id="cpg-bg">${t('Continue in background')}</button><button id="cpg-cancel">${t('Cancel compression')}</button></div>`);
   $('#cpg-bg').onclick = ()=>{ CPG.alive = false; closeModal(); };
-  $('#cpg-cancel').onclick = async ()=>{ $('#cpg-cancel').disabled = true; $('#cpg-cancel').textContent = t('מבטל…'); await send('POST', '/api/compress/cancel'); };
+  $('#cpg-cancel').onclick = async ()=>{ $('#cpg-cancel').disabled = true; $('#cpg-cancel').textContent = t('Cancelling…'); await send('POST', '/api/compress/cancel'); };
   compressProgressUpdate({state: 'probing', done: 0, total: 0, extra: {}, result: null});
 }
 function compressProgressUpdate(p){
@@ -1923,16 +1923,16 @@ function compressProgressUpdate(p){
   $('#cpg-pct').textContent = Math.floor(f * 100) + '%';
   $('#cpg-el').textContent = fmtDur(el);
   $('#cpg-eta').textContent = eta == null ? '…' : '~' + fmtDur(eta);
-  $('#cpg-fps').textContent = (isVid && st === 'encoding' && ex.fps) ? t('{0} פריימים לשנייה', [ltr(String(Math.round(ex.fps)))]) : '';
-  $('#cpg-file').innerHTML = CPG.n === 1 ? `<bdi>${esc(cur.filename)}</bdi>` : `${t('קובץ {0} מתוך {1}', [num(i + 1), num(CPG.n)])}: <bdi>${esc(cur.filename)}</bdi>`;
+  $('#cpg-fps').textContent = (isVid && st === 'encoding' && ex.fps) ? t('{0} frames per second', [ltr(String(Math.round(ex.fps)))]) : '';
+  $('#cpg-file').innerHTML = CPG.n === 1 ? `<bdi>${esc(cur.filename)}</bdi>` : `${t('File {0} of {1}', [num(i + 1), num(CPG.n)])}: <bdi>${esc(cur.filename)}</bdi>`;
   const order = ['probing', 'encoding', 'verifying', 'replacing'], at = order.indexOf(st);
-  const names = [t('בדיקת הקובץ המקורי'), t('דחיסה'), t('אימות התוצאה'), t('גיבוי והחלפת הקובץ')];
+  const names = [t('Checking the original file'), t('Compression'), t('Verify result'), t('Back up and replace file')];
   $('#cpg-steps').innerHTML = names.map((nm, k) => `<li class="${k < at ? 'done' : k === at ? 'cur' : ''}"><i>${k < at ? '✓' : k === at ? '●' : '○'}</i>${nm}</li>`).join('');
   const items = (p.result && p.result.items) || [];
   const fin = items.filter(it => it.status !== 'running');
   if(CPG.n > 1){
     const saved = fin.reduce((a, it) => a + (it.status === 'done' ? it.src_bytes - it.out_bytes : 0), 0);
-    $('#cpg-list').innerHTML = fin.length ? `<div class="hint" style="padding:0">${t('הושלמו {0} מתוך {1} · נחסכו עד כה {2}', [num(fin.length), num(CPG.n), fmtBytes(saved)])}</div>`
+    $('#cpg-list').innerHTML = fin.length ? `<div class="hint" style="padding:0">${t('{0} of {1} done · {2} saved so far', [num(fin.length), num(CPG.n), fmtBytes(saved)])}</div>`
       + fin.slice(-6).map(it => `<div class="cpg-row ${it.status === 'done' ? 'ok' : it.status === 'failed' ? 'bad' : 'warn'}"><i>${it.status === 'done' ? '✓' : it.status === 'failed' ? '✗' : '–'}</i><bdi>${esc(it.filename)}</bdi></div>`).join('') : '';
   }
 }
@@ -1940,19 +1940,19 @@ function compressProgressUpdate(p){
 // report for a batch: one row per file
 function compressBatchReport(r){
   const c = r.counts || {}, n = r.items.length;
-  const label = {done:t('נדחס'), no_gain:t('לא נחסך מקום: הקובץ כבר דחוס היטב, הוא נשאר כמו שהיה'), skipped:t('דולג'), failed:t('נכשל'), cancelled:t('בוטל')};
+  const label = {done:t('Compressed'), no_gain:t('No space saved: the file is already well compressed and was left as it was'), skipped:t('Skipped'), failed:t('Failed'), cancelled:t('Canceled')};
   const row = it => {
     const ok = it.status === 'done';
-    const detail = ok ? t('{0} ← {1} ({2}% מהמקור)', [fmtBytes(it.src_bytes), fmtBytes(it.out_bytes), ltr(String(Math.round(it.ratio * 100)))]) + (it.grade ? ' · ' + GRADE_LABELS()[it.grade] : '')
+    const detail = ok ? t('{0} ← {1} ({2}% of original)', [fmtBytes(it.src_bytes), fmtBytes(it.out_bytes), ltr(String(Math.round(it.ratio * 100)))]) + (it.grade ? ' · ' + GRADE_LABELS()[it.grade] : '')
       : it.status !== 'no_gain' && it.error_key ? t(it.error_key, it.error_vars) : label[it.status];
     const cls = ok ? 'ok' : (it.status === 'no_gain' || it.status === 'skipped' || it.status === 'cancelled') ? 'warn' : 'bad';
     return `<div class="chk ${cls}">${I(ok ? 'check' : 'close')}<b><bdi>${esc(it.filename)}</bdi></b><span>${esc(detail)}</span></div>`;
   };
-  modal(`<h3>${t('דוח דחיסה')}</h3><div class="mb">
-    <p style="color:${c.done ? 'var(--green)' : 'var(--yellow)'}">${t('נדחסו {0} מתוך {1} קבצים · נחסכו {2}', [num(c.done || 0), num(n), fmtBytes(r.saved || 0)])}</p>
-    <p class="hint" style="padding:0">${t('כל קובץ נבדק בנפרד, והגרסה הקודמת שלו נשמרה בגיבויים.')}</p>
+  modal(`<h3>${t('Compression report')}</h3><div class="mb">
+    <p style="color:${c.done ? 'var(--green)' : 'var(--yellow)'}">${t('Compressed {0} of {1} files · saved {2}', [num(c.done || 0), num(n), fmtBytes(r.saved || 0)])}</p>
+    <p class="hint" style="padding:0">${t('Each file was checked separately, and its previous version was saved in backups.')}</p>
     <div class="cmp-rows">${r.items.map(row).join('')}</div>
-  </div><div class="mf"><span class="spacer"></span><button class="primary" id="cr-close">${t('סגור')}</button></div>`);
+  </div><div class="mf"><span class="spacer"></span><button class="primary" id="cr-close">${t('Close')}</button></div>`);
   $('#cr-close').onclick = closeModal;
 }
 
@@ -1975,8 +1975,8 @@ async function updateCheck(manual){
   let info;
   try{ info = await api('/api/update/check' + (manual ? '?force=1' : '')); }
   catch(e){ if(manual) toast(e.message); return; }
-  if(info.error){ if(manual) toast(t('לא ניתן לבדוק עדכונים: {0}', [info.error])); return; }
-  if(!info.available){ if(manual) toast(t('אתם משתמשים בגרסה העדכנית ({0})', [ltr(info.current)])); return; }
+  if(info.error){ if(manual) toast(t('Unable to check for updates: {0}', [info.error])); return; }
+  if(!info.available){ if(manual) toast(t('You are using the latest version ({0})', [ltr(info.current)])); return; }
   if(info.skipped && !manual) return;
   updateDialog(info);
 }
@@ -1987,28 +1987,28 @@ async function whatsNew(manual){
   let r;
   try{ r = await api('/api/update/whatsnew' + (manual ? '?current=1' : '')); } catch(e){ if(manual) toast(e.message); return false; }
   const notesHtml = n => !n ? '' : n.error
-    ? `<p class="hint" style="padding:0">${t('לא ניתן להביא את פירוט הגרסה מ‑GitHub ({0}).', [n.error])}</p><button class="linkbtn" id="wn-page">${t('פתח את דף השחרור')}</button>`
-    : (n.notes && n.notes.trim() ? `<div class="upd-notes">${mdLite(n.notes)}</div>` : `<span class="hint" style="padding:0">${t('אין פירוט לגרסה הזו.')}</span>`);
+    ? `<p class="hint" style="padding:0">${t('Could not fetch the release notes from GitHub ({0}).', [n.error])}</p><button class="linkbtn" id="wn-page">${t('Open the release page')}</button>`
+    : (n.notes && n.notes.trim() ? `<div class="upd-notes">${mdLite(n.notes)}</div>` : `<span class="hint" style="padding:0">${t('No details for this version.')}</span>`);
   const close = async ()=>{ closeModal(); if(!manual) await send('POST', '/api/update/whatsnew/ack'); };
   const wire = ()=>{ $('#wn-close').onclick = close; if($('#wn-page')) $('#wn-page').onclick = ()=>send('POST', '/api/update/open-page'); };
   if(!manual && r.failed){
-    modal(`<h3>${t('העדכון לא הושלם')}</h3><div class="mb upd">
-      <p>${t('העדכון לגרסה {0} לא הסתיים (למשל המחשב כבה באמצע, או שההתקנה נסגרה).', [ltr(String(r.failed.to || ''))])}</p>
-      <p>${r.failed.restored ? t('הגרסה הקודמת הוחזרה אוטומטית.') : t('הגרסה הקודמת נשארה במקומה ועובדת כרגיל.')}</p>
-      <p>${t('התמונות, הקטלוג וההגדרות שלכם לא נפגעו. אפשר לנסות שוב מתפריט עזרה ← בדוק עדכונים.')}</p>
-    </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('סגור')}</button></div>`);
+    modal(`<h3>${t('Update not completed')}</h3><div class="mb upd">
+      <p>${t('The update to version {0} didn\'t finish (for example, the computer shut down midway, or the installer was closed).', [ltr(String(r.failed.to || ''))])}</p>
+      <p>${r.failed.restored ? t('The previous version was restored automatically.') : t('The previous version was left in place and works as usual.')}</p>
+      <p>${t('Your photos, catalog and settings were not affected. You can try again from Help ← Check for updates.')}</p>
+    </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('Close')}</button></div>`);
     wire(); return true;
   }
   if(!manual && r.updated){
-    modal(`<h3>${t('עודכנת לגרסה {0}', [ltr(String(r.updated.to))])}</h3><div class="mb upd">
-      <p>${t('העדכון הסתיים. התמונות והנתונים שלכם נשארו כמו שהיו.')}</p>
-      <div class="lbl-sub" style="padding:0">${t('מה חדש')}</div>${notesHtml(r.notes)}
-    </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('סגור')}</button></div>`);
+    modal(`<h3>${t('Updated to version {0}', [ltr(String(r.updated.to))])}</h3><div class="mb upd">
+      <p>${t('The update has finished. Your photos and data are unchanged.')}</p>
+      <div class="lbl-sub" style="padding:0">${t('What\'s new')}</div>${notesHtml(r.notes)}
+    </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('Close')}</button></div>`);
     wire(); return true;
   }
   if(manual){
-    modal(`<h3>${t('מה חדש בגרסה {0}', [ltr(String(r.current))])}</h3><div class="mb upd">${notesHtml(r.notes)}</div>
-      <div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('סגור')}</button></div>`);
+    modal(`<h3>${t('What\'s new in version {0}', [ltr(String(r.current))])}</h3><div class="mb upd">${notesHtml(r.notes)}</div>
+      <div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('Close')}</button></div>`);
     wire(); return true;
   }
   return false;
@@ -2016,21 +2016,21 @@ async function whatsNew(manual){
 
 function updateDialog(info){
   const auto = info.can_install && info.frozen;
-  modal(`<h3>${t('עדכון זמין')}</h3><div class="mb upd">
-    <p>${t('גרסה {0} זמינה. הגרסה המותקנת: {1}.', [ltr(info.latest), ltr(info.current)])}</p>
-    <div class="lbl-sub" style="padding:0">${t('מה חדש')}</div>
-    <div class="upd-notes">${info.notes.trim() ? mdLite(info.notes) : `<span class="hint" style="padding:0">${t('אין פירוט לגרסה הזו.')}</span>`}</div>
-    ${auto ? `<p class="hint" style="padding:0">${t('העדכון מותקן על הגרסה הקיימת. התמונות והנתונים שלכם לא נוגעים בו, ואם הוא יופסק באמצע (למשל המחשב ייכבה) הגרסה הקודמת תוחזר אוטומטית.')}</p>` : ''}
+  modal(`<h3>${t('Update available')}</h3><div class="mb upd">
+    <p>${t('Version {0} is available. Installed version: {1}.', [ltr(info.latest), ltr(info.current)])}</p>
+    <div class="lbl-sub" style="padding:0">${t('What\'s new')}</div>
+    <div class="upd-notes">${info.notes.trim() ? mdLite(info.notes) : `<span class="hint" style="padding:0">${t('No details for this version.')}</span>`}</div>
+    ${auto ? `<p class="hint" style="padding:0">${t('The update is installed over the existing version. Your photos and data are not touched, and if it is interrupted midway (for example, the computer shuts down) the previous version is restored automatically.')}</p>` : ''}
     <div id="up-prog" class="hidden"><div class="progress"><i id="up-bar"></i></div></div>
     <div class="hint" id="up-msg" style="padding:0;min-height:16px"></div>
-  </div><div class="mf"><button id="up-skip">${t('דלג על גרסה זו')}</button><span class="spacer"></span>
-    <button id="up-later">${t('אחר כך')}</button><button id="up-go" class="primary">${auto ? t('עדכן עכשיו') : t('פתח את דף השחרור')}</button></div>`);
+  </div><div class="mf"><button id="up-skip">${t('Skip this version')}</button><span class="spacer"></span>
+    <button id="up-later">${t('Later')}</button><button id="up-go" class="primary">${auto ? t('Update now') : t('Open the release page')}</button></div>`);
   const msg = (text, cls='') => { $('#up-msg').textContent = text; $('#up-msg').className = 'hint ' + cls; $('#up-msg').style.padding = '0'; };
   const busy = on => ['up-skip', 'up-later', 'up-go'].forEach(id=>$('#' + id).disabled = on);
   $('#up-later').onclick = closeModal;
-  $('#up-skip').onclick = async ()=>{ await send('POST', '/api/update/skip', {version:info.latest}); closeModal(); toast(t('הגרסה תידלג. אפשר תמיד לבדוק ידנית בתפריט עזרה.')); };
+  $('#up-skip').onclick = async ()=>{ await send('POST', '/api/update/skip', {version:info.latest}); closeModal(); toast(t('This version will be skipped. You can always check manually in the Help menu.')); };
   $('#up-go').onclick = async ()=>{
-    if(!auto){ await send('POST', '/api/update/open-page'); if(info.can_install) msg(t('בהרצה מקוד המקור אי אפשר להתקין עדכון אוטומטית. נפתח דף השחרור.')); return; }
+    if(!auto){ await send('POST', '/api/update/open-page'); if(info.can_install) msg(t('An update can\'t be installed automatically when running from source code. The release page was opened.')); return; }
     busy(true); $('#up-prog').classList.remove('hidden');
     try{
       await send('POST', '/api/update/download');
@@ -2041,63 +2041,63 @@ function updateDialog(info){
       while(!['done', 'error'].includes(p.state));
       if(p.state === 'error') throw new Error(p.error_key ? t(p.error_key, p.vars) : p.error);
       const r = await send('POST', '/api/update/install', {path:p.result.path});
-      if(r.mode === 'dry-run') msg(t('(בדיקה) הקובץ הורד ואומת ולא הופעל'), 'ok');
-      else if(r.mode === 'page'){ await send('POST', '/api/update/open-page'); msg(t('בהרצה מקוד המקור אי אפשר להתקין עדכון אוטומטית. נפתח דף השחרור.')); busy(false); }
-      else msg(t('מתקין ומפעיל מחדש…'), 'ok');
+      if(r.mode === 'dry-run') msg(t('(Test) The file was downloaded and verified but not launched'), 'ok');
+      else if(r.mode === 'page'){ await send('POST', '/api/update/open-page'); msg(t('An update can\'t be installed automatically when running from source code. The release page was opened.')); busy(false); }
+      else msg(t('Installing and restarting…'), 'ok');
     }catch(e){ msg(e.message, 'err'); busy(false); $('#up-prog').classList.add('hidden'); }
   };
 }
 
 function languageDialog(){
-  modal(`<h3>${t('שפה')}${I18N.lang==='en'?'':' / Language'}</h3><div class="mb"><div class="lang-grid">
+  modal(`<h3>${t('Language')}${I18N.lang==='en'?'':' / Language'}</h3><div class="mb"><div class="lang-grid">
     ${LANGS.map(([c,n,d])=>`<button class="${c===I18N.lang?'primary':''}" data-lang="${c}" dir="${d}">${n}</button>`).join('')}</div>
-    <p>${t('מילות המפתח האוטומטיות נשארות באנגלית בכל השפות.')}</p></div>
-    <div class="mf"><button onclick="closeModal()">${t('סגור')}</button></div>`);
+    <p>${t('Automatic keywords stay in English in all languages.')}</p></div>
+    <div class="mf"><button onclick="closeModal()">${t('Close')}</button></div>`);
   $$('#modal-box [data-lang]').forEach(b=>b.onclick=()=>{ if(b.dataset.lang!==I18N.lang) setLanguage(b.dataset.lang); else closeModal(); });
 }
 async function memories(){
   const m=await api('/api/memories'), tg=m.titles||[], c=m.comments||[];
-  modal(`<h3>${t("זיכרונות ותגובות מ‑Google Photos")}</h3><div class="mb">
-    ${!tg.length&&!c.length?("<p>"+t("לא יובאו זיכרונות או תגובות.")+"</p>"):''}
-    ${tg.length?`<p>${t("כותרות זיכרונות")}</p><div class="mem-list">${tg.map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:''}
-    ${c.length?`<p>${t("תגובות באלבומים משותפים")}</p><div class="mem-list">${c.map(x=>`<div><time>${fdate(x.created_at)}</time>${x.liked?'♥ ':''}${esc(x.text)||t('(לייק)')}</div>`).join('')}</div>`:''}
-  </div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`);
+  modal(`<h3>${t("Memories and comments from Google Photos")}</h3><div class="mb">
+    ${!tg.length&&!c.length?("<p>"+t("No memories or comments will be imported.")+"</p>"):''}
+    ${tg.length?`<p>${t("Memory Titles")}</p><div class="mem-list">${tg.map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:''}
+    ${c.length?`<p>${t("Comments in shared albums")}</p><div class="mem-list">${c.map(x=>`<div><time>${fdate(x.created_at)}</time>${x.liked?'♥ ':''}${esc(x.text)||t('(like)')}</div>`).join('')}</div>`:''}
+  </div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`);
 }
 function shortcuts(){
   const k=(key,tg)=>`<kbd>${key}</kbd><span>${tg}</span>`;
-  modal(`<h3>${t("קיצורי מקשים")}</h3><div class="mb"><div class="kgrid">
-    <h4>${t("תצוגות")}</h4>${k('G',t('רשת'))}${k('E',t('זכוכית מגדלת'))}${k('C',t('השוואה'))}${k('N',t('סקירה'))}${k('O',t('אנשים'))}${k('D',t('מודול פיתוח'))}${k('Ctrl+Enter',t('מצגת'))}${k('Esc',t('חזרה / יציאה'))}
-    <h4>${t("דירוג וסימון")}</h4>${k('P',t('דגל נבחרת'))}${k('X',t('דגל נדחית'))}${k('U',t('הסר דגל'))}${k('`',t('החלף דגל'))}${k('0–5',t('דירוג כוכבים'))}${k('[ / ]',t('הורד / העלה דירוג'))}${k('6–9',t('תווית אדום/צהוב/ירוק/כחול'))}${k(t('Shift+מקש'),t('סמן ועבור לבאה'))}${k('B',t('אוסף מהיר'))}${k('Ctrl+B',t('הצג אוסף מהיר'))}
-    <h4>${t("בחירה")}</h4>${k('Ctrl+A',t('בחר הכול'))}${k('Ctrl+D',t('בטל בחירה'))}${k(t('Ctrl+לחיצה'),t('הוסף לבחירה'))}${k(t('Shift+לחיצה'),t('בחר טווח'))}${k('← → ↑ ↓',t('מעבר בין תמונות'))}${k('Delete',t('העבר לאשפה'))}
-    <h4>${t("ממשק")}</h4>${k('Tab',t('הסתר לוחות צד'))}${k('Shift+Tab',t('הסתר את כל הלוחות'))}${k('F5 / F6',t('לוח עליון / רצועת תמונות'))}${k('F7 / F8',t('לוח ימני / שמאלי'))}${k('T',t('סרגל כלים'))}${k('L',t('כבה אורות'))}${k('J',t('סגנון תאים'))}${k('I',t('מידע בזכוכית מגדלת'))}${k('\\\\',t('סרגל סינון / לפני-אחרי'))}${k('Ctrl+L',t('הפעל/השבת מסננים'))}${k('Ctrl+F',t('חיפוש טקסט'))}${k(t('Z / רווח'),t('זום 1:1'))}
-    <h4>${t("קבצים")}</h4>${k('Ctrl+Shift+I',t('ייבוא'))}${k('Ctrl+Shift+E',t('ייצוא'))}${k('Ctrl+N',t('אוסף חדש'))}${k('Ctrl+[ / ]',t('סיבוב'))}${k('Ctrl+R',t('הצג בסייר'))}${k('Ctrl+S',t('שמור מטא-נתונים לקובץ'))}${k('Ctrl+K',t('הוסף מילות מפתח'))}${k('R',t('חיתוך (פיתוח)'))}
-    <h4>${t("וידאו")}</h4>${k('Space / K',t('הפעל / השהה'))}${k('Shift+← / →',t('דילוג 10 שניות'))}${k(', / .',t('פריים אחורה / קדימה'))}${k('Shift+, / .',t('מהירות ניגון'))}${k('↑ / ↓',t('עוצמת קול'))}${k('M',t('השתק'))}${k('F',t('מסך מלא'))}
-  </div></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`);
+  modal(`<h3>${t("Keyboard Shortcuts")}</h3><div class="mb"><div class="kgrid">
+    <h4>${t("Views")}</h4>${k('G',t('Grid'))}${k('E',t('Loupe'))}${k('C',t('Compare'))}${k('N',t('Survey'))}${k('O',t('People'))}${k('D',t('Develop Module'))}${k('Ctrl+Enter',t('Slideshow'))}${k('Esc',t('Back / Exit'))}
+    <h4>${t("Rating and Flagging")}</h4>${k('P',t('Flag as Pick'))}${k('X',t('Flag as Rejected'))}${k('U',t('Remove Flag'))}${k('`',t('Toggle Flag'))}${k('0–5',t('Star Rating'))}${k('[ / ]',t('Decrease / Increase Rating'))}${k('6–9',t('Label Red/Yellow/Green/Blue'))}${k(t('Shift+key'),t('Mark and Go to Next'))}${k('B',t('Quick Collection'))}${k('Ctrl+B',t('Show Quick Collection'))}
+    <h4>${t("Selection")}</h4>${k('Ctrl+A',t('Select All'))}${k('Ctrl+D',t('Deselect'))}${k(t('Ctrl+click'),t('Add to Selection'))}${k(t('Shift+click'),t('Select Range'))}${k('← → ↑ ↓',t('Move Between Photos'))}${k('Delete',t('Move to Trash'))}
+    <h4>${t("Interface")}</h4>${k('Tab',t('Hide Side Panels'))}${k('Shift+Tab',t('Hide All Panels'))}${k('F5 / F6',t('Top Panel / Filmstrip'))}${k('F7 / F8',t('Right / Left Panel'))}${k('T',t('Toolbar'))}${k('L',t('Lights Out'))}${k('J',t('Grid Cell Style'))}${k('I',t('Loupe Info'))}${k('\\\\',t('Filter Bar / Before-After'))}${k('Ctrl+L',t('Enable/Disable Filters'))}${k('Ctrl+F',t('Text Search'))}${k(t('Z / Space'),t('Zoom 1:1'))}
+    <h4>${t("Files")}</h4>${k('Ctrl+Shift+I',t('Import'))}${k('Ctrl+Shift+E',t('Export'))}${k('Ctrl+N',t('New Collection'))}${k('Ctrl+[ / ]',t('Rotation'))}${k('Ctrl+R',t('Show in Explorer'))}${k('Ctrl+S',t('Save Metadata to File'))}${k('Ctrl+K',t('Add Keywords'))}${k('R',t('Crop (Develop)'))}
+    <h4>${t("Video")}</h4>${k('Space / K',t('Play / Pause'))}${k('Shift+← / →',t('Skip 10 seconds'))}${k(', / .',t('Frame back / forward'))}${k('Shift+, / .',t('Playback speed'))}${k('↑ / ↓',t('Volume'))}${k('M',t('Mute'))}${k('F',t('Fullscreen'))}
+  </div></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`);
 }
 
 // ---------- export ----------
 function openExport(){
   const ids=targets().length ? targets() : [];
-  if(!ids.length) return toast(t('בחרו תמונות לייצוא'));
+  if(!ids.length) return toast(t('Select photos to export'));
   const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90});
-  modal(`<h3>${t("ייצוא {0} קבצים", [num(ids.length)])}</h3><div class="mb">
-    <label class="fld"><span>${t("ייצא אל")}</span><div class="frow"><input type="text" id="ex-dest" dir="ltr" value="${esc(last.dest)}" placeholder="C:\\Users\\...\\Pictures\\Export"><button id="ex-pick">${t("בחר...")}</button></div></label>
-    <div class="fld"><span>${t("הגדרות קובץ")}</span>
-      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="current" ${last.mode==='current'?'checked':''}> ${t(" הקובץ כפי שהוא בקטלוג (כולל עריכות)")}</label>
-      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="original" ${last.mode==='original'?'checked':''}> ${t(" המקור, בלי עריכות")}</label>
-      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="jpeg" ${last.mode==='jpeg'?'checked':''}> ${t(" JPEG בגודל מותאם")}</label></div>
-    <div class="frow" id="ex-jpeg"><span>${t("צלע ארוכה")}</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>${t("פיקסלים · איכות")}</span>
+  modal(`<h3>${t("Export {0} Files", [num(ids.length)])}</h3><div class="mb">
+    <label class="fld"><span>${t("Export To")}</span><div class="frow"><input type="text" id="ex-dest" dir="ltr" value="${esc(last.dest)}" placeholder="C:\\Users\\...\\Pictures\\Export"><button id="ex-pick">${t("Choose...")}</button></div></label>
+    <div class="fld"><span>${t("File Settings")}</span>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="current" ${last.mode==='current'?'checked':''}> ${t(" The file as it is in the catalog (including edits)")}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="original" ${last.mode==='original'?'checked':''}> ${t(" The original, without edits")}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="jpeg" ${last.mode==='jpeg'?'checked':''}> ${t(" JPEG, resized")}</label></div>
+    <div class="frow" id="ex-jpeg"><span>${t("Long Edge")}</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>${t("Pixels · Quality")}</span>
       <input type="range" id="ex-q" min="40" max="100" value="${last.q}" style="width:120px"><output id="ex-qv">${last.q}</output></div>
-    <p>${t("סרטונים תמיד מועתקים כמו שהם. שמות קבצים כפולים מקבלים מספר.")}</p>
-  </div><div class="mf"><button onclick="closeModal()">${t("ביטול")}</button><button class="primary" id="ex-go">${t("ייצוא")}</button></div>`);
+    <p>${t("Videos are always copied as they are. Duplicate file names get a number.")}</p>
+  </div><div class="mf"><button onclick="closeModal()">${t("Cancel")}</button><button class="primary" id="ex-go">${t("Export")}</button></div>`);
   $('#ex-q').oninput=e=>$('#ex-qv').textContent=e.target.value;
-  $('#ex-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('בחר תיקיית ייצוא'))); if(r.path) $('#ex-dest').value=r.path; };
+  $('#ex-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose export folder'))); if(r.path) $('#ex-dest').value=r.path; };
   $('#ex-go').onclick=async()=>{
     const dest=$('#ex-dest').value.trim(), mode=$('input[name=ex-mode]:checked').value, edge=+$('#ex-edge').value||null, q=+$('#ex-q').value;
-    if(!dest) return toast(t('בחרו תיקיית יעד'));
+    if(!dest) return toast(t('Choose a destination folder'));
     pref.set('export', {dest, mode, edge:edge||2048, q});
     closeModal();
-    runJob('/api/export','export',t('ייצוא'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100});
+    runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100});
   };
 }
 
@@ -2120,53 +2120,53 @@ function renderImport(){
   const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : IM.zip;
   el.innerHTML = `
   <div class="im-top">
-    <div class="blk"><span>${t("מקור")}</span><b>${esc(folder ? (IM.path||t('בחרו תיקייה')) : lr ? (IM.lrcat||t('בחרו קטלוג Lightroom')) : (IM.zip||t('בחרו קובץ ZIP')))}</b></div>
+    <div class="blk"><span>${t("Source")}</span><b>${esc(folder ? (IM.path||t('Choose a folder')) : lr ? (IM.lrcat||t('Choose a Lightroom catalog')) : (IM.zip||t('Choose a ZIP file')))}</b></div>
     <span class="im-arrow">←</span>
-    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("העתק")}<small>${t("מתיקייה / כרטיס זיכרון")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("קטלוג ‎.lrcat")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("קובץ ZIP מגוגל פוטוס")}</small></a></nav>
+    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("Copy")}<small>${t("From Folder / Memory Card")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("Catalog .lrcat")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("ZIP file from Google Photos")}</small></a></nav>
     <span class="im-arrow">←</span>
-    <div class="blk"><span>${t("יעד")}</span><b>${esc(S.status?.media_path||'')}</b></div>
+    <div class="blk"><span>${t("Destination")}</span><b>${esc(S.status?.media_path||'')}</b></div>
   </div>
   <div class="im-body">
     <aside class="im-side">
-      <section class="pnl"><h3><span>${t("מקור")}</span></h3><div class="pbody">
-        ${folder ? `<div class="btnrow"><button id="im-pick">${I('folder')} ${t(" בחר תיקייה...")}</button></div>
-          <label class="check"><input type="checkbox" id="im-rec" ${IM.recursive?'checked':''}> ${t(" כולל תיקיות משנה")}</label>
-          ${recent.length?`<div class="lbl-sub" style="padding-top:8px">${t("אחרונים")}</div>${recent.map(p=>`<div class="row" data-recent="${esc(p)}">${I('folder')}<span class="nm" dir="ltr" title="${esc(p)}">${esc(p)}</span></div>`).join('')}`:''}`
-        : lr ? `<div class="btnrow"><button id="im-lrcat">${I('import')} ${t(" בחר קטלוג Lightroom...")}</button></div>
-          <div class="hint">${t("קובץ ‎")}<code>.lrcat</code>${t("‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.")}</div>`
-        : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" בחר קובץ ZIP...")}</button></div>
-          <div class="hint">${t("הורידו את הספרייה מ‑takeout.google.com (Google Photos). הקובץ נקרא ישירות, בלי לפרוס אותו.")}</div>`}
+      <section class="pnl"><h3><span>${t("Source")}</span></h3><div class="pbody">
+        ${folder ? `<div class="btnrow"><button id="im-pick">${I('folder')} ${t(" Choose folder...")}</button></div>
+          <label class="check"><input type="checkbox" id="im-rec" ${IM.recursive?'checked':''}> ${t(" Include subfolders")}</label>
+          ${recent.length?`<div class="lbl-sub" style="padding-top:8px">${t("Recent")}</div>${recent.map(p=>`<div class="row" data-recent="${esc(p)}">${I('folder')}<span class="nm" dir="ltr" title="${esc(p)}">${esc(p)}</span></div>`).join('')}`:''}`
+        : lr ? `<div class="btnrow"><button id="im-lrcat">${I('import')} ${t(" Choose Lightroom catalog...")}</button></div>
+          <div class="hint">${t("File ")}<code>.lrcat</code>${t(" from Lightroom Classic (usually in Pictures/Lightroom). Closing Lightroom before importing is recommended.")}</div>`
+        : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" Choose ZIP file...")}</button></div>
+          <div class="hint">${t("Download your library from takeout.google.com (Google Photos). The file is read directly, without extracting it.")}</div>`}
       </div></section>
     </aside>
     <div class="im-center">
-      ${folder ? `<div class="im-bar"><a data-show="all" class="${IM.show==='all'?'on':''}">${t("כל התמונות")}</a><a data-show="new" class="${IM.show==='new'?'on':''}">${t("תמונות חדשות")}</a>
-        <span class="spacer"></span><a data-chk="all">${t("סמן הכול")}</a><a data-chk="none">${t("בטל סימון")}</a></div>
-        <div class="im-grid" id="im-grid">${IM.loading?("<div class=\"im-empty\">"+t("סורק…")+"</div>"):!IM.files.length?`<div class="im-empty">${IM.path?t('לא נמצאו תמונות או סרטונים בתיקייה.'):t('בחרו תיקייה או כרטיס זיכרון מהלוח „מקור".')}</div>`
+      ${folder ? `<div class="im-bar"><a data-show="all" class="${IM.show==='all'?'on':''}">${t("All Photographs")}</a><a data-show="new" class="${IM.show==='new'?'on':''}">${t("New Photos")}</a>
+        <span class="spacer"></span><a data-chk="all">${t("Check All")}</a><a data-chk="none">${t("Uncheck")}</a></div>
+        <div class="im-grid" id="im-grid">${IM.loading?("<div class=\"im-empty\">"+t("Scanning…")+"</div>"):!IM.files.length?`<div class="im-empty">${IM.path?t('No photos or videos were found in the folder.'):t('Choose a folder or memory card from the “Source” panel.')}</div>`
           : shown.slice(0,3000).map(f=>`<div class="im-cell ${IM.on.has(f.path)?'':'off'}" data-path="${esc(f.path)}" title="${esc(f.path)}">
-            <input type="checkbox" ${IM.on.has(f.path)?'checked':''}>${f.dup?("<span class=\"dup\" title=\""+t("כבר בקטלוג (אותו שם וגודל)")+"\">"+t("כפילות")+"</span>"):''}
+            <input type="checkbox" ${IM.on.has(f.path)?'checked':''}>${f.dup?("<span class=\"dup\" title=\""+t("Already in catalog (same name and size)")+"\">"+t("Duplicate")+"</span>"):''}
             ${f.is_video?`<span class="vid">${I('play')}</span>`:`<img loading="lazy" src="/api/local-thumb?path=${encodeURIComponent(f.path)}" alt="">`}
-            <span class="nm">${esc(f.name)}</span></div>`).join('') + (shown.length>3000?`<div class="im-empty">${t("מוצגות 3,000 הראשונות מתוך {0} — כולן ייובאו אם מסומנות.", [num(shown.length)])}</div>`:'')}</div>`
-      : lr ? `<div class="im-grid"><div class="im-empty">${IM.lrloading?t('קורא את הקטלוג…'):!li?t('בחרו קטלוג Lightroom Classic מהלוח „מקור".')
-          : `<b dir="ltr">${esc(IM.lrcat)}</b><br>${t("{0} תמונות · {1} מילות מפתח · {2} אוספים · {3}", [num(li.images), num(li.keywords), num(li.collections), fsize(li.bytes)])}
-             ${li.missing?`<br><span style="color:var(--yellow)">${t("{0} קבצים שהקטלוג מפנה אליהם לא נמצאו בדיסק ולא ייובאו.", [num(li.missing)])}</span>`:''}`}</div></div>`
-      : `<div class="im-grid"><div class="im-empty">${IM.zip?`<b dir="ltr">${esc(IM.zip)}</b><br>${t("ייבוא ישמור אלבומים, תאריכים, מיקומים, מועדפים, תגי אנשים וזיכרונות. תמונות שכבר בקטלוג לא ישוכפלו.")}`:t('בחרו את קובץ ה‑ZIP מ‑Google Takeout.')}</div></div>`}
+            <span class="nm">${esc(f.name)}</span></div>`).join('') + (shown.length>3000?`<div class="im-empty">${t("Showing the first 3,000 of {0} — all will be imported if checked.", [num(shown.length)])}</div>`:'')}</div>`
+      : lr ? `<div class="im-grid"><div class="im-empty">${IM.lrloading?t('Reading the catalog…'):!li?t('Choose a Lightroom Classic catalog from the “Source” panel.')
+          : `<b dir="ltr">${esc(IM.lrcat)}</b><br>${t("{0} photos · {1} keywords · {2} collections · {3}", [num(li.images), num(li.keywords), num(li.collections), fsize(li.bytes)])}
+             ${li.missing?`<br><span style="color:var(--yellow)">${t("{0} files referenced by the catalog were not found on disk and will not be imported.", [num(li.missing)])}</span>`:''}`}</div></div>`
+      : `<div class="im-grid"><div class="im-empty">${IM.zip?`<b dir="ltr">${esc(IM.zip)}</b><br>${t("Import will keep albums, dates, locations, favorites, people tags and memories. Photos already in the catalog will not be duplicated.")}`:t('Choose the ZIP file from Google Takeout.')}</div></div>`}
     </div>
     <aside class="im-side">
-      ${folder?`<section class="pnl"><h3><span>${t("טיפול בקבצים")}</span></h3><div class="pbody">
-        <label class="check"><input type="checkbox" id="im-skipdup" ${IM.skipDup?'checked':''}> ${t(" אל תייבא כפילויות חשודות")}</label>
-        <div class="hint">${t("קבצים זהים לגמרי (לפי תוכן) אף פעם לא נשמרים פעמיים.")}</div></div></section>
-      <section class="pnl"><h3><span>${t("החל במהלך הייבוא")}</span></h3><div class="pbody">
-        <label class="fld" style="padding:4px 12px"><span>${t("מילות מפתח")}</span><input type="text" id="im-kw" placeholder="${t("חופשה, משפחה")}"></label>
-        <label class="fld" style="padding:4px 12px"><span>${t("הוסף לאוסף")}</span><input type="text" id="im-album" list="im-albums" placeholder="${t("ללא")}"></label>
+      ${folder?`<section class="pnl"><h3><span>${t("File Handling")}</span></h3><div class="pbody">
+        <label class="check"><input type="checkbox" id="im-skipdup" ${IM.skipDup?'checked':''}> ${t(" Don't import suspected duplicates")}</label>
+        <div class="hint">${t("Files that are completely identical (by content) are never saved twice.")}</div></div></section>
+      <section class="pnl"><h3><span>${t("Apply During Import")}</span></h3><div class="pbody">
+        <label class="fld" style="padding:4px 12px"><span>${t("Keywords")}</span><input type="text" id="im-kw" placeholder="${t("Vacation, family")}"></label>
+        <label class="fld" style="padding:4px 12px"><span>${t("Add to Collection")}</span><input type="text" id="im-album" list="im-albums" placeholder="${t("None")}"></label>
         <datalist id="im-albums">${S.albums.filter(a=>a.kind==='album').map(a=>`<option value="${esc(a.name)}">`).join('')}</datalist></div></section>`:''}
-      ${lr?`<section class="pnl"><h3><span>${t("מה מיובא")}</span></h3><div class="pbody"><div class="hint">
-        ${t(" דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם\" הופכות לאנשים), אוספים והאוסף המהיר. הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי. עותקים וירטואליים ואוספים חכמים מדולגים.")}</div></div></section>`:''}
-      <section class="pnl"><h3><span>${t("יעד")}</span></h3><div class="pbody">
-        <div class="hint"><code>${esc(S.status?.media_path||'')}</code><br>${t("מסודר בתיקיות לפי שנת צילום (למשל")} <code>2024</code>${t("). ניתן לשנות מקובץ ← הגדרות קטלוג.")}</div></div></section>
+      ${lr?`<section class="pnl"><h3><span>${t("What Is Imported")}</span></h3><div class="pbody"><div class="hint">
+        ${t(" Ratings, flags, color labels, captions, capture dates, locations, keywords (“person” keywords become People), collections and the Quick Collection. Files are copied into the library — the original is not changed. Develop edits are saved in Lightroom's format and are not transferred; the original file is imported. Virtual copies and smart collections are skipped.")}</div></div></section>`:''}
+      <section class="pnl"><h3><span>${t("Destination")}</span></h3><div class="pbody">
+        <div class="hint"><code>${esc(S.status?.media_path||'')}</code><br>${t("Organized in folders by capture year (for example")} <code>2024</code>${t("). You can change this under File → Catalog Settings.")}</div></div></section>
     </aside>
   </div>
-  <div class="im-foot">${folder?`${t("{0} תמונות / {1}", [num(chosen.length), fsize(bytes)])}`:lr&&li?`${t("{0} תמונות / {1}", [num(li.images-li.missing), fsize(li.bytes)])}`:''}<span class="spacer"></span>
-    <button id="im-cancel">${t("ביטול")}</button><button class="primary" id="im-go" ${ready?'':'disabled'}>${t("ייבוא")}</button></div>`;
+  <div class="im-foot">${folder?`${t("{0} photos / {1}", [num(chosen.length), fsize(bytes)])}`:lr&&li?`${t("{0} photos / {1}", [num(li.images-li.missing), fsize(li.bytes)])}`:''}<span class="spacer"></span>
+    <button id="im-cancel">${t("Cancel")}</button><button class="primary" id="im-go" ${ready?'':'disabled'}>${t("Import")}</button></div>`;
 }
 async function scanImport(){
   if(!IM.path) return;
@@ -2181,9 +2181,9 @@ $('#import').addEventListener('click', async e=>{
   const tg=e.target;
   const mode=tg.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport(); return; }
   if(tg.closest('#im-cancel')) return closeImport();
-  if(tg.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('בחר תיקייה לייבוא'))); if(r.path){ IM.path=r.path; scanImport(); } return; }
-  if(tg.closest('#im-zip')){ const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('בחר קובץ ZIP של Google Takeout'))); if(r.path){ IM.zip=r.path; renderImport(); } return; }
-  if(tg.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat&title='+encodeURIComponent(t('בחר קטלוג Lightroom'))); if(!r.path) return;
+  if(tg.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose folder to import'))); if(r.path){ IM.path=r.path; scanImport(); } return; }
+  if(tg.closest('#im-zip')){ const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('Choose Google Takeout ZIP file'))); if(r.path){ IM.zip=r.path; renderImport(); } return; }
+  if(tg.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat&title='+encodeURIComponent(t('Choose Lightroom catalog'))); if(!r.path) return;
     IM.lrcat=r.path; IM.lrinfo=null; IM.lrloading=true; renderImport();
     try{ IM.lrinfo=await api('/api/lrcat-info?'+new URLSearchParams({path:r.path})); } finally { IM.lrloading=false; renderImport(); } return; }
   const rec=tg.closest('[data-recent]'); if(rec){ IM.path=rec.dataset.recent; scanImport(); return; }
@@ -2191,14 +2191,14 @@ $('#import').addEventListener('click', async e=>{
   const ck=tg.closest('[data-chk]'); if(ck){ IM.on = ck.dataset.chk==='all' ? new Set(IM.files.filter(f=>IM.show==='all'||!f.dup).map(f=>f.path)) : new Set(); renderImport(); return; }
   const cell=tg.closest('.im-cell'); if(cell){ const p=cell.dataset.path; IM.on.has(p)?IM.on.delete(p):IM.on.add(p);
     cell.classList.toggle('off', !IM.on.has(p)); cell.querySelector('input').checked=IM.on.has(p);
-    const chosen=IM.files.filter(f=>IM.on.has(f.path)); $('#import .im-foot').firstChild.textContent=`${t("{0} תמונות / {1}", [num(chosen.length), fsize(chosen.reduce((a,f)=>a+f.bytes,0))])}`;
+    const chosen=IM.files.filter(f=>IM.on.has(f.path)); $('#import .im-foot').firstChild.textContent=`${t("{0} photos / {1}", [num(chosen.length), fsize(chosen.reduce((a,f)=>a+f.bytes,0))])}`;
     $('#im-go').disabled=!chosen.length; return; }
   if(tg.closest('#im-go')){
-    if(IM.mode==='zip'){ await send('POST','/api/import',{zip_path:IM.zip}); closeImport(); pollJob('import',t('ייבוא מ‑Google')); return; }
-    if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import',t('ייבוא מ‑Lightroom')); return; }
+    if(IM.mode==='zip'){ await send('POST','/api/import',{zip_path:IM.zip}); closeImport(); pollJob('import',t('Import from Google')); return; }
+    if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import',t('Import from Lightroom')); return; }
     const paths=IM.files.filter(f=>IM.on.has(f.path)).map(f=>f.path);
     await send('POST','/api/import-folder',{paths, keywords:($('#im-kw').value||'').split(','), album:$('#im-album').value||null});
-    closeImport(); IM.files=[]; pollJob('import',t('ייבוא'));
+    closeImport(); IM.files=[]; pollJob('import',t('Import'));
   }
 });
 $('#import').addEventListener('change', e=>{
@@ -2222,7 +2222,7 @@ async function pollJob(name, label){
   if(['done','error','idle'].includes(p.state)){
     act.classList.add('hidden');
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
-    toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('הושלם'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
+    toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(['import','faces','aitag','compress','backup'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
@@ -2245,83 +2245,83 @@ async function pollJob(name, label){
 // ---------- menu bar ----------
 const sep='-';
 const MENUS = [
-  [t('קובץ'), [
-    [t('ייבוא...'), 'Ctrl+Shift+I', ()=>openImport('folder')],        // one screen: choose the source there (folder / card, Lightroom, Google Takeout)
-    [t('ייצוא...'), 'Ctrl+Shift+E', openExport],
+  [t('File'), [
+    [t('Import...'), 'Ctrl+Shift+I', ()=>openImport('folder')],        // one screen: choose the source there (folder / card, Lightroom, Google Takeout)
+    [t('Export...'), 'Ctrl+Shift+E', openExport],
     sep,
-    [t('גיבוי ושחזור...'), '', backupDialog],
-    [t('הגדרות קטלוג...'), 'Ctrl+Alt+,', catalogSettings],
-    [t('העדפות...'), 'Ctrl+,', preferences],
+    [t('Backup and restore...'), '', backupDialog],
+    [t('Catalog Settings...'), 'Ctrl+Alt+,', catalogSettings],
+    [t('Preferences...'), 'Ctrl+,', preferences],
   ]],
-  [t('עריכה'), [
-    [t('בחר הכול'), 'Ctrl+A', selectAll],
-    [t('בטל בחירה'), 'Ctrl+D', selectNone],
-    [t('הפוך בחירה'), '', selectInvert],
-    [t('בחר את המסומנות בדגל'), 'Ctrl+Alt+A', selectPicks],
+  [t('Edit'), [
+    [t('Select All'), 'Ctrl+A', selectAll],
+    [t('Deselect'), 'Ctrl+D', selectNone],
+    [t('Invert Selection'), '', selectInvert],
+    [t('Select Flagged Photos'), 'Ctrl+Alt+A', selectPicks],
   ]],
-  [t('ספרייה'), [
-    [t('אוסף חדש...'), 'Ctrl+N', newCollection],
+  [t('Library'), [
+    [t('New Collection...'), 'Ctrl+N', newCollection],
     sep,
-    [t('הצג אוסף מהיר'), 'Ctrl+B', ()=>setSource(srcFromKey('quick'))],
-    [t('נקה אוסף מהיר'), '', async()=>{ const ids=S.all.filter(p=>p.quick).map(p=>p.id); if(ids.length) await setAttr({quick:0}, ids); }],
+    [t('Show Quick Collection'), 'Ctrl+B', ()=>setSource(srcFromKey('quick'))],
+    [t('Clear Quick Collection'), '', async()=>{ const ids=S.all.filter(p=>p.quick).map(p=>p.id); if(ids.length) await setAttr({quick:0}, ids); }],
     sep,
-    [t('הפעל מסננים'), 'Ctrl+L', ()=>{ S.F.on=!S.F.on; applyFilter(); }, null, ()=>S.F.on],
-    [t('הצג סרגל סינון'), '\\', ()=>{ $('#filterbar').classList.toggle('hidden'); }, null, ()=>!$('#filterbar').classList.contains('hidden')],
+    [t('Enable Filters'), 'Ctrl+L', ()=>{ S.F.on=!S.F.on; applyFilter(); }, null, ()=>S.F.on],
+    [t('Show Library Filter Bar'), '\\', ()=>{ $('#filterbar').classList.toggle('hidden'); }, null, ()=>!$('#filterbar').classList.contains('hidden')],
     sep,
-    [t('זיהוי פנים'), '', ()=>runJob('/api/faces','faces',t('זיהוי פנים'))],
+    [t('Face Detection'), '', ()=>runJob('/api/faces','faces',t('Face Detection'))],
     sep,
-    [t('זיכרונות ותגובות מ‑Google...'), '', memories],
+    [t('Memories and comments from Google...'), '', memories],
   ]],
-  [t('תמונה'), [
-    [t('הוסף לאוסף המהיר'), 'B', toggleQuick],
-    [t('הצג בסייר'), 'Ctrl+R', reveal],
+  [t('Photo'), [
+    [t('Add to Quick Collection'), 'B', toggleQuick],
+    [t('Show in Explorer'), 'Ctrl+R', reveal],
     sep,
-    [t('סובב שמאלה'), 'Ctrl+[', ()=>rotateSel(-90)],
-    [t('סובב ימינה'), 'Ctrl+]', ()=>rotateSel(90)],
+    [t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)],
+    [t('Rotate Right'), 'Ctrl+]', ()=>rotateSel(90)],
     sep,
-    [t('דגל: נבחרת'), 'P', ()=>setFlag(1)],
-    [t('דגל: נדחית'), 'X', ()=>setFlag(-1)],
-    [t('ללא דגל'), 'U', ()=>setFlag(0)],
+    [t('Flag: Pick'), 'P', ()=>setFlag(1)],
+    [t('Flag: Rejected'), 'X', ()=>setFlag(-1)],
+    [t('Unflagged'), 'U', ()=>setFlag(0)],
     sep,
-    ...[0,1,2,3,4,5].map(n=>[n?`${'★'.repeat(n)}`:t('ללא דירוג'), String(n), ()=>setRating(n)]),
+    ...[0,1,2,3,4,5].map(n=>[n?`${'★'.repeat(n)}`:t('No Rating'), String(n), ()=>setRating(n)]),
     sep,
-    ...LABELS.map(([k,n,key])=>[`${t("תווית: {0}", [n])}`, key, ()=>setLabel(k)]),
-    [t('ללא תווית'), '', ()=>setAttr({label:''})],
+    ...LABELS.map(([k,n,key])=>[`${t("Label: {0}", [n])}`, key, ()=>setLabel(k)]),
+    [t('No Label'), '', ()=>setAttr({label:''})],
     sep,
-    [t('דחיסת הקבצים שנבחרו...'), '', ()=>compressDialog(targets())],
-    [t('עצור דחיסה'), '', ()=>send('POST','/api/compress/cancel')],
+    [t('Compress selected files...'), '', ()=>compressDialog(targets())],
+    [t('Stop compression'), '', ()=>send('POST','/api/compress/cancel')],
     sep,
-    [t('העבר לאשפה / שחזר'), 'Delete', trashSelected],
+    [t('Move to Trash / Restore'), 'Delete', trashSelected],
   ]],
-  [t('מטא-נתונים'), [
-    [t('הוסף מילות מפתח'), 'Ctrl+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
-    [t('תיוג AI לתמונות שנבחרו...'), '', aiRun],
-    [t('הגדרות תיוג AI...'), '', aiSettings],
-    [t('עצור תיוג AI'), '', ()=>send('POST','/api/aitag/cancel')],
+  [t('Metadata'), [
+    [t('Add Keywords'), 'Ctrl+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
+    [t('AI tagging for selected photos...'), '', aiRun],
+    [t('AI tagging settings...'), '', aiSettings],
+    [t('Stop AI tagging'), '', ()=>send('POST','/api/aitag/cancel')],
     sep,
-    [t('שמור מטא-נתונים לקובץ'), 'Ctrl+S', saveMetaToFile],
-    [t('סנכרן מטא-נתונים'), '', ()=>$('#btn-sync-meta').click()],
+    [t('Save Metadata to File'), 'Ctrl+S', saveMetaToFile],
+    [t('Synchronize Metadata'), '', ()=>$('#btn-sync-meta').click()],
   ]],
-  [t('תצוגה'), [
-    [t('שפה') + (I18N.lang==='en' ? '' : ' / Language') + '...', '', languageDialog],
+  [t('View'), [
+    [t('Language') + (I18N.lang==='en' ? '' : ' / Language') + '...', '', languageDialog],
     sep,
-    [t('רשת'), 'G', ()=>setView('grid')], [t('זכוכית מגדלת'), 'E', ()=>setView('loupe')], [t('השוואה'), 'C', ()=>setView('compare')],
-    [t('סקירה'), 'N', ()=>setView('survey')], [t('אנשים'), 'O', ()=>setView('people')], [t('מפה'), '', ()=>setView('map')], [t('פיתוח'), 'D', ()=>setModule('develop')],
-    [t('מצגת'), 'Ctrl+Enter', ssStart],
+    [t('Grid'), 'G', ()=>setView('grid')], [t('Loupe'), 'E', ()=>setView('loupe')], [t('Compare'), 'C', ()=>setView('compare')],
+    [t('Survey'), 'N', ()=>setView('survey')], [t('People'), 'O', ()=>setView('people')], [t('Map'), '', ()=>setView('map')], [t('Develop'), 'D', ()=>setModule('develop')],
+    [t('Slideshow'), 'Ctrl+Enter', ssStart],
     sep,
-    [t('החלף סגנון תאים'), 'J', cycleCellStyle],
-    [t('מידע בזכוכית מגדלת'), 'I', ()=>{ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }, null, ()=>S.loupeInfo],
+    [t('Cycle Grid Cell Style'), 'J', cycleCellStyle],
+    [t('Loupe Info'), 'I', ()=>{ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }, null, ()=>S.loupeInfo],
     sep,
-    [t('הסתר/הצג לוחות צד'), 'Tab', toggleSides],
-    [t('הסתר/הצג את כל הלוחות'), 'Shift+Tab', toggleAllPanels],
-    [t('סרגל כלים'), 'T', ()=>togglePanel('tool'), null, ()=>!document.body.classList.contains('hide-tool')],
-    [t('כבה אורות'), 'L', cycleLights],
+    [t('Hide/Show Side Panels'), 'Tab', toggleSides],
+    [t('Hide/Show All Panels'), 'Shift+Tab', toggleAllPanels],
+    [t('Toolbar'), 'T', ()=>togglePanel('tool'), null, ()=>!document.body.classList.contains('hide-tool')],
+    [t('Lights Out'), 'L', cycleLights],
   ]],
-  [t('עזרה'), [
-    [t('קיצורי מקשים'), 'Ctrl+/', shortcuts],
-    [t('בדוק עדכונים...'), '', ()=>updateCheck(true)],
-    [t('מה חדש בגרסה הזו...'), '', ()=>whatsNew(true)],
-    [t('אודות photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('גרסה {0}', [ltr(S.status?.version || '')])}</p><p>${t("ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.")}</p><p class="hint" style="padding:0">${t("תוכנה חופשית ברישיון GPL‑3.0, ללא אחריות. אפשר לשנות ולהפיץ אותה בתנאי הרישיון.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`)],
+  [t('Help'), [
+    [t('Keyboard Shortcuts'), 'Ctrl+/', shortcuts],
+    [t('Check for Updates...'), '', ()=>updateCheck(true)],
+    [t('What\'s new in this version...'), '', ()=>whatsNew(true)],
+    [t('About photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('Version {0}', [ltr(S.status?.version || '')])}</p><p>${t("Local photo management and storage inspired by Lightroom Classic: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.")}</p><p class="hint" style="padding:0">${t("Free software under the GPL-3.0 license, with no warranty. You may modify and redistribute it under the license terms.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`)],
   ]],
 ];
 let MENU_OPEN=null;
@@ -2364,7 +2364,7 @@ document.addEventListener('keydown', e=>{
   if(ctrl){
     const map = {
       KeyA: ()=>e.altKey?selectPicks():selectAll(), KeyD: selectNone, KeyB: ()=>setSource(srcFromKey('quick')), KeyN: newCollection,
-      KeyL: ()=>{ S.F.on=!S.F.on; applyFilter(); toast(S.F.on?t('המסננים הופעלו'):t('המסננים הושבתו'), 1200); },
+      KeyL: ()=>{ S.F.on=!S.F.on; applyFilter(); toast(S.F.on?t('Filters enabled'):t('Filters disabled'), 1200); },
       KeyF: ()=>{ S.fb='text'; renderFilterBar(); $('#filterbar').classList.remove('hidden'); $('#ft-q').focus(); },
       KeyR: reveal, KeyS: saveMetaToFile, KeyK: ()=>MENUS[4][1][0][2](),
       BracketLeft: ()=>rotateSel(-90), BracketRight: ()=>rotateSel(90),
@@ -2446,7 +2446,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setTimeout(backupHealthNotice, 8000);   // quiet check on start-up; a window appears only when a newer release exists
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
-  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['aitag',t('תיוג AI')],['compress',t('דחיסת וידאו')],['backup',t('גיבוי')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
+  [['import',t('Import')],['faces',t('Face Detection')],['aitag',t('AI tagging')],['compress',t('Video compression')],['backup',t('Backup')],['export',t('Export')]].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}
   });
 })();
