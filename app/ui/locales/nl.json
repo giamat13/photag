@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "Kon geen back-up maken vóór het comprimeren ({error}); er is niets gewijzigd",
  "Making a backup first…": "Eerst een back-up maken…",
  "Replacing the file…": "Bestand vervangen…",
- "The previous version is in the backup made before compressing": "De vorige versie staat in de back-up die vóór het comprimeren is gemaakt"
+ "The previous version is in the backup made before compressing": "De vorige versie staat in de back-up die vóór het comprimeren is gemaakt",
+ "Check for updates automatically once a day": "Eén keer per dag automatisch op updates controleren"
 }

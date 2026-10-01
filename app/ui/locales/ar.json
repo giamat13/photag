@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "تعذّر إنشاء نسخة احتياطية قبل الضغط ({error})؛ لم يتغيّر أي شيء",
  "Making a backup first…": "جارٍ إنشاء نسخة احتياطية أولًا…",
  "Replacing the file…": "جارٍ استبدال الملف…",
- "The previous version is in the backup made before compressing": "الإصدار السابق موجود في النسخة الاحتياطية التي أُنشئت قبل الضغط"
+ "The previous version is in the backup made before compressing": "الإصدار السابق موجود في النسخة الاحتياطية التي أُنشئت قبل الضغط",
+ "Check for updates automatically once a day": "التحقق من التحديثات تلقائيًا مرة في اليوم"
 }

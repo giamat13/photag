@@ -1475,8 +1475,10 @@ async function preferences(){
   modal(`<h3>${t("Preferences · Face detection")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
+    <label class="chkrow"><input type="checkbox" id="pf-upd" ${pref.get('autoUpdate', true) ? 'checked' : ''}> ${t('Check for updates automatically once a day')}</label>
   </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button>
     <button id="pf-ai">${t("AI tagging settings")}</button><button class="primary" id="pf-faces">${t("Detect Faces")}</button></div>`);
+  $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
   $('#pf-ai').onclick=()=>{ closeModal(); aiSettings(); };
   $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('Face Detection')); };
 }
@@ -2102,15 +2104,30 @@ function mdLite(md){
   return out.join('');
 }
 
-async function updateCheck(manual){
+// Returns true when the check itself worked (even if there is nothing new), false when it could not reach GitHub.
+async function updateCheck(manual, force=manual){
   let info;
-  try{ info = await api('/api/update/check' + (manual ? '?force=1' : '')); }
-  catch(e){ if(manual) toast(e.message); return; }
-  if(info.error){ if(manual) toast(t('Unable to check for updates: {0}', [info.error])); return; }
-  if(!info.available){ if(manual) toast(t('You are using the latest version ({0})', [ltr(info.current)])); return; }
-  if(info.skipped && !manual) return;
+  try{ info = await api('/api/update/check' + (force ? '?force=1' : '')); }
+  catch(e){ if(manual) toast(e.message); return false; }
+  if(info.error){ if(manual) toast(t('Unable to check for updates: {0}', [info.error])); return false; }
+  if(!info.available){ if(manual) toast(t('You are using the latest version ({0})', [ltr(info.current)])); return true; }
+  if(info.skipped && !manual) return true;
   updateDialog(info);
+  return true;
 }
+// Automatic check: at start-up and then once a day while the app stays open. A window appears only when a newer
+// release exists (and never on top of another dialog; the next tick tries again). A failed check is retried later.
+const UPDATE_EVERY = 24 * 3600 * 1000, UPDATE_TICK = 30 * 60 * 1000;
+let UPDATE_BUSY = false;
+async function autoUpdateTick(){
+  if(UPDATE_BUSY || !pref.get('autoUpdate', true)) return;
+  if(Date.now() - pref.get('updateCheckedAt', 0) < UPDATE_EVERY) return;
+  if(!$('#modal').classList.contains('hidden')) return;
+  UPDATE_BUSY = true;
+  try{ if(await updateCheck(false, true)) pref.set('updateCheckedAt', Date.now()); }
+  finally{ UPDATE_BUSY = false; }
+}
+setInterval(autoUpdateTick, UPDATE_TICK);
 
 // After an update the app shows the release notes of the new version (fetched from GitHub); an update that
 // did not finish says so, and that nothing was lost. Returns true when it showed something.
@@ -2654,7 +2671,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
-  setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false))) updateCheck(false); }, 2500);
+  setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
   setTimeout(backupHealthNotice, 8000);   // quiet check on start-up; a window appears only when a newer release exists
   // an empty catalog shows the empty-state screen with an Import button; it never jumps to the Import screen by itself
   // resume the activity indicator if a job is already running (e.g. after a reload)

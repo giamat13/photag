@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "Nie udało się utworzyć kopii zapasowej przed kompresją ({error}); nic nie zmieniono",
  "Making a backup first…": "Najpierw tworzę kopię zapasową…",
  "Replacing the file…": "Zastępowanie pliku…",
- "The previous version is in the backup made before compressing": "Poprzednia wersja jest w kopii zapasowej utworzonej przed kompresją"
+ "The previous version is in the backup made before compressing": "Poprzednia wersja jest w kopii zapasowej utworzonej przed kompresją",
+ "Check for updates automatically once a day": "Sprawdzaj aktualizacje automatycznie raz dziennie"
 }

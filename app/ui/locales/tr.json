@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "Sıkıştırmadan önce yedek oluşturulamadı ({error}); hiçbir şey değiştirilmedi",
  "Making a backup first…": "Önce yedek oluşturuluyor…",
  "Replacing the file…": "Dosya değiştiriliyor…",
- "The previous version is in the backup made before compressing": "Önceki sürüm, sıkıştırmadan önce alınan yedekte"
+ "The previous version is in the backup made before compressing": "Önceki sürüm, sıkıştırmadan önce alınan yedekte",
+ "Check for updates automatically once a day": "Güncellemeleri günde bir kez otomatik denetle"
 }

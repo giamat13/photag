@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "压缩前无法创建备份（{error}）；未做任何更改",
  "Making a backup first…": "正在先创建备份…",
  "Replacing the file…": "正在替换文件…",
- "The previous version is in the backup made before compressing": "之前的版本在压缩前创建的备份中"
+ "The previous version is in the backup made before compressing": "之前的版本在压缩前创建的备份中",
+ "Check for updates automatically once a day": "每天自动检查一次更新"
 }

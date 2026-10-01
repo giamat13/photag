@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "לא הצלחתי ליצור גיבוי לפני הדחיסה ({error}); שום דבר לא שונה",
  "Making a backup first…": "יוצר קודם גיבוי…",
  "Replacing the file…": "מחליף את הקובץ…",
- "The previous version is in the backup made before compressing": "הגרסה הקודמת נמצאת בגיבוי שנעשה לפני הדחיסה"
+ "The previous version is in the backup made before compressing": "הגרסה הקודמת נמצאת בגיבוי שנעשה לפני הדחיסה",
+ "Check for updates automatically once a day": "בדוק עדכונים אוטומטית פעם ביום"
 }

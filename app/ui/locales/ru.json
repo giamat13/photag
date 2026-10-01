@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "Не удалось создать резервную копию перед сжатием ({error}); ничего не изменено",
  "Making a backup first…": "Сначала создаётся резервная копия…",
  "Replacing the file…": "Замена файла…",
- "The previous version is in the backup made before compressing": "Предыдущая версия находится в копии, сделанной перед сжатием"
+ "The previous version is in the backup made before compressing": "Предыдущая версия находится в копии, сделанной перед сжатием",
+ "Check for updates automatically once a day": "Автоматически проверять обновления раз в день"
 }

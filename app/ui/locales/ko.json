@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "압축 전에 백업을 만들지 못했습니다({error}). 아무것도 변경되지 않았습니다",
  "Making a backup first…": "먼저 백업을 만드는 중…",
  "Replacing the file…": "파일을 바꾸는 중…",
- "The previous version is in the backup made before compressing": "이전 버전은 압축 전에 만든 백업에 있습니다"
+ "The previous version is in the backup made before compressing": "이전 버전은 압축 전에 만든 백업에 있습니다",
+ "Check for updates automatically once a day": "하루에 한 번 자동으로 업데이트 확인"
 }

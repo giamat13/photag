@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "圧縮前のバックアップを作成できませんでした（{error}）。何も変更されていません",
  "Making a backup first…": "まずバックアップを作成しています…",
  "Replacing the file…": "ファイルを置き換えています…",
- "The previous version is in the backup made before compressing": "以前のバージョンは、圧縮前に作成したバックアップにあります"
+ "The previous version is in the backup made before compressing": "以前のバージョンは、圧縮前に作成したバックアップにあります",
+ "Check for updates automatically once a day": "1日1回、自動的に更新を確認する"
 }

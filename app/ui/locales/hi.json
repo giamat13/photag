@@ -825,5 +825,6 @@
  "Could not make a backup before compressing ({error}); nothing was changed": "कंप्रेस करने से पहले बैकअप नहीं बन सका ({error}); कुछ भी नहीं बदला",
  "Making a backup first…": "पहले बैकअप बनाया जा रहा है…",
  "Replacing the file…": "फ़ाइल बदली जा रही है…",
- "The previous version is in the backup made before compressing": "पिछला संस्करण कंप्रेस करने से पहले बने बैकअप में है"
+ "The previous version is in the backup made before compressing": "पिछला संस्करण कंप्रेस करने से पहले बने बैकअप में है",
+ "Check for updates automatically once a day": "दिन में एक बार अपने आप अपडेट जाँचें"
 }
