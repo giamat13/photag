@@ -1,5 +1,5 @@
 """FastAPI backend: catalog queries, media/thumbnail serving, metadata &
-image editing, and background jobs (import / faces / automatic keywords)."""
+image editing, and background jobs (import / faces)."""
 import threading
 import time
 from pathlib import Path
@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, autotag, config
+from . import db, images, importer, faces, config
 from .config import PATHS
 
 app = FastAPI(title="photag")
@@ -33,34 +33,19 @@ def _trash_purge_loop():
 
 @app.on_event("startup")
 def _start_trash_purge():
-    con = db.init_db()  # run schema migrations before the first request
+    db.init_db()  # run schema migrations before the first request
     threading.Thread(target=_trash_purge_loop, daemon=True).start()
-    # keep keywords current for photos added/edited since last time - only once the
-    # model is on disk, so a fresh install doesn't start a 600 MB download unasked
-    if autotag.model_ready() and autotag.pending_count(con):
-        _start("tags", autotag.run_autotag)
 
 
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "tagging", "downloading", "exporting"):
+        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting"):
             raise err(409, "המשימה כבר רצה")
         prog = importer.Progress()
         JOBS[name] = prog
         threading.Thread(target=target, args=(*args, prog), daemon=True).start()
         return prog
-
-
-def _then_autotag(run, *args):
-    """Import, then tag what was imported (runs in the import job's thread)."""
-    prog = args[-1]
-    run(*args)
-    if prog.state == "done":
-        try:
-            _start("tags", autotag.run_autotag)
-        except HTTPException:
-            pass  # already running; it will pick the new photos up
 
 
 @app.get("/api/job/{name}")
@@ -87,8 +72,6 @@ def status():
             "tags": c("SELECT COUNT(*) FROM tags"),
             "trashed": c("SELECT COUNT(*) FROM photos WHERE trashed=1"),
         },
-        "autotag": {"model_ready": autotag.model_ready(), "pending": autotag.pending_count(con),
-                    "embedded": c("SELECT COUNT(*) FROM clip_emb WHERE emb IS NOT NULL")},
         "trash_days": config.TRASH_RETENTION_DAYS,
         "last_import": int(db.get_setting(con, "last_import", 0) or 0),
     }
@@ -137,7 +120,7 @@ class ImportIn(BaseModel):
 def start_import(body: ImportIn):
     if not Path(body.zip_path).exists():
         raise err(404, "קובץ ה-ZIP לא נמצא")
-    _start("import", _then_autotag, importer.run_import, body.zip_path)
+    _start("import", importer.run_import, body.zip_path)
     return {"ok": True}
 
 
@@ -145,17 +128,6 @@ def start_import(body: ImportIn):
 def start_faces():
     _start("faces", faces.run_faces)
     return {"ok": True}
-
-
-@app.post("/api/autotag")
-def start_autotag():
-    _start("tags", autotag.run_autotag)
-    return {"ok": True}
-
-
-@app.get("/api/photo/{pid}/suggest")
-def suggest(pid: int):
-    return autotag.suggestions(db.connect(), pid)
 
 
 # ---- browse ----------------------------------------------------------------
@@ -218,7 +190,6 @@ def folders():
 def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
            favorite: int = 0, year: int = 0, trashed: int = 0,
            folder: str | None = None, quick: int = 0, prev_import: int = 0, cluster: int = 0,
-           smart: str = "",
            limit: int = 200, offset: int = 0):
     con = db.connect()
     where = ["p.trashed=?"]; args = [trashed]
@@ -249,11 +220,6 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
         args += [f + "\\%", f + "/%"]
     if year:
         where.append("CAST(strftime('%Y', p.taken_at, 'unixepoch') AS INT)=?"); args.append(year)
-    scores = {}
-    if smart.strip():  # content search: "kids on the beach" (CLIP, English)
-        import json
-        scores = autotag.search(con, smart.strip())
-        where.append("p.id IN (SELECT value FROM json_each(?))"); args.append(json.dumps(list(scores)))
     if q:
         where.append("(p.filename LIKE ? OR p.description LIKE ? "
                      "OR p.id IN (SELECT photo_id FROM photo_tags pt JOIN tags t ON t.id=pt.tag_id WHERE t.name LIKE ?) "
@@ -268,8 +234,6 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
     out = []
     for r in con.execute(sql, args).fetchall():
         d = dict(r); d["folder"] = _folder_of(d.pop("rel_path") or "")
-        if scores:
-            d["score"] = scores.get(d["id"], 0)
         out.append(d)
     return out
 
@@ -395,9 +359,6 @@ def _apply_meta(con, ids: list[int], m: MetaIn):
         con.executemany("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'manual')",
                         [(pid, tid) for pid in ids])
     for tid in (m.remove_tag_ids or []):
-        con.execute(f"INSERT OR IGNORE INTO autotag_rejected(photo_id, tag) SELECT pt.photo_id, t.name "
-                    f"FROM photo_tags pt JOIN tags t ON t.id=pt.tag_id WHERE pt.tag_id=? AND pt.source IN ('auto','place') "
-                    f"AND pt.photo_id IN ({q})", (tid, *ids))
         con.execute(f"DELETE FROM photo_tags WHERE tag_id=? AND photo_id IN ({q})", (tid, *ids))
     con.commit()
 
@@ -671,7 +632,7 @@ def lrcat_info(path: str):
 def start_import_lrcat(body: LrcatIn):
     if not Path(body.path).is_file():
         raise err(404, "הקטלוג לא נמצא")
-    _start("import", _then_autotag, importer.run_lrcat_import, body.path)
+    _start("import", importer.run_lrcat_import, body.path)
     return {"ok": True}
 
 
@@ -685,7 +646,7 @@ def start_import_folder(body: ImportFolderIn):
     if not body.paths:
         raise err(400, "לא נבחרו קבצים")
     kws = [k.strip() for k in body.keywords if k.strip()]
-    _start("import", _then_autotag, importer.run_folder_import, body.paths, kws, (body.album or "").strip() or None)
+    _start("import", importer.run_folder_import, body.paths, kws, (body.album or "").strip() or None)
     return {"ok": True}
 
 

@@ -56,7 +56,7 @@ def _html_keys() -> set[str]:
 def _py_keys() -> set[str]:
     keys = set()
     pat = re.compile(r"""(?:\.say|\.fail|\berr\(\d+,)\s*\(?\s*"([^"]*)"|\(\s*"([^"]*[֐-׿][^"]*)",\s*\{""")
-    for f in ("server.py", "importer.py", "autotag.py", "faces.py"):
+    for f in ("server.py", "importer.py", "faces.py"):
         for m in pat.finditer((ROOT / "app" / f).read_text("utf-8")):
             k = m.group(1) or m.group(2)
             if k and (HEB.search(k) or "{" in k):

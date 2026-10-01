@@ -34,7 +34,7 @@ def purge_expired_trash(con, days: int = TRASH_RETENTION_DAYS):
         if r["orig_backup"]:
             (PATHS.media / r["orig_backup"]).unlink(missing_ok=True)
         pid = r["id"]
-        for table in ("photo_albums", "photo_people", "photo_tags", "faces", "clip_emb", "autotag_rejected"):
+        for table in ("photo_albums", "photo_people", "photo_tags", "faces"):
             con.execute(f"DELETE FROM {table} WHERE photo_id=?", (pid,))
         con.execute("DELETE FROM photos WHERE id=?", (pid,))
     if rows:

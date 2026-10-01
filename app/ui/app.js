@@ -104,8 +104,8 @@ async function fetchSource(){
   let rows;
   if(src.kind==='all' && !q) rows = S.all;
   else {
-    const p = new URLSearchParams({limit:10000000, ...srcParams(src)}); if(q) p.set(S.F.qf==='smart' ? 'smart' : 'q', q);
-    rows = (await api('/api/photos?'+p)).map(r=>{ const o=S.byId.get(r.id) || r; o.score = r.score; return o; });
+    const p = new URLSearchParams({limit:10000000, ...srcParams(src)}); if(q) p.set('q', q);
+    rows = (await api('/api/photos?'+p)).map(r=>S.byId.get(r.id) || r);
     if(S.src!==src) return;   // clicked elsewhere meanwhile
   }
   if(src.kind==='smart'){ const f = SMART.find(x=>x[0]===src.id); rows = rows.filter(f[2]); }
@@ -154,8 +154,7 @@ function applyFilter({keepScroll=true}={}){
     rows = rows.filter(p=>passAttr(p) && passMeta(p));
   }
   const cmp = SORTS[S.sort][1];
-  rows = S.F.q && S.F.qf==='smart' ? rows.slice().sort((a,b)=>(b.score||0)-(a.score||0))   // best matches first
-       : rows.slice().sort(S.asc ? cmp : (a,b)=>cmp(b,a));
+  rows = rows.slice().sort(S.asc ? cmp : (a,b)=>cmp(b,a));
   S.list = rows;
   S.idx = new Map(rows.map((p,i)=>[p.id,i]));
   for(const id of [...S.sel]) if(!S.idx.has(id)) S.sel.delete(id);
@@ -466,7 +465,7 @@ function renderFilterBar(){
   $('#fb-state').innerHTML = filterActive() ? (S.F.on ? ("<b>"+t("מסנן פעיל")+"</b>") : t('המסנן כבוי')) : '';
 }
 $('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
-$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; $('#ft-q').placeholder = S.F.qf==='smart' ? 'kids playing on the beach' : t('חיפוש'); if(S.F.q) fetchSource(); };
+$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; if(S.F.q) fetchSource(); };
 function renderMetaBrowser(){
   const base = S.base;
   $('#fb-meta').innerHTML = META_COLS.map(([k,title,fn], ci)=>{
@@ -807,22 +806,21 @@ const renderRight = debounce(async ()=>{
   if(S.mod==='develop') return;
   if(S.view!=='loupe') histoFromThumb();
   const ids=targets(), p=actPhoto();
-  const [detail, kws, sug] = await Promise.all([
+  const [detail, kws] = await Promise.all([
     p ? api('/api/photo/'+p.id) : null,
     ids.length ? send('POST','/api/keywords',{ids}) : [],
-    p && ids.length===1 ? api(`/api/photo/${p.id}/suggest`).catch(()=>[]) : [],
   ]);
   if(p && actPhoto()?.id!==p.id) return;
   DETAIL=detail;
-  renderKeywording(ids, kws, sug); renderKwList(kws, ids.length); renderMeta(ids, detail);
+  renderKeywording(ids, kws); renderKwList(kws, ids.length); renderMeta(ids, detail);
 }, 90);
 
-function renderKeywording(ids, kws, content=[]){
+function renderKeywording(ids, kws){
   const el=$('#p-kwing');
   if(!ids.length){ el.innerHTML=("<div class=\"hint\">"+t("בחרו תמונות כדי לתייג אותן.")+"</div>"); return; }
   const txt = kws.map(k=>k.name + (k.n<ids.length?' *':'')).join(', ');
   const top = S.tags.slice(0,30).map(tg=>tg.name);
-  const sug = [...new Set([...content, ...S.recentKw, ...top])].filter(n=>!kws.some(k=>k.name===n && k.n===ids.length)).slice(0,9);
+  const sug = [...new Set([...S.recentKw, ...top])].filter(n=>!kws.some(k=>k.name===n && k.n===ids.length)).slice(0,9);
   el.innerHTML = `<div class="lbl-sub">${t("מילות מפתח")}${ids.length>1?` ${t("· {0} תמונות (* = רק בחלק מהן)", [num(ids.length)])}`:''}</div>
     <label class="kwbox"><textarea id="kw-text" spellcheck="false" placeholder="${t("הקלידו מילות מפתח מופרדות בפסיקים")}">${esc(txt)}</textarea></label>
     <label class="kwadd"><input id="kw-add" placeholder="${t("לחצו כאן כדי להוסיף מילות מפתח")}"></label>
@@ -1196,18 +1194,13 @@ async function catalogSettings(){
   $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); closeModal(); toast(t('הקטלוג הוחלף')); await reloadAll(); };
 }
 async function preferences(){
-  const s=await api('/api/status'), at=s.autotag;
-  const tagState = !at.model_ready ? ['stat-off',t('המודל יורד אוטומטית (כ‑600MB, פעם אחת) בהרצה הראשונה.')]
-    : at.pending ? ['stat-warn',`${t("{0} תמונות ממתינות לתיוג", [num(at.pending)])}`] : ['stat-ok',`${t("מעודכן · {0} תמונות נותחו", [num(at.embedded)])}`];
-  modal(`<h3>${t("העדפות · זיהוי ותיוג")}</h3><div class="mb">
+  const s=await api('/api/status');
+  modal(`<h3>${t("העדפות · זיהוי פנים")}</h3><div class="mb">
     <p>${t("הכול רץ מקומית במחשב — שום תמונה לא נשלחת לשירות חיצוני, ואין צורך להתקין שום דבר.")}</p>
     <div class="pathrow"><span>${t("זיהוי פנים")}</span><span>${t("InsightFace · {0} פרצופים זוהו עד כה", [num(s.counts.faces)])}</span></div>
-    <div class="pathrow"><span>${t("מילות מפתח אוטומטיות")}</span><span class="${tagState[0]}">${tagState[1]}</span></div>
-    <p>${t("מילות המפתח (באנגלית) נבחרות מתוך אוצר מילים קבוע לפי תוכן התמונה (CLIP), ומקומות לפי GPS. התיוג רץ לבד אחרי כל ייבוא. מילת מפתח אוטומטית שמחקתם לא תחזור. חיפוש חכם: מסנן ספרייה ← טקסט ← „חיפוש חכם לפי תוכן\".")}</p>
   </div><div class="mf"><button onclick="closeModal()">${t("סגור")}</button>
-    <button id="pf-faces">${t("זהה פנים")}</button><button class="primary" id="pf-tag">${t("תייג עכשיו")}</button></div>`);
+    <button class="primary" id="pf-faces">${t("זהה פנים")}</button></div>`);
   $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('זיהוי פנים')); };
-  $('#pf-tag').onclick=()=>{ closeModal(); runJob('/api/autotag','tags',t('תיוג אוטומטי')); };
 }
 function languageDialog(){
   modal(`<h3>${t('שפה')}${I18N.lang==='en'?'':' / Language'}</h3><div class="mb"><div class="lang-grid">
@@ -1381,10 +1374,9 @@ async function pollJob(name, label){
   if(['done','error','idle'].includes(p.state)){
     act.classList.add('hidden');
     toast(`${label}: ${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('הושלם'))}`, 4000);
-    if(['import','faces','tags'].includes(name)){
+    if(['import','faces'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
-      if(name==='import' && p.state==='done') setTimeout(()=>pollJob('tags',t('תיוג אוטומטי')), 600);
       if(S.view==='people') renderPeople();
     }
     return;
@@ -1420,7 +1412,6 @@ const MENUS = [
     [t('הצג סרגל סינון'), '\\', ()=>{ $('#filterbar').classList.toggle('hidden'); }, null, ()=>!$('#filterbar').classList.contains('hidden')],
     sep,
     [t('זיהוי פנים'), '', ()=>runJob('/api/faces','faces',t('זיהוי פנים'))],
-    [t('תיוג אוטומטי'), '', ()=>runJob('/api/autotag','tags',t('תיוג אוטומטי'))],
     sep,
     [t('זיכרונות ותגובות מ‑Google...'), '', memories],
   ]],
@@ -1586,7 +1577,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setView('grid');
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
-  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['tags',t('תיוג אוטומטי')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
+  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}
   });
 })();
