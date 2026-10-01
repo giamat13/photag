@@ -141,7 +141,8 @@ def pick_file(kind: str = "zip", title: str = ""):
             paths = filedialog.askopenfilenames(           # a Takeout export can be several ZIP files
                 title=title or "Select Google Takeout ZIP files",
                 filetypes=[("ZIP files", "*.zip"), ("All files", "*.*")], parent=root)
-            return {"path": paths[0] if paths else None, "paths": list(paths),
+            paths = [str(Path(p)) for p in paths]          # the file dialog returns C:/x/y.zip; the rest of the app uses C:\x\y.zip
+            return {"path": paths[0] if paths else None, "paths": paths,
                     "files": [{"path": p, "name": Path(p).name, "bytes": Path(p).stat().st_size} for p in paths]}
     finally:
         root.destroy()

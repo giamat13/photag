@@ -122,6 +122,9 @@ try:
         check("Takeout screen lists the parts, the total, the added parts and the missing-part warning (English)",
               "takeout-1-001.zip" in zt and "2 ZIP files" in zt and "1 more parts" in zt and "Part 002 is missing" in zt and not HEB.search(zt), zt[:100].replace(chr(10), " "))
         check("with parts chosen the Import button is enabled", not ev("document.querySelector('#im-go').disabled"))
+        check("sizes are shown in GB / TB, not 19000 MB", ev("[fsize(19e9), fsize(5e11), fsize(2e12), fsize(5e8), fsize(2e4)]") == ["17.7 GB", "465.7 GB", "1.82 TB", "476.8 MB", "20 KB"] and "GB" in zt, ev("[fsize(19e9), fsize(5e11), fsize(2e12)]"))
+        # the file dialog says C:/x/a.zip and the server C:\x\a.zip: they are the SAME file (a part must not be listed twice)
+        check("a ZIP chosen in the dialog and the same one found by the server are one entry", ev(r"zkey('C:/Users/me/takeout-1-001.zip') === zkey('c:\\users\\me\\Takeout-1-001.ZIP')"))
         # a part added by mistake can be removed again; "Remove all" empties the list; the missing-part warning follows
         pg.click('[data-zrm="1"]')
         pg.wait_for_timeout(300)

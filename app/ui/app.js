@@ -16,7 +16,7 @@ const send = (method, u, body) => api(u, {method, headers:{'Content-Type':'appli
 const esc = s => (s??'').toString().replace(/[<>&"']/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
 const num = n => (n||0).toLocaleString(I18N.locale);
 const fdate = ts => ts ? new Date(ts*1000).toLocaleString(I18N.locale, {dateStyle:'medium', timeStyle:'short'}) : '—';
-const fsize = b => !b ? '—' : b > 1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(b/1024))+' KB';
+const fsize = b => !b ? '—' : b >= 1099511627776 ? (b/1099511627776).toFixed(2)+' TB' : b >= 1073741824 ? (b/1073741824).toFixed(b >= 10737418240 ? 1 : 2)+' GB' : b > 1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(b/1024))+' KB';
 const I = (n, cls='') => `<svg class="ic ${cls}"><use href="#i-${n}"/></svg>`;
 const ext = p => (p.filename.split('.').pop()||'').toUpperCase();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -1529,7 +1529,7 @@ async function aiRun(){
 
 // ---------- video compression (HandBrake) ----------
 const ltr = s => '\u2066' + s + '\u2069';   // isolate numbers/Latin inside RTL text so "10.6 MB" doesn't flip
-const fmtBytes = b => ltr(b>=1073741824 ? (b/1073741824).toFixed(2)+' GB' : (b/1048576).toFixed(b>=104857600 ? 0 : 1)+' MB');
+const fmtBytes = b => ltr(b>=1099511627776 ? (b/1099511627776).toFixed(2)+' TB' : b>=1073741824 ? (b/1073741824).toFixed(2)+' GB' : (b/1048576).toFixed(b>=104857600 ? 0 : 1)+' MB');
 const STRENGTH_LABELS = () => [t('Very weak'), t('Weak'), t('Medium'), t('Strong'), t('Very strong')];
 const SPEED_LABELS = () => [t('Very slow'), t('Slow'), t('A bit slow'), t('Medium'), t('A bit fast'), t('Fast'), t('Very fast')];
 const GRADE_LABELS = () => ({excellent:t('Almost identical to the original'), very_good:t('Very good'), good:t('Good'), noticeable:t('Noticeable quality loss')});
@@ -2135,6 +2135,8 @@ function openImport(mode){
   if(IM.mode==='folder' && IM.path && !IM.files.length) scanImport();
 }
 function closeImport(){ $('#import').classList.add('hidden'); }
+// one key per file whatever the slashes and capitals (the file dialog says C:/x/a.zip, the server C:\x\a.zip)
+const zkey = p => String(p).split('\\').join('/').toLowerCase();
 // part numbers missing in a Takeout set (takeout-<stamp>-001.zip, -002.zip, ...), per export
 function zipGaps(zips){
   const sets = new Map();
@@ -2223,11 +2225,11 @@ $('#import').addEventListener('click', async e=>{
   if(tg.closest('#im-zip')){
     const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('Choose Google Takeout ZIP files')));
     if(!(r.files||[]).length) return;
-    const picked = new Map(IM.zips.map(z => [z.path.toLowerCase(), z]));          // choosing again ADDS to the list
-    r.files.forEach(f => picked.set(f.path.toLowerCase(), f));
+    const picked = new Map(IM.zips.map(z => [zkey(z.path), z]));          // choosing again ADDS to the list
+    r.files.forEach(f => picked.set(zkey(f.path), f));
     const before = picked.size;
     let info = {parts:[]}; try{ info = await api('/api/takeout/parts?path='+encodeURIComponent(r.files[0].path)); }catch{}
-    info.parts.forEach(p => { if(!picked.has(p.path.toLowerCase())) picked.set(p.path.toLowerCase(), p); });
+    info.parts.forEach(p => { if(!picked.has(zkey(p.path))) picked.set(zkey(p.path), p); });
     IM.zips = [...picked.values()].sort((a,b)=>a.name.localeCompare(b.name));
     IM.zipFound = picked.size - before; IM.zipMissing = zipGaps(IM.zips);
     renderImport(); return; }

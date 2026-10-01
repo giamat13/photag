@@ -77,7 +77,54 @@ except Exception as e:
     _fatal("photag could not load its components", f"{type(e).__name__}: {e}")
 _log("components loaded")
 
-HOST, PORT = "127.0.0.1", int(os.environ.get("PHOTAG_PORT", 8756))
+HOST = "127.0.0.1"
+BASE_PORT = int(os.environ.get("PHOTAG_BASE_PORT", 8756))
+
+
+def _photag_on(port: int) -> bool:
+    """Is photag itself already answering on this port (another window of the app is open)?"""
+    import json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://{HOST}:{port}/api/status", timeout=3) as r:
+            d = json.loads(r.read())
+        return "library_root" in d and "version" in d
+    except Exception:
+        return False
+
+
+def _port_free(port: int) -> bool:
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((HOST, port))
+            return True
+        except OSError:
+            return False
+
+
+def _choose_port():
+    """(port, already_running). The usual port when it is free; the running photag when it is that; otherwise the
+    next free port, so another program using 8756 never stops photag from starting."""
+    forced = os.environ.get("PHOTAG_PORT")
+    if forced:
+        return int(forced), False
+    if _photag_on(BASE_PORT):
+        return BASE_PORT, True
+    for port in range(BASE_PORT, BASE_PORT + 50):
+        if _port_free(port):
+            if port != BASE_PORT:
+                _log(f"port {BASE_PORT} is used by another program, using {port} instead")
+            return port, False
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:     # last resort: any free port
+        s.bind((HOST, 0))
+        port = s.getsockname()[1]
+    _log(f"ports {BASE_PORT}-{BASE_PORT + 49} are all used, using {port}")
+    return port, False
+
+
+PORT, ALREADY_RUNNING = _choose_port()
 URL = f"http://{HOST}:{PORT}"
 
 
@@ -121,11 +168,16 @@ def _own_taskbar_identity():
 
 def main():
     _own_taskbar_identity()
-    if os.environ.get("PHOTAG_NO_WINDOW"):       # server only, no window (tests of the packaged EXE)
+    if ALREADY_RUNNING:                          # photag is already open: just show another window of it, no second server
+        _log(f"photag is already running on port {PORT}")
+        if os.environ.get("PHOTAG_NO_WINDOW"):
+            return
+    elif os.environ.get("PHOTAG_NO_WINDOW"):     # server only, no window (tests of the packaged EXE)
         _serve()
         return
-    threading.Thread(target=_serve, daemon=True).start()
-    if not _wait_up(60):                         # a cold first start unpacks and loads a lot: allow a minute
+    else:
+        threading.Thread(target=_serve, daemon=True).start()
+    if not ALREADY_RUNNING and not _wait_up(60):                         # a cold first start unpacks and loads a lot: allow a minute
         _fatal("photag could not start its local server",
                f"Nothing answered on port {PORT}. Another program may be using it, or antivirus is blocking photag.")
     try:
