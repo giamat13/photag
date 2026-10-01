@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, config
+from . import db, images, importer, faces, aitag, config
 from .config import PATHS
 
 app = FastAPI(title="photag")
@@ -40,9 +40,10 @@ def _start_trash_purge():
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting"):
+        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting"):
             raise err(409, "המשימה כבר רצה")
         prog = importer.Progress()
+        prog.state = "starting"   # not "idle": a poll right after the start must not read the job as finished
         JOBS[name] = prog
         threading.Thread(target=target, args=(*args, prog), daemon=True).start()
         return prog
@@ -121,6 +122,72 @@ def start_import(body: ImportIn):
     if not Path(body.zip_path).exists():
         raise err(404, "קובץ ה-ZIP לא נמצא")
     _start("import", importer.run_import, body.zip_path)
+    return {"ok": True}
+
+
+# ---- AI tagging (OpenAI / Claude / Gemini / OpenRouter / any OpenAI-compatible API) ----
+class AiSettingsIn(BaseModel):
+    provider: str
+    model: str = ""
+    language: str = "en"
+    base_url: str = ""
+    api_key: str | None = None   # None/empty = keep the saved key
+
+class AiProbeIn(BaseModel):
+    provider: str
+    base_url: str = ""
+    api_key: str | None = None   # a key typed but not saved yet
+
+class AiTagIn(BaseModel):
+    ids: list[int] | None = None
+    only_untagged: bool = False
+
+
+def _ai_call(fn, *a):
+    try:
+        return fn(*a)
+    except aitag.AIError as e:
+        raise err(502, "שגיאה מספק ה‑AI: {error}", error=str(e))
+    except (ValueError, KeyError) as e:
+        raise err(400, "הגדרה לא תקינה: {error}", error=str(e))
+
+
+@app.get("/api/ai/settings")
+def ai_settings():
+    return aitag.get_settings()
+
+
+@app.post("/api/ai/settings")
+def ai_save(body: AiSettingsIn):
+    _ai_call(aitag.save_settings, body.provider, body.model, body.language, body.base_url, body.api_key)
+    return aitag.get_settings()
+
+
+@app.delete("/api/ai/key/{provider}")
+def ai_delete_key(provider: str):
+    aitag.delete_key(provider)
+    return aitag.get_settings()
+
+
+@app.post("/api/ai/models")
+def ai_models(body: AiProbeIn):
+    """Live model list of the provider (and what "auto" would pick); also serves as the connection test."""
+    return _ai_call(aitag.probe, body.provider, body.base_url, body.api_key)
+
+
+@app.post("/api/aitag")
+def start_aitag(body: AiTagIn):
+    if not body.ids and not body.only_untagged:
+        raise err(400, "לא נבחרו תמונות לתיוג")
+    _start("aitag", aitag.run_aitag, body.ids, body.only_untagged)
+    return {"ok": True}
+
+
+@app.post("/api/aitag/cancel")
+def cancel_aitag():
+    p = JOBS.get("aitag")
+    if p:
+        p.cancel = True
     return {"ok": True}
 
 

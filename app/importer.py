@@ -127,6 +127,7 @@ class Progress:
     def __init__(self):
         self.state = "idle"; self.done = 0; self.total = 0; self.msg = ""; self.error = None
         self.key = None; self.vars = {}; self.parts = None; self.error_key = None
+        self.cancel = False   # set by the UI to stop a long job (AI tagging)
 
     def say(self, key, **vars):
         self.key, self.vars, self.parts = key, vars, None

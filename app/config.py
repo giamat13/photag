@@ -52,6 +52,15 @@ def get_library_root() -> Path:
     return Path(p) if p else _DEFAULT_LIBRARY
 
 
+def get_ai() -> dict:
+    """AI tagging settings: provider, model, language, base_url and the encrypted per-provider keys."""
+    return _read_pointer().get("ai") or {}
+
+
+def set_ai(data: dict) -> None:
+    _write_pointer(ai=data or None)
+
+
 def set_library_root(path: str | os.PathLike) -> Path:
     root = Path(path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
