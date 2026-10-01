@@ -220,6 +220,14 @@ function toggleQuick(){
 async function trashSelected(){
   const ids=targets(); if(!ids.length) return;
   const restore = S.src.kind==='trash';
+  if(!restore && !pref.get('trashNoAsk', false)){      // deleting always asks first (restoring does not)
+    const days = S.status?.trash_days || 60;
+    const ok = await confirmBox(t('להעביר לאשפה?'),
+      `${t('{0} פריטים יועברו לאשפה. אפשר לשחזר אותם משם, והם יימחקו לצמיתות אחרי {1} יום.', [num(ids.length), days])}
+       <br><label class="chkrow" style="margin-top:12px"><input type="checkbox" id="cb-never"> ${t('אל תשאל שוב על העברה לאשפה')}</label>`, t('העבר לאשפה'));
+    if(!ok) return;
+    if(CB_NEVER) pref.set('trashNoAsk', true);
+  }
   await setAttr({trashed: restore?0:1}, ids);
   toast(restore ? `${t("שוחזרו {0} פריטים", [num(ids.length)])}` : `${t("הועברו לאשפה {0} פריטים · נמחקים לצמיתות אחרי {1} יום", [num(ids.length), S.status?.trash_days||60])}`);
 }
@@ -1291,6 +1299,7 @@ $('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) retur
 $('#btn-dev-revert').onclick = async ()=>{
   if(DEV.id==null) return; const p=actPhoto();
   if(!p?.edited){ devSet(NEUTRAL(), t('איפוס')); return; }
+  if(!await confirmBox(t('לחזור לקובץ המקורי?'), t('העריכות ששמורות בקובץ יימחקו והקובץ המקורי יוחזר.'), t('החזר את המקור'))) return;
   await send('POST', `/api/photo/${DEV.id}/revert`); VER[DEV.id]=Date.now();
   Object.assign(p, {edited:0}); const d=await api('/api/photo/'+p.id); Object.assign(p,{width:d.width,height:d.height,bytes:d.bytes});
   toast(t('הוחזר לקובץ המקורי')); renderFilm(true); devOpen();
@@ -1349,10 +1358,11 @@ function promptBox(title, value='', extra=''){
     $('#pb-cancel').onclick=()=>done(null);
   });
 }
+let CB_NEVER = false;   // the optional "don't ask again" checkbox of the last confirmBox
 function confirmBox(title, text, ok=t('אישור')){
   return new Promise(res=>{
     modal(`<h3>${title}</h3><div class="mb"><p>${text}</p></div><div class="mf"><button id="cb-no">${t("ביטול")}</button><button class="primary" id="cb-yes">${ok}</button></div>`);
-    $('#cb-yes').onclick=()=>{ closeModal(); res(true); }; $('#cb-no').onclick=()=>{ closeModal(); res(false); };
+    $('#cb-yes').onclick=()=>{ CB_NEVER = !!$('#cb-never')?.checked; closeModal(); res(true); }; $('#cb-no').onclick=()=>{ closeModal(); res(false); };
   });
 }
 async function catalogSettings(){
@@ -1415,7 +1425,7 @@ async function aiSettings(){
   refresh();
   q('ai-provider').onchange = ()=>{ radio('auto').checked = true; q('ai-model').value = ''; q('ai-models').innerHTML = ''; status(''); refresh(); };
   $$('input[name=ai-m]').forEach(r=>r.onchange = refresh);
-  q('ai-key-del').onclick = async ()=>{ s.providers = (await send('DELETE', '/api/ai/key/' + q('ai-provider').value)).providers; refresh(); };
+  q('ai-key-del').onclick = async ()=>{ const ok = await confirmBox(t('למחוק את מפתח ה‑API?'), t('המפתח יימחק מהמחשב הזה.'), t('מחק')); if(ok) await send('DELETE', '/api/ai/key/' + q('ai-provider').value); aiSettings(); };
   const probe = ()=>({provider:q('ai-provider').value, base_url:q('ai-base').value.trim(), api_key:q('ai-key').value.trim() || null});
   q('ai-load').onclick = async ()=>{
     status(t('טוען…'));
@@ -1711,6 +1721,20 @@ async function backupDialog(){
     const next = !s.enabled ? t('הגיבוי האוטומטי כבוי') : t('הגיבוי הבא: {0}', [ltr(fdt(Math.max(i.next, Date.now() / 1000)))]);
     return `${last} · ${next}`;
   };
+  const healthHtml = () => {
+    const h = i.health || {}, tk = h.task || {}, L = [];
+    if(h.folder_error) L.push(['bad', t('אי אפשר להגיע לתיקיית הגיבויים (למשל הדיסק מנותק): {0}', [h.folder_error])]);
+    else if(h.last_error) L.push(['bad', t('הגיבוי האחרון נכשל: {0}', [h.last_error])]);
+    if(h.overdue) L.push(['bad', t('לא נעשה גיבוי מאז {0}. בדקו שהדיסק מחובר ושיש בו מקום.', [ltr(fdt(h.last_success))])]);
+    else if(h.never && h.enabled) L.push(['warn', t('עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».')]);
+    if(h.enabled){
+      if(!tk.supported) L.push(['', t('בהרצה מקוד המקור הגיבוי רץ רק כשהאפליקציה פתוחה.')]);
+      else if(tk.registered) L.push(['ok', t('הגיבוי רץ גם כשהאפליקציה סגורה: משימת Windows בודקת כל שעה ובכל כניסה למחשב, משלימה ריצה שהוחמצה, רצה ברקע בעדיפות נמוכה ונסגרת מיד בסיום. בנוסף האפליקציה עצמה בודקת כשהיא פתוחה.')
+        + (tk.next_run ? ' ' + t('הבדיקה הבאה: {0}', [ltr(fdt(new Date(tk.next_run).getTime() / 1000))]) : '')]);
+      else L.push(['warn', t('משימת הגיבוי של Windows לא נרשמה: הגיבוי ירוץ רק כשהאפליקציה פתוחה.') + (tk.error ? ' (' + tk.error + ')' : '')]);
+    }
+    return L.map(([c, x]) => `<div class="bk-h ${c}">${esc(x)}</div>`).join('');
+  };
   const coverage = () => {
     const s = i.settings, cat = i.snapshots.reduce((a, m) => a + m.bytes, 0);
     return s.include_media
@@ -1725,6 +1749,7 @@ async function backupDialog(){
   const draw = () => {
     const s = i.settings;
     $('#bk-status').textContent = status();
+    $('#bk-health').innerHTML = healthHtml();
     $('#bk-cover').textContent = coverage(); $('#bk-cover').classList.toggle('warn', !s.include_media);
     $('#bk-on').checked = s.enabled; $('#bk-int').value = String(s.interval_hours); $('#bk-keep').value = s.keep; $('#bk-media').checked = s.include_media;
     $('#bk-folder').value = i.folder; $('#bk-list').innerHTML = rows();
@@ -1733,6 +1758,7 @@ async function backupDialog(){
   modal(`<h3>${t('גיבוי ושחזור')}</h3><div class="mb bk">
     <div class="bk-status" id="bk-status"></div>
     <div class="bk-cover" id="bk-cover"></div>
+    <div id="bk-health"></div>
     <label class="chkrow"><input type="checkbox" id="bk-on"> ${t('גיבוי אוטומטי של הקטלוג וההגדרות')}</label>
     <div class="two"><label class="fld"><span>${t('תדירות')}</span><select id="bk-int">${INTERVALS.map(([h, l]) => `<option value="${h}">${l}</option>`).join('')}</select></label>
       <label class="fld"><span>${t('כמה גיבויים לשמור')}</span><input type="number" id="bk-keep" min="3" max="200" dir="ltr"></label></div>
@@ -1773,6 +1799,24 @@ function backupRestoreDialog(m, i){
     closeModal();
     try{ await send('POST', '/api/backup/restore', body); pollJob('backup', t('שחזור מגיבוי')); } catch(e){ toast(e.message); }
   };
+}
+
+// Tell the user at start-up (once a day) if automatic backups are not really happening.
+async function backupHealthNotice(){
+  let i; try{ i = await api('/api/backup'); }catch{ return; }
+  const h = i.health || {};
+  if(!(h.overdue || h.last_error || h.folder_error) || !h.enabled) return;
+  const today = new Date().toDateString();
+  if(pref.get('bkNoticeDay', '') === today) return;
+  pref.set('bkNoticeDay', today);
+  const why = h.folder_error ? t('אי אפשר להגיע לתיקיית הגיבויים (למשל הדיסק מנותק): {0}', [h.folder_error])
+    : h.last_error ? t('הגיבוי האחרון נכשל: {0}', [h.last_error])
+    : t('לא נעשה גיבוי מאז {0}. בדקו שהדיסק מחובר ושיש בו מקום.', [ltr(fdt(h.last_success))]);
+  modal(`<h3>${t('הגיבוי האוטומטי לא רץ כמו שצריך')}</h3><div class="mb"><p>${esc(why)}</p></div>
+    <div class="mf"><button id="bn-settings">${t('הגדרות גיבוי')}</button><span class="spacer"></span><button id="bn-close">${t('סגור')}</button><button class="primary" id="bn-now">${t('גבה עכשיו')}</button></div>`);
+  $('#bn-close').onclick = closeModal;
+  $('#bn-settings').onclick = () => backupDialog();
+  $('#bn-now').onclick = async () => { closeModal(); try{ await send('POST', '/api/backup/run'); pollJob('backup', t('גיבוי')); }catch(e){ toast(e.message); } };
 }
 
 // ---------- compression progress screen: percent, elapsed / remaining time, steps ----------
@@ -2342,7 +2386,8 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
-  setTimeout(async ()=>{ if(!(await whatsNew(false))) updateCheck(false); }, 2500);   // quiet check on start-up; a window appears only when a newer release exists
+  setTimeout(async ()=>{ if(!(await whatsNew(false))) updateCheck(false); }, 2500);
+  setTimeout(backupHealthNotice, 8000);   // quiet check on start-up; a window appears only when a newer release exists
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
   [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['aitag',t('תיוג AI')],['compress',t('דחיסת וידאו')],['backup',t('גיבוי')],['export',t('ייצוא')]].forEach(async ([n,l])=>{

@@ -14,11 +14,13 @@ are copied each time, so the second backup is fast.
 Restoring first takes a safety snapshot of the current state ("before-restore"), then loads the chosen
 catalog into the live database in one transaction. Photo files are only ever ADDED back (never deleted).
 """
+import contextlib
 import json
 import os
 import re
 import shutil
 import sqlite3
+import sys
 import tempfile
 import time
 import zipfile
@@ -80,8 +82,70 @@ def _manifest(path: Path) -> dict | None:
         return None
 
 
+@contextlib.contextmanager
+def background_mode(process: bool = False):
+    """Windows "background mode": low CPU and disk priority for this thread (or the whole process), so a backup
+    never slows down what the user is doing. No-op elsewhere."""
+    k = None
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            k = ctypes.windll.kernel32
+            if process:
+                k.SetPriorityClass(k.GetCurrentProcess(), 0x00100000)        # PROCESS_MODE_BACKGROUND_BEGIN
+            else:
+                k.SetThreadPriority(k.GetCurrentThread(), 0x00010000)        # THREAD_MODE_BACKGROUND_BEGIN
+        except Exception:
+            k = None
+    try:
+        yield
+    finally:
+        if k is not None:
+            try:
+                if process:
+                    k.SetPriorityClass(k.GetCurrentProcess(), 0x00200000)    # ..._END
+                else:
+                    k.SetThreadPriority(k.GetCurrentThread(), 0x00020000)
+            except Exception:
+                pass
+
+
+def peak_ram_mb() -> int | None:
+    """Peak working set of this process in MB (Windows), for the log."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        class PMC(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t),
+                        ("WorkingSetSize", ctypes.c_size_t), ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPagedPoolUsage", ctypes.c_size_t), ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaNonPagedPoolUsage", ctypes.c_size_t), ("PagefileUsage", ctypes.c_size_t),
+                        ("PeakPagefileUsage", ctypes.c_size_t)]
+        k, ps = ctypes.windll.kernel32, ctypes.windll.psapi
+        k.GetCurrentProcess.restype = wintypes.HANDLE
+        ps.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(PMC), wintypes.DWORD]
+        pmc = PMC(); pmc.cb = ctypes.sizeof(pmc)
+        if not ps.GetProcessMemoryInfo(k.GetCurrentProcess(), ctypes.byref(pmc), pmc.cb):
+            return None
+        return round(pmc.PeakWorkingSetSize / 1048576)
+    except Exception:
+        return None
+
+
+def folder_error() -> str | None:
+    """Why the backup folder cannot be used right now (e.g. the external drive is unplugged), else None."""
+    try:
+        backup_dir()
+        return None
+    except OSError as e:
+        return str(e)[:200]
+
+
 def list_snapshots() -> list[dict]:
-    d = backup_dir()
+    try:
+        d = backup_dir()
+    except OSError:
+        return []
     out = [m for p in d.glob("photag-*.zip") if NAME_RE.match(p.name) and (m := _manifest(p))]
     return sorted(out, key=lambda m: m["created"], reverse=True)
 
@@ -91,12 +155,17 @@ def last_backup_time() -> float | None:
     return snaps[0]["created"] if snaps else None
 
 
+def _interval_seconds(s: dict) -> float:
+    ov = os.environ.get("PHOTAG_BACKUP_INTERVAL_SECONDS")       # tests: shrink "a day" to a few seconds
+    return float(ov) if ov else s["interval_hours"] * 3600
+
+
 def next_due(now: float | None = None) -> float | None:
     s = get_settings()
     if not s["enabled"]:
         return None
     last = last_backup_time()
-    return (last + s["interval_hours"] * 3600) if last else (now or time.time())
+    return (last + _interval_seconds(s)) if last else (now or time.time())
 
 
 def is_due(now: float | None = None) -> bool:
@@ -163,7 +232,117 @@ def folder_bytes(path: Path) -> int:
     return total
 
 
+# ------------------------------------------------------------------ never silently forget: state, lock, health
+STATE_FILE = config.settings_dir() / "backup_state.json"
+RETRY_AFTER = 30 * 60           # after a failed automatic backup, wait this long before trying again
+LOCK_STALE = 3 * 3600
+
+
+class BusyError(Exception):
+    """Another backup (the app's or the scheduled task's) is running right now."""
+
+
+def get_state() -> dict:
+    try:
+        return json.loads(STATE_FILE.read_text("utf-8"))
+    except Exception:
+        return {}
+
+
+def _record(ok: bool, by: str, error=None, now: float | None = None):
+    st = get_state()
+    now = now or time.time()
+    st.update(last_attempt=now, last_by=by)
+    if ok:
+        st.update(last_success=now, last_error=None, fail_count=0)
+    else:
+        st.update(last_error=str(error)[:300], fail_count=int(st.get("fail_count", 0)) + 1)
+    tmp = STATE_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(st, indent=1), "utf-8")
+    os.replace(tmp, STATE_FILE)
+
+
+def _lock() -> Path:
+    p = backup_dir() / ".backup.lock"
+    for _ in range(2):
+        try:
+            fd = os.open(p, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, f"{os.getpid()} {time.time()}".encode()); os.close(fd)
+            return p
+        except FileExistsError:
+            try:
+                if time.time() - p.stat().st_mtime > LOCK_STALE:      # left behind by a crash
+                    p.unlink()
+                    continue
+            except OSError:
+                pass
+            raise BusyError()
+    raise BusyError()
+
+
 def create_snapshot(reason: str = "manual", progress=None) -> dict:
+    lock = _lock()
+    try:
+        return _create_snapshot(reason, progress)
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def create_tracked(reason: str, by: str, progress=None, now: float | None = None) -> dict:
+    """create_snapshot + remember the outcome, so a failure can be shown instead of lurking in a log."""
+    try:
+        m = create_snapshot(reason, progress)
+    except BusyError:
+        raise
+    except Exception as e:
+        _record(False, by, e, now)
+        raise
+    _record(True, by, None, now)
+    return m
+
+
+def auto_due(now: float | None = None) -> str | None:
+    """None = an automatic backup should run now; otherwise why not."""
+    now = now or time.time()
+    if not get_settings()["enabled"]:
+        return "disabled"
+    if not is_due(now):
+        return "not due"
+    st = get_state()
+    if st.get("last_error") and now - st.get("last_attempt", 0) < RETRY_AFTER:
+        return "retry later"
+    return None
+
+
+def run_if_due(by: str = "app", force: bool = False, now: float | None = None) -> dict:
+    why = None if force else auto_due(now)
+    if why:
+        return {"ran": False, "reason": why}
+    try:
+        return {"ran": True, **create_tracked("manual" if force else "auto", by, now=now)}
+    except BusyError:
+        return {"ran": False, "reason": "another backup is running"}
+    except Exception as e:
+        return {"ran": False, "error": str(e)}
+
+
+def health(now: float | None = None) -> dict:
+    """Everything the UI needs to say whether backups are really happening."""
+    from . import backup_task
+    now = now or time.time()
+    s, st, last = get_settings(), get_state(), last_backup_time()
+    interval = _interval_seconds(s)
+    overdue = bool(s["enabled"] and last is not None and now - last > max(2 * interval, interval + 6 * 3600))
+    ferr = folder_error()
+    if ferr and last is None:                       # the folder is unreachable: fall back to what we remember
+        last = st.get("last_success")
+        overdue = bool(s["enabled"] and last is not None and now - last > max(2 * interval, interval + 6 * 3600))
+    return {"enabled": s["enabled"], "last_success": last, "never": last is None, "overdue": overdue, "folder_error": ferr,
+            "last_attempt": st.get("last_attempt"), "last_by": st.get("last_by"),
+            "last_error": st.get("last_error"), "fail_count": st.get("fail_count", 0), "task": backup_task.status()}
+
+
+def _create_snapshot(reason: str = "manual", progress=None) -> dict:
     if reason not in REASONS:
         raise ValueError(reason)
     s = get_settings()
@@ -294,10 +473,13 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
 def run_backup(reason: str, progress):
     try:
         progress.state = "backing_up"; progress.say("יוצר גיבוי…")
-        m = create_snapshot(reason, progress)
+        with background_mode():                       # never slow down the app while it backs up
+            m = create_tracked(reason, "app", progress)
         progress.result = m
         progress.state = "done"
         progress.say_parts(("הגיבוי נשמר", {}), ("{n} תמונות בקטלוג", {"n": m["photos"]}))
+    except BusyError:
+        progress.fail("גיבוי אחר רץ כרגע, נסו שוב בעוד כמה דקות")
     except NoSpaceError as e:
         progress.fail("אין מספיק מקום פנוי בדיסק של הגיבויים: צריך {need} MB, פנויים {free} MB. בחרו תיקייה בדיסק אחר",
                       need=round(e.need / 1048576), free=round(e.free / 1048576))

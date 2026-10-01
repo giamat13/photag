@@ -39,6 +39,10 @@ Source: "dist\photag.exe"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{autoprograms}\photag"; Filename: "{app}\photag.exe"
 Name: "{autodesktop}\photag"; Filename: "{app}\photag.exe"; Tasks: desktopicon
 
+[UninstallRun]
+; the app's backup task (created by the app itself) goes away with it; photos and backups are NOT touched
+Filename: "schtasks.exe"; Parameters: "/Delete /TN ""photag-backup"" /F"; Flags: runhidden; RunOnceId: "DelBackupTask"
+
 [Run]
 Filename: "{app}\photag.exe"; Description: "הפעל את photag"; Flags: nowait postinstall skipifsilent
 ; started by the in-app updater (photagSetup.exe /SILENT /update=1): relaunch the app when the update is done

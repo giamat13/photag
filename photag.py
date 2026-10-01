@@ -29,6 +29,12 @@ def _ensure_std_streams():
 
 _ensure_std_streams()
 
+if "--backup" in sys.argv:       # headless: used by the Windows scheduled task, never opens a window
+    from app import backup_cli
+    _rc = backup_cli.main(sys.argv[1:])
+    sys.stdout.flush(); sys.stderr.flush()
+    os._exit(_rc)                # leave at once: nothing stays in memory after a background backup
+
 import uvicorn
 
 from app.server import app

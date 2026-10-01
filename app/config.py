@@ -70,6 +70,11 @@ def set_update_skipped(version: str | None) -> None:
     _write_pointer(update_skipped=version or None)
 
 
+def settings_dir() -> Path:
+    """The folder of the settings file (%APPDATA%\\photag)."""
+    return _POINTER.parent
+
+
 def read_all() -> dict:
     """Every saved setting (for backups)."""
     return dict(_read_pointer())

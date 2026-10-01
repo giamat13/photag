@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task
 from .version import __version__
 from .config import PATHS
 
@@ -38,14 +38,19 @@ def _other_job_running(except_name: str = "") -> bool:
 
 def _backup_loop():
     """Automatic backups: every few minutes, check whether one is due (never while another job is running)."""
-    time.sleep(90)                                  # let the app finish starting first
+    try:
+        backup_task.ensure(backup.get_settings()["enabled"])     # the Windows task that backs up even when the app is closed
+    except Exception:
+        pass
+    time.sleep(float(os.environ.get("PHOTAG_BACKUP_START_DELAY", 90)))      # let the app finish starting first
     while True:
         try:
-            if backup.get_settings()["enabled"] and backup.is_due() and not _other_job_running():
+            # catches up on a missed day right after start-up; after a failure it retries every 30 minutes
+            if backup.auto_due() is None and not _other_job_running():
                 _start("backup", backup.run_backup, "auto")
         except Exception:
             pass
-        time.sleep(300)
+        time.sleep(float(os.environ.get("PHOTAG_BACKUP_TICK", 300)))
 
 
 def _trash_purge_loop():
@@ -211,17 +216,21 @@ def backup_info():
     s = backup.get_settings()
     snaps = backup.list_snapshots()
     last = next((m["created"] for m in snaps if m["reason"] in ("auto", "manual")), None)
-    return {"settings": s, "folder": str(backup.backup_dir()), "snapshots": snaps, "last": last,
+    ferr = backup.folder_error()
+    folder = Path(s["folder"]) if s["folder"] else PATHS.root / "backups"       # shown even when it cannot be reached
+    return {"settings": s, "folder": str(folder), "snapshots": snaps, "last": last,
             "next": backup.next_due(), "media_bytes": con.execute("SELECT COALESCE(SUM(bytes),0) FROM photos").fetchone()[0],
-            "mirror": (backup.backup_dir() / backup.MIRROR).is_dir(),
-            "mirror_bytes": backup.folder_bytes(backup.backup_dir() / backup.MIRROR),
-            "free_bytes": shutil.disk_usage(backup.backup_dir()).free}
+            "mirror": (not ferr) and (folder / backup.MIRROR).is_dir(),
+            "health": backup.health(),
+            "mirror_bytes": 0 if ferr else backup.folder_bytes(folder / backup.MIRROR),
+            "free_bytes": 0 if ferr else shutil.disk_usage(folder).free}
 
 
 @app.post("/api/backup/settings")
 def backup_settings(body: BackupSettingsIn):
     try:
-        backup.set_settings(body.model_dump(exclude_unset=True))
+        s = backup.set_settings(body.model_dump(exclude_unset=True))
+        threading.Thread(target=backup_task.ensure, args=(s["enabled"],), daemon=True).start()
     except OSError:
         raise err(400, "אי אפשר לכתוב לתיקייה שנבחרה")
     return backup_info()

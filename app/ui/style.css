@@ -597,6 +597,8 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 .bk{display:flex;flex-direction:column;gap:10px;min-width:460px}
 .bk-status{color:#fff}
 .bk-cover{padding:8px 12px;background:#2a2a2a;border:1px solid #1e1e1e;border-radius:3px;color:var(--t2)}
+.bk-h{padding:6px 12px;border-radius:3px;background:#2a2a2a;color:var(--t2)}
+.bk-h.ok{border-inline-start:3px solid var(--green)}.bk-h.warn{border-inline-start:3px solid var(--yellow);color:var(--yellow)}.bk-h.bad{border-inline-start:3px solid var(--red);color:#f0b0b0}
 .bk-cover.warn{border-color:var(--yellow);color:var(--yellow)}
 .chkrow{display:flex;align-items:center;gap:8px}.chkrow.off{opacity:.5}
 .bk-path{display:flex;gap:6px}.bk-path input{flex:1;min-width:0}
