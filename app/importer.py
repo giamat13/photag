@@ -122,22 +122,39 @@ def _unique_dest(dest: Path) -> Path:
 
 
 class Progress:
+    """Job state for the UI. Messages are Hebrew source strings with {name}
+    placeholders (key + vars), translated by the frontend's t()."""
     def __init__(self):
         self.state = "idle"; self.done = 0; self.total = 0; self.msg = ""; self.error = None
+        self.key = None; self.vars = {}; self.parts = None; self.error_key = None
+
+    def say(self, key, **vars):
+        self.key, self.vars, self.parts = key, vars, None
+        self.msg = key.format(**vars)
+
+    def say_parts(self, *parts):
+        """Several short messages shown joined by " · " (only the ones that apply)."""
+        self.key, self.parts = None, [{"key": k, "vars": v} for k, v in parts]
+        self.msg = " · ".join(k.format(**v) for k, v in parts)
+
+    def fail(self, key, **vars):
+        self.state, self.error_key, self.vars = "error", key, vars
+        self.error = key.format(**vars)
+
     def as_dict(self):
-        return {"state": self.state, "done": self.done, "total": self.total,
-                "msg": self.msg, "error": self.error}
+        return {"state": self.state, "done": self.done, "total": self.total, "msg": self.msg, "error": self.error,
+                "key": self.key, "vars": self.vars, "parts": self.parts, "error_key": self.error_key}
 
 
 def run_import(zip_path: str, progress: Progress):
     con = db.init_db()
     mark_import_start(con)
-    progress.state = "scanning"; progress.msg = "קורא את מבנה ה-ZIP…"
+    progress.state = "scanning"; progress.say("קורא את מבנה ה-ZIP…")
     try:
         _do_import(zip_path, con, progress)
-        progress.state = "done"; progress.msg = "הייבוא הושלם"
+        progress.state = "done"; progress.say("הייבוא הושלם")
     except Exception as e:  # surface to UI instead of dying silently
-        progress.state = "error"; progress.error = str(e)
+        progress.fail("הייבוא נכשל: {error}", error=str(e))
         raise
     finally:
         con.commit()
@@ -198,7 +215,7 @@ def _do_import(zip_path, con, progress):
         for base, entry in f["media"].items():
             progress.done += 1
             if progress.done % 25 == 0:
-                progress.msg = f"{album} — {progress.done}/{progress.total}"
+                progress.say("{album} — {done}/{total}", album=album, done=progress.done, total=progress.total)
                 con.commit()
             meta = {}
             if base in pairs:
@@ -354,7 +371,7 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
         for path in paths:
             progress.done += 1
             if progress.done % 10 == 0:
-                progress.msg = f"{progress.done}/{progress.total}"
+                progress.say("{done}/{total}", done=progress.done, total=progress.total)
                 con.commit()
             src = Path(path)
             if not src.is_file():
@@ -368,10 +385,11 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
                             (photo_id, tid))
         con.commit()
         progress.state = "done"
-        progress.msg = f"יובאו {added} פריטים" + (f" ({dupes} כבר היו בקטלוג)" if dupes else "")
+        progress.say_parts(("יובאו {n} פריטים", {"n": added}),
+                           *([("{n} כבר היו בקטלוג", {"n": dupes})] if dupes else []))
     except Exception as e:
         con.commit()
-        progress.state = "error"; progress.error = str(e)
+        progress.fail("הייבוא נכשל: {error}", error=str(e))
 
 
 # ---------- import a Lightroom Classic catalog (.lrcat) ----------
@@ -435,7 +453,7 @@ def lrcat_info(path: str) -> dict:
 def run_lrcat_import(path: str, progress: Progress):
     con = db.init_db()
     mark_import_start(con)
-    progress.state = "scanning"; progress.msg = "קורא את קטלוג Lightroom…"
+    progress.state = "scanning"; progress.say("קורא את קטלוג Lightroom…")
     try:
         lr = _lr_open(path)
         imgs = _lr_images(lr)
@@ -466,7 +484,7 @@ def run_lrcat_import(path: str, progress: Progress):
         for r in imgs:
             progress.done += 1
             if progress.done % 10 == 0:
-                progress.msg = f"Lightroom — {progress.done}/{progress.total}"
+                progress.say("Lightroom — {done}/{total}", done=progress.done, total=progress.total)
                 con.commit()
             src = Path(r["path"])
             if not src.is_file():
@@ -500,11 +518,12 @@ def run_lrcat_import(path: str, progress: Progress):
                 con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (pid, aid))
         con.commit()
         progress.state = "done"
-        progress.msg = (f"יובאו {added} פריטים מ‑Lightroom" + (f" · {dupes} כבר היו בקטלוג" if dupes else "")
-                        + (f" · {missing} קבצים חסרים בדיסק" if missing else ""))
+        progress.say_parts(("יובאו {n} פריטים מ‑Lightroom", {"n": added}),
+                           *([("{n} כבר היו בקטלוג", {"n": dupes})] if dupes else []),
+                           *([("{n} קבצים חסרים בדיסק", {"n": missing})] if missing else []))
     except Exception as e:
         con.commit()
-        progress.state = "error"; progress.error = f"ייבוא מ‑Lightroom נכשל: {e}"
+        progress.fail("ייבוא מ‑Lightroom נכשל: {error}", error=str(e))
 
 
 def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
@@ -517,7 +536,7 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
     try:
         for pid in ids:
             progress.done += 1
-            progress.msg = f"{progress.done}/{progress.total}"
+            progress.say("{done}/{total}", done=progress.done, total=progress.total)
             r = con.execute("SELECT filename, rel_path, orig_backup, is_video FROM photos WHERE id=?",
                             (pid,)).fetchone()
             if not r:
@@ -531,9 +550,9 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
                 shutil.copy2(src, _unique_dest(out_dir / name))
             else:
                 images.export_resized(src, _unique_dest(out_dir / (Path(name).stem + ".jpg")), long_edge, quality)
-        progress.state = "done"; progress.msg = f"יוצאו {progress.done} פריטים אל {out_dir}"
+        progress.state = "done"; progress.say("יוצאו {n} פריטים אל {folder}", n=progress.done, folder=str(out_dir))
     except Exception as e:
-        progress.state = "error"; progress.error = str(e)
+        progress.fail("הייצוא נכשל: {error}", error=str(e))
 
 
 if __name__ == "__main__":  # ponytail self-check for the fiddly matcher

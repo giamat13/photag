@@ -51,7 +51,7 @@ def model_ready() -> bool:
     return all((d / f).exists() for f in MODEL_FILES)
 
 
-def _download(url: str, dest: Path, progress=None, label=""):
+def _download(url: str, dest: Path, progress=None, label="{done}/{total} MB"):
     if dest.exists():
         return
     tmp = dest.with_suffix(dest.suffix + ".part")
@@ -62,17 +62,17 @@ def _download(url: str, dest: Path, progress=None, label=""):
             f.write(chunk); done += len(chunk)
             if progress is not None and total:
                 progress.total, progress.done = total, done
-                progress.msg = f"מוריד {label} ({done >> 20}/{total >> 20} MB)"
+                progress.say(label, done=done >> 20, total=total >> 20)
     tmp.replace(dest)
 
 
 def ensure_models(progress=None):
     d = models_dir()
     for name, remote in MODEL_FILES.items():
-        _download(HF + remote, d / name, progress, "מודל תיוג")
+        _download(HF + remote, d / name, progress, "מוריד מודל תיוג ({done}/{total} MB)")
     for name, url in GEO_FILES.items():
         try:
-            _download(url, d / name, progress, "מפת מקומות")
+            _download(url, d / name, progress, "מוריד מפת מקומות ({done}/{total} MB)")
         except Exception:
             pass  # places are a bonus; tagging works without them
 
@@ -471,7 +471,7 @@ def run_autotag(progress):
             "SELECT p.id, p.sha256 FROM photos p LEFT JOIN clip_emb e ON e.photo_id=p.id "
             "WHERE p.trashed=0 AND p.is_video=0 AND (e.photo_id IS NULL OR e.sha256<>p.sha256)").fetchall()
         progress.state = "tagging"; progress.total = len(todo); progress.done = 0
-        progress.msg = "מנתח תמונות…"
+        progress.say("מנתח תמונות…")
         for i in range(0, len(todo), 16):
             batch, arrs = todo[i:i + 16], []
             for r in batch:
@@ -489,10 +489,10 @@ def run_autotag(progress):
                 e = next(embs).astype(np.float16).tobytes() if a is not None else None
                 con.execute("INSERT OR REPLACE INTO clip_emb(photo_id, sha256, emb) VALUES(?,?,?)", (r["id"], r["sha256"], e))
             progress.done = min(len(todo), i + 16)
-            progress.msg = f"מנתח תמונות {progress.done}/{progress.total}"
+            progress.say("מנתח תמונות {done}/{total}", done=progress.done, total=progress.total)
             con.commit()
 
-        progress.msg = "משייך מילות מפתח…"
+        progress.say("משייך מילות מפתח…")
         ids, E = _emb_rows(con)
         rejected = {(r["photo_id"], r["tag"]) for r in con.execute("SELECT photo_id, tag FROM autotag_rejected")}
         n_tags = 0
@@ -508,10 +508,10 @@ def run_autotag(progress):
         con.execute("DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM photo_tags)")
         con.commit()
         progress.state = "done"
-        progress.msg = f"תויגו {len(ids)} תמונות · {n_tags} מילות מפתח"
+        progress.say_parts(("תויגו {n} תמונות", {"n": len(ids)}), ("{n} מילות מפתח", {"n": n_tags}))
     except Exception as e:
         con.commit()
-        progress.state = "error"; progress.error = f"התיוג האוטומטי נכשל: {e}"
+        progress.fail("התיוג האוטומטי נכשל: {error}", error=str(e))
 
 
 # ---------- smart search + suggestions ----------

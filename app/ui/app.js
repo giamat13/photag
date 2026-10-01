@@ -7,28 +7,28 @@
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 async function api(u, opt){
-  const r = await fetch(u, opt); const t = await r.text(); let d = {};
-  try{ d = t ? JSON.parse(t) : {}; }catch{}
-  if(!r.ok) throw new Error(d.detail || r.statusText);
+  const r = await fetch(u, opt); const tg = await r.text(); let d = {};
+  try{ d = tg ? JSON.parse(tg) : {}; }catch{}
+  if(!r.ok) throw new Error(d.detail && d.detail.key ? t(d.detail.key, d.detail.vars) : t(d.detail || r.statusText));
   return d;
 }
 const send = (method, u, body) => api(u, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body||{})});
 const esc = s => (s??'').toString().replace(/[<>&"']/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
-const num = n => (n||0).toLocaleString('he-IL');
-const fdate = t => t ? new Date(t*1000).toLocaleString('he-IL', {dateStyle:'medium', timeStyle:'short'}) : '—';
+const num = n => (n||0).toLocaleString(I18N.locale);
+const fdate = ts => ts ? new Date(ts*1000).toLocaleString(I18N.locale, {dateStyle:'medium', timeStyle:'short'}) : '—';
 const fsize = b => !b ? '—' : b > 1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(b/1024))+' KB';
 const I = (n, cls='') => `<svg class="ic ${cls}"><use href="#i-${n}"/></svg>`;
 const ext = p => (p.filename.split('.').pop()||'').toUpperCase();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function debounce(fn, ms){ let h; return (...a)=>{ clearTimeout(h); h=setTimeout(()=>fn(...a), ms); }; }
-function toast(msg, ms=2600){ const t=$('#toast'); t.innerHTML=msg; t.classList.remove('hidden'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.add('hidden'), ms); }
-window.addEventListener('unhandledrejection', e=>toast('שגיאה: '+esc(e.reason?.message||e.reason)));
+function toast(msg, ms=2600){ const tg=$('#toast'); tg.innerHTML=msg; tg.classList.remove('hidden'); clearTimeout(tg._h); tg._h=setTimeout(()=>tg.classList.add('hidden'), ms); }
+window.addEventListener('unhandledrejection', e=>toast(t('שגיאה: ')+esc(e.reason?.message||e.reason)));
 const pref = {
   get(k, d){ try{ const v=localStorage.getItem('pm.'+k); return v==null ? d : JSON.parse(v); }catch{ return d; } },
   set(k, v){ try{ localStorage.setItem('pm.'+k, JSON.stringify(v)); }catch{} },
 };
 
-const LABELS = [['red','אדום','6'],['yellow','צהוב','7'],['green','ירוק','8'],['blue','כחול','9'],['purple','סגול','']];
+const LABELS = [['red',t('אדום'),'6'],['yellow',t('צהוב'),'7'],['green',t('ירוק'),'8'],['blue',t('כחול'),'9'],['purple',t('סגול'),'']];
 const LNAME = Object.fromEntries(LABELS.map(([k,n])=>[k,n]));
 const lcol = k => `var(--${k})`;
 // photo/media urls carry a version so edited photos don't come back stale from the browser cache
@@ -39,7 +39,7 @@ const mediaUrl = id => `/media/${id}${VER[id]?'?v='+VER[id]:''}`;
 // ---------- state ----------
 const S = {
   mod:'library', view:'grid', prevView:'grid',
-  src:{kind:'all', name:'כל התמונות'}, hist:[], histPos:-1,
+  src:{kind:'all', name:t('כל התמונות')}, hist:[], histPos:-1,
   all:[], byId:new Map(), base:[], list:[], idx:new Map(),
   sel:new Set(), act:null, anchor:null,
   sort:pref.get('sort','capture'), asc:pref.get('asc',false),
@@ -67,14 +67,14 @@ async function loadSide(){
 // ---------- sources (what the grid shows) ----------
 const MONTH_S = 30*86400;
 const SMART = [
-  ['red',   'תווית אדומה',          p=>p.label==='red'],
-  ['five',  'חמישה כוכבים',         p=>p.rating===5],
-  ['picks', 'נבחרו (דגל)',           p=>p.flag===1],
-  ['month', 'החודש האחרון',          p=>(p.taken_at||0) > Date.now()/1000 - MONTH_S],
-  ['video', 'קובצי וידאו',           p=>!!p.is_video],
-  ['nokw',  'ללא מילות מפתח',        p=>!p.has_kw],
-  ['edited','ערוכות',                p=>!!p.edited],
-  ['fav',   'מועדפים מ‑Google',      p=>!!p.favorited],
+  ['red',   t('תווית אדומה'),          p=>p.label==='red'],
+  ['five',  t('חמישה כוכבים'),         p=>p.rating===5],
+  ['picks', t('נבחרו (דגל)'),           p=>p.flag===1],
+  ['month', t('החודש האחרון'),          p=>(p.taken_at||0) > Date.now()/1000 - MONTH_S],
+  ['video', t('קובצי וידאו'),           p=>!!p.is_video],
+  ['nokw',  t('ללא מילות מפתח'),        p=>!p.has_kw],
+  ['edited',t('ערוכות'),                p=>!!p.edited],
+  ['fav',   t('מועדפים מ‑Google'),      p=>!!p.favorited],
 ];
 function srcKey(s){ return s.kind + (s.id!=null ? ':'+s.id : ''); }
 function srcParams(s){
@@ -114,9 +114,9 @@ async function fetchSource(){
 }
 
 // ---------- filtering + sorting ----------
-const yearOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getFullYear()) : 'ללא';
-const monthOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getMonth()+1).padStart(2,'0') : 'ללא';
-const orientOf = p => !p.width||!p.height ? 'לא ידוע' : p.width>p.height*1.05 ? 'לרוחב' : p.height>p.width*1.05 ? 'לאורך' : 'ריבועי';
+const yearOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getFullYear()) : t('ללא');
+const monthOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getMonth()+1).padStart(2,'0') : t('ללא');
+const orientOf = p => !p.width||!p.height ? t('לא ידוע') : p.width>p.height*1.05 ? t('לרוחב') : p.height>p.width*1.05 ? t('לאורך') : t('ריבועי');
 const flagKey = p => p.flag===1 ? 'pick' : p.flag===-1 ? 'rej' : 'none';
 function passAttr(p){
   const F = S.F;
@@ -129,7 +129,7 @@ function passAttr(p){
   if(F.kinds.size && !((F.kinds.has('photo')&&!p.is_video) || (F.kinds.has('video')&&p.is_video) || (F.kinds.has('edited')&&p.edited))) return false;
   return true;
 }
-const META_COLS = [['year','תאריך',yearOf],['month','חודש',monthOf],['ext','סוג קובץ',ext],['orient','כיוון',orientOf]];
+const META_COLS = [['year',t('תאריך'),yearOf],['month',t('חודש'),monthOf],['ext',t('סוג קובץ'),ext],['orient',t('כיוון'),orientOf]];
 function passMeta(p, upto=META_COLS.length){
   for(let i=0;i<upto;i++){ const [k,,fn]=META_COLS[i]; const set=S.F.meta[k]; if(set.size && !set.has(fn(p))) return false; }
   return true;
@@ -138,13 +138,13 @@ function filterActive(){
   const F=S.F; return !!(F.q || F.flags.size || F.rating || F.labels.size || F.kinds.size || Object.values(F.meta).some(s=>s.size));
 }
 const SORTS = {
-  capture:['זמן צילום', (a,b)=>(a.taken_at||0)-(b.taken_at||0) || a.id-b.id],
-  import: ['סדר הוספה', (a,b)=>(a.imported_at||0)-(b.imported_at||0) || a.id-b.id],
-  name:   ['שם קובץ',   (a,b)=>a.filename.localeCompare(b.filename, 'he', {numeric:true})],
-  rating: ['דירוג',     (a,b)=>(a.rating||0)-(b.rating||0) || (a.taken_at||0)-(b.taken_at||0)],
-  pick:   ['דגל',       (a,b)=>(a.flag||0)-(b.flag||0) || (a.taken_at||0)-(b.taken_at||0)],
-  label:  ['תווית צבע', (a,b)=>lrank(a)-lrank(b) || (a.taken_at||0)-(b.taken_at||0)],
-  size:   ['גודל קובץ', (a,b)=>(a.bytes||0)-(b.bytes||0)],
+  capture:[t('זמן צילום'), (a,b)=>(a.taken_at||0)-(b.taken_at||0) || a.id-b.id],
+  import: [t('סדר הוספה'), (a,b)=>(a.imported_at||0)-(b.imported_at||0) || a.id-b.id],
+  name:   [t('שם קובץ'),   (a,b)=>a.filename.localeCompare(b.filename, I18N.locale, {numeric:true})],
+  rating: [t('דירוג'),     (a,b)=>(a.rating||0)-(b.rating||0) || (a.taken_at||0)-(b.taken_at||0)],
+  pick:   [t('דגל'),       (a,b)=>(a.flag||0)-(b.flag||0) || (a.taken_at||0)-(b.taken_at||0)],
+  label:  [t('תווית צבע'), (a,b)=>lrank(a)-lrank(b) || (a.taken_at||0)-(b.taken_at||0)],
+  size:   [t('גודל קובץ'), (a,b)=>(a.bytes||0)-(b.bytes||0)],
 };
 const lrank = p => p.label ? LABELS.findIndex(l=>l[0]===p.label) : 9;
 function applyFilter({keepScroll=true}={}){
@@ -216,17 +216,17 @@ function toggleQuick(){
   const ids=targets(); if(!ids.length) return;
   const on = !(S.byId.get(ids[0])||{}).quick;
   setAttr({quick:on?1:0}, ids);
-  toast(on ? `נוסף לאוסף המהיר (${num(ids.length)})` : 'הוסר מהאוסף המהיר');
+  toast(on ? `${t("נוסף לאוסף המהיר ({0})", [num(ids.length)])}` : t('הוסר מהאוסף המהיר'));
 }
 async function trashSelected(){
   const ids=targets(); if(!ids.length) return;
   const restore = S.src.kind==='trash';
   await setAttr({trashed: restore?0:1}, ids);
-  toast(restore ? `שוחזרו ${num(ids.length)} פריטים` : `הועברו לאשפה ${num(ids.length)} פריטים · נמחקים לצמיתות אחרי ${S.status?.trash_days||60} יום`);
+  toast(restore ? `${t("שוחזרו {0} פריטים", [num(ids.length)])}` : `${t("הועברו לאשפה {0} פריטים · נמחקים לצמיתות אחרי {1} יום", [num(ids.length), S.status?.trash_days||60])}`);
 }
 async function rotateSel(deg){
   const ids = targets().filter(id=>!(S.byId.get(id)||{}).is_video); if(!ids.length) return;
-  toast('מסובב…', 1200);
+  toast(t('מסובב…'), 1200);
   for(const id of ids){
     const d = await send('POST', `/api/photo/${id}/rotate`, {degrees:deg});
     const p = S.byId.get(id); if(p) Object.assign(p, {width:d.width, height:d.height, edited:d.edited});
@@ -250,9 +250,9 @@ function renderAll(){
 }
 function renderEmpty(){
   const e=$('#v-empty');
-  if(!S.all.length && S.src.kind==='all') e.innerHTML = `<b>הקטלוג ריק</b><div>ייבאו תמונות מתיקייה, מכרטיס זיכרון או מ‑Google Takeout.</div><button class="primary" onclick="openImport()">ייבוא...</button>`;
-  else if(S.base.length) e.innerHTML = `<b>אין תמונות שתואמות למסנן</b><div>${num(S.base.length)} תמונות במקור הזה מוסתרות על ידי המסנן.</div><button onclick="clearFilters()">נקה מסנן</button>`;
-  else e.innerHTML = `<b>אין כאן תמונות</b>`;
+  if(!S.all.length && S.src.kind==='all') e.innerHTML = `<b>${t("הקטלוג ריק")}</b><div>${t("ייבאו תמונות מתיקייה, מכרטיס זיכרון או מ‑Google Takeout.")}</div><button class="primary" onclick="openImport()">${t("ייבוא...")}</button>`;
+  else if(S.base.length) e.innerHTML = `<b>${t("אין תמונות שתואמות למסנן")}</b><div>${t("{0} תמונות במקור הזה מוסתרות על ידי המסנן.", [num(S.base.length)])}</div><button onclick="clearFilters()">${t("נקה מסנן")}</button>`;
+  else e.innerHTML = `<b>${t("אין כאן תמונות")}</b>`;
 }
 
 // ---------- grid (virtualized) ----------
@@ -313,13 +313,13 @@ function fillCell(c, p, i){
   const bx = (G.cw - c._w)/2, by = S.cell==='xp' ? G.cw*.22 + (G.cw*.58 - c._h)/2 : G.cw*.15 + (G.cw*.65 - c._h)/2;
   const badges = [p.has_kw && I('kw'), p.edited && I('dev')].filter(Boolean);
   c.querySelector('.ov').innerHTML =
-    `<button class="flag ${p.flag===1?'pick':p.flag===-1?'rej':''}" data-a="flag" title="דגל (P / X / U)">${I(p.flag===-1?'reject':'flag')}</button>
-     <button class="qc ${p.quick?'on':''}" data-a="qc" title="אוסף מהיר (B)">${I('dot')}</button>
-     <button class="rot l" data-a="rotl" title="סובב שמאלה (Ctrl+[)">${I('rotl')}</button>
-     <button class="rot r" data-a="rotr" title="סובב ימינה (Ctrl+])">${I('rotr')}</button>
+    `<button class="flag ${p.flag===1?'pick':p.flag===-1?'rej':''}" data-a="flag" title="${t("דגל (P / X / U)")}">${I(p.flag===-1?'reject':'flag')}</button>
+     <button class="qc ${p.quick?'on':''}" data-a="qc" title="${t("אוסף מהיר (B)")}">${I('dot')}</button>
+     <button class="rot l" data-a="rotl" title="${t("סובב שמאלה (Ctrl+[)")}">${I('rotl')}</button>
+     <button class="rot r" data-a="rotr" title="${t("סובב ימינה (Ctrl+])")}">${I('rotr')}</button>
      <div class="stars ${r?'':'none'}">${stars}</div>
      ${badges.length?`<div class="badges" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-end:${Math.round(bx+4)}px">${badges.map(b=>`<i>${b}</i>`).join('')}</div>`:''}
-     ${p.is_video?`<span class="dur" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-start:${Math.round(bx+4)}px">${I('play')}וידאו</span>`:''}`;
+     ${p.is_video?`<span class="dur" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-start:${Math.round(bx+4)}px">${I('play')}${t("וידאו")}</span>`:''}`;
 }
 function refreshCells(){ for(const [i,c] of G.cells){ const p=S.list[i]; if(p) fillCell(c,p,i); } }
 function scrollToAct(){
@@ -372,14 +372,14 @@ function renderFilm(rebuild){
 }
 function drawFilm(){
   const strip=$('#fs-strip'), innerW=$('#fs-inner').offsetWidth;
-  const fromRight = innerW - (strip.scrollLeft + strip.clientWidth);
-  const a = Math.max(0, Math.floor(fromRight / FW) - 4), b = Math.min(S.list.length-1, Math.ceil((fromRight+strip.clientWidth)/FW) + 4);
+  const fromStart = RTL ? innerW - (strip.scrollLeft + strip.clientWidth) : strip.scrollLeft;   // offset from the first photo
+  const a = Math.max(0, Math.floor(fromStart / FW) - 4), b = Math.min(S.list.length-1, Math.ceil((fromStart+strip.clientWidth)/FW) + 4);
   for(const [i,c] of F_.cells) if(i<a || i>b){ c.remove(); F_.cells.delete(i); }
   const frag=document.createDocumentFragment();
   for(let i=a;i<=b;i++){
     let c=F_.cells.get(i);
     const p=S.list[i];
-    if(!c){ c=document.createElement('div'); c.className='fc'; c.style.right=(4+i*FW)+'px'; c.dataset.i=i; c.draggable=true;
+    if(!c){ c=document.createElement('div'); c.className='fc'; c.style[RTL?'right':'left']=(4+i*FW)+'px'; c.dataset.i=i; c.draggable=true;
       c.innerHTML=`<img loading="lazy" draggable="false" src="${thumbUrl(p.id)}" alt="" onerror="this.remove()"><span class="ov"></span>`; F_.cells.set(i,c); frag.appendChild(c); }
     c.dataset.id=p.id;
     c.classList.toggle('sel', S.sel.has(p.id)); c.classList.toggle('act', S.act===p.id); c.classList.toggle('rej', p.flag===-1);
@@ -390,18 +390,18 @@ function drawFilm(){
 }
 function filmScrollTo(i){
   const strip=$('#fs-strip'), innerW=$('#fs-inner').offsetWidth;
-  const left = innerW - (4+i*FW) - FW;   // left edge of cell i in LTR coords
+  const left = RTL ? innerW - (4+i*FW) - FW : 4+i*FW;   // left edge of cell i (the strip scrolls in LTR coords)
   if(left < strip.scrollLeft || left+FW > strip.scrollLeft+strip.clientWidth) strip.scrollLeft = left - strip.clientWidth/2 + FW/2;
 }
 $('#fs-strip').addEventListener('scroll', ()=>requestAnimationFrame(drawFilm), {passive:true});
-$('#fs-strip').addEventListener('wheel', e=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ e.preventDefault(); $('#fs-strip').scrollLeft -= e.deltaY; } }, {passive:false});
+$('#fs-strip').addEventListener('wheel', e=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ e.preventDefault(); $('#fs-strip').scrollLeft += RTL ? -e.deltaY : e.deltaY; } }, {passive:false});
 $('#fs-inner').addEventListener('mousedown', e=>{ const c=e.target.closest('.fc'); if(c && e.button===0) selectClick(+c.dataset.id, e); });
 $('#fs-inner').addEventListener('dblclick', e=>{ const c=e.target.closest('.fc'); if(c){ selectOnly(+c.dataset.id); if(S.mod==='library') setView('loupe'); } });
 $('#fs-inner').addEventListener('dragstart', e=>{ const c=e.target.closest('.fc'); if(!c) return; const id=+c.dataset.id; if(!S.sel.has(id)) selectOnly(id);
   e.dataTransfer.setData('text/x-pm-ids', JSON.stringify([...S.sel])); });
 function renderPath(){
   const n=S.list.length, s=S.sel.size, p=actPhoto();
-  $('#fs-path').innerHTML = `<b>${esc(S.src.name)}</b> : ${num(n)} תמונות${S.base.length!==n?` (מתוך ${num(S.base.length)})`:''}${s?` / ${num(s)} נבחרו`:''}${p?` / <b dir="ltr">${esc(p.filename)}</b>`:''}`;
+  $('#fs-path').innerHTML = `<b>${esc(S.src.name)}</b> ${t(": {0} תמונות", [num(n)])}${S.base.length!==n?` ${t("(מתוך {0})", [num(S.base.length)])}`:''}${s?` ${t("/ {0} נבחרו", [num(s)])}`:''}${p?` / <b dir="ltr">${esc(p.filename)}</b>`:''}`;
 }
 $('#fs-grid').onclick = ()=>{ if(S.mod!=='library') setModule('library'); setView('grid'); };
 $('#fs-back').onclick = ()=>{ if(S.histPos>0){ S.histPos--; setSource(S.hist[S.histPos], {push:false}); } };
@@ -410,32 +410,32 @@ $('#fs-fwd').onclick = ()=>{ if(S.histPos<S.hist.length-1){ S.histPos++; setSour
 // quick filter in the filmstrip header (shares state with the Library Filter's attribute tab)
 function attrControls(small){
   const F=S.F;
-  const flag = (k, ic, t) => `<button class="tg ${F.flags.has(k)?'on':''}" data-ff="${k}" title="${t}">${ic}</button>`;
+  const flag = (k, ic, tg) => `<button class="tg ${F.flags.has(k)?'on':''}" data-ff="${k}" title="${tg}">${ic}</button>`;
   const stars = `<span class="fstars" data-fr>${[1,2,3,4,5].map(n=>`<b data-n="${n}" class="${n<=F.rating?'on':''}">★</b>`).join('')}</span>`;
   const labs = LABELS.map(([k,n])=>`<button class="tg lab ${F.labels.has(k)?'on':''}" data-fl="${k}" title="${n}"><span class="sw" style="background:${lcol(k)}"></span></button>`).join('')
-    + `<button class="tg lab ${F.labels.has('none')?'on':''}" data-fl="none" title="ללא תווית"><span class="sw" style="background:#555"></span></button>`;
-  const flags = flag('pick', I('flag'), 'נבחרו') + flag('none', `<svg class="ic"><use href="#i-flag"/></svg>`.replace('ic"','ic" style="opacity:.45"'), 'ללא דגל') + flag('rej', I('reject'), 'נדחו');
-  if(small) return `<span>סינון:</span>${flags}<span class="tb-sep"></span>
+    + `<button class="tg lab ${F.labels.has('none')?'on':''}" data-fl="none" title="${t("ללא תווית")}"><span class="sw" style="background:#555"></span></button>`;
+  const flags = flag('pick', I('flag'), t('נבחרו')) + flag('none', `<svg class="ic"><use href="#i-flag"/></svg>`.replace('ic"','ic" style="opacity:.45"'), t('ללא דגל')) + flag('rej', I('reject'), t('נדחו'));
+  if(small) return `<span>${t("סינון:")}</span>${flags}<span class="tb-sep"></span>
     <select class="op" data-fop><option ${F.rop==='>='?'selected':''} value=">=">≥</option><option ${F.rop==='<='?'selected':''} value="<=">≤</option><option ${F.rop==='='?'selected':''} value="=">=</option></select>${stars}<span class="tb-sep"></span>${labs}
-    <button class="tg ${F.on?'':'on'}" data-foff title="הפעל/השבת מסננים (Ctrl+L)">${F.on?'מופעל':'כבוי'}</button>`;
-  return `<div class="attr-grp"><span>דגל</span>${flags}</div>
-    <div class="attr-grp"><span>דירוג</span><select class="op" data-fop><option ${F.rop==='>='?'selected':''} value=">=">≥</option><option ${F.rop==='<='?'selected':''} value="<=">≤</option><option ${F.rop==='='?'selected':''} value="=">=</option></select>${stars}</div>
-    <div class="attr-grp"><span>צבע</span>${labs}</div>
-    <div class="attr-grp"><span>סוג</span>
-      <button class="tg ${F.kinds.has('photo')?'on':''}" data-fk="photo" title="תמונות">${I('photos')}</button>
-      <button class="tg ${F.kinds.has('video')?'on':''}" data-fk="video" title="וידאו">${I('play')}</button>
-      <button class="tg ${F.kinds.has('edited')?'on':''}" data-fk="edited" title="ערוכות">${I('dev')}</button></div>`;
+    <button class="tg ${F.on?'':'on'}" data-foff title="${t("הפעל/השבת מסננים (Ctrl+L)")}">${F.on?t('מופעל'):t('כבוי')}</button>`;
+  return `<div class="attr-grp"><span>${t("דגל")}</span>${flags}</div>
+    <div class="attr-grp"><span>${t("דירוג")}</span><select class="op" data-fop><option ${F.rop==='>='?'selected':''} value=">=">≥</option><option ${F.rop==='<='?'selected':''} value="<=">≤</option><option ${F.rop==='='?'selected':''} value="=">=</option></select>${stars}</div>
+    <div class="attr-grp"><span>${t("צבע")}</span>${labs}</div>
+    <div class="attr-grp"><span>${t("סוג")}</span>
+      <button class="tg ${F.kinds.has('photo')?'on':''}" data-fk="photo" title="${t("תמונות")}">${I('photos')}</button>
+      <button class="tg ${F.kinds.has('video')?'on':''}" data-fk="video" title="${t("וידאו")}">${I('play')}</button>
+      <button class="tg ${F.kinds.has('edited')?'on':''}" data-fk="edited" title="${t("ערוכות")}">${I('dev')}</button></div>`;
 }
 function renderFsFilter(){ $('#fs-filter').innerHTML = attrControls(true); }
 function bindAttrControls(root){
   root.addEventListener('click', e=>{
-    const t=e.target.closest('[data-ff],[data-fl],[data-fk],[data-n],[data-foff]'); if(!t) return;
+    const tg=e.target.closest('[data-ff],[data-fl],[data-fk],[data-n],[data-foff]'); if(!tg) return;
     const F=S.F, tog=(set,k)=>set.has(k)?set.delete(k):set.add(k);
-    if(t.dataset.ff) tog(F.flags, t.dataset.ff);
-    else if(t.dataset.fl) tog(F.labels, t.dataset.fl);
-    else if(t.dataset.fk) tog(F.kinds, t.dataset.fk);
-    else if(t.dataset.n){ const n=+t.dataset.n; F.rating = F.rating===n ? 0 : n; }
-    else if('foff' in t.dataset){ F.on=!F.on; }
+    if(tg.dataset.ff) tog(F.flags, tg.dataset.ff);
+    else if(tg.dataset.fl) tog(F.labels, tg.dataset.fl);
+    else if(tg.dataset.fk) tog(F.kinds, tg.dataset.fk);
+    else if(tg.dataset.n){ const n=+tg.dataset.n; F.rating = F.rating===n ? 0 : n; }
+    else if('foff' in tg.dataset){ F.on=!F.on; }
     applyFilter();
   });
   root.addEventListener('change', e=>{ if('fop' in e.target.dataset){ S.F.rop=e.target.value; applyFilter(); } });
@@ -463,10 +463,10 @@ function renderFilterBar(){
   $('#fb-meta').classList.toggle('hidden', S.fb!=='meta');
   if(S.fb==='attr') $('#fb-attr').innerHTML = attrControls(false);
   if(S.fb==='meta') renderMetaBrowser();
-  $('#fb-state').innerHTML = filterActive() ? (S.F.on ? '<b>מסנן פעיל</b>' : 'המסנן כבוי') : '';
+  $('#fb-state').innerHTML = filterActive() ? (S.F.on ? ("<b>"+t("מסנן פעיל")+"</b>") : t('המסנן כבוי')) : '';
 }
 $('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
-$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; $('#ft-q').placeholder = S.F.qf==='smart' ? 'kids playing on the beach' : 'חיפוש'; if(S.F.q) fetchSource(); };
+$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; $('#ft-q').placeholder = S.F.qf==='smart' ? 'kids playing on the beach' : t('חיפוש'); if(S.F.q) fetchSource(); };
 function renderMetaBrowser(){
   const base = S.base;
   $('#fb-meta').innerHTML = META_COLS.map(([k,title,fn], ci)=>{
@@ -474,9 +474,9 @@ function renderMetaBrowser(){
     for(const p of base) if(passMeta(p, ci)){ const v=fn(p); counts.set(v, (counts.get(v)||0)+1); }
     const vals = [...counts.entries()].sort((a,b)=> k==='year'||k==='month' ? b[0].localeCompare(a[0]) : b[1]-a[1]);
     const set=S.F.meta[k];
-    const label = v => k==='month' && v!=='ללא' ? new Date(2000, +v-1, 1).toLocaleDateString('he-IL',{month:'long'}) : v;
+    const label = v => k==='month' && v!==t('ללא') ? new Date(2000, +v-1, 1).toLocaleDateString(I18N.locale,{month:'long'}) : v;
     return `<div class="mcol"><h4>${title}</h4><div class="mlist">
-      <div class="row ${set.size?'':'on'}" data-mk="${k}" data-mv=""><span class="nm">הכול (${vals.length})</span><span class="n">${num([...counts.values()].reduce((a,b)=>a+b,0))}</span></div>
+      <div class="row ${set.size?'':'on'}" data-mk="${k}" data-mv=""><span class="nm">${t("הכול ({0})", [vals.length])}</span><span class="n">${num([...counts.values()].reduce((a,b)=>a+b,0))}</span></div>
       ${vals.map(([v,n])=>`<div class="row ${set.has(v)?'on':''}" data-mk="${k}" data-mv="${esc(v)}"><span class="nm">${esc(label(v))}</span><span class="n">${num(n)}</span></div>`).join('')}
     </div></div>`;
   }).join('');
@@ -502,16 +502,16 @@ function renderCatalog(){
   const q=S.all.filter(p=>p.quick).length;
   const prev = st.last_import ? S.all.filter(p=>(p.imported_at||0)>=st.last_import).length : 0;
   $('#p-catalog').innerHTML =
-    row('all', I('photos'), 'כל התמונות', S.all.length) +
-    row('quick', I('coll'), 'אוסף מהיר +', q) +
-    (st.last_import ? row('prev', I('import'), 'ייבוא קודם', prev) : '') +
-    row('trash', I('trash'), 'אשפה', st.counts.trashed);
+    row('all', I('photos'), t('כל התמונות'), S.all.length) +
+    row('quick', I('coll'), t('אוסף מהיר +'), q) +
+    (st.last_import ? row('prev', I('import'), t('ייבוא קודם'), prev) : '') +
+    row('trash', I('trash'), t('אשפה'), st.counts.trashed);
   markSourceRows();
 }
 function renderFolders(){
   const f=S.folders;
-  $('#p-folders').innerHTML = `<div class="vol" title="${esc(f.root)}">${I('drive')}<span>ספרייה</span><span class="path">${esc(f.root)}</span></div>` +
-    (f.folders.map(x=>row('folder:'+x.name, I('folder'), x.name || '(שורש)', x.n, '', 'ind')).join('') || '<div class="hint">אין תיקיות עדיין</div>');
+  $('#p-folders').innerHTML = `<div class="vol" title="${esc(f.root)}">${I('drive')}<span>${t("ספרייה")}</span><span class="path">${esc(f.root)}</span></div>` +
+    (f.folders.map(x=>row('folder:'+x.name, I('folder'), x.name || t('(שורש)'), x.n, '', 'ind')).join('') || ("<div class=\"hint\">"+t("אין תיקיות עדיין")+"</div>"));
   markSourceRows();
 }
 const OPEN_SETS = new Set(pref.get('openSets', ['smart','album']));
@@ -521,29 +521,29 @@ function renderColls(){
     const open=OPEN_SETS.has(key);
     return `<div class="row set" data-set="${key}"><span class="tw">${open?'▼':'◀'}</span>${I('set')}<span class="nm">${title}</span></div>` + (open ? items : '');
   };
-  const coll = a => row('album:'+a.id, I('coll'), a.name, a.n, `<button class="x" data-del="${a.id}" title="מחק אוסף">${I('close')}</button>`, 'ind');
+  const coll = a => row('album:'+a.id, I('coll'), a.name, a.n, `<button class="x" data-del="${a.id}" title="${t("מחק אוסף")}">${I('close')}</button>`, 'ind');
   const smart = SMART.map(([k,n,f])=>row('smart:'+k, I('smart'), n, S.all.filter(f).length, '', 'ind')).join('');
   const people = S.people.map(p=>row('person:'+p.id, I('people'), p.name, (p.face_photos||0)+(p.tag_photos||0), '', 'ind')).join('');
   $('#p-colls').innerHTML =
-    set('smart', 'אוספים חכמים', smart) +
-    set('album', 'אוספים', al.filter(a=>a.kind==='album').map(coll).join('') || '<div class="hint">גררו תמונות לכאן אחרי יצירת אוסף</div>') +
-    (al.some(a=>a.kind==='people-share') ? set('shared', 'אלבומים משותפים', al.filter(a=>a.kind==='people-share').map(coll).join('')) : '') +
-    (al.some(a=>a.kind==='year') ? set('year', 'לפי שנה (Google)', al.filter(a=>a.kind==='year').map(coll).join('')) : '') +
-    (S.people.length ? set('people', 'אנשים', people) : '');
+    set('smart', t('אוספים חכמים'), smart) +
+    set('album', t('אוספים'), al.filter(a=>a.kind==='album').map(coll).join('') || ("<div class=\"hint\">"+t("גררו תמונות לכאן אחרי יצירת אוסף")+"</div>")) +
+    (al.some(a=>a.kind==='people-share') ? set('shared', t('אלבומים משותפים'), al.filter(a=>a.kind==='people-share').map(coll).join('')) : '') +
+    (al.some(a=>a.kind==='year') ? set('year', t('לפי שנה (Google)'), al.filter(a=>a.kind==='year').map(coll).join('')) : '') +
+    (S.people.length ? set('people', t('אנשים'), people) : '');
   markSourceRows();
 }
 function markSourceRows(){ const k=srcKey(S.src); $$('#left [data-src]').forEach(r=>r.classList.toggle('on', r.dataset.src===k)); }
 function srcFromKey(key){
   const [kind, id] = key.split(/:(.*)/s);
-  const name = {all:'כל התמונות', quick:'אוסף מהיר', prev:'ייבוא קודם', trash:'אשפה'}[kind]
-    || (kind==='folder' ? (id||'(שורש)') : kind==='smart' ? SMART.find(s=>s[0]===id)[1]
+  const name = {all:t('כל התמונות'), quick:t('אוסף מהיר'), prev:t('ייבוא קודם'), trash:t('אשפה')}[kind]
+    || (kind==='folder' ? (id||t('(שורש)')) : kind==='smart' ? SMART.find(s=>s[0]===id)[1]
       : kind==='album' ? S.albums.find(a=>a.id==id)?.name : kind==='person' ? S.people.find(p=>p.id==id)?.name : '');
   return {kind, id: id===undefined ? null : (['album','person','tag','cluster'].includes(kind) ? +id : id), name};
 }
 $('#left').addEventListener('click', async e=>{
   const del=e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); const a=S.albums.find(x=>x.id==del.dataset.del);
-    if(!await confirmBox(`למחוק את האוסף „${esc(a.name)}"?`, 'התמונות עצמן יישארו בקטלוג.', 'מחק')) return;
+    if(!await confirmBox(`${t("למחוק את האוסף „{0}\"?", [esc(a.name)])}`, t('התמונות עצמן יישארו בקטלוג.'), t('מחק'))) return;
     await send('DELETE', '/api/album/'+a.id); if(S.src.kind==='album' && S.src.id===a.id) setSource(srcFromKey('all')); loadSide(); return; }
   const st=e.target.closest('[data-set]');
   if(st){ const k=st.dataset.set; OPEN_SETS.has(k)?OPEN_SETS.delete(k):OPEN_SETS.add(k); pref.set('openSets',[...OPEN_SETS]); renderColls(); return; }
@@ -552,7 +552,7 @@ $('#left').addEventListener('click', async e=>{
 $('#left').addEventListener('dblclick', async e=>{
   const r=e.target.closest('[data-src^="album:"]'); if(!r) return;
   const a=S.albums.find(x=>'album:'+x.id===r.dataset.src);
-  const n=await promptBox('שינוי שם אוסף', a.name); if(!n || n===a.name) return;
+  const n=await promptBox(t('שינוי שם אוסף'), a.name); if(!n || n===a.name) return;
   await send('POST', `/api/album/${a.id}/rename`, {name:n}); await loadSide(); if(S.src.kind==='album'&&S.src.id===a.id){ S.src.name=n; renderPath(); }
 });
 // drag photos onto a collection / the Quick Collection
@@ -561,13 +561,13 @@ $('#left').addEventListener('dragleave', e=>{ const r=e.target.closest('.drop');
 $('#left').addEventListener('drop', async e=>{
   const r=e.target.closest('[data-src^="album:"],[data-src="quick"]'); $$('#left .drop').forEach(x=>x.classList.remove('drop')); if(!r) return;
   e.preventDefault(); const ids=JSON.parse(e.dataTransfer.getData('text/x-pm-ids')||'[]'); if(!ids.length) return;
-  if(r.dataset.src==='quick'){ await setAttr({quick:1}, ids); toast(`נוספו ${num(ids.length)} לאוסף המהיר`); return; }
+  if(r.dataset.src==='quick'){ await setAttr({quick:1}, ids); toast(`${t("נוספו {0} לאוסף המהיר", [num(ids.length)])}`); return; }
   const aid=+r.dataset.src.split(':')[1];
-  await send('POST', `/api/album/${aid}/add`, {ids}); toast(`נוספו ${num(ids.length)} תמונות ל„${esc(S.albums.find(a=>a.id===aid)?.name)}"`); loadSide();
+  await send('POST', `/api/album/${aid}/add`, {ids}); toast(`${t("נוספו {0} תמונות ל„{1}\"", [num(ids.length), esc(S.albums.find(a=>a.id===aid)?.name)])}`); loadSide();
 });
 async function newCollection(){
   const ids=[...S.sel];
-  const n=await promptBox('צור אוסף', '', ids.length?`<label class="check" style="padding:0"><input type="checkbox" id="nc-sel" checked> כלול את התמונות שנבחרו (${num(ids.length)})</label>`:'');
+  const n=await promptBox(t('צור אוסף'), '', ids.length?`<label class="check" style="padding:0"><input type="checkbox" id="nc-sel" checked> ${t("כלול את התמונות שנבחרו ({0})", [num(ids.length)])}</label>`:'');
   if(!n) return;
   const inc = ids.length && PB_CHECKED;
   const r = await send('POST', '/api/albums', {name:n, ids: inc ? ids : []});
@@ -639,7 +639,7 @@ function renderLoupe(){
   }
   const info=$('#loupe-info');
   info.classList.toggle('hidden', !S.loupeInfo);
-  info.innerHTML = `<b>${esc(p.filename)}</b><span>${fdate(p.taken_at)}</span><br><span dir="ltr">${p.width&&p.height?p.width+' × '+p.height:''}  ${fsize(p.bytes)}</span>${p.flag===-1?'<br><span>נדחתה</span>':''}`;
+  info.innerHTML = `<b>${esc(p.filename)}</b><span>${fdate(p.taken_at)}</span><br><span dir="ltr">${p.width&&p.height?p.width+' × '+p.height:''}  ${fsize(p.bytes)}</span>${p.flag===-1?("<br><span>"+t("נדחתה")+"</span>"):''}`;
   filmScrollTo(S.idx.get(p.id)??0);
 }
 function zoomLoupe(on, fx=.5, fy=.5){
@@ -660,8 +660,8 @@ $('#loupe-media').addEventListener('click', e=>{
 $('#loupe-media').addEventListener('scroll', updateNavRect, {passive:true});
 $('#loupe-media').addEventListener('mousedown', e=>{   // drag to pan when zoomed
   const m=$('#loupe-media'); m._dragged=false; if(!m.classList.contains('zoom')) return;
-  const sx=e.clientX, sy=e.clientY, l=m.scrollLeft, t=m.scrollTop; e.preventDefault();
-  const mv=ev=>{ if(Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy)>3) m._dragged=true; m.scrollLeft=l-(ev.clientX-sx); m.scrollTop=t-(ev.clientY-sy); };
+  const sx=e.clientX, sy=e.clientY, l=m.scrollLeft, tg=m.scrollTop; e.preventDefault();
+  const mv=ev=>{ if(Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy)>3) m._dragged=true; m.scrollLeft=l-(ev.clientX-sx); m.scrollTop=tg-(ev.clientY-sy); };
   const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); setTimeout(()=>m._dragged=false); };
   addEventListener('mousemove',mv); addEventListener('mouseup',up);
 });
@@ -673,7 +673,7 @@ function renderCompare(){
   let b = CMP_CAND && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : ([...S.sel].find(id=>id!==a.id) ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
   CMP_CAND=b;
   const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt=""></div>`:'<div class="cmp"></div>';
-  $('#v-compare').innerHTML = pane(a,'בחירה','sel') + pane(S.byId.get(b)||S.base.find(x=>x.id===b),'מועמד','');
+  $('#v-compare').innerHTML = pane(a,t('בחירה'),'sel') + pane(S.byId.get(b)||S.base.find(x=>x.id===b),t('מועמד'),'');
 }
 $('#v-compare').addEventListener('click', e=>{ const c=e.target.closest('.cmp:not(.sel)'); if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; renderCompare(); } });
 function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; renderCompare(); }
@@ -688,83 +688,83 @@ function renderSurvey(){
   for(let cols=1; cols<=n; cols++){ const rows=Math.ceil(n/cols), s=Math.min((W-(cols-1)*10)/cols, (H-(rows-1)*10)/rows); if(s>best[2]) best=[cols,rows,s]; }
   const [cols, rows] = best, bw=Math.floor((W-(cols-1)*10)/cols), bh=Math.floor((H-(rows-1)*10)/rows);
   el.innerHTML = ids.map(id=>{ const p=S.byId.get(id)||S.base.find(x=>x.id===id);
-    return `<div class="sv ${id===S.act?'act':''}" data-id="${id}" style="width:${bw}px;height:${bh}px"><img src="${bw>300?mediaUrl(id):thumbUrl(id)}" alt=""><button class="x" data-x title="הסר מהסקירה">${I('close')}</button></div>`; }).join('');
+    return `<div class="sv ${id===S.act?'act':''}" data-id="${id}" style="width:${bw}px;height:${bh}px"><img src="${bw>300?mediaUrl(id):thumbUrl(id)}" alt=""><button class="x" data-x title="${t("הסר מהסקירה")}">${I('close')}</button></div>`; }).join('');
 }
 $('#v-survey').addEventListener('click', e=>{ const c=e.target.closest('.sv'); if(!c) return; const id=+c.dataset.id;
   if(e.target.closest('[data-x]')){ S.sel.delete(id); if(S.act===id) S.act=[...S.sel][0]??null; onSelChange(); return; }
   S.act=id; onSelChange(); });
 
 async function renderPeople(){
-  const el=$('#v-people'); el.innerHTML='<div class="hint">טוען…</div>';
+  const el=$('#v-people'); el.innerHTML=("<div class=\"hint\">"+t("טוען…")+"</div>");
   const [people, clusters] = await Promise.all([api('/api/people'), api('/api/clusters')]);
   S.people=people;
   const face = src => src ? `<img loading="lazy" src="${src}" alt="">` : I('people');
-  el.innerHTML = `<h2>אנשים עם שם <span>${num(people.length)}</span></h2>
+  el.innerHTML = `<h2>${t("אנשים עם שם")} <span>${num(people.length)}</span></h2>
     <div class="pgrid">${people.map(p=>`<div class="pc" data-person="${p.id}"><div class="face">${face(p.cover_face?'/face/'+p.cover_face:p.cover_photo?thumbUrl(p.cover_photo):'')}</div>
-      <div class="nm" title="לחיצה כפולה לשינוי שם">${esc(p.name)}</div><div class="ct">${num((p.face_photos||0)+(p.tag_photos||0))}</div></div>`).join('') || '<div class="hint">עוד אין אנשים עם שם.</div>'}</div>
-    <h2>אנשים ללא שם <span>${num(clusters.length)}</span></h2>
+      <div class="nm" title="${t("לחיצה כפולה לשינוי שם")}">${esc(p.name)}</div><div class="ct">${num((p.face_photos||0)+(p.tag_photos||0))}</div></div>`).join('') || ("<div class=\"hint\">"+t("עוד אין אנשים עם שם.")+"</div>")}</div>
+    <h2>${t("אנשים ללא שם")} <span>${num(clusters.length)}</span></h2>
     ${clusters.length ? `<div class="pgrid">${clusters.map(c=>`<div class="pc" data-cluster="${c.id}"><div class="face">${face(c.cover_face?'/face/'+c.cover_face:'')}</div>
-      <input placeholder="?" data-name-cluster="${c.id}" title="הקלידו שם ולחצו Enter"><div class="ct">${num(c.n)}</div></div>`).join('')}</div>`
-      : `<div class="hint">${S.status?.counts.faces ? 'כל קבוצות הפנים קיבלו שם.' : 'עוד לא הורץ זיהוי פנים. ספרייה ← זיהוי פנים.'}</div>`}`;
+      <input placeholder="?" data-name-cluster="${c.id}" title="${t("הקלידו שם ולחצו Enter")}"><div class="ct">${num(c.n)}</div></div>`).join('')}</div>`
+      : `<div class="hint">${S.status?.counts.faces ? t('כל קבוצות הפנים קיבלו שם.') : t('עוד לא הורץ זיהוי פנים. ספרייה ← זיהוי פנים.')}</div>`}`;
 }
 $('#v-people').addEventListener('click', e=>{
   const face=e.target.closest('.face'); if(!face) return;
   const pc=face.closest('.pc');
   if(pc.dataset.person){ const p=S.people.find(x=>x.id==pc.dataset.person); setSource({kind:'person', id:p.id, name:p.name}); setView('grid'); }
-  else setSource({kind:'cluster', id:+pc.dataset.cluster, name:'אדם ללא שם'}).then(()=>setView('grid'));
+  else setSource({kind:'cluster', id:+pc.dataset.cluster, name:t('אדם ללא שם')}).then(()=>setView('grid'));
 });
 $('#v-people').addEventListener('dblclick', async e=>{
   const nm=e.target.closest('.nm'); if(!nm) return; const id=+nm.closest('.pc').dataset.person, p=S.people.find(x=>x.id===id);
-  const n=await promptBox('שינוי שם', p.name); if(!n) return;
-  await send('POST', `/api/person/${id}/rename`, {name:n}); toast('השם עודכן'); await loadSide(); renderPeople();
+  const n=await promptBox(t('שינוי שם'), p.name); if(!n) return;
+  await send('POST', `/api/person/${id}/rename`, {name:n}); toast(t('השם עודכן')); await loadSide(); renderPeople();
 });
 $('#v-people').addEventListener('keydown', async e=>{
   const inp=e.target.closest('[data-name-cluster]'); if(!inp || e.key!=='Enter') return;
   const n=inp.value.trim(); if(!n) return;
-  await send('POST', `/api/cluster/${inp.dataset.nameCluster}/name`, {name:n}); toast(`נקרא „${esc(n)}"`); await loadSide(); renderPeople();
+  await send('POST', `/api/cluster/${inp.dataset.nameCluster}/name`, {name:n}); toast(`${t("נקרא „{0}\"", [esc(n)])}`); await loadSide(); renderPeople();
 });
 
 // ---------- toolbar ----------
 function tbViews(){
-  const b=(v,ic,t)=>`<button class="tb-btn ${S.view===v?'on':''}" data-view="${v}" title="${t}">${I(ic)}</button>`;
-  return `<div class="tb-grp">${b('grid','grid','תצוגת רשת (G)')}${b('loupe','loupe','זכוכית מגדלת (E)')}${b('compare','compare','השוואה (C)')}${b('survey','survey','סקירה (N)')}${b('people','face','אנשים (O)')}</div>`;
+  const b=(v,ic,tg)=>`<button class="tb-btn ${S.view===v?'on':''}" data-view="${v}" title="${tg}">${I(ic)}</button>`;
+  return `<div class="tb-grp">${b('grid','grid',t('תצוגת רשת (G)'))}${b('loupe','loupe',t('זכוכית מגדלת (E)'))}${b('compare','compare',t('השוואה (C)'))}${b('survey','survey',t('סקירה (N)'))}${b('people','face',t('אנשים (O)'))}</div>`;
 }
 function tbAttrs(){
   const p=actPhoto(), r=p?.rating||0;
-  return `<div class="tb-grp"><button class="tb-btn tb-flag pick ${p?.flag===1?'on':''}" data-t="pick" title="סמן כנבחרת (P)">${I('flag')}</button>
-    <button class="tb-btn tb-flag rej ${p?.flag===-1?'on':''}" data-t="rej" title="סמן כנדחית (X)">${I('reject')}</button></div>
-    <span class="tb-sep"></span><span class="tb-stars">${[1,2,3,4,5].map(n=>`<b data-star="${n}" class="${n<=r?'on':''}" title="${n} (מקש ${n})">★</b>`).join('')}</span>
+  return `<div class="tb-grp"><button class="tb-btn tb-flag pick ${p?.flag===1?'on':''}" data-t="pick" title="${t("סמן כנבחרת (P)")}">${I('flag')}</button>
+    <button class="tb-btn tb-flag rej ${p?.flag===-1?'on':''}" data-t="rej" title="${t("סמן כנדחית (X)")}">${I('reject')}</button></div>
+    <span class="tb-sep"></span><span class="tb-stars">${[1,2,3,4,5].map(n=>`<b data-star="${n}" class="${n<=r?'on':''}" title="${t("{0} (מקש {1})", [n, n])}">★</b>`).join('')}</span>
     <span class="tb-sep"></span><span class="tb-labs">${LABELS.map(([k,n,key])=>`<button data-lab="${k}" class="${p?.label===k?'on':''}" style="background:${lcol(k)}" title="${n}${key?` (${key})`:''}"></button>`).join('')}</span>
-    <span class="tb-sep"></span><div class="tb-grp"><button class="tb-btn" data-t="rotl" title="סובב שמאלה (Ctrl+[)">${I('rotl')}</button><button class="tb-btn" data-t="rotr" title="סובב ימינה (Ctrl+])">${I('rotr')}</button></div>`;
+    <span class="tb-sep"></span><div class="tb-grp"><button class="tb-btn" data-t="rotl" title="${t("סובב שמאלה (Ctrl+[)")}">${I('rotl')}</button><button class="tb-btn" data-t="rotr" title="${t("סובב ימינה (Ctrl+])")}">${I('rotr')}</button></div>`;
 }
 function renderToolbar(){
   const tb=$('#toolbar');
   if(S.mod==='develop'){ const p=actPhoto();
-    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="לפני/אחרי (\\)">לפני / אחרי</button><span class="tb-sep"></span>
-      <button class="tb-btn ${DEV.crop?'on':''}" data-t="crop" title="חיתוך (R)">${I('crop')}</button><span class="spacer"></span>
-      <span class="tb-info">${p?`<bdi>${esc(p.filename)}</bdi>`:''}${DEV.dirty?' · שינויים שלא הוחלו':''}</span>`; return; }
+    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="${t("לפני/אחרי (\\)")}">${t("לפני / אחרי")}</button><span class="tb-sep"></span>
+      <button class="tb-btn ${DEV.crop?'on':''}" data-t="crop" title="${t("חיתוך (R)")}">${I('crop')}</button><span class="spacer"></span>
+      <span class="tb-info">${p?`<bdi>${esc(p.filename)}</bdi>`:''}${DEV.dirty?t(' · שינויים שלא הוחלו'):''}</span>`; return; }
   let h = tbViews() + '<span class="tb-sep"></span>';
-  if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">מיון:</span><button class="tb-btn" data-t="asc" title="${S.asc?'סדר עולה':'סדר יורד'}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
+  if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">${t("מיון:")}</span><button class="tb-btn" data-t="asc" title="${S.asc?t('סדר עולה'):t('סדר יורד')}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
       <select data-t="sort">${Object.entries(SORTS).map(([k,[n]])=>`<option value="${k}" ${k===S.sort?'selected':''}>${n}</option>`).join('')}</select></div><span class="tb-sep"></span>` + tbAttrs() +
-      `<label class="tb-size"><span>תמונות ממוזערות</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
-  else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="מידע (I)">מידע</button>`;
-  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="החלף בחירה ומועמד">החלף</button><button class="tb-btn" data-t="done" title="סיום (Esc)">סיום</button>`;
-  else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${num(S.sel.size)} תמונות בסקירה</span>`;
-  else h += `<span class="spacer"></span><span class="tb-info">הקלידו שם מתחת לפנים כדי לתת להן שם</span>`;
+      `<label class="tb-size"><span>${t("תמונות ממוזערות")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
+  else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("מידע (I)")}">${t("מידע")}</button>`;
+  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("החלף בחירה ומועמד")}">${t("החלף")}</button><button class="tb-btn" data-t="done" title="${t("סיום (Esc)")}">${t("סיום")}</button>`;
+  else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} תמונות בסקירה", [num(S.sel.size)])}</span>`;
+  else h += `<span class="spacer"></span><span class="tb-info">${t("הקלידו שם מתחת לפנים כדי לתת להן שם")}</span>`;
   tb.innerHTML = h;
 }
 $('#toolbar').addEventListener('click', e=>{
   const v=e.target.closest('[data-view]'); if(v){ setView(v.dataset.view); return; }
   const s=e.target.closest('[data-star]'); if(s){ const n=+s.dataset.star, p=actPhoto(); setRating(p&&p.rating===n?0:n); return; }
   const l=e.target.closest('[data-lab]'); if(l){ setLabel(l.dataset.lab); return; }
-  const t=e.target.closest('[data-t]')?.dataset.t; if(!t) return;
-  if(t==='pick'){ const p=actPhoto(); setFlag(p?.flag===1?0:1); }
-  else if(t==='rej'){ const p=actPhoto(); setFlag(p?.flag===-1?0:-1); }
-  else if(t==='rotl') rotateSel(-90); else if(t==='rotr') rotateSel(90);
-  else if(t==='asc'){ S.asc=!S.asc; pref.set('asc',S.asc); applyFilter(); }
-  else if(t==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
-  else if(t==='swap') compareSwap(); else if(t==='done') setView('loupe');
-  else if(t==='before') devBefore(); else if(t==='crop') devCropToggle();
+  const tg=e.target.closest('[data-t]')?.dataset.t; if(!tg) return;
+  if(tg==='pick'){ const p=actPhoto(); setFlag(p?.flag===1?0:1); }
+  else if(tg==='rej'){ const p=actPhoto(); setFlag(p?.flag===-1?0:-1); }
+  else if(tg==='rotl') rotateSel(-90); else if(tg==='rotr') rotateSel(90);
+  else if(tg==='asc'){ S.asc=!S.asc; pref.set('asc',S.asc); applyFilter(); }
+  else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
+  else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
+  else if(tg==='before') devBefore(); else if(tg==='crop') devCropToggle();
 });
 $('#toolbar').addEventListener('change', e=>{ if(e.target.dataset.t==='sort'){ S.sort=e.target.value; pref.set('sort',S.sort); applyFilter(); } });
 $('#toolbar').addEventListener('input', e=>{ if(e.target.dataset.t==='size'){ S.cellsz=+e.target.value; pref.set('cellsz',S.cellsz); layoutGrid(true); scrollToAct(); } });
@@ -819,14 +819,14 @@ const renderRight = debounce(async ()=>{
 
 function renderKeywording(ids, kws, content=[]){
   const el=$('#p-kwing');
-  if(!ids.length){ el.innerHTML='<div class="hint">בחרו תמונות כדי לתייג אותן.</div>'; return; }
+  if(!ids.length){ el.innerHTML=("<div class=\"hint\">"+t("בחרו תמונות כדי לתייג אותן.")+"</div>"); return; }
   const txt = kws.map(k=>k.name + (k.n<ids.length?' *':'')).join(', ');
-  const top = S.tags.slice(0,30).map(t=>t.name);
+  const top = S.tags.slice(0,30).map(tg=>tg.name);
   const sug = [...new Set([...content, ...S.recentKw, ...top])].filter(n=>!kws.some(k=>k.name===n && k.n===ids.length)).slice(0,9);
-  el.innerHTML = `<div class="lbl-sub">מילות מפתח${ids.length>1?` · ${num(ids.length)} תמונות (* = רק בחלק מהן)`:''}</div>
-    <label class="kwbox"><textarea id="kw-text" spellcheck="false" placeholder="הקלידו מילות מפתח מופרדות בפסיקים">${esc(txt)}</textarea></label>
-    <label class="kwadd"><input id="kw-add" placeholder="לחצו כאן כדי להוסיף מילות מפתח"></label>
-    <div class="lbl-sub" style="padding-top:8px">הצעות למילות מפתח</div>
+  el.innerHTML = `<div class="lbl-sub">${t("מילות מפתח")}${ids.length>1?` ${t("· {0} תמונות (* = רק בחלק מהן)", [num(ids.length)])}`:''}</div>
+    <label class="kwbox"><textarea id="kw-text" spellcheck="false" placeholder="${t("הקלידו מילות מפתח מופרדות בפסיקים")}">${esc(txt)}</textarea></label>
+    <label class="kwadd"><input id="kw-add" placeholder="${t("לחצו כאן כדי להוסיף מילות מפתח")}"></label>
+    <div class="lbl-sub" style="padding-top:8px">${t("הצעות למילות מפתח")}</div>
     <div class="kwsug">${sug.map(n=>`<a data-kwadd="${esc(n)}" title="${esc(n)}">${esc(n)}</a>`).join('')}</div>`;
   el._orig = kws; el._ids = ids;
 }
@@ -863,59 +863,59 @@ function renderKwList(selKws, nSel){
   const el=$('#p-kwlist'); if(!el) return;
   selKws = selKws || el._sel || []; nSel = nSel ?? el._n ?? 0; el._sel=selKws; el._n=nSel;
   const on = new Map(selKws.map(k=>[k.id,k.n]));
-  const tags = S.tags.filter(t=>!KWF || t.name.toLowerCase().includes(KWF));
-  el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="סינון מילות מפתח" value="${esc(KWF)}"></div>
-    <div class="kwrows">${tags.slice(0,800).map(t=>{ const c=on.get(t.id)||0;
-      return `<div class="row" data-kw="${t.id}"><input type="checkbox" ${nSel&&c===nSel?'checked':''} ${nSel?'':'disabled'} data-part="${c&&c<nSel?1:0}" title="${nSel?'הוסף/הסר לתמונות שנבחרו':''}"><span class="nm">${esc(t.name)}</span>
-        <button class="go" data-go="${t.id}" title="הצג תמונות עם מילת המפתח">${I('next')}</button><span class="n">${num(t.n)}</span></div>`; }).join('')
-      || '<div class="hint">אין מילות מפתח עדיין. תייגו תמונות או הריצו תיוג חכם.</div>'}</div>`;
+  const tags = S.tags.filter(tg=>!KWF || tg.name.toLowerCase().includes(KWF));
+  el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="${t("סינון מילות מפתח")}" value="${esc(KWF)}"></div>
+    <div class="kwrows">${tags.slice(0,800).map(tg=>{ const c=on.get(tg.id)||0;
+      return `<div class="row" data-kw="${tg.id}"><input type="checkbox" ${nSel&&c===nSel?'checked':''} ${nSel?'':'disabled'} data-part="${c&&c<nSel?1:0}" title="${nSel?t('הוסף/הסר לתמונות שנבחרו'):''}"><span class="nm">${esc(tg.name)}</span>
+        <button class="go" data-go="${tg.id}" title="${t("הצג תמונות עם מילת המפתח")}">${I('next')}</button><span class="n">${num(tg.n)}</span></div>`; }).join('')
+      || ("<div class=\"hint\">"+t("אין מילות מפתח עדיין. תייגו תמונות או הריצו תיוג חכם.")+"</div>")}</div>`;
   $$('#p-kwlist [data-part="1"]').forEach(c=>c.indeterminate=true);
 }
 $('#p-kwlist').addEventListener('input', debounce(e=>{ if(e.target.id==='kw-filter'){ KWF=e.target.value.toLowerCase(); renderKwList(); $('#kw-filter').focus(); } }, 150));
 $('#p-kwlist').addEventListener('click', e=>{
   const go=e.target.closest('[data-go]');
-  if(go){ const t=S.tags.find(x=>x.id==go.dataset.go); setSource({kind:'tag', id:t.id, name:'מילת מפתח: '+t.name}); return; }
+  if(go){ const tg=S.tags.find(x=>x.id==go.dataset.go); setSource({kind:'tag', id:tg.id, name:t('מילת מפתח: ')+tg.name}); return; }
   const cb=e.target.closest('input[type=checkbox]');
-  if(cb){ const t=S.tags.find(x=>x.id==cb.closest('[data-kw]').dataset.kw);
-    if(cb.checked) commitKeywords([t.name], []); else commitKeywords([], [t.id]); }
+  if(cb){ const tg=S.tags.find(x=>x.id==cb.closest('[data-kw]').dataset.kw);
+    if(cb.checked) commitKeywords([tg.name], []); else commitKeywords([], [tg.id]); }
 });
 
 function renderMeta(ids, d){
   const el=$('#p-meta');
-  if(!ids.length || !d){ el.innerHTML='<div class="hint">לא נבחרה תמונה.</div>'; return; }
+  if(!ids.length || !d){ el.innerHTML=("<div class=\"hint\">"+t("לא נבחרה תמונה.")+"</div>"); return; }
   const multi = ids.length>1;
   const sel = ids.map(id=>S.byId.get(id)).filter(Boolean);
   const same = k => sel.every(p=>(p[k]??null)===(sel[0][k]??null));
-  const MIX = '<span class="mixed">&lt;מעורב&gt;</span>';
+  const MIX = ("<span class=\"mixed\">"+t("&lt;מעורב&gt;")+"</span>");
   const rating = !multi || same('rating') ? (d.rating||0) : -1;
   const label = !multi || same('label') ? (d.label||'') : '*';
   const local = d.taken_at ? new Date(d.taken_at*1000 - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16) : '';
   const links = (arr, kind) => arr.length ? arr.map(a=>`<a data-src-link="${kind}:${a.id}">${esc(a.name)}</a>`).join(', ') : '—';
   el.innerHTML = `
-    ${multi?`<div class="lbl-sub">${num(ids.length)} תמונות נבחרו — שינויים יחולו על כולן</div>`:''}
-    <div class="kv"><span>שם קובץ</span>${multi?MIX:`<span dir="ltr" title="${esc(d.filename)}">${esc(d.filename)}</span>`}</div>
-    <div class="kv"><span>תיקייה</span>${multi&&!same('folder')?MIX:`<a data-src-link="folder:${esc(sel[0]?.folder??'')}">${esc(sel[0]?.folder||'(שורש)')}</a>`}</div>
-    <div class="kv"><span>דירוג</span><span class="stars-in" id="m-stars">${[1,2,3,4,5].map(n=>`<b data-mr="${n}" class="${rating>=n?'on':''}">★</b>`).join('')}${rating<0?' '+MIX:''}</span></div>
-    <div class="kv"><span>תווית</span><select id="m-label"><option value="">ללא</option>${LABELS.map(([k,n])=>`<option value="${k}" ${label===k?'selected':''}>${n}</option>`).join('')}${label==='*'?'<option selected disabled>&lt;מעורב&gt;</option>':''}</select></div>
-    <div class="meta-sub">תוכן</div>
-    <div class="kv tall"><span>כיתוב</span><textarea id="m-desc" placeholder="${multi?'<מעורב>':''}">${multi?'':esc(d.description||'')}</textarea></div>
-    <div class="meta-sub">צילום</div>
-    <div class="kv"><span>זמן צילום</span>${multi?MIX:`<input id="m-date" type="datetime-local" value="${local}">`}</div>
-    <div class="kv"><span>מידות</span>${multi?MIX:`<span dir="ltr">${d.width||'?'} × ${d.height||'?'}</span>`}</div>
-    <div class="kv"><span>גודל קובץ</span>${multi?MIX:fsize(d.bytes)}</div>
-    <div class="kv"><span>סוג</span>${multi&&!sel.every(p=>ext(p)===ext(sel[0]))?MIX:esc(ext(d))}${d.edited&&!multi?' · נערך':''}</div>
-    <div class="meta-sub">מיקום</div>
+    ${multi?`<div class="lbl-sub">${t("{0} תמונות נבחרו — שינויים יחולו על כולן", [num(ids.length)])}</div>`:''}
+    <div class="kv"><span>${t("שם קובץ")}</span>${multi?MIX:`<span dir="ltr" title="${esc(d.filename)}">${esc(d.filename)}</span>`}</div>
+    <div class="kv"><span>${t("תיקייה")}</span>${multi&&!same('folder')?MIX:`<a data-src-link="folder:${esc(sel[0]?.folder??'')}">${esc(sel[0]?.folder||t('(שורש)'))}</a>`}</div>
+    <div class="kv"><span>${t("דירוג")}</span><span class="stars-in" id="m-stars">${[1,2,3,4,5].map(n=>`<b data-mr="${n}" class="${rating>=n?'on':''}">★</b>`).join('')}${rating<0?' '+MIX:''}</span></div>
+    <div class="kv"><span>${t("תווית")}</span><select id="m-label"><option value="">${t("ללא")}</option>${LABELS.map(([k,n])=>`<option value="${k}" ${label===k?'selected':''}>${n}</option>`).join('')}${label==='*'?("<option selected disabled>"+t("&lt;מעורב&gt;")+"</option>"):''}</select></div>
+    <div class="meta-sub">${t("תוכן")}</div>
+    <div class="kv tall"><span>${t("כיתוב")}</span><textarea id="m-desc" placeholder="${multi?t('<מעורב>'):''}">${multi?'':esc(d.description||'')}</textarea></div>
+    <div class="meta-sub">${t("צילום")}</div>
+    <div class="kv"><span>${t("זמן צילום")}</span>${multi?MIX:`<input id="m-date" type="datetime-local" value="${local}">`}</div>
+    <div class="kv"><span>${t("מידות")}</span>${multi?MIX:`<span dir="ltr">${d.width||'?'} × ${d.height||'?'}</span>`}</div>
+    <div class="kv"><span>${t("גודל קובץ")}</span>${multi?MIX:fsize(d.bytes)}</div>
+    <div class="kv"><span>${t("סוג")}</span>${multi&&!sel.every(p=>ext(p)===ext(sel[0]))?MIX:esc(ext(d))}${d.edited&&!multi?t(' · נערך'):''}</div>
+    <div class="meta-sub">${t("מיקום")}</div>
     ${multi?`<div class="kv"><span>GPS</span>${MIX}</div>`:`
-    <div class="kv"><span>קו רוחב</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>
-    <div class="kv"><span>קו אורך</span><input id="m-lng" type="number" step="any" dir="ltr" value="${d.lng??''}"></div>
-    ${d.lat!=null?`<div class="kv"><span></span><a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank">${I('pin','')} הצג במפה</a></div>`:''}
-    <div class="meta-sub">קטלוג</div>
-    <div class="kv tall"><span>אוספים</span><span style="white-space:normal">${links(d.albums,'album')}</span></div>
-    <div class="kv tall"><span>אנשים</span><span style="white-space:normal">${links(d.people,'person')}</span></div>
-    <div class="kv"><span>מועדף Google</span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="m-fav" ${d.favorited?'checked':''}></label></div>
-    <div class="kv"><span>יובא</span>${fdate(d.imported_at)}</div>
-    ${d.gphotos_url?`<div class="kv"><span></span><a href="${esc(d.gphotos_url)}" target="_blank">פתח ב‑Google Photos ${I('external')}</a></div>`:''}
-    <div class="btnrow"><button id="m-exif" title="כתוב תיאור, תאריך ומיקום לתוך קובץ ה‑JPG (Ctrl+S)">שמור מטא-נתונים לקובץ</button><button id="m-reveal" title="Ctrl+R">הצג בסייר</button></div>`}`;
+    <div class="kv"><span>${t("קו רוחב")}</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>
+    <div class="kv"><span>${t("קו אורך")}</span><input id="m-lng" type="number" step="any" dir="ltr" value="${d.lng??''}"></div>
+    ${d.lat!=null?`<div class="kv"><span></span><a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank">${I('pin','')} ${t(" הצג במפה")}</a></div>`:''}
+    <div class="meta-sub">${t("קטלוג")}</div>
+    <div class="kv tall"><span>${t("אוספים")}</span><span style="white-space:normal">${links(d.albums,'album')}</span></div>
+    <div class="kv tall"><span>${t("אנשים")}</span><span style="white-space:normal">${links(d.people,'person')}</span></div>
+    <div class="kv"><span>${t("מועדף Google")}</span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="m-fav" ${d.favorited?'checked':''}></label></div>
+    <div class="kv"><span>${t("יובא")}</span>${fdate(d.imported_at)}</div>
+    ${d.gphotos_url?`<div class="kv"><span></span><a href="${esc(d.gphotos_url)}" target="_blank">${t("פתח ב‑Google Photos")} ${I('external')}</a></div>`:''}
+    <div class="btnrow"><button id="m-exif" title="${t("כתוב תיאור, תאריך ומיקום לתוך קובץ ה‑JPG (Ctrl+S)")}">${t("שמור מטא-נתונים לקובץ")}</button><button id="m-reveal" title="Ctrl+R">${t("הצג בסייר")}</button></div>`}`;
 }
 $('#p-meta').addEventListener('click', e=>{
   const s=e.target.closest('[data-mr]'); if(s){ const n=+s.dataset.mr, p=actPhoto(); setRating(p&&p.rating===n&&targets().length===1?0:n); setTimeout(renderRight, 50); return; }
@@ -924,28 +924,28 @@ $('#p-meta').addEventListener('click', e=>{
   if(e.target.id==='m-reveal') reveal();
 });
 $('#p-meta').addEventListener('change', async e=>{
-  const ids=targets(), t=e.target;
-  if(t.id==='m-label') setAttr({label:t.value}, ids);
-  else if(t.id==='m-desc'){ await send('PATCH','/api/photos',{ids, description:t.value}); toast('הכיתוב נשמר', 1200); }
-  else if(t.id==='m-fav'){ setAttr({favorited:t.checked?1:0}, ids); }
-  else if(t.id==='m-date' && t.value){ const ts=Math.floor(new Date(t.value).getTime()/1000);
-    await send('PATCH','/api/photo/'+ids[0],{taken_at:ts}); const p=S.byId.get(ids[0]); if(p) p.taken_at=ts; applyFilter(); toast('זמן הצילום עודכן', 1200); }
-  else if(t.id==='m-lat' || t.id==='m-lng'){ const lat=$('#m-lat').value, lng=$('#m-lng').value;
+  const ids=targets(), tg=e.target;
+  if(tg.id==='m-label') setAttr({label:tg.value}, ids);
+  else if(tg.id==='m-desc'){ await send('PATCH','/api/photos',{ids, description:tg.value}); toast(t('הכיתוב נשמר'), 1200); }
+  else if(tg.id==='m-fav'){ setAttr({favorited:tg.checked?1:0}, ids); }
+  else if(tg.id==='m-date' && tg.value){ const ts=Math.floor(new Date(tg.value).getTime()/1000);
+    await send('PATCH','/api/photo/'+ids[0],{taken_at:ts}); const p=S.byId.get(ids[0]); if(p) p.taken_at=ts; applyFilter(); toast(t('זמן הצילום עודכן'), 1200); }
+  else if(tg.id==='m-lat' || tg.id==='m-lng'){ const lat=$('#m-lat').value, lng=$('#m-lng').value;
     if((lat==='')!==(lng==='')) return;
-    await send('PATCH','/api/photo/'+ids[0],{lat: lat===''?null:+lat, lng: lng===''?null:+lng}); toast('המיקום נשמר', 1200); renderRight(); }
+    await send('PATCH','/api/photo/'+ids[0],{lat: lat===''?null:+lat, lng: lng===''?null:+lng}); toast(t('המיקום נשמר'), 1200); renderRight(); }
 });
 $('#p-meta').addEventListener('keydown', e=>{ if(e.target.id==='m-desc' && e.key==='Enter' && !e.shiftKey){ e.preventDefault(); e.target.blur(); } });
 async function saveMetaToFile(){
-  const d=DETAIL; if(!d || targets().length!==1) return toast('בחרו תמונה אחת');
+  const d=DETAIL; if(!d || targets().length!==1) return toast(t('בחרו תמונה אחת'));
   await send('PATCH','/api/photo/'+d.id,{description:d.description, taken_at:d.taken_at, lat:d.lat, lng:d.lng, write_exif:true});
-  toast(/\.jpe?g$/i.test(d.filename) ? 'המטא-נתונים נכתבו לקובץ' : 'כתיבה לקובץ נתמכת רק ב‑JPG');
+  toast(/\.jpe?g$/i.test(d.filename) ? t('המטא-נתונים נכתבו לקובץ') : t('כתיבה לקובץ נתמכת רק ב‑JPG'));
 }
 async function reveal(){ const p=actPhoto(); if(p) await send('POST', `/api/photo/${p.id}/reveal`); }
 $('#btn-sync-meta').onclick = async ()=>{
-  const ids=targets(), d=DETAIL; if(ids.length<2 || !d) return toast('בחרו כמה תמונות; הערכים יועתקו מהתמונה הפעילה');
+  const ids=targets(), d=DETAIL; if(ids.length<2 || !d) return toast(t('בחרו כמה תמונות; הערכים יועתקו מהתמונה הפעילה'));
   await send('PATCH','/api/photos',{ids, description:d.description||'', rating:d.rating||0, label:d.label||''});
   ids.forEach(id=>{ const p=S.byId.get(id); if(p){ p.rating=d.rating||0; p.label=d.label||null; } });
-  toast(`סונכרנו ${num(ids.length)} תמונות`); applyFilter();
+  toast(`${t("סונכרנו {0} תמונות", [num(ids.length)])}`); applyFilter();
 };
 
 // ---------- modules ----------
@@ -974,26 +974,26 @@ const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1]})
 const fac = (v, lo) => v>=0 ? 1+v/100 : 1+(v/100)*(1-lo);
 const unfac = (f, lo) => f==null ? 0 : Math.round(f>=1 ? (f-1)*100 : (f-1)/(1-lo)*100);
 const PRESETS = [
-  ['ללא (איפוס טונים)', {bri:0,con:0,sat:0,gray:false}],
-  ['שחור-לבן', {gray:true, con:10}],
-  ['שחור-לבן בניגודיות גבוהה', {gray:true, con:45, bri:5}],
-  ['חי וצבעוני', {sat:40, con:15}],
-  ['מושתק', {sat:-40, con:-10}],
-  ['בהיר ואוורירי', {bri:20, con:-15, sat:-10}],
-  ['כהה ודרמטי', {bri:-15, con:35, sat:-15}],
+  [t('ללא (איפוס טונים)'), {bri:0,con:0,sat:0,gray:false}],
+  [t('שחור-לבן'), {gray:true, con:10}],
+  [t('שחור-לבן בניגודיות גבוהה'), {gray:true, con:45, bri:5}],
+  [t('חי וצבעוני'), {sat:40, con:15}],
+  [t('מושתק'), {sat:-40, con:-10}],
+  [t('בהיר ואוורירי'), {bri:20, con:-15, sat:-10}],
+  [t('כהה ודרמטי'), {bri:-15, con:35, sat:-15}],
 ];
 async function devOpen(){
   const p=actPhoto();
   DEV.crop=false; DEV.before=false; DEV.dirty=false;
   if(!p){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); return; }
-  if(p.is_video){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); toast('עריכה זמינה לתמונות בלבד'); return; }
+  if(p.is_video){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); toast(t('עריכה זמינה לתמונות בלבד')); return; }
   DEV.id=p.id;
   const d=await api('/api/photo/'+p.id); if(DEV.id!==p.id) return;
   const o = d.edit_ops ? JSON.parse(d.edit_ops) : {};
   DEV.ops = {bri:unfac(o.brightness,.3), con:unfac(o.contrast,.3), sat:unfac(o.saturation,0), gray:!!o.grayscale,
              rot:o.rotate||0, crop:o.crop&&o.crop.length===4?o.crop:[0,0,1,1]};
   DEV.saved = JSON.stringify(DEV.ops);
-  DEV.hist=[{t:d.edited?'הגדרות שמורות':'ייבוא', ops:{...DEV.ops}}];
+  DEV.hist=[{t:d.edited?t('הגדרות שמורות'):t('ייבוא'), ops:{...DEV.ops}}];
   const img=$('#dev-img'); img.onload=()=>{ layoutDev(); drawHisto(img); };
   img.src = `/original/${p.id}${VER[p.id]?'?v='+VER[p.id]:''}`;
   renderDevPanels(); renderToolbar(); updateNavigator();
@@ -1029,24 +1029,24 @@ function devSet(changes, label){
 }
 function renderDevPanels(){
   const o=DEV.ops || NEUTRAL(), dis = DEV.id==null ? 'disabled' : '';
-  const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="לחיצה כפולה לאיפוס"><output>${o[k]>0?'+':''}${o[k]}</output></div>`;
+  const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="${t("לחיצה כפולה לאיפוס")}"><output>${o[k]>0?'+':''}${o[k]}</output></div>`;
   $('#p-basic').innerHTML = `
-    <div class="dsec">טיפול</div>
-    <div class="treat"><a data-gray="0" class="${o.gray?'':'on'}">צבע</a><a data-gray="1" class="${o.gray?'on':''}">שחור-לבן</a></div>
-    <div class="dsec">טון</div>
-    ${sl('bri','חשיפה','exp')}${sl('con','ניגודיות','con')}
-    <div class="dsec">נוכחות</div>
-    ${sl('sat','רוויה','sat')}`;
+    <div class="dsec">${t("טיפול")}</div>
+    <div class="treat"><a data-gray="0" class="${o.gray?'':'on'}">${t("צבע")}</a><a data-gray="1" class="${o.gray?'on':''}">${t("שחור-לבן")}</a></div>
+    <div class="dsec">${t("טון")}</div>
+    ${sl('bri',t('חשיפה'),'exp')}${sl('con',t('ניגודיות'),'con')}
+    <div class="dsec">${t("נוכחות")}</div>
+    ${sl('sat',t('רוויה'),'sat')}`;
   const fine = Math.round((o.rot - Math.round(o.rot/90)*90)*10)/10;
   $('#p-transform').innerHTML = `
-    <div class="dsl"><label for="d-straight">יישור</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
+    <div class="dsl"><label for="d-straight">${t("יישור")}</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
     <div class="btnrow90"><button data-rot="-90" ${dis}>${I('rotl')} 90°</button><button data-rot="90" ${dis}>90° ${I('rotr')}</button></div>
-    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?'סיום חיתוך (Enter)':'חיתוך (R)'}</button><button data-t="cropreset" ${dis}>אפס חיתוך</button></div>`;
+    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('סיום חיתוך (Enter)'):t('חיתוך (R)')}</button><button data-t="cropreset" ${dis}>${t("אפס חיתוך")}</button></div>`;
   $('#p-presets').innerHTML = PRESETS.map(([n],i)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${n}</span></div>`).join('');
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
 }
-const DLABEL = {bri:'חשיפה', con:'ניגודיות', sat:'רוויה'};
+const DLABEL = {bri:t('חשיפה'), con:t('ניגודיות'), sat:t('רוויה')};
 $('#right').addEventListener('input', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
@@ -1058,28 +1058,28 @@ $('#right').addEventListener('input', e=>{
 $('#right').addEventListener('change', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
-  devSet({}, k==='straight' ? `יישור ${v>0?'+':''}${v}°` : `${DLABEL[k]} ${v>0?'+':''}${v}`);
+  devSet({}, k==='straight' ? `${t("יישור")} ${v>0?'+':''}${v}°` : `${DLABEL[k]} ${v>0?'+':''}${v}`);
 });
 $('#right').addEventListener('dblclick', e=>{
   const k=e.target.dataset?.k; if(!k || DEV.id==null) return;
-  if(k==='straight') devSet({rot:Math.round(DEV.ops.rot/90)*90}, 'יישור 0°'); else devSet({[k]:0}, `${DLABEL[k]} 0`);
+  if(k==='straight') devSet({rot:Math.round(DEV.ops.rot/90)*90}, t('יישור 0°')); else devSet({[k]:0}, `${DLABEL[k]} 0`);
 });
 $('#right').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
-  const g=e.target.closest('[data-gray]'); if(g){ const on=g.dataset.gray==='1'; if(on!==DEV.ops.gray) devSet({gray:on}, on?'שחור-לבן':'צבע'); return; }
+  const g=e.target.closest('[data-gray]'); if(g){ const on=g.dataset.gray==='1'; if(on!==DEV.ops.gray) devSet({gray:on}, on?t('שחור-לבן'):t('צבע')); return; }
   const r=e.target.closest('[data-rot]'); if(r){ const d=+r.dataset.rot; const k=DEV.ops.crop, c = d>0 ? [1-k[3],k[0],1-k[1],k[2]] : [k[1],1-k[2],k[3],1-k[0]];
-    let rot=DEV.ops.rot+d; if(rot>180) rot-=360; if(rot<=-180) rot+=360; devSet({rot, crop:c}, d>0?'סיבוב ימינה':'סיבוב שמאלה'); return; }
-  const t=e.target.closest('[data-t]')?.dataset.t;
-  if(t==='crop') devCropToggle();
-  if(t==='cropreset') devSet({crop:[0,0,1,1]}, 'איפוס חיתוך');
+    let rot=DEV.ops.rot+d; if(rot>180) rot-=360; if(rot<=-180) rot+=360; devSet({rot, crop:c}, d>0?t('סיבוב ימינה'):t('סיבוב שמאלה')); return; }
+  const tg=e.target.closest('[data-t]')?.dataset.t;
+  if(tg==='crop') devCropToggle();
+  if(tg==='cropreset') devSet({crop:[0,0,1,1]}, t('איפוס חיתוך'));
   if(e.target.closest('[data-tool="crop"]')) devCropToggle();
 });
 $('#left').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
-  const pr=e.target.closest('[data-preset]'); if(pr){ const [n,o]=PRESETS[+pr.dataset.preset]; devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, ...o}, 'הגדרה קבועה: '+n); return; }
+  const pr=e.target.closest('[data-preset]'); if(pr){ const [n,o]=PRESETS[+pr.dataset.preset]; devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, ...o}, t('הגדרה קבועה: ')+n); return; }
   const h=e.target.closest('[data-hist]'); if(h){ const s=DEV.hist[+h.dataset.hist]; devSet({...s.ops, crop:[...s.ops.crop]}); }
 });
-function devCropToggle(){ if(DEV.id==null) return; DEV.crop=!DEV.crop; if(!DEV.crop) devSet({}, 'חיתוך'); else { layoutDev(); renderDevPanels(); renderToolbar(); } }
+function devCropToggle(){ if(DEV.id==null) return; DEV.crop=!DEV.crop; if(!DEV.crop) devSet({}, t('חיתוך')); else { layoutDev(); renderDevPanels(); renderToolbar(); } }
 function devBefore(){ if(DEV.id==null) return; DEV.before=!DEV.before; layoutDev(); renderToolbar(); }
 $('#crop-ov').addEventListener('mousedown', e=>{
   e.preventDefault();
@@ -1102,7 +1102,7 @@ function devOpsToApi(o){
 async function devApply(silent){
   if(DEV.id==null) return;
   const id=DEV.id, ops={...DEV.ops};
-  if(!silent) toast('מחיל…', 1500);
+  if(!silent) toast(t('מחיל…'), 1500);
   await send('POST', `/api/photo/${id}/edit`, devOpsToApi(ops));
   const d=await api('/api/photo/'+id);
   const p=S.byId.get(id); if(p) Object.assign(p, {width:d.width, height:d.height, edited:d.edited, bytes:d.bytes});
@@ -1111,24 +1111,24 @@ async function devApply(silent){
   if(DEV.id===id){ DEV.saved=JSON.stringify(DEV.ops); DEV.dirty=false; renderToolbar(); }
   G.cells.forEach(c=>{ if(+c.dataset.id===id){ const img=c.querySelector('img'); if(img) img.src=thumbUrl(id); } });
   renderFilm(true); renderColls();
-  if(!silent) toast('ההגדרות הוחלו · המקור נשמר');
+  if(!silent) toast(t('ההגדרות הוחלו · המקור נשמר'));
 }
 $('#btn-dev-apply').onclick = ()=>devApply();
-$('#btn-dev-reset').onclick = ()=>{ if(DEV.id!=null) devSet(NEUTRAL(), 'איפוס'); };
-$('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast('עוד לא הוחלו הגדרות על תמונה אחרת'); devSet({...DEV.last}, 'הגדרות קודמות'); };
+$('#btn-dev-reset').onclick = ()=>{ if(DEV.id!=null) devSet(NEUTRAL(), t('איפוס')); };
+$('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast(t('עוד לא הוחלו הגדרות על תמונה אחרת')); devSet({...DEV.last}, t('הגדרות קודמות')); };
 $('#btn-dev-revert').onclick = async ()=>{
   if(DEV.id==null) return; const p=actPhoto();
-  if(!p?.edited){ devSet(NEUTRAL(), 'איפוס'); return; }
+  if(!p?.edited){ devSet(NEUTRAL(), t('איפוס')); return; }
   await send('POST', `/api/photo/${DEV.id}/revert`); VER[DEV.id]=Date.now();
   Object.assign(p, {edited:0}); const d=await api('/api/photo/'+p.id); Object.assign(p,{width:d.width,height:d.height,bytes:d.bytes});
-  toast('הוחזר לקובץ המקורי'); renderFilm(true); devOpen();
+  toast(t('הוחזר לקובץ המקורי')); renderFilm(true); devOpen();
 };
 
 // ---------- slideshow ----------
 const SS={list:[], i:0, t:null, playing:true, cur:'a'};
 function ssStart(){
   let list = S.sel.size>1 ? S.list.filter(p=>S.sel.has(p.id)) : S.list;
-  list = list.filter(p=>!p.is_video); if(!list.length) return toast('אין תמונות להצגה');
+  list = list.filter(p=>!p.is_video); if(!list.length) return toast(t('אין תמונות להצגה'));
   SS.list=list; SS.i=Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
   $('#slideshow').classList.remove('hidden'); ssShow(); ssTimer();
   document.documentElement.requestFullscreen?.().catch(()=>{});
@@ -1166,90 +1166,96 @@ let PB_CHECKED=false;   // state of an optional checkbox passed to promptBox via
 function promptBox(title, value='', extra=''){
   return new Promise(res=>{
     modal(`<h3>${esc(title)}</h3><form class="mb" id="pb-form"><input type="text" id="pb-in" value="${esc(value)}" autocomplete="off">${extra}</form>
-      <div class="mf"><button id="pb-cancel">ביטול</button><button class="primary" id="pb-ok">אישור</button></div>`);
+      <div class="mf"><button id="pb-cancel">${t("ביטול")}</button><button class="primary" id="pb-ok">${t("אישור")}</button></div>`);
     const done=v=>{ PB_CHECKED = !!$('#modal-box input[type=checkbox]')?.checked; closeModal(); res(v); };
     $('#pb-form').onsubmit=e=>{ e.preventDefault(); done($('#pb-in').value.trim()||null); };
     $('#pb-ok').onclick=()=>done($('#pb-in').value.trim()||null);
     $('#pb-cancel').onclick=()=>done(null);
   });
 }
-function confirmBox(title, text, ok='אישור'){
+function confirmBox(title, text, ok=t('אישור')){
   return new Promise(res=>{
-    modal(`<h3>${title}</h3><div class="mb"><p>${text}</p></div><div class="mf"><button id="cb-no">ביטול</button><button class="primary" id="cb-yes">${ok}</button></div>`);
+    modal(`<h3>${title}</h3><div class="mb"><p>${text}</p></div><div class="mf"><button id="cb-no">${t("ביטול")}</button><button class="primary" id="cb-yes">${ok}</button></div>`);
     $('#cb-yes').onclick=()=>{ closeModal(); res(true); }; $('#cb-no').onclick=()=>{ closeModal(); res(false); };
   });
 }
 async function catalogSettings(){
   const s=await api('/api/status'), c=s.counts;
-  modal(`<h3>הגדרות קטלוג</h3><div class="mb">
-    <p>כל הקבצים נשמרים מקומית במחשב שלך. תמונות מיובאות מועתקות לתיקיית המדיה ומסודרות לפי שנת צילום. המקור של כל תמונה שנערכה נשמר בנפרד.</p>
-    <div class="pathrow"><span>ספריית הקטלוג</span><code>${esc(s.library_root)}</code></div>
-    <div class="pathrow"><span>קבצי מדיה</span><code>${esc(s.media_path)}</code></div>
-    <div class="pathrow"><span>קובץ הקטלוג</span><code>${esc(s.db_path)}</code></div>
-    <div class="pathrow"><span>תוכן</span><span>${num(c.photos)} פריטים · ${num(c.videos)} סרטונים · ${num(c.albums)} אוספים · ${num(c.people)} אנשים · ${num(c.tags)} מילות מפתח · ${num(c.trashed)} באשפה</span></div>
-    <div class="pathrow"><span>אשפה</span><span>פריטים נמחקים לצמיתות אחרי ${s.trash_days} יום</span></div>
-    <label class="fld"><span>מיקום קטלוג אחר</span><div class="frow"><input type="text" id="lib-path" dir="ltr" value="${esc(s.library_root)}"><button id="lib-pick">בחר...</button></div></label>
-  </div><div class="mf"><button onclick="closeModal()">סגור</button><button class="primary" id="lib-set">עבור לקטלוג</button></div>`);
-  $('#lib-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent('בחר תיקיית קטלוג')); if(r.path) $('#lib-path').value=r.path; };
-  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); closeModal(); toast('הקטלוג הוחלף'); await reloadAll(); };
+  modal(`<h3>${t("הגדרות קטלוג")}</h3><div class="mb">
+    <p>${t("כל הקבצים נשמרים מקומית במחשב שלך. תמונות מיובאות מועתקות לתיקיית המדיה ומסודרות לפי שנת צילום. המקור של כל תמונה שנערכה נשמר בנפרד.")}</p>
+    <div class="pathrow"><span>${t("ספריית הקטלוג")}</span><code>${esc(s.library_root)}</code></div>
+    <div class="pathrow"><span>${t("קבצי מדיה")}</span><code>${esc(s.media_path)}</code></div>
+    <div class="pathrow"><span>${t("קובץ הקטלוג")}</span><code>${esc(s.db_path)}</code></div>
+    <div class="pathrow"><span>${t("תוכן")}</span><span>${t("{0} פריטים · {1} סרטונים · {2} אוספים · {3} אנשים · {4} מילות מפתח · {5} באשפה", [num(c.photos), num(c.videos), num(c.albums), num(c.people), num(c.tags), num(c.trashed)])}</span></div>
+    <div class="pathrow"><span>${t("אשפה")}</span><span>${t("פריטים נמחקים לצמיתות אחרי {0} יום", [s.trash_days])}</span></div>
+    <label class="fld"><span>${t("מיקום קטלוג אחר")}</span><div class="frow"><input type="text" id="lib-path" dir="ltr" value="${esc(s.library_root)}"><button id="lib-pick">${t("בחר...")}</button></div></label>
+  </div><div class="mf"><button onclick="closeModal()">${t("סגור")}</button><button class="primary" id="lib-set">${t("עבור לקטלוג")}</button></div>`);
+  $('#lib-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('בחר תיקיית קטלוג'))); if(r.path) $('#lib-path').value=r.path; };
+  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); closeModal(); toast(t('הקטלוג הוחלף')); await reloadAll(); };
 }
 async function preferences(){
   const s=await api('/api/status'), at=s.autotag;
-  const tagState = !at.model_ready ? ['stat-off','המודל יורד אוטומטית (כ‑600MB, פעם אחת) בהרצה הראשונה.']
-    : at.pending ? ['stat-warn',`${num(at.pending)} תמונות ממתינות לתיוג`] : ['stat-ok',`מעודכן · ${num(at.embedded)} תמונות נותחו`];
-  modal(`<h3>העדפות · זיהוי ותיוג</h3><div class="mb">
-    <p>הכול רץ מקומית במחשב — שום תמונה לא נשלחת לשירות חיצוני, ואין צורך להתקין שום דבר.</p>
-    <div class="pathrow"><span>זיהוי פנים</span><span>InsightFace · ${num(s.counts.faces)} פרצופים זוהו עד כה</span></div>
-    <div class="pathrow"><span>מילות מפתח אוטומטיות</span><span class="${tagState[0]}">${tagState[1]}</span></div>
-    <p>מילות המפתח (באנגלית) נבחרות מתוך אוצר מילים קבוע לפי תוכן התמונה (CLIP), ומקומות לפי GPS. התיוג רץ לבד אחרי כל ייבוא.
-      מילת מפתח אוטומטית שמחקתם לא תחזור. חיפוש חכם: מסנן ספרייה ← טקסט ← „חיפוש חכם לפי תוכן".</p>
-  </div><div class="mf"><button onclick="closeModal()">סגור</button>
-    <button id="pf-faces">זהה פנים</button><button class="primary" id="pf-tag">תייג עכשיו</button></div>`);
-  $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces','זיהוי פנים'); };
-  $('#pf-tag').onclick=()=>{ closeModal(); runJob('/api/autotag','tags','תיוג אוטומטי'); };
+  const tagState = !at.model_ready ? ['stat-off',t('המודל יורד אוטומטית (כ‑600MB, פעם אחת) בהרצה הראשונה.')]
+    : at.pending ? ['stat-warn',`${t("{0} תמונות ממתינות לתיוג", [num(at.pending)])}`] : ['stat-ok',`${t("מעודכן · {0} תמונות נותחו", [num(at.embedded)])}`];
+  modal(`<h3>${t("העדפות · זיהוי ותיוג")}</h3><div class="mb">
+    <p>${t("הכול רץ מקומית במחשב — שום תמונה לא נשלחת לשירות חיצוני, ואין צורך להתקין שום דבר.")}</p>
+    <div class="pathrow"><span>${t("זיהוי פנים")}</span><span>${t("InsightFace · {0} פרצופים זוהו עד כה", [num(s.counts.faces)])}</span></div>
+    <div class="pathrow"><span>${t("מילות מפתח אוטומטיות")}</span><span class="${tagState[0]}">${tagState[1]}</span></div>
+    <p>${t("מילות המפתח (באנגלית) נבחרות מתוך אוצר מילים קבוע לפי תוכן התמונה (CLIP), ומקומות לפי GPS. התיוג רץ לבד אחרי כל ייבוא. מילת מפתח אוטומטית שמחקתם לא תחזור. חיפוש חכם: מסנן ספרייה ← טקסט ← „חיפוש חכם לפי תוכן\".")}</p>
+  </div><div class="mf"><button onclick="closeModal()">${t("סגור")}</button>
+    <button id="pf-faces">${t("זהה פנים")}</button><button class="primary" id="pf-tag">${t("תייג עכשיו")}</button></div>`);
+  $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('זיהוי פנים')); };
+  $('#pf-tag').onclick=()=>{ closeModal(); runJob('/api/autotag','tags',t('תיוג אוטומטי')); };
+}
+function languageDialog(){
+  modal(`<h3>${t('שפה')}${I18N.lang==='en'?'':' / Language'}</h3><div class="mb"><div class="lang-grid">
+    ${LANGS.map(([c,n,d])=>`<button class="${c===I18N.lang?'primary':''}" data-lang="${c}" dir="${d}">${n}</button>`).join('')}</div>
+    <p>${t('מילות המפתח האוטומטיות נשארות באנגלית בכל השפות.')}</p></div>
+    <div class="mf"><button onclick="closeModal()">${t('סגור')}</button></div>`);
+  $$('#modal-box [data-lang]').forEach(b=>b.onclick=()=>{ if(b.dataset.lang!==I18N.lang) setLanguage(b.dataset.lang); else closeModal(); });
 }
 async function memories(){
-  const m=await api('/api/memories'), t=m.titles||[], c=m.comments||[];
-  modal(`<h3>זיכרונות ותגובות מ‑Google Photos</h3><div class="mb">
-    ${!t.length&&!c.length?'<p>לא יובאו זיכרונות או תגובות.</p>':''}
-    ${t.length?`<p>כותרות זיכרונות</p><div class="mem-list">${t.map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:''}
-    ${c.length?`<p>תגובות באלבומים משותפים</p><div class="mem-list">${c.map(x=>`<div><time>${fdate(x.created_at)}</time>${x.liked?'♥ ':''}${esc(x.text)||'(לייק)'}</div>`).join('')}</div>`:''}
-  </div><div class="mf"><button class="primary" onclick="closeModal()">סגור</button></div>`);
+  const m=await api('/api/memories'), tg=m.titles||[], c=m.comments||[];
+  modal(`<h3>${t("זיכרונות ותגובות מ‑Google Photos")}</h3><div class="mb">
+    ${!tg.length&&!c.length?("<p>"+t("לא יובאו זיכרונות או תגובות.")+"</p>"):''}
+    ${tg.length?`<p>${t("כותרות זיכרונות")}</p><div class="mem-list">${tg.map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:''}
+    ${c.length?`<p>${t("תגובות באלבומים משותפים")}</p><div class="mem-list">${c.map(x=>`<div><time>${fdate(x.created_at)}</time>${x.liked?'♥ ':''}${esc(x.text)||t('(לייק)')}</div>`).join('')}</div>`:''}
+  </div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`);
 }
 function shortcuts(){
-  const k=(key,t)=>`<kbd>${key}</kbd><span>${t}</span>`;
-  modal(`<h3>קיצורי מקשים</h3><div class="mb"><div class="kgrid">
-    <h4>תצוגות</h4>${k('G','רשת')}${k('E','זכוכית מגדלת')}${k('C','השוואה')}${k('N','סקירה')}${k('O','אנשים')}${k('D','מודול פיתוח')}${k('Ctrl+Enter','מצגת')}${k('Esc','חזרה / יציאה')}
-    <h4>דירוג וסימון</h4>${k('P','דגל נבחרת')}${k('X','דגל נדחית')}${k('U','הסר דגל')}${k('`','החלף דגל')}${k('0–5','דירוג כוכבים')}${k('[ / ]','הורד / העלה דירוג')}${k('6–9','תווית אדום/צהוב/ירוק/כחול')}${k('Shift+מקש','סמן ועבור לבאה')}${k('B','אוסף מהיר')}${k('Ctrl+B','הצג אוסף מהיר')}
-    <h4>בחירה</h4>${k('Ctrl+A','בחר הכול')}${k('Ctrl+D','בטל בחירה')}${k('Ctrl+לחיצה','הוסף לבחירה')}${k('Shift+לחיצה','בחר טווח')}${k('← → ↑ ↓','מעבר בין תמונות')}${k('Delete','העבר לאשפה')}
-    <h4>ממשק</h4>${k('Tab','הסתר לוחות צד')}${k('Shift+Tab','הסתר את כל הלוחות')}${k('F5 / F6','לוח עליון / רצועת תמונות')}${k('F7 / F8','לוח ימני / שמאלי')}${k('T','סרגל כלים')}${k('L','כבה אורות')}${k('J','סגנון תאים')}${k('I','מידע בזכוכית מגדלת')}${k('\\\\','סרגל סינון / לפני-אחרי')}${k('Ctrl+L','הפעל/השבת מסננים')}${k('Ctrl+F','חיפוש טקסט')}${k('Z / רווח','זום 1:1')}
-    <h4>קבצים</h4>${k('Ctrl+Shift+I','ייבוא')}${k('Ctrl+Shift+E','ייצוא')}${k('Ctrl+N','אוסף חדש')}${k('Ctrl+[ / ]','סיבוב')}${k('Ctrl+R','הצג בסייר')}${k('Ctrl+S','שמור מטא-נתונים לקובץ')}${k('Ctrl+K','הוסף מילות מפתח')}${k('R','חיתוך (פיתוח)')}
-  </div></div><div class="mf"><button class="primary" onclick="closeModal()">סגור</button></div>`);
+  const k=(key,tg)=>`<kbd>${key}</kbd><span>${tg}</span>`;
+  modal(`<h3>${t("קיצורי מקשים")}</h3><div class="mb"><div class="kgrid">
+    <h4>${t("תצוגות")}</h4>${k('G',t('רשת'))}${k('E',t('זכוכית מגדלת'))}${k('C',t('השוואה'))}${k('N',t('סקירה'))}${k('O',t('אנשים'))}${k('D',t('מודול פיתוח'))}${k('Ctrl+Enter',t('מצגת'))}${k('Esc',t('חזרה / יציאה'))}
+    <h4>${t("דירוג וסימון")}</h4>${k('P',t('דגל נבחרת'))}${k('X',t('דגל נדחית'))}${k('U',t('הסר דגל'))}${k('`',t('החלף דגל'))}${k('0–5',t('דירוג כוכבים'))}${k('[ / ]',t('הורד / העלה דירוג'))}${k('6–9',t('תווית אדום/צהוב/ירוק/כחול'))}${k(t('Shift+מקש'),t('סמן ועבור לבאה'))}${k('B',t('אוסף מהיר'))}${k('Ctrl+B',t('הצג אוסף מהיר'))}
+    <h4>${t("בחירה")}</h4>${k('Ctrl+A',t('בחר הכול'))}${k('Ctrl+D',t('בטל בחירה'))}${k(t('Ctrl+לחיצה'),t('הוסף לבחירה'))}${k(t('Shift+לחיצה'),t('בחר טווח'))}${k('← → ↑ ↓',t('מעבר בין תמונות'))}${k('Delete',t('העבר לאשפה'))}
+    <h4>${t("ממשק")}</h4>${k('Tab',t('הסתר לוחות צד'))}${k('Shift+Tab',t('הסתר את כל הלוחות'))}${k('F5 / F6',t('לוח עליון / רצועת תמונות'))}${k('F7 / F8',t('לוח ימני / שמאלי'))}${k('T',t('סרגל כלים'))}${k('L',t('כבה אורות'))}${k('J',t('סגנון תאים'))}${k('I',t('מידע בזכוכית מגדלת'))}${k('\\\\',t('סרגל סינון / לפני-אחרי'))}${k('Ctrl+L',t('הפעל/השבת מסננים'))}${k('Ctrl+F',t('חיפוש טקסט'))}${k(t('Z / רווח'),t('זום 1:1'))}
+    <h4>${t("קבצים")}</h4>${k('Ctrl+Shift+I',t('ייבוא'))}${k('Ctrl+Shift+E',t('ייצוא'))}${k('Ctrl+N',t('אוסף חדש'))}${k('Ctrl+[ / ]',t('סיבוב'))}${k('Ctrl+R',t('הצג בסייר'))}${k('Ctrl+S',t('שמור מטא-נתונים לקובץ'))}${k('Ctrl+K',t('הוסף מילות מפתח'))}${k('R',t('חיתוך (פיתוח)'))}
+  </div></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`);
 }
 
 // ---------- export ----------
 function openExport(){
   const ids=targets().length ? targets() : [];
-  if(!ids.length) return toast('בחרו תמונות לייצוא');
+  if(!ids.length) return toast(t('בחרו תמונות לייצוא'));
   const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90});
-  modal(`<h3>ייצוא ${num(ids.length)} קבצים</h3><div class="mb">
-    <label class="fld"><span>ייצא אל</span><div class="frow"><input type="text" id="ex-dest" dir="ltr" value="${esc(last.dest)}" placeholder="C:\\Users\\...\\Pictures\\Export"><button id="ex-pick">בחר...</button></div></label>
-    <div class="fld"><span>הגדרות קובץ</span>
-      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="current" ${last.mode==='current'?'checked':''}> הקובץ כפי שהוא בקטלוג (כולל עריכות)</label>
-      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="original" ${last.mode==='original'?'checked':''}> המקור, בלי עריכות</label>
-      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="jpeg" ${last.mode==='jpeg'?'checked':''}> JPEG בגודל מותאם</label></div>
-    <div class="frow" id="ex-jpeg"><span>צלע ארוכה</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>פיקסלים · איכות</span>
+  modal(`<h3>${t("ייצוא {0} קבצים", [num(ids.length)])}</h3><div class="mb">
+    <label class="fld"><span>${t("ייצא אל")}</span><div class="frow"><input type="text" id="ex-dest" dir="ltr" value="${esc(last.dest)}" placeholder="C:\\Users\\...\\Pictures\\Export"><button id="ex-pick">${t("בחר...")}</button></div></label>
+    <div class="fld"><span>${t("הגדרות קובץ")}</span>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="current" ${last.mode==='current'?'checked':''}> ${t(" הקובץ כפי שהוא בקטלוג (כולל עריכות)")}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="original" ${last.mode==='original'?'checked':''}> ${t(" המקור, בלי עריכות")}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="jpeg" ${last.mode==='jpeg'?'checked':''}> ${t(" JPEG בגודל מותאם")}</label></div>
+    <div class="frow" id="ex-jpeg"><span>${t("צלע ארוכה")}</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>${t("פיקסלים · איכות")}</span>
       <input type="range" id="ex-q" min="40" max="100" value="${last.q}" style="width:120px"><output id="ex-qv">${last.q}</output></div>
-    <p>סרטונים תמיד מועתקים כמו שהם. שמות קבצים כפולים מקבלים מספר.</p>
-  </div><div class="mf"><button onclick="closeModal()">ביטול</button><button class="primary" id="ex-go">ייצוא</button></div>`);
+    <p>${t("סרטונים תמיד מועתקים כמו שהם. שמות קבצים כפולים מקבלים מספר.")}</p>
+  </div><div class="mf"><button onclick="closeModal()">${t("ביטול")}</button><button class="primary" id="ex-go">${t("ייצוא")}</button></div>`);
   $('#ex-q').oninput=e=>$('#ex-qv').textContent=e.target.value;
-  $('#ex-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent('בחר תיקיית ייצוא')); if(r.path) $('#ex-dest').value=r.path; };
+  $('#ex-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('בחר תיקיית ייצוא'))); if(r.path) $('#ex-dest').value=r.path; };
   $('#ex-go').onclick=async()=>{
     const dest=$('#ex-dest').value.trim(), mode=$('input[name=ex-mode]:checked').value, edge=+$('#ex-edge').value||null, q=+$('#ex-q').value;
-    if(!dest) return toast('בחרו תיקיית יעד');
+    if(!dest) return toast(t('בחרו תיקיית יעד'));
     pref.set('export', {dest, mode, edge:edge||2048, q});
     closeModal();
-    runJob('/api/export','export','ייצוא',{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100});
+    runJob('/api/export','export',t('ייצוא'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100});
   };
 }
 
@@ -1272,55 +1278,53 @@ function renderImport(){
   const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : IM.zip;
   el.innerHTML = `
   <div class="im-top">
-    <div class="blk"><span>מקור</span><b>${esc(folder ? (IM.path||'בחרו תיקייה') : lr ? (IM.lrcat||'בחרו קטלוג Lightroom') : (IM.zip||'בחרו קובץ ZIP'))}</b></div>
+    <div class="blk"><span>${t("מקור")}</span><b>${esc(folder ? (IM.path||t('בחרו תיקייה')) : lr ? (IM.lrcat||t('בחרו קטלוג Lightroom')) : (IM.zip||t('בחרו קובץ ZIP')))}</b></div>
     <span class="im-arrow">←</span>
-    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">העתק<small>מתיקייה / כרטיס זיכרון</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>קטלוג ‎.lrcat</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>קובץ ZIP מגוגל פוטוס</small></a></nav>
+    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("העתק")}<small>${t("מתיקייה / כרטיס זיכרון")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("קטלוג ‎.lrcat")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("קובץ ZIP מגוגל פוטוס")}</small></a></nav>
     <span class="im-arrow">←</span>
-    <div class="blk"><span>יעד</span><b>${esc(S.status?.media_path||'')}</b></div>
+    <div class="blk"><span>${t("יעד")}</span><b>${esc(S.status?.media_path||'')}</b></div>
   </div>
   <div class="im-body">
     <aside class="im-side">
-      <section class="pnl"><h3><span>מקור</span></h3><div class="pbody">
-        ${folder ? `<div class="btnrow"><button id="im-pick">${I('folder')} בחר תיקייה...</button></div>
-          <label class="check"><input type="checkbox" id="im-rec" ${IM.recursive?'checked':''}> כולל תיקיות משנה</label>
-          ${recent.length?`<div class="lbl-sub" style="padding-top:8px">אחרונים</div>${recent.map(p=>`<div class="row" data-recent="${esc(p)}">${I('folder')}<span class="nm" dir="ltr" title="${esc(p)}">${esc(p)}</span></div>`).join('')}`:''}`
-        : lr ? `<div class="btnrow"><button id="im-lrcat">${I('import')} בחר קטלוג Lightroom...</button></div>
-          <div class="hint">קובץ ‎<code>.lrcat</code>‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.</div>`
-        : `<div class="btnrow"><button id="im-zip">${I('import')} בחר קובץ ZIP...</button></div>
-          <div class="hint">הורידו את הספרייה מ‑takeout.google.com (Google Photos). הקובץ נקרא ישירות, בלי לפרוס אותו.</div>`}
+      <section class="pnl"><h3><span>${t("מקור")}</span></h3><div class="pbody">
+        ${folder ? `<div class="btnrow"><button id="im-pick">${I('folder')} ${t(" בחר תיקייה...")}</button></div>
+          <label class="check"><input type="checkbox" id="im-rec" ${IM.recursive?'checked':''}> ${t(" כולל תיקיות משנה")}</label>
+          ${recent.length?`<div class="lbl-sub" style="padding-top:8px">${t("אחרונים")}</div>${recent.map(p=>`<div class="row" data-recent="${esc(p)}">${I('folder')}<span class="nm" dir="ltr" title="${esc(p)}">${esc(p)}</span></div>`).join('')}`:''}`
+        : lr ? `<div class="btnrow"><button id="im-lrcat">${I('import')} ${t(" בחר קטלוג Lightroom...")}</button></div>
+          <div class="hint">${t("קובץ ‎")}<code>.lrcat</code>${t("‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.")}</div>`
+        : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" בחר קובץ ZIP...")}</button></div>
+          <div class="hint">${t("הורידו את הספרייה מ‑takeout.google.com (Google Photos). הקובץ נקרא ישירות, בלי לפרוס אותו.")}</div>`}
       </div></section>
     </aside>
     <div class="im-center">
-      ${folder ? `<div class="im-bar"><a data-show="all" class="${IM.show==='all'?'on':''}">כל התמונות</a><a data-show="new" class="${IM.show==='new'?'on':''}">תמונות חדשות</a>
-        <span class="spacer"></span><a data-chk="all">סמן הכול</a><a data-chk="none">בטל סימון</a></div>
-        <div class="im-grid" id="im-grid">${IM.loading?'<div class="im-empty">סורק…</div>':!IM.files.length?`<div class="im-empty">${IM.path?'לא נמצאו תמונות או סרטונים בתיקייה.':'בחרו תיקייה או כרטיס זיכרון מהלוח „מקור".'}</div>`
+      ${folder ? `<div class="im-bar"><a data-show="all" class="${IM.show==='all'?'on':''}">${t("כל התמונות")}</a><a data-show="new" class="${IM.show==='new'?'on':''}">${t("תמונות חדשות")}</a>
+        <span class="spacer"></span><a data-chk="all">${t("סמן הכול")}</a><a data-chk="none">${t("בטל סימון")}</a></div>
+        <div class="im-grid" id="im-grid">${IM.loading?("<div class=\"im-empty\">"+t("סורק…")+"</div>"):!IM.files.length?`<div class="im-empty">${IM.path?t('לא נמצאו תמונות או סרטונים בתיקייה.'):t('בחרו תיקייה או כרטיס זיכרון מהלוח „מקור".')}</div>`
           : shown.slice(0,3000).map(f=>`<div class="im-cell ${IM.on.has(f.path)?'':'off'}" data-path="${esc(f.path)}" title="${esc(f.path)}">
-            <input type="checkbox" ${IM.on.has(f.path)?'checked':''}>${f.dup?'<span class="dup" title="כבר בקטלוג (אותו שם וגודל)">כפילות</span>':''}
+            <input type="checkbox" ${IM.on.has(f.path)?'checked':''}>${f.dup?("<span class=\"dup\" title=\""+t("כבר בקטלוג (אותו שם וגודל)")+"\">"+t("כפילות")+"</span>"):''}
             ${f.is_video?`<span class="vid">${I('play')}</span>`:`<img loading="lazy" src="/api/local-thumb?path=${encodeURIComponent(f.path)}" alt="">`}
-            <span class="nm">${esc(f.name)}</span></div>`).join('') + (shown.length>3000?`<div class="im-empty">מוצגות 3,000 הראשונות מתוך ${num(shown.length)} — כולן ייובאו אם מסומנות.</div>`:'')}</div>`
-      : lr ? `<div class="im-grid"><div class="im-empty">${IM.lrloading?'קורא את הקטלוג…':!li?'בחרו קטלוג Lightroom Classic מהלוח „מקור".'
-          : `<b dir="ltr">${esc(IM.lrcat)}</b><br>${num(li.images)} תמונות · ${num(li.keywords)} מילות מפתח · ${num(li.collections)} אוספים · ${fsize(li.bytes)}
-             ${li.missing?`<br><span style="color:var(--yellow)">${num(li.missing)} קבצים שהקטלוג מפנה אליהם לא נמצאו בדיסק ולא ייובאו.</span>`:''}`}</div></div>`
-      : `<div class="im-grid"><div class="im-empty">${IM.zip?`<b dir="ltr">${esc(IM.zip)}</b><br>ייבוא ישמור אלבומים, תאריכים, מיקומים, מועדפים, תגי אנשים וזיכרונות. תמונות שכבר בקטלוג לא ישוכפלו.`:'בחרו את קובץ ה‑ZIP מ‑Google Takeout.'}</div></div>`}
+            <span class="nm">${esc(f.name)}</span></div>`).join('') + (shown.length>3000?`<div class="im-empty">${t("מוצגות 3,000 הראשונות מתוך {0} — כולן ייובאו אם מסומנות.", [num(shown.length)])}</div>`:'')}</div>`
+      : lr ? `<div class="im-grid"><div class="im-empty">${IM.lrloading?t('קורא את הקטלוג…'):!li?t('בחרו קטלוג Lightroom Classic מהלוח „מקור".')
+          : `<b dir="ltr">${esc(IM.lrcat)}</b><br>${t("{0} תמונות · {1} מילות מפתח · {2} אוספים · {3}", [num(li.images), num(li.keywords), num(li.collections), fsize(li.bytes)])}
+             ${li.missing?`<br><span style="color:var(--yellow)">${t("{0} קבצים שהקטלוג מפנה אליהם לא נמצאו בדיסק ולא ייובאו.", [num(li.missing)])}</span>`:''}`}</div></div>`
+      : `<div class="im-grid"><div class="im-empty">${IM.zip?`<b dir="ltr">${esc(IM.zip)}</b><br>${t("ייבוא ישמור אלבומים, תאריכים, מיקומים, מועדפים, תגי אנשים וזיכרונות. תמונות שכבר בקטלוג לא ישוכפלו.")}`:t('בחרו את קובץ ה‑ZIP מ‑Google Takeout.')}</div></div>`}
     </div>
     <aside class="im-side">
-      ${folder?`<section class="pnl"><h3><span>טיפול בקבצים</span></h3><div class="pbody">
-        <label class="check"><input type="checkbox" id="im-skipdup" ${IM.skipDup?'checked':''}> אל תייבא כפילויות חשודות</label>
-        <div class="hint">קבצים זהים לגמרי (לפי תוכן) אף פעם לא נשמרים פעמיים.</div></div></section>
-      <section class="pnl"><h3><span>החל במהלך הייבוא</span></h3><div class="pbody">
-        <label class="fld" style="padding:4px 12px"><span>מילות מפתח</span><input type="text" id="im-kw" placeholder="חופשה, משפחה"></label>
-        <label class="fld" style="padding:4px 12px"><span>הוסף לאוסף</span><input type="text" id="im-album" list="im-albums" placeholder="ללא"></label>
+      ${folder?`<section class="pnl"><h3><span>${t("טיפול בקבצים")}</span></h3><div class="pbody">
+        <label class="check"><input type="checkbox" id="im-skipdup" ${IM.skipDup?'checked':''}> ${t(" אל תייבא כפילויות חשודות")}</label>
+        <div class="hint">${t("קבצים זהים לגמרי (לפי תוכן) אף פעם לא נשמרים פעמיים.")}</div></div></section>
+      <section class="pnl"><h3><span>${t("החל במהלך הייבוא")}</span></h3><div class="pbody">
+        <label class="fld" style="padding:4px 12px"><span>${t("מילות מפתח")}</span><input type="text" id="im-kw" placeholder="${t("חופשה, משפחה")}"></label>
+        <label class="fld" style="padding:4px 12px"><span>${t("הוסף לאוסף")}</span><input type="text" id="im-album" list="im-albums" placeholder="${t("ללא")}"></label>
         <datalist id="im-albums">${S.albums.filter(a=>a.kind==='album').map(a=>`<option value="${esc(a.name)}">`).join('')}</datalist></div></section>`:''}
-      ${lr?`<section class="pnl"><h3><span>מה מיובא</span></h3><div class="pbody"><div class="hint">
-        דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם" הופכות לאנשים), אוספים והאוסף המהיר.
-        הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי.
-        עותקים וירטואליים ואוספים חכמים מדולגים.</div></div></section>`:''}
-      <section class="pnl"><h3><span>יעד</span></h3><div class="pbody">
-        <div class="hint"><code>${esc(S.status?.media_path||'')}</code><br>מסודר בתיקיות לפי שנת צילום (למשל <code>2024</code>). ניתן לשנות מקובץ ← הגדרות קטלוג.</div></div></section>
+      ${lr?`<section class="pnl"><h3><span>${t("מה מיובא")}</span></h3><div class="pbody"><div class="hint">
+        ${t(" דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם\" הופכות לאנשים), אוספים והאוסף המהיר. הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי. עותקים וירטואליים ואוספים חכמים מדולגים.")}</div></div></section>`:''}
+      <section class="pnl"><h3><span>${t("יעד")}</span></h3><div class="pbody">
+        <div class="hint"><code>${esc(S.status?.media_path||'')}</code><br>${t("מסודר בתיקיות לפי שנת צילום (למשל")} <code>2024</code>${t("). ניתן לשנות מקובץ ← הגדרות קטלוג.")}</div></div></section>
     </aside>
   </div>
-  <div class="im-foot">${folder?`${num(chosen.length)} תמונות / ${fsize(bytes)}`:lr&&li?`${num(li.images-li.missing)} תמונות / ${fsize(li.bytes)}`:''}<span class="spacer"></span>
-    <button id="im-cancel">ביטול</button><button class="primary" id="im-go" ${ready?'':'disabled'}>ייבוא</button></div>`;
+  <div class="im-foot">${folder?`${t("{0} תמונות / {1}", [num(chosen.length), fsize(bytes)])}`:lr&&li?`${t("{0} תמונות / {1}", [num(li.images-li.missing), fsize(li.bytes)])}`:''}<span class="spacer"></span>
+    <button id="im-cancel">${t("ביטול")}</button><button class="primary" id="im-go" ${ready?'':'disabled'}>${t("ייבוא")}</button></div>`;
 }
 async function scanImport(){
   if(!IM.path) return;
@@ -1332,27 +1336,27 @@ async function scanImport(){
   } finally { IM.loading=false; renderImport(); }
 }
 $('#import').addEventListener('click', async e=>{
-  const t=e.target;
-  const mode=t.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport(); return; }
-  if(t.closest('#im-cancel')) return closeImport();
-  if(t.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent('בחר תיקייה לייבוא')); if(r.path){ IM.path=r.path; scanImport(); } return; }
-  if(t.closest('#im-zip')){ const r=await api('/api/pick-file?kind=zip'); if(r.path){ IM.zip=r.path; renderImport(); } return; }
-  if(t.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat'); if(!r.path) return;
+  const tg=e.target;
+  const mode=tg.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport(); return; }
+  if(tg.closest('#im-cancel')) return closeImport();
+  if(tg.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('בחר תיקייה לייבוא'))); if(r.path){ IM.path=r.path; scanImport(); } return; }
+  if(tg.closest('#im-zip')){ const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('בחר קובץ ZIP של Google Takeout'))); if(r.path){ IM.zip=r.path; renderImport(); } return; }
+  if(tg.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat&title='+encodeURIComponent(t('בחר קטלוג Lightroom'))); if(!r.path) return;
     IM.lrcat=r.path; IM.lrinfo=null; IM.lrloading=true; renderImport();
     try{ IM.lrinfo=await api('/api/lrcat-info?'+new URLSearchParams({path:r.path})); } finally { IM.lrloading=false; renderImport(); } return; }
-  const rec=t.closest('[data-recent]'); if(rec){ IM.path=rec.dataset.recent; scanImport(); return; }
-  const sh=t.closest('[data-show]'); if(sh){ IM.show=sh.dataset.show; renderImport(); return; }
-  const ck=t.closest('[data-chk]'); if(ck){ IM.on = ck.dataset.chk==='all' ? new Set(IM.files.filter(f=>IM.show==='all'||!f.dup).map(f=>f.path)) : new Set(); renderImport(); return; }
-  const cell=t.closest('.im-cell'); if(cell){ const p=cell.dataset.path; IM.on.has(p)?IM.on.delete(p):IM.on.add(p);
+  const rec=tg.closest('[data-recent]'); if(rec){ IM.path=rec.dataset.recent; scanImport(); return; }
+  const sh=tg.closest('[data-show]'); if(sh){ IM.show=sh.dataset.show; renderImport(); return; }
+  const ck=tg.closest('[data-chk]'); if(ck){ IM.on = ck.dataset.chk==='all' ? new Set(IM.files.filter(f=>IM.show==='all'||!f.dup).map(f=>f.path)) : new Set(); renderImport(); return; }
+  const cell=tg.closest('.im-cell'); if(cell){ const p=cell.dataset.path; IM.on.has(p)?IM.on.delete(p):IM.on.add(p);
     cell.classList.toggle('off', !IM.on.has(p)); cell.querySelector('input').checked=IM.on.has(p);
-    const chosen=IM.files.filter(f=>IM.on.has(f.path)); $('#import .im-foot').firstChild.textContent=`${num(chosen.length)} תמונות / ${fsize(chosen.reduce((a,f)=>a+f.bytes,0))}`;
+    const chosen=IM.files.filter(f=>IM.on.has(f.path)); $('#import .im-foot').firstChild.textContent=`${t("{0} תמונות / {1}", [num(chosen.length), fsize(chosen.reduce((a,f)=>a+f.bytes,0))])}`;
     $('#im-go').disabled=!chosen.length; return; }
-  if(t.closest('#im-go')){
-    if(IM.mode==='zip'){ await send('POST','/api/import',{zip_path:IM.zip}); closeImport(); pollJob('import','ייבוא מ‑Google'); return; }
-    if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import','ייבוא מ‑Lightroom'); return; }
+  if(tg.closest('#im-go')){
+    if(IM.mode==='zip'){ await send('POST','/api/import',{zip_path:IM.zip}); closeImport(); pollJob('import',t('ייבוא מ‑Google')); return; }
+    if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import',t('ייבוא מ‑Lightroom')); return; }
     const paths=IM.files.filter(f=>IM.on.has(f.path)).map(f=>f.path);
     await send('POST','/api/import-folder',{paths, keywords:($('#im-kw').value||'').split(','), album:$('#im-album').value||null});
-    closeImport(); IM.files=[]; pollJob('import','ייבוא');
+    closeImport(); IM.files=[]; pollJob('import',t('ייבוא'));
   }
 });
 $('#import').addEventListener('change', e=>{
@@ -1369,15 +1373,16 @@ async function pollJob(name, label){
   const pct = p.total ? Math.round(100*p.done/p.total) : null;
   $('#act-label').textContent = `${label}${pct!=null?` · ${pct}%`:'…'}`;
   bar.classList.toggle('indet', pct==null); $('#act-fill').style.width = (pct??0)+'%';
-  act.title = `${label}: ${p.msg||p.state}`;
-  act.onclick = ()=>toast(`<b>${label}</b><br>${esc(p.msg||p.state)}${p.total?` (${num(p.done)}/${num(p.total)})`:''}`);
+  const msg = p.parts ? p.parts.map(x=>t(x.key, x.vars)).join(' · ') : p.key ? t(p.key, p.vars) : (p.msg || p.state);
+  act.title = `${label}: ${msg}`;
+  act.onclick = ()=>toast(`<b>${label}</b><br>${esc(msg)}${p.total?` (${num(p.done)}/${num(p.total)})`:''}`);
   if(['done','error','idle'].includes(p.state)){
     act.classList.add('hidden');
-    toast(`${label}: ${esc(p.error||p.msg||'הושלם')}`, 4000);
+    toast(`${label}: ${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('הושלם'))}`, 4000);
     if(['import','faces','tags'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
-      if(name==='import' && p.state==='done') setTimeout(()=>pollJob('tags','תיוג אוטומטי'), 600);
+      if(name==='import' && p.state==='done') setTimeout(()=>pollJob('tags',t('תיוג אוטומטי')), 600);
       if(S.view==='people') renderPeople();
     }
     return;
@@ -1388,74 +1393,76 @@ async function pollJob(name, label){
 // ---------- menu bar ----------
 const sep='-';
 const MENUS = [
-  ['קובץ', [
-    ['ייבוא תמונות וסרטונים...', 'Ctrl+Shift+I', ()=>openImport('folder')],
-    ['ייבוא מקטלוג Lightroom...', '', ()=>openImport('lrcat')],
-    ['ייבוא מ‑Google Takeout...', '', ()=>openImport('zip')],
-    ['ייצוא...', 'Ctrl+Shift+E', openExport],
+  [t('קובץ'), [
+    [t('ייבוא תמונות וסרטונים...'), 'Ctrl+Shift+I', ()=>openImport('folder')],
+    [t('ייבוא מקטלוג Lightroom...'), '', ()=>openImport('lrcat')],
+    [t('ייבוא מ‑Google Takeout...'), '', ()=>openImport('zip')],
+    [t('ייצוא...'), 'Ctrl+Shift+E', openExport],
     sep,
-    ['הגדרות קטלוג...', 'Ctrl+Alt+,', catalogSettings],
-    ['העדפות...', 'Ctrl+,', preferences],
+    [t('הגדרות קטלוג...'), 'Ctrl+Alt+,', catalogSettings],
+    [t('העדפות...'), 'Ctrl+,', preferences],
   ]],
-  ['עריכה', [
-    ['בחר הכול', 'Ctrl+A', selectAll],
-    ['בטל בחירה', 'Ctrl+D', selectNone],
-    ['הפוך בחירה', '', selectInvert],
-    ['בחר את המסומנות בדגל', 'Ctrl+Alt+A', selectPicks],
+  [t('עריכה'), [
+    [t('בחר הכול'), 'Ctrl+A', selectAll],
+    [t('בטל בחירה'), 'Ctrl+D', selectNone],
+    [t('הפוך בחירה'), '', selectInvert],
+    [t('בחר את המסומנות בדגל'), 'Ctrl+Alt+A', selectPicks],
   ]],
-  ['ספרייה', [
-    ['אוסף חדש...', 'Ctrl+N', newCollection],
+  [t('ספרייה'), [
+    [t('אוסף חדש...'), 'Ctrl+N', newCollection],
     sep,
-    ['הצג אוסף מהיר', 'Ctrl+B', ()=>setSource(srcFromKey('quick'))],
-    ['נקה אוסף מהיר', '', async()=>{ const ids=S.all.filter(p=>p.quick).map(p=>p.id); if(ids.length) await setAttr({quick:0}, ids); }],
+    [t('הצג אוסף מהיר'), 'Ctrl+B', ()=>setSource(srcFromKey('quick'))],
+    [t('נקה אוסף מהיר'), '', async()=>{ const ids=S.all.filter(p=>p.quick).map(p=>p.id); if(ids.length) await setAttr({quick:0}, ids); }],
     sep,
-    ['הפעל מסננים', 'Ctrl+L', ()=>{ S.F.on=!S.F.on; applyFilter(); }, null, ()=>S.F.on],
-    ['הצג סרגל סינון', '\\', ()=>{ $('#filterbar').classList.toggle('hidden'); }, null, ()=>!$('#filterbar').classList.contains('hidden')],
+    [t('הפעל מסננים'), 'Ctrl+L', ()=>{ S.F.on=!S.F.on; applyFilter(); }, null, ()=>S.F.on],
+    [t('הצג סרגל סינון'), '\\', ()=>{ $('#filterbar').classList.toggle('hidden'); }, null, ()=>!$('#filterbar').classList.contains('hidden')],
     sep,
-    ['זיהוי פנים', '', ()=>runJob('/api/faces','faces','זיהוי פנים')],
-    ['תיוג אוטומטי', '', ()=>runJob('/api/autotag','tags','תיוג אוטומטי')],
+    [t('זיהוי פנים'), '', ()=>runJob('/api/faces','faces',t('זיהוי פנים'))],
+    [t('תיוג אוטומטי'), '', ()=>runJob('/api/autotag','tags',t('תיוג אוטומטי'))],
     sep,
-    ['זיכרונות ותגובות מ‑Google...', '', memories],
+    [t('זיכרונות ותגובות מ‑Google...'), '', memories],
   ]],
-  ['תמונה', [
-    ['הוסף לאוסף המהיר', 'B', toggleQuick],
-    ['הצג בסייר', 'Ctrl+R', reveal],
+  [t('תמונה'), [
+    [t('הוסף לאוסף המהיר'), 'B', toggleQuick],
+    [t('הצג בסייר'), 'Ctrl+R', reveal],
     sep,
-    ['סובב שמאלה', 'Ctrl+[', ()=>rotateSel(-90)],
-    ['סובב ימינה', 'Ctrl+]', ()=>rotateSel(90)],
+    [t('סובב שמאלה'), 'Ctrl+[', ()=>rotateSel(-90)],
+    [t('סובב ימינה'), 'Ctrl+]', ()=>rotateSel(90)],
     sep,
-    ['דגל: נבחרת', 'P', ()=>setFlag(1)],
-    ['דגל: נדחית', 'X', ()=>setFlag(-1)],
-    ['ללא דגל', 'U', ()=>setFlag(0)],
+    [t('דגל: נבחרת'), 'P', ()=>setFlag(1)],
+    [t('דגל: נדחית'), 'X', ()=>setFlag(-1)],
+    [t('ללא דגל'), 'U', ()=>setFlag(0)],
     sep,
-    ...[0,1,2,3,4,5].map(n=>[n?`${'★'.repeat(n)}`:'ללא דירוג', String(n), ()=>setRating(n)]),
+    ...[0,1,2,3,4,5].map(n=>[n?`${'★'.repeat(n)}`:t('ללא דירוג'), String(n), ()=>setRating(n)]),
     sep,
-    ...LABELS.map(([k,n,key])=>[`תווית: ${n}`, key, ()=>setLabel(k)]),
-    ['ללא תווית', '', ()=>setAttr({label:''})],
+    ...LABELS.map(([k,n,key])=>[`${t("תווית: {0}", [n])}`, key, ()=>setLabel(k)]),
+    [t('ללא תווית'), '', ()=>setAttr({label:''})],
     sep,
-    ['העבר לאשפה / שחזר', 'Delete', trashSelected],
+    [t('העבר לאשפה / שחזר'), 'Delete', trashSelected],
   ]],
-  ['מטא-נתונים', [
-    ['הוסף מילות מפתח', 'Ctrl+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
-    ['שמור מטא-נתונים לקובץ', 'Ctrl+S', saveMetaToFile],
-    ['סנכרן מטא-נתונים', '', ()=>$('#btn-sync-meta').click()],
+  [t('מטא-נתונים'), [
+    [t('הוסף מילות מפתח'), 'Ctrl+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
+    [t('שמור מטא-נתונים לקובץ'), 'Ctrl+S', saveMetaToFile],
+    [t('סנכרן מטא-נתונים'), '', ()=>$('#btn-sync-meta').click()],
   ]],
-  ['תצוגה', [
-    ['רשת', 'G', ()=>setView('grid')], ['זכוכית מגדלת', 'E', ()=>setView('loupe')], ['השוואה', 'C', ()=>setView('compare')],
-    ['סקירה', 'N', ()=>setView('survey')], ['אנשים', 'O', ()=>setView('people')], ['פיתוח', 'D', ()=>setModule('develop')],
-    ['מצגת', 'Ctrl+Enter', ssStart],
+  [t('תצוגה'), [
+    [t('שפה') + (I18N.lang==='en' ? '' : ' / Language') + '...', '', languageDialog],
     sep,
-    ['החלף סגנון תאים', 'J', cycleCellStyle],
-    ['מידע בזכוכית מגדלת', 'I', ()=>{ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }, null, ()=>S.loupeInfo],
+    [t('רשת'), 'G', ()=>setView('grid')], [t('זכוכית מגדלת'), 'E', ()=>setView('loupe')], [t('השוואה'), 'C', ()=>setView('compare')],
+    [t('סקירה'), 'N', ()=>setView('survey')], [t('אנשים'), 'O', ()=>setView('people')], [t('פיתוח'), 'D', ()=>setModule('develop')],
+    [t('מצגת'), 'Ctrl+Enter', ssStart],
     sep,
-    ['הסתר/הצג לוחות צד', 'Tab', toggleSides],
-    ['הסתר/הצג את כל הלוחות', 'Shift+Tab', toggleAllPanels],
-    ['סרגל כלים', 'T', ()=>togglePanel('tool'), null, ()=>!document.body.classList.contains('hide-tool')],
-    ['כבה אורות', 'L', cycleLights],
+    [t('החלף סגנון תאים'), 'J', cycleCellStyle],
+    [t('מידע בזכוכית מגדלת'), 'I', ()=>{ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }, null, ()=>S.loupeInfo],
+    sep,
+    [t('הסתר/הצג לוחות צד'), 'Tab', toggleSides],
+    [t('הסתר/הצג את כל הלוחות'), 'Shift+Tab', toggleAllPanels],
+    [t('סרגל כלים'), 'T', ()=>togglePanel('tool'), null, ()=>!document.body.classList.contains('hide-tool')],
+    [t('כבה אורות'), 'L', cycleLights],
   ]],
-  ['עזרה', [
-    ['קיצורי מקשים', 'Ctrl+/', shortcuts],
-    ['אודות photag', '', ()=>modal(`<h3>photag</h3><div class="mb"><p>ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.</p></div><div class="mf"><button class="primary" onclick="closeModal()">סגור</button></div>`)],
+  [t('עזרה'), [
+    [t('קיצורי מקשים'), 'Ctrl+/', shortcuts],
+    [t('אודות photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p>${t("ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`)],
   ]],
 ];
 let MENU_OPEN=null;
@@ -1464,7 +1471,7 @@ function openMenu(i){
   const b=$(`#menubar [data-menu="${i}"]`), pop=$('#menu-pop'), items=MENUS[i][1];
   $$('#menubar button').forEach(x=>x.classList.toggle('open', x===b));
   pop.innerHTML = items.map((it,j)=>it===sep?'<hr>':`<div class="mi ${it[4]&&it[4]()?'chk':''}" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[1]||''}</span></div>`).join('');
-  const r=b.getBoundingClientRect(); pop.style.top=r.bottom+'px'; pop.style.right=(innerWidth-r.right)+'px'; pop.style.left='auto';
+  const r=b.getBoundingClientRect(); pop.style.top=r.bottom+'px'; if(RTL){ pop.style.right=(innerWidth-r.right)+'px'; pop.style.left='auto'; } else { pop.style.left=r.left+'px'; pop.style.right='auto'; }
   pop.classList.remove('hidden'); MENU_OPEN=i;
 }
 function closeMenu(){ $('#menu-pop').classList.add('hidden'); $$('#menubar button').forEach(x=>x.classList.remove('open')); MENU_OPEN=null; }
@@ -1498,7 +1505,7 @@ document.addEventListener('keydown', e=>{
   if(ctrl){
     const map = {
       KeyA: ()=>e.altKey?selectPicks():selectAll(), KeyD: selectNone, KeyB: ()=>setSource(srcFromKey('quick')), KeyN: newCollection,
-      KeyL: ()=>{ S.F.on=!S.F.on; applyFilter(); toast(S.F.on?'המסננים הופעלו':'המסננים הושבתו', 1200); },
+      KeyL: ()=>{ S.F.on=!S.F.on; applyFilter(); toast(S.F.on?t('המסננים הופעלו'):t('המסננים הושבתו'), 1200); },
       KeyF: ()=>{ S.fb='text'; renderFilterBar(); $('#filterbar').classList.remove('hidden'); $('#ft-q').focus(); },
       KeyR: reveal, KeyS: saveMetaToFile, KeyK: ()=>MENUS[4][1][0][2](),
       BracketLeft: ()=>rotateSel(-90), BracketRight: ()=>rotateSel(90),
@@ -1551,7 +1558,7 @@ document.addEventListener('keydown', e=>{
     else { const l=LABELS[d-6]; if(l) setLabel(l[0], adv); }
     return;
   }
-  const rtl = true;   // the grid flows right-to-left
+  const rtl = RTL;   // the grid flows in reading direction
   if(k==='ArrowLeft' || k==='ArrowRight'){
     e.preventDefault(); const fwd = (k==='ArrowLeft')===rtl ? 1 : -1;
     if(S.view==='compare') compareStep(fwd); else moveAct(fwd, shift && S.view==='grid');
@@ -1577,7 +1584,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setView('grid');
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
-  [['import','ייבוא'],['faces','זיהוי פנים'],['tags','תיוג אוטומטי'],['export','ייצוא']].forEach(async ([n,l])=>{
+  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['tags',t('תיוג אוטומטי')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}
   });
 })();

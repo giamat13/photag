@@ -97,12 +97,12 @@ def run_faces(progress):
         detect_photo(con, row)
         progress.done = i
         if i % 20 == 0:
-            progress.msg = f"מזהה פנים {i}/{len(todo)}"; con.commit()
+            progress.say("מזהה פנים {done}/{total}", done=i, total=len(todo)); con.commit()
     con.commit()
-    progress.state = "clustering"; progress.msg = "מקבץ פנים…"
+    progress.state = "clustering"; progress.say("מקבץ פנים…")
     n = cluster_all(con)
     name_clusters(con)
-    progress.state = "done"; progress.msg = f"נמצאו {n} קבוצות פנים"
+    progress.state = "done"; progress.say("נמצאו {n} קבוצות פנים", n=n)
     con.commit()
 
 

@@ -523,3 +523,9 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 /* narrow windows: drop the least-used toolbar controls instead of clipping */
 @media (max-width:1300px){ .tb-size span{display:none} .tb-size{width:110px} }
 @media (max-width:1180px){ .tb-labs,.tb-labs+.tb-sep{display:none} }
+
+/* language picker */
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lang-grid button{height:30px}
+/* LTR languages: arrows that point "forward" flip */
+[dir=ltr] .im-arrow{transform:scaleX(-1)}

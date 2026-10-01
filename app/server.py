@@ -13,6 +13,11 @@ from . import db, images, importer, faces, autotag, config
 from .config import PATHS
 
 app = FastAPI(title="photag")
+
+
+def err(code: int, key: str, **vars) -> HTTPException:
+    """Error for the UI: a Hebrew source string + values, translated by t()."""
+    return HTTPException(code, {"key": key, "vars": vars})
 UI = Path(__file__).parent / "ui"
 
 # ---- background jobs -------------------------------------------------------
@@ -40,7 +45,7 @@ def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
         if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "tagging", "downloading", "exporting"):
-            raise HTTPException(409, "המשימה כבר רצה")
+            raise err(409, "המשימה כבר רצה")
         prog = importer.Progress()
         JOBS[name] = prog
         threading.Thread(target=target, args=(*args, prog), daemon=True).start()
@@ -100,15 +105,15 @@ def pick_file(kind: str = "zip", title: str = ""):
     root.attributes("-topmost", True)
     try:
         if kind == "folder":
-            path = filedialog.askdirectory(title=title or "בחר תיקייה", parent=root)
+            path = filedialog.askdirectory(title=title or "Select folder", parent=root)
         elif kind == "lrcat":
             path = filedialog.askopenfilename(
-                title="בחר קטלוג Lightroom", parent=root,
-                filetypes=[("Lightroom Catalog", "*.lrcat"), ("כל הקבצים", "*.*")])
+                title=title or "Select Lightroom catalog", parent=root,
+                filetypes=[("Lightroom Catalog", "*.lrcat"), ("All files", "*.*")])
         else:
             path = filedialog.askopenfilename(
-                title="בחר קובץ ZIP של Google Takeout",
-                filetypes=[("ZIP files", "*.zip"), ("כל הקבצים", "*.*")], parent=root)
+                title=title or "Select Google Takeout ZIP",
+                filetypes=[("ZIP files", "*.zip"), ("All files", "*.*")], parent=root)
     finally:
         root.destroy()
     return {"path": path or None}
@@ -131,7 +136,7 @@ class ImportIn(BaseModel):
 @app.post("/api/import")
 def start_import(body: ImportIn):
     if not Path(body.zip_path).exists():
-        raise HTTPException(404, "קובץ ה-ZIP לא נמצא")
+        raise err(404, "קובץ ה-ZIP לא נמצא")
     _start("import", _then_autotag, importer.run_import, body.zip_path)
     return {"ok": True}
 
@@ -348,7 +353,7 @@ def _raw_jpeg(p: Path):
         try:
             images.open_image(p).save(out, "JPEG", quality=92)   # oriented, cached
         except Exception:
-            raise HTTPException(415, "לא נמצאה תצוגה מקדימה בקובץ ה‑RAW")
+            raise err(415, "לא נמצאה תצוגה מקדימה בקובץ ה‑RAW")
     return FileResponse(out, media_type="image/jpeg")
 
 
@@ -485,9 +490,9 @@ def _render(con, r, ops: dict):
 def _editable(con, pid):
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r or r["is_video"]:
-        raise HTTPException(400, "לא ניתן לערוך")
+        raise err(400, "לא ניתן לערוך")
     if images.is_raw(Path(r["rel_path"])):
-        raise HTTPException(400, "עריכת קובצי RAW לא נתמכת — ייצאו JPEG וערכו אותו")
+        raise err(400, "עריכת קובצי RAW לא נתמכת — ייצאו JPEG וערכו אותו")
     return r
 
 
@@ -525,7 +530,7 @@ def revert_image(pid: int):
     con = db.connect()
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r or not r["orig_backup"]:
-        raise HTTPException(400, "אין גרסה מקורית")
+        raise err(400, "אין גרסה מקורית")
     src = PATHS.media / r["rel_path"]
     shutil.copy2(PATHS.media / r["orig_backup"], src)
     _refresh_file(con, r, src, edited=0, edit_ops=None)
@@ -573,9 +578,9 @@ def create_album(body: CollectionIn):
     con = db.connect()
     name = body.name.strip()
     if not name:
-        raise HTTPException(400, "שם ריק")
+        raise err(400, "שם ריק")
     if con.execute("SELECT 1 FROM albums WHERE name=?", (name,)).fetchone():
-        raise HTTPException(409, "כבר קיים אוסף בשם הזה")
+        raise err(409, "כבר קיים אוסף בשם הזה")
     aid = con.execute("INSERT INTO albums(name,kind) VALUES(?, 'album')", (name,)).lastrowid
     con.executemany("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", [(i, aid) for i in body.ids])
     con.commit()
@@ -600,7 +605,7 @@ def album_rename(aid: int, body: RenameIn):
     con = db.connect()
     name = body.name.strip()
     if con.execute("SELECT 1 FROM albums WHERE name=? AND id<>?", (name, aid)).fetchone():
-        raise HTTPException(409, "כבר קיים אוסף בשם הזה")
+        raise err(409, "כבר קיים אוסף בשם הזה")
     con.execute("UPDATE albums SET name=? WHERE id=?", (name, aid))
     con.commit()
     return {"ok": True}
@@ -619,7 +624,7 @@ def album_delete(aid: int):
 @app.get("/api/scan-folder")
 def scan_folder(path: str, recursive: int = 1):
     if not Path(path).is_dir():
-        raise HTTPException(404, "התיקייה לא נמצאה")
+        raise err(404, "התיקייה לא נמצאה")
     files = importer.scan_folder(path, bool(recursive))
     known = {(r["filename"], r["bytes"]) for r in db.connect().execute("SELECT filename, bytes FROM photos")}
     for f in files:  # Lightroom's "suspected duplicate": same name + size already in the catalog
@@ -642,16 +647,16 @@ class LrcatIn(BaseModel):
 @app.get("/api/lrcat-info")
 def lrcat_info(path: str):
     if not Path(path).is_file():
-        raise HTTPException(404, "הקטלוג לא נמצא")
+        raise err(404, "הקטלוג לא נמצא")
     try:
         return importer.lrcat_info(path)
     except Exception as e:
-        raise HTTPException(400, f"לא ניתן לקרוא את הקטלוג: {e}")
+        raise err(400, "לא ניתן לקרוא את הקטלוג: {error}", error=str(e))
 
 @app.post("/api/import-lrcat")
 def start_import_lrcat(body: LrcatIn):
     if not Path(body.path).is_file():
-        raise HTTPException(404, "הקטלוג לא נמצא")
+        raise err(404, "הקטלוג לא נמצא")
     _start("import", _then_autotag, importer.run_lrcat_import, body.path)
     return {"ok": True}
 
@@ -664,7 +669,7 @@ class ImportFolderIn(BaseModel):
 @app.post("/api/import-folder")
 def start_import_folder(body: ImportFolderIn):
     if not body.paths:
-        raise HTTPException(400, "לא נבחרו קבצים")
+        raise err(400, "לא נבחרו קבצים")
     kws = [k.strip() for k in body.keywords if k.strip()]
     _start("import", _then_autotag, importer.run_folder_import, body.paths, kws, (body.album or "").strip() or None)
     return {"ok": True}
@@ -680,7 +685,7 @@ class ExportIn(BaseModel):
 @app.post("/api/export")
 def start_export(body: ExportIn):
     if not body.ids or not body.dest.strip():
-        raise HTTPException(400, "חסרים פריטים או תיקיית יעד")
+        raise err(400, "חסרים פריטים או תיקיית יעד")
     _start("export", importer.run_export, body.ids, body.dest.strip(), body.originals,
            body.long_edge, max(10, min(100, body.quality)))
     return {"ok": True}
@@ -717,7 +722,7 @@ def name_cluster(cid: int, body: RenameIn):
     con = db.connect()
     name = body.name.strip()
     if not name:
-        raise HTTPException(400, "שם ריק")
+        raise err(400, "שם ריק")
     con.execute("INSERT OR IGNORE INTO people(name,source) VALUES(?, 'manual')", (name,))
     pid = con.execute("SELECT id FROM people WHERE name=?", (name,)).fetchone()["id"]
     con.execute("UPDATE faces SET person_id=? WHERE cluster_id=?", (pid, cid))
