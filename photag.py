@@ -43,7 +43,7 @@ import uvicorn
 
 from app.server import app
 
-HOST, PORT = "127.0.0.1", 8756
+HOST, PORT = "127.0.0.1", int(os.environ.get("PHOTAG_PORT", 8756))
 URL = f"http://{HOST}:{PORT}"
 
 
@@ -80,6 +80,9 @@ def _own_taskbar_identity():
 
 def main():
     _own_taskbar_identity()
+    if os.environ.get("PHOTAG_NO_WINDOW"):       # server only, no window (tests of the packaged EXE)
+        _serve()
+        return
     threading.Thread(target=_serve, daemon=True).start()
     _wait_up()
     import webview

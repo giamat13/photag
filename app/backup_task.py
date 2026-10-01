@@ -15,6 +15,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 NO_WIN = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
 
@@ -27,7 +28,10 @@ def exe() -> str | None:
     env = os.environ.get("PHOTAG_BACKUP_TASK_EXE")        # tests
     if env:
         return env
-    return sys.executable if getattr(sys, "frozen", False) else None
+    if getattr(sys, "frozen", False):
+        small = Path(sys.executable).with_name("photag-backup.exe")      # the tiny program installed next to photag.exe
+        return str(small if small.is_file() else sys.executable)
+    return None
 
 
 def supported() -> bool:

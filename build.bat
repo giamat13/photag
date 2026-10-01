@@ -25,6 +25,13 @@ if errorlevel 1 (
 )
 
 for /f %%v in ('%PYEXE% -c "from app.version import __version__; print(__version__)"') do set VER=%%v
+echo === Building photag-backup.exe (small background backup program) ===
+%PYEXE% -m PyInstaller photag_backup.spec
+if errorlevel 1 (
+  echo PyInstaller build of photag-backup failed.
+  exit /b 1
+)
+
 echo === Version %VER% ===
 
 echo === Building installer (Inno Setup) ===
