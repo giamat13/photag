@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "Masquer/afficher les panneaux latéraux",
  "Hide/Show Filmstrip (F6)": "Masquer/afficher la bande de film (F6)",
  "Move to Trash": "Mettre à la corbeille",
- "Move to Trash / Restore": "Mettre à la corbeille / Restaurer",
  "Update downloaded and verified": "Mise à jour téléchargée et vérifiée",
  "The update has finished. Your photos and data are unchanged.": "La mise à jour est terminée. Vos photos et données sont restées intactes.",
  "Update not completed": "Mise à jour non terminée",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "{n} fichiers n'ont pas pu être importés",
  "Cancelled": "Annulé",
  "Progress": "Progression",
- "photos/s": "photos/s"
+ "photos/s": "photos/s",
+ "Delete permanently": "Supprimer définitivement",
+ "Delete permanently?": "Supprimer définitivement ?",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} éléments seront supprimés définitivement avec leurs fichiers. Cette action est irréversible.",
+ "{0} items deleted permanently": "{0} éléments supprimés définitivement",
+ "Empty the trash": "Vider la corbeille",
+ "Date in Trash": "Date de mise à la corbeille"
 }

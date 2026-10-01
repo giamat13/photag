@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "إخفاء/إظهار اللوحات الجانبية",
  "Hide/Show Filmstrip (F6)": "إخفاء/إظهار شريط الصور (F6)",
  "Move to Trash": "نقل إلى سلة المحذوفات",
- "Move to Trash / Restore": "نقل إلى سلة المحذوفات / استعادة",
  "Update downloaded and verified": "تم تنزيل التحديث والتحقق منه",
  "The update has finished. Your photos and data are unchanged.": "انتهى التحديث. بقيت صورك وبياناتك كما كانت.",
  "Update not completed": "لم يكتمل التحديث",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "تعذّر استيراد {n} من الملفات",
  "Cancelled": "أُلغي",
  "Progress": "التقدم",
- "photos/s": "صور/ث"
+ "photos/s": "صور/ث",
+ "Delete permanently": "حذف نهائي",
+ "Delete permanently?": "حذف نهائي؟",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "سيتم حذف {0} عنصر نهائيًا مع ملفاتها. لا يمكن التراجع عن ذلك.",
+ "{0} items deleted permanently": "تم حذف {0} عنصر نهائيًا",
+ "Empty the trash": "إفراغ سلة المهملات",
+ "Date in Trash": "تاريخ الحذف"
 }

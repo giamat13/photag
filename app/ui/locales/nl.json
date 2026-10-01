@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "Zijpanelen tonen/verbergen",
  "Hide/Show Filmstrip (F6)": "Filmstrip tonen/verbergen (F6)",
  "Move to Trash": "Naar prullenbak verplaatsen",
- "Move to Trash / Restore": "Naar prullenbak verplaatsen / Herstellen",
  "Update downloaded and verified": "Update gedownload en geverifieerd",
  "The update has finished. Your photos and data are unchanged.": "De update is voltooid. Je foto's en gegevens zijn ongewijzigd gebleven.",
  "Update not completed": "Update niet voltooid",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "{n} bestanden konden niet worden geïmporteerd",
  "Cancelled": "Geannuleerd",
  "Progress": "Voortgang",
- "photos/s": "foto's/s"
+ "photos/s": "foto's/s",
+ "Delete permanently": "Definitief verwijderen",
+ "Delete permanently?": "Definitief verwijderen?",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} items worden samen met hun bestanden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.",
+ "{0} items deleted permanently": "{0} items definitief verwijderd",
+ "Empty the trash": "Prullenbak legen",
+ "Date in Trash": "Datum in prullenbak"
 }

@@ -600,7 +600,7 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
                      "OR p.id IN (SELECT pp.photo_id FROM photo_people pp JOIN people pe ON pe.id=pp.person_id WHERE pe.name LIKE ?))")
         args += [f"%{q}%"] * 4
     sql = (f"SELECT p.id,p.filename,p.is_video,p.taken_at,p.favorited,p.rating,p.width,p.height,"
-           f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.rel_path,"
+           f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.trashed_at,p.rel_path,"
            f"EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=p.id) has_kw "
            f"FROM photos p{joins} WHERE {' AND '.join(where)} "
            f"ORDER BY p.taken_at DESC, p.id DESC LIMIT ? OFFSET ?")
@@ -760,6 +760,16 @@ def update_many(b: BatchIn):
     if b.ids:
         _apply_meta(db.connect(), b.ids, b)
     return {"ok": True, "n": len(b.ids)}
+
+
+class ForeverIn(BaseModel):
+    ids: list[int]
+
+@app.post("/api/photos/delete-forever")
+def delete_forever(body: ForeverIn):
+    """Delete photos that are already in the trash for good (files included). Photos outside the trash are ignored."""
+    n = importer.delete_trashed_by_id(db.connect(), body.ids)
+    return {"ok": True, "deleted": n}
 
 
 class KeywordsIn(BaseModel):

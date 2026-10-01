@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "Скрыть/показать боковые панели",
  "Hide/Show Filmstrip (F6)": "Скрыть/показать ленту фото (F6)",
  "Move to Trash": "Переместить в корзину",
- "Move to Trash / Restore": "Переместить в корзину / Восстановить",
  "Update downloaded and verified": "Обновление загружено и проверено",
  "The update has finished. Your photos and data are unchanged.": "Обновление завершено. Ваши фото и данные остались без изменений.",
  "Update not completed": "Обновление не завершено",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "Не удалось импортировать файлов: {n}",
  "Cancelled": "Отменено",
  "Progress": "Прогресс",
- "photos/s": "фото/с"
+ "photos/s": "фото/с",
+ "Delete permanently": "Удалить навсегда",
+ "Delete permanently?": "Удалить навсегда?",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "Элементов: {0} будет удалено навсегда вместе с файлами. Это нельзя отменить.",
+ "{0} items deleted permanently": "Удалено навсегда: {0}",
+ "Empty the trash": "Очистить корзину",
+ "Date in Trash": "Дата помещения в корзину"
 }

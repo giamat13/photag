@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "측면 패널 숨기기/표시",
  "Hide/Show Filmstrip (F6)": "필름스트립 숨기기/표시 (F6)",
  "Move to Trash": "휴지통으로 이동",
- "Move to Trash / Restore": "휴지통으로 이동 / 복원",
  "Update downloaded and verified": "업데이트를 다운로드하고 확인했습니다",
  "The update has finished. Your photos and data are unchanged.": "업데이트가 완료되었습니다. 사진과 데이터는 그대로입니다.",
  "Update not completed": "업데이트가 완료되지 않았습니다",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "파일 {n}개를 가져오지 못했습니다",
  "Cancelled": "취소됨",
  "Progress": "진행률",
- "photos/s": "장/초"
+ "photos/s": "장/초",
+ "Delete permanently": "영구 삭제",
+ "Delete permanently?": "영구 삭제할까요?",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0}개 항목이 파일과 함께 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+ "{0} items deleted permanently": "{0}개 항목을 영구 삭제했습니다",
+ "Empty the trash": "휴지통 비우기",
+ "Date in Trash": "휴지통으로 이동한 날짜"
 }

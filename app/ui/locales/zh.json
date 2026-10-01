@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "隐藏/显示侧面板",
  "Hide/Show Filmstrip (F6)": "隐藏/显示胶片显示窗格 (F6)",
  "Move to Trash": "移至回收站",
- "Move to Trash / Restore": "移至回收站 / 恢复",
  "Update downloaded and verified": "更新已下载并验证",
  "The update has finished. Your photos and data are unchanged.": "更新已完成。您的照片和数据保持原样。",
  "Update not completed": "更新未完成",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "有 {n} 个文件无法导入",
  "Cancelled": "已取消",
  "Progress": "进度",
- "photos/s": "张/秒"
+ "photos/s": "张/秒",
+ "Delete permanently": "永久删除",
+ "Delete permanently?": "要永久删除吗？",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} 个项目及其文件将被永久删除。此操作无法撤销。",
+ "{0} items deleted permanently": "已永久删除 {0} 个项目",
+ "Empty the trash": "清空回收站",
+ "Date in Trash": "移入回收站的日期"
 }

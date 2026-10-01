@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "साइड पैनल छिपाएँ/दिखाएँ",
  "Hide/Show Filmstrip (F6)": "फ़िल्मस्ट्रिप छिपाएँ/दिखाएँ (F6)",
  "Move to Trash": "कचरे में डालें",
- "Move to Trash / Restore": "कचरे में डालें / पुनर्स्थापित करें",
  "Update downloaded and verified": "अपडेट डाउनलोड और सत्यापित हो गया",
  "The update has finished. Your photos and data are unchanged.": "अपडेट पूरा हो गया। आपकी फ़ोटो और डेटा जैसे थे वैसे ही रहे।",
  "Update not completed": "अपडेट पूरा नहीं हुआ",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "{n} फ़ाइलें इम्पोर्ट नहीं हो सकीं",
  "Cancelled": "रद्द किया गया",
  "Progress": "प्रगति",
- "photos/s": "फ़ोटो/सेकंड"
+ "photos/s": "फ़ोटो/सेकंड",
+ "Delete permanently": "हमेशा के लिए हटाएँ",
+ "Delete permanently?": "हमेशा के लिए हटाएँ?",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} आइटम उनकी फ़ाइलों सहित हमेशा के लिए हटा दिए जाएँगे। इसे पूर्ववत नहीं किया जा सकता।",
+ "{0} items deleted permanently": "{0} आइटम हमेशा के लिए हटाए गए",
+ "Empty the trash": "ट्रैश खाली करें",
+ "Date in Trash": "ट्रैश में डालने की तिथि"
 }

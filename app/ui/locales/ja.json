@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "サイドパネルを表示/非表示",
  "Hide/Show Filmstrip (F6)": "フィルムストリップを表示/非表示 (F6)",
  "Move to Trash": "ゴミ箱に移動",
- "Move to Trash / Restore": "ゴミ箱に移動 / 復元",
  "Update downloaded and verified": "アップデートをダウンロードし、検証しました",
  "The update has finished. Your photos and data are unchanged.": "アップデートが完了しました。写真とデータはそのままです。",
  "Update not completed": "アップデートが完了しませんでした",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "{n} 個のファイルをインポートできませんでした",
  "Cancelled": "キャンセルしました",
  "Progress": "進行状況",
- "photos/s": "枚/秒"
+ "photos/s": "枚/秒",
+ "Delete permanently": "完全に削除",
+ "Delete permanently?": "完全に削除しますか？",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} 個の項目をファイルごと完全に削除します。この操作は元に戻せません。",
+ "{0} items deleted permanently": "{0} 個の項目を完全に削除しました",
+ "Empty the trash": "ごみ箱を空にする",
+ "Date in Trash": "ごみ箱に入れた日"
 }

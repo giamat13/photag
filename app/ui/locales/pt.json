@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "Ocultar/mostrar painéis laterais",
  "Hide/Show Filmstrip (F6)": "Ocultar/mostrar tira de filme (F6)",
  "Move to Trash": "Mover para a lixeira",
- "Move to Trash / Restore": "Mover para a lixeira / Restaurar",
  "Update downloaded and verified": "Atualização transferida e verificada",
  "The update has finished. Your photos and data are unchanged.": "A atualização terminou. As suas fotos e dados ficaram como estavam.",
  "Update not completed": "Atualização incompleta",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "Não foi possível importar {n} arquivos",
  "Cancelled": "Cancelado",
  "Progress": "Progresso",
- "photos/s": "fotos/s"
+ "photos/s": "fotos/s",
+ "Delete permanently": "Excluir permanentemente",
+ "Delete permanently?": "Excluir permanentemente?",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} itens serão excluídos permanentemente, junto com os arquivos. Isso não pode ser desfeito.",
+ "{0} items deleted permanently": "{0} itens excluídos permanentemente",
+ "Empty the trash": "Esvaziar a lixeira",
+ "Date in Trash": "Data na lixeira"
 }

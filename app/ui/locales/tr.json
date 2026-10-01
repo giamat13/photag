@@ -300,7 +300,6 @@
  "Hide/Show Side Panels": "Yan panelleri gizle/göster",
  "Hide/Show Filmstrip (F6)": "Film şeridini gizle/göster (F6)",
  "Move to Trash": "Çöp kutusuna taşı",
- "Move to Trash / Restore": "Çöp kutusuna taşı / Geri yükle",
  "Update downloaded and verified": "Güncelleme indirildi ve doğrulandı",
  "The update has finished. Your photos and data are unchanged.": "Güncelleme tamamlandı. Fotoğraflarınız ve verileriniz olduğu gibi kaldı.",
  "Update not completed": "Güncelleme tamamlanmadı",
@@ -816,5 +815,11 @@
  "{n} files could not be imported": "{n} dosya içe aktarılamadı",
  "Cancelled": "İptal edildi",
  "Progress": "İlerleme",
- "photos/s": "fotoğraf/sn"
+ "photos/s": "fotoğraf/sn",
+ "Delete permanently": "Kalıcı olarak sil",
+ "Delete permanently?": "Kalıcı olarak silinsin mi?",
+ "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} öğe dosyalarıyla birlikte kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+ "{0} items deleted permanently": "{0} öğe kalıcı olarak silindi",
+ "Empty the trash": "Çöp kutusunu boşalt",
+ "Date in Trash": "Çöpe atılma tarihi"
 }

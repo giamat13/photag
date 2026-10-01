@@ -21,13 +21,10 @@ LATIN_PAIR_RE = re.compile(r"^[A-Za-z].*,")  # e.g. "Itamar, dafna" -> shared/pe
 SUPP_RE = re.compile(r"\.supplemental[\w-]*\.json$", re.I)
 
 
-def purge_expired_trash(con, days: int = TRASH_RETENTION_DAYS):
-    """Permanently delete photos that have sat in the trash for over `days`:
-    their media/thumb/backup files and every DB row referencing them."""
-    cutoff = int(time.time()) - days * 86400
-    rows = con.execute(
-        "SELECT id, sha256, rel_path, orig_backup FROM photos "
-        "WHERE trashed=1 AND trashed_at IS NOT NULL AND trashed_at < ?", (cutoff,)).fetchall()
+def delete_forever(con, rows) -> int:
+    """Permanently delete these photos (rows with id, sha256, rel_path, orig_backup): their media / thumb / backup
+    files and every DB row referencing them. Only used on photos that are already in the trash."""
+    rows = list(rows)
     for r in rows:
         for p in (PATHS.media / r["rel_path"], images.thumb_path(r["sha256"])):
             p.unlink(missing_ok=True)
@@ -42,6 +39,24 @@ def purge_expired_trash(con, days: int = TRASH_RETENTION_DAYS):
     if rows:
         con.commit()
     return len(rows)
+
+
+def delete_trashed_by_id(con, ids) -> int:
+    """Delete for good the given photos, but only those that are in the trash (never a photo that is not)."""
+    ids = list(dict.fromkeys(int(i) for i in ids))
+    if not ids:
+        return 0
+    q = ",".join("?" * len(ids))
+    rows = con.execute(f"SELECT id, sha256, rel_path, orig_backup FROM photos WHERE trashed=1 AND id IN ({q})", ids).fetchall()
+    return delete_forever(con, rows)
+
+
+def purge_expired_trash(con, days: int = TRASH_RETENTION_DAYS):
+    """Permanently delete photos that have sat in the trash for over `days`."""
+    cutoff = int(time.time()) - days * 86400
+    return delete_forever(con, con.execute(
+        "SELECT id, sha256, rel_path, orig_backup FROM photos "
+        "WHERE trashed=1 AND trashed_at IS NOT NULL AND trashed_at < ?", (cutoff,)).fetchall())
 
 
 def _album_kind(name: str) -> str:

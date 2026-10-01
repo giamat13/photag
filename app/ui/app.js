@@ -137,15 +137,26 @@ function passMeta(p, upto=META_COLS.length){
 function filterActive(){
   const F=S.F; return !!(F.q || F.flags.size || F.rating || F.labels.size || F.kinds.size || Object.values(F.meta).some(s=>s.size));
 }
+// every sort ends with the same tie-breakers (capture time, then file name, then id), so equal values never shuffle
+const byName = (a,b)=>a.filename.localeCompare(b.filename, I18N.locale, {numeric:true, sensitivity:'base'});
+const tie = (a,b)=>(a.taken_at||0)-(b.taken_at||0) || byName(a,b) || a.id-b.id;
+const megapix = p => (p.width||0)*(p.height||0);
 const SORTS = {
-  capture:[t('Capture Time'), (a,b)=>(a.taken_at||0)-(b.taken_at||0) || a.id-b.id],
-  import: [t('Added Order'), (a,b)=>(a.imported_at||0)-(b.imported_at||0) || a.id-b.id],
-  name:   [t('File Name'),   (a,b)=>a.filename.localeCompare(b.filename, I18N.locale, {numeric:true})],
-  rating: [t('Rating'),     (a,b)=>(a.rating||0)-(b.rating||0) || (a.taken_at||0)-(b.taken_at||0)],
-  pick:   [t('Flag'),       (a,b)=>(a.flag||0)-(b.flag||0) || (a.taken_at||0)-(b.taken_at||0)],
-  label:  [t('Color Label'), (a,b)=>lrank(a)-lrank(b) || (a.taken_at||0)-(b.taken_at||0)],
-  size:   [t('File Size'), (a,b)=>(a.bytes||0)-(b.bytes||0)],
+  capture:[t('Capture Time'), (a,b)=>tie(a,b)],
+  import: [t('Added Order'), (a,b)=>(a.imported_at||0)-(b.imported_at||0) || tie(a,b)],
+  name:   [t('File Name'),   (a,b)=>byName(a,b) || tie(a,b)],
+  ext:    [t('File Type'),   (a,b)=>ext(a).localeCompare(ext(b)) || tie(a,b)],
+  folder: [t('Folder'),      (a,b)=>(a.folder||'').localeCompare(b.folder||'', I18N.locale, {numeric:true}) || tie(a,b)],
+  rating: [t('Rating'),     (a,b)=>(a.rating||0)-(b.rating||0) || tie(a,b)],
+  pick:   [t('Flag'),       (a,b)=>(a.flag||0)-(b.flag||0) || tie(a,b)],
+  label:  [t('Color Label'), (a,b)=>lrank(a)-lrank(b) || tie(a,b)],
+  size:   [t('File Size'), (a,b)=>(a.bytes||0)-(b.bytes||0) || tie(a,b)],
+  dims:   [t('Dimensions'), (a,b)=>megapix(a)-megapix(b) || tie(a,b)],
+  edited: [t('Edited'),    (a,b)=>(a.edited?1:0)-(b.edited?1:0) || tie(a,b)],
+  trashed:[t('Date in Trash'), (a,b)=>(a.trashed_at||0)-(b.trashed_at||0) || tie(a,b)],
 };
+const SORT_ASC_FIRST = new Set(['name','ext','folder']);      // text sorts start A→Z, the rest start with the biggest / newest
+const sortKeys = () => Object.keys(SORTS).filter(k => k!=='trashed' || S.src.kind==='trash');
 const lrank = p => p.label ? LABELS.findIndex(l=>l[0]===p.label) : 9;
 function applyFilter({keepScroll=true}={}){
   let rows = S.base;
@@ -153,6 +164,7 @@ function applyFilter({keepScroll=true}={}){
     if(S.F.q && S.F.qf==='name'){ const q=S.F.q.toLowerCase(); rows = rows.filter(p=>p.filename.toLowerCase().includes(q)); }
     rows = rows.filter(p=>passAttr(p) && passMeta(p));
   }
+  if(!SORTS[S.sort] || !sortKeys().includes(S.sort)) S.sort='capture';      // e.g. 'Date in Trash' after leaving the trash
   const cmp = SORTS[S.sort][1];
   rows = rows.slice().sort(S.asc ? cmp : (a,b)=>cmp(b,a));
   S.list = rows;
@@ -217,9 +229,30 @@ function toggleQuick(){
   setAttr({quick:on?1:0}, ids);
   toast(on ? `${t("Added to Quick Collection ({0})", [num(ids.length)])}` : t('Removed from Quick Collection'));
 }
-async function trashSelected(){
+async function restoreSelected(){
   const ids=targets(); if(!ids.length) return;
-  const restore = S.src.kind==='trash';
+  await setAttr({trashed:0}, ids);
+  toast(`${t("{0} items restored", [num(ids.length)])}`);
+}
+// inside the trash the Delete key deletes for good, after asking; restoring is a separate command (menu / right-click)
+async function deleteForever(){
+  const ids=targets(); if(!ids.length || S.src.kind!=='trash') return;
+  if(!await confirmBox(t('Delete permanently?'), t('{0} items will be deleted permanently, together with their files. This cannot be undone.', [num(ids.length)]), t('Delete permanently'))) return;
+  await send('POST', '/api/photos/delete-forever', {ids});
+  await reloadAll();
+  toast(t('{0} items deleted permanently', [num(ids.length)]));
+}
+async function emptyTrash(){
+  const ids = S.base.map(p=>p.id); if(S.src.kind!=='trash' || !ids.length) return;
+  if(!await confirmBox(t('Delete permanently?'), t('{0} items will be deleted permanently, together with their files. This cannot be undone.', [num(ids.length)]), t('Delete permanently'))) return;
+  await send('POST', '/api/photos/delete-forever', {ids});
+  await reloadAll();
+  toast(t('{0} items deleted permanently', [num(ids.length)]));
+}
+async function trashSelected(){
+  if(S.src.kind==='trash') return deleteForever();
+  const ids=targets(); if(!ids.length) return;
+  const restore = false;
   if(!restore && !pref.get('trashNoAsk', false)){      // deleting always asks first (restoring does not)
     const days = S.status?.trash_days || 60;
     const ok = await confirmBox(t('Move to trash?'),
@@ -977,7 +1010,7 @@ function renderToolbar(){
       <span class="tb-info">${p?`<bdi>${esc(p.filename)}</bdi>`:''}${DEV.dirty?t(' · unapplied changes'):''}</span>`; return; }
   let h = tbViews() + '<span class="tb-sep"></span>';
   if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">${t("Sort:")}</span><button class="tb-btn" data-t="asc" title="${S.asc?t('Ascending'):t('Descending')}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
-      <select data-t="sort">${Object.entries(SORTS).map(([k,[n]])=>`<option value="${k}" ${k===S.sort?'selected':''}>${n}</option>`).join('')}</select></div><span class="tb-sep"></span>` + tbAttrs() +
+      <select data-t="sort">${sortKeys().map(k=>`<option value="${k}" ${k===S.sort?'selected':''}>${SORTS[k][0]}</option>`).join('')}</select></div><span class="tb-sep"></span>` + tbAttrs() +
       `<label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
   else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
@@ -999,7 +1032,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
   else if(tg==='before') devBefore(); else if(tg==='crop') devCropToggle();
 });
-$('#toolbar').addEventListener('change', e=>{ if(e.target.dataset.t==='sort'){ S.sort=e.target.value; pref.set('sort',S.sort); applyFilter(); } });
+$('#toolbar').addEventListener('change', e=>{ if(e.target.dataset.t==='sort'){ S.sort=e.target.value; S.asc=SORT_ASC_FIRST.has(S.sort); pref.set('sort',S.sort); pref.set('asc',S.asc); applyFilter(); renderToolbar(); } });
 $('#toolbar').addEventListener('input', e=>{ if(e.target.dataset.t==='size'){ S.cellsz=+e.target.value; pref.set('cellsz',S.cellsz); layoutGrid(true); scrollToAct(); } });
 
 // ---------- right panel: histogram / keywording / keyword list / metadata ----------
@@ -2418,7 +2451,10 @@ const MENUS = [
     [t('Compress selected files...'), '', ()=>compressDialog(targets())],
     [t('Stop compression'), '', ()=>send('POST','/api/compress/cancel')],
     sep,
-    [t('Move to Trash / Restore'), 'Delete', trashSelected],
+    [t('Move to Trash'), 'Delete', trashSelected],
+    [t('Restore'), '', restoreSelected],
+    [t('Delete permanently'), 'Delete', deleteForever],
+    [t('Empty the trash'), '', emptyTrash],
   ]],
   [t('Metadata'), [
     [t('Add Keywords'), 'Ctrl+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
@@ -2451,19 +2487,66 @@ const MENUS = [
     [t('About photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('Version {0}', [ltr(S.status?.version || '')])}</p><p>${t("Local photo management and storage inspired by Lightroom Classic: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.")}</p><p class="hint" style="padding:0">${t("Free software under the GPL-3.0 license, with no warranty. You may modify and redistribute it under the license terms.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`)],
   ]],
 ];
-let MENU_OPEN=null;
+let MENU_OPEN=null, MENU_ITEMS=[];
 $('#menubar').innerHTML = MENUS.map(([n],i)=>`<button data-menu="${i}">${n}</button>`).join('');
 function openMenu(i){
-  const b=$(`#menubar [data-menu="${i}"]`), pop=$('#menu-pop'), items=MENUS[i][1];
+  const b=$(`#menubar [data-menu="${i}"]`), pop=$('#menu-pop'), items=MENU_ITEMS=MENUS[i][1];
   $$('#menubar button').forEach(x=>x.classList.toggle('open', x===b));
   pop.innerHTML = items.map((it,j)=>it===sep?'<hr>':`<div class="mi ${it[4]&&it[4]()?'chk':''}" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[1]||''}</span></div>`).join('');
   const r=b.getBoundingClientRect(); pop.style.top=r.bottom+'px'; if(RTL){ pop.style.right=(innerWidth-r.right)+'px'; pop.style.left='auto'; } else { pop.style.left=r.left+'px'; pop.style.right='auto'; }
   pop.classList.remove('hidden'); MENU_OPEN=i;
 }
+// right-click menu on photos: the same popup as the menu bar, placed at the pointer
+function photoMenuItems(){
+  const trash = S.src.kind==='trash', n = targets().length, photos = targets().some(id=>!(S.byId.get(id)||{}).is_video);
+  const sep = null;
+  if(trash) return [
+    [t('Restore'), '', restoreSelected],
+    [t('Show in Explorer'), 'Ctrl+R', reveal],
+    sep,
+    [t('Delete permanently'), 'Delete', deleteForever],
+    [t('Empty the trash'), '', emptyTrash],
+    sep,
+    [t('Select All'), 'Ctrl+A', selectAll],
+  ];
+  return [
+    [t('Loupe'), 'E', ()=>setView('loupe')],
+    [t('Add to Quick Collection'), 'B', toggleQuick],
+    [t('Show in Explorer'), 'Ctrl+R', reveal],
+    sep,
+    ...(photos ? [[t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)], [t('Rotate Right'), 'Ctrl+]', ()=>rotateSel(90)], sep] : []),
+    [t('Flag: Pick'), 'P', ()=>setFlag(1)],
+    [t('Flag: Rejected'), 'X', ()=>setFlag(-1)],
+    [t('Unflagged'), 'U', ()=>setFlag(0)],
+    sep,
+    ...[5,4,3,2,1,0].map(r=>[r?'★'.repeat(r):t('No Rating'), String(r), ()=>setRating(r)]),
+    sep,
+    [t('Export...'), '', openExport],
+    [t('Compress selected files...'), '', ()=>compressDialog(targets())],
+    sep,
+    [t('Move to Trash'), 'Delete', trashSelected],
+  ];
+}
+function openContextMenu(x, y){
+  const pop=$('#menu-pop'), items=MENU_ITEMS=photoMenuItems();
+  pop.innerHTML = items.map((it,j)=>it===null?'<hr>':`<div class="mi" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[1]||''}</span></div>`).join('');
+  pop.classList.remove('hidden'); MENU_OPEN=-1;
+  const w=pop.offsetWidth, h=pop.offsetHeight;
+  pop.style.left=Math.max(0, Math.min(x, innerWidth-w-4))+'px'; pop.style.right='auto';
+  pop.style.top=Math.max(0, Math.min(y, innerHeight-h-4))+'px';
+}
+document.addEventListener('contextmenu', e=>{
+  const c = e.target.closest('.cell, .fc');
+  if(!c || !c.dataset.id){ if(!e.target.closest('input,textarea')) e.preventDefault(); return; }
+  e.preventDefault();
+  const id=+c.dataset.id;
+  if(!S.sel.has(id)) selectOnly(id); else { S.act=id; }
+  openContextMenu(e.clientX, e.clientY);
+});
 function closeMenu(){ $('#menu-pop').classList.add('hidden'); $$('#menubar button').forEach(x=>x.classList.remove('open')); MENU_OPEN=null; }
 $('#menubar').addEventListener('mousedown', e=>{ const b=e.target.closest('[data-menu]'); if(!b) return; e.stopPropagation(); MENU_OPEN===+b.dataset.menu ? closeMenu() : openMenu(+b.dataset.menu); });
 $('#menubar').addEventListener('mouseover', e=>{ const b=e.target.closest('[data-menu]'); if(b && MENU_OPEN!=null && MENU_OPEN!==+b.dataset.menu) openMenu(+b.dataset.menu); });
-$('#menu-pop').addEventListener('mousedown', e=>{ e.stopPropagation(); const it=e.target.closest('[data-mi]'); if(!it) return; const f=MENUS[MENU_OPEN][1][+it.dataset.mi][2]; closeMenu(); f(); });
+$('#menu-pop').addEventListener('mousedown', e=>{ e.stopPropagation(); const it=e.target.closest('[data-mi]'); if(!it) return; const f=MENU_ITEMS[+it.dataset.mi][2]; closeMenu(); f(); });
 document.addEventListener('mousedown', ()=>{ if(MENU_OPEN!=null) closeMenu(); });
 
 // ---------- buttons ----------
@@ -2534,6 +2617,7 @@ document.addEventListener('keydown', e=>{
     case 'Delete': case 'Backspace': trashSelected(); return;
     case 'Enter': if(S.mod==='develop' && DEV.crop){ devCropToggle(); return; } if(S.view==='grid' && S.act!=null) setView('loupe'); return;
     case 'Escape':
+      if(MENU_OPEN!=null){ closeMenu(); return; }
       if(S.mod==='develop'){ if(DEV.crop){ devCropToggle(); return; } setModule('library'); return; }
       if(S.lights){ S.lights=2; cycleLights(); return; }
       if(S.view!=='grid') setView('grid'); return;
