@@ -1,113 +1,113 @@
-# photag — ניהול ושמירת תמונות מקומי
+# photag — a local photo manager
 
-תוכנת ניהול ושמירת תמונות למחשב (Windows) בהשראת Lightroom Classic: קטלוג, אוספים,
-דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פרצופים ועריכה שלא הורסת
-את המקור. ממשק ב‑17 שפות.
+A photo and video manager for Windows in the spirit of Lightroom Classic: catalog, collections, flags, ratings,
+color labels, keywords, face recognition and non-destructive editing (the original is always kept).
+The interface is available in 17 languages (English by default). A Hebrew version of this file is in [README.he.md](README.he.md).
 
-## מה יש בפנים
-- **ממשק בסגנון Lightroom Classic** — מודולים ספרייה / פיתוח / מצגת, תצוגות רשת,
-  זכוכית מגדלת, השוואה, סקירה ואנשים, רצועת תמונות, מסנן ספרייה וקיצורי המקשים של Lightroom.
-- **תיוג AI (אופציונלי, עם המפתח שלכם)** — כפתור «תיוג AI» ליד מילות המפתח. ספקים: OpenAI, Claude (Anthropic),
-  Gemini (Google), OpenRouter (מפתח אחד לעשרות ספקים), וכל שרת תואם‑OpenAI (Groq, Together, Ollama מקומי…).
-  המודל: **אוטומטי** (נבחר מהרשימה החיה של הספק מודל זול ומהיר שמבין תמונות) או בחירה ידנית, כולל טעינת רשימת
-  המודלים. נשלחת רק תמונה ממוזערת (512px) של כל תמונה, ורק כשמפעילים תיוג; ניתן לבחור שפה למילות המפתח, לתייג
-  את הנבחרות או את כל התמונות ללא מילות מפתח, ולעצור באמצע. מפתח ה‑API נשמר מוצפן (Windows DPAPI) ולא חוזר לממשק.
-- **דחיסת וידאו עם HandBrake** — כפתור בנגן. אם HandBrakeCLI לא מותקן נפתח דף ההתקנה שלו; אחרת בוחרים בשני סרגלים
-  עוצמת דחיסה ומהירות (עם תיאור במילים של מה נבחר), ובמצב «מתקדם» מקודד (H.264/H.265/AV1), איכות, רזולוציה, קצב פריימים ואודיו.
-  ברירת המחדל שומרת כל פריים ואת הרזולוציה. אחרי הדחיסה האפליקציה **מאמתת** (מספר פריימים, אורך ב‑±50ms, רזולוציה, אודיו, גודל
-  ו‑SSIM) ורק אז מחליפה את הקובץ; הגרסה הקודמת נשמרת בגיבויים וניתנת לשחזור.
-- **עדכון אוטומטי** — בכניסה נבדק אם יצא שחרור חדש ב‑GitHub (`giamat13/photag`); אם כן, חלון עם «מה חדש», כפתור «עדכן עכשיו»
-  («אחר כך» / «דלג על גרסה זו»). ההורדה מאומתת ב‑SHA‑256 לפני ההרצה. בדיקה ידנית: עזרה ← בדוק עדכונים.
-  העדכון מותקן *על* הגרסה הקיימת (לא מסירים ואז מתקינים), התמונות והנתונים יושבים מחוץ לתיקיית התוכנה ואינם נוגעים בו, ולפני ההתקנה נשמר
-  עותק מאומת של התוכנה: אם המחשב נכבה או ההתקנה נסגרת באמצע, הגרסה הקודמת מוחזרת אוטומטית (בכניסה הבאה לאפליקציה, או דרך סקריפט
-  RunOnce של Windows בכניסה הבאה למשתמש אם התוכנה עצמה ניזוקה). אחרי עדכון מוצג «מה חדש» של הגרסה החדשה, מתוך GitHub.
-- **דחיסת תמונות וכמה קבצים בבת אחת** — אותו חלון דחיסה לתמונה, לסרטון או לכל בחירה מעורבת (תפריט «תמונה» ← «דחיסת הקבצים שנבחרו»).
-  תמונות: JPEG/WebP לפי איכות, PNG/BMP/TIFF ללא אובדן, אפשר להגביל את הצלע הארוכה. נשמרים EXIF, כיוון ופרופיל צבע; כל קובץ נבדק
-  (גודל, מטא-נתונים, SSIM) ומגובה לפני ההחלפה, וקובץ שלא הצטמצם נשאר כמו שהיה. בזמן הדחיסה יש מסך התקדמות עם אחוזים, זמן שחלף,
-  זמן משוער שנותר ורשימת הקבצים שהושלמו; בסוף דוח לכל קובץ.
-- **גיבוי אוטומטי ושחזור** (קובץ ← גיבוי ושחזור) — כברירת מחדל פעם ביום נשמר גיבוי תקין של הקטלוג וההגדרות (עם בדיקת שלמות), ושומרים
-  את 10 האחרונים. הגיבוי לא "שוכח": כמה דברים מעירים אותו ואחד מהם מספיק — משימת Windows שרצה כל שעה ובכל כניסה למחשב
-  (ומשלימה ריצה שהוחמצה כי המחשב היה כבוי), ערך Run בכניסה למשתמש, והאפליקציה עצמה בפתיחה ובבדיקה כל 5 דקות. הריצה מהמשימה היא תהליך
-  `photag.exe --backup` בלי חלון, בעדיפות נמוכה ובמצב רקע של Windows, והוא נסגר מיד בסיום (לא נשאר בזיכרון). כשל נרשם ומוצג בחלון הגיבוי
-  ובהודעה בפתיחה, ונבדק שוב אחרי 30 דקות. אפשר לשנות תדירות, כמות, תיקייה (עדיף דיסק אחר), ולצרף גם את קבצי התמונות (העתקה מצטברת). שחזור מתוך האפליקציה
-  שומר קודם עותק של המצב הנוכחי, כך שאפשר לבטל אותו; קבצי תמונות לא נמחקים לעולם בשחזור.
-- **מפה** — בחרו כמה תמונות ולחצו על כפתור המפה בסרגל (ליד «אנשים»): כל מקום שבו צולמו התמונות מקבל סיכה (תמונות מאותו מקום
-  מתכנסות לסיכה אחת עם מספר), ולחיצה על סיכה מציגה את התמונות. בלי בחירה מוצגות כל התמונות שבתצוגה. בלוח המטא-נתונים שמאל/ימין יש
-  מפה קטנה למיקום התמונה הנבחרת. המפה היא Leaflet שמצורף לאפליקציה; **האריחים נטענים מ‑OpenStreetMap ולכן נדרש אינטרנט** (בלי אינטרנט
-  מוצגות הסיכות על רקע ריק), וכתובות האריחים שמוצגים נשלחות לשרתים שלהם.
-- **שואל לפני מחיקה** — העברה לאשפה (אפשר לסמן «אל תשאל שוב»; אפשר תמיד לשחזר), חזרה לקובץ המקורי, מחיקת אוסף, גיבוי או מפתח API.
-- **נגן וידאו** — סרגל בקרה משלנו מעל נגן הדפדפן: פס התקדמות עם חלק טעון ותצוגה מקדימה של פריים
-  בריחוף, ±10 שניות, עוצמת קול, מהירות (0.25×–2×), חזרה, פריים‑פריים (`,` ו‑`.`), תמונה בתוך תמונה,
-  מסך מלא וקיצורי מקשים (רווח, `Shift+←/→`, `↑/↓`, `M`, `F`). לפורמטים שהאפליקציה לא מנגנת יש כפתור
-  «פתח בנגן חיצוני» — VLC אם הוא מותקן, אחרת נגן ברירת המחדל של Windows.
-- **ייבוא מתיקייה / כרטיס זיכרון** — העתקה לספרייה לפי שנת צילום, זיהוי כפילויות,
-  מילות מפתח ואוסף כבר בזמן הייבוא. כולל קובצי RAW (CR2/CR3/NEF/ARW/DNG/…) דרך
-  התצוגה המקדימה שהמצלמה שומרת בקובץ.
-- **ייבוא מקטלוג Lightroom Classic (`.lrcat`)** — דירוגים, דגלים, תוויות צבע, כיתובים,
-  תאריכים, GPS, מילות מפתח (מילות „אדם" הופכות לאנשים), אוספים והאוסף המהיר. עריכות
-  Develop לא מועברות (פורמט של Lightroom) — מיובא הקובץ המקורי.
-- **ייבוא מ‑Google Takeout** — קורא ישירות את ה‑ZIP (בלי לפרוס 19GB), שומר כל
-  תמונה פעם אחת (dedup לפי SHA‑256) ומשחזר: אלבומים, תיאורים, תאריכי צילום,
-  GPS, מועדפים, תגי‑אנשים של גוגל, שמות זיכרונות ותגובות באלבומים משותפים.
-- **זיהוי פרצופים** — InsightFace `buffalo_l` (ONNX Runtime) → מרחק קוסינוס →
-  אשכול SciPy average‑linkage בסף **0.38**. שמות האשכולות מאותחלים אוטומטית
-  מתגי‑האנשים של גוגל (הצבעת רוב), והשאר ניתן לשיום ידני.
-- **עריכת תמונה פשוטה** — סיבוב, חיתוך, בהירות/ניגודיות/רוויה, שחור‑לבן. המקור
-  תמיד נשמר וניתן לשחזור.
-- **עריכת מאפיינים** — תיאור, תאריך, GPS, מועדף, דירוג, תגיות (כמו עורך המאפיינים
-  ב‑Windows), עם כתיבה אופציונלית ל‑EXIF (JPG).
-- **שקיפות אחסון** — מסך ההגדרות מראה בדיוק איפה הכול נשמר, וניתן לשנות מיקום.
+## What's inside
+- **Lightroom Classic–style interface** — Library / Develop / Slideshow modules; grid, loupe, compare, survey and people views;
+  filmstrip, library filter and the Lightroom keyboard shortcuts.
+- **AI tagging (optional, with your own key)** — an "AI tagging" button next to the keywords. Providers: OpenAI, Claude (Anthropic),
+  Gemini (Google), OpenRouter (one key for dozens of providers) and any OpenAI-compatible server (Groq, Together, local Ollama…).
+  The model is **automatic** (a cheap, fast vision model is picked from the provider's live list) or chosen by hand. Only a small
+  thumbnail (512 px) of each photo is sent, and only while tagging runs. You can choose the keyword language, tag the selection or all
+  photos without keywords, and stop at any time. The API key is stored encrypted (Windows DPAPI) and is never sent back to the UI.
+- **Video compression with HandBrake** — a button in the player. If HandBrakeCLI is not installed, its download page opens; otherwise you
+  choose compression strength and speed with two sliders (with a plain-words description of what was chosen), and in "Advanced" mode the
+  encoder (H.264 / H.265 / AV1), quality, resolution, frame rate and audio. The default keeps every frame and the resolution. After
+  compressing, photag **verifies** the result (frame count, length within ±50 ms, resolution, audio, size and SSIM) and only then replaces
+  the file; the previous version is kept in backups and can be restored.
+- **Photo compression and several files at once** — the same dialog handles one photo, one video or any mix (Photo menu →
+  "Compress selected files…"). Photos: JPEG/WebP by quality, PNG/BMP/TIFF losslessly, optional longest-side limit; EXIF, orientation and
+  color profile are kept. Every file is verified (size, metadata, SSIM) and backed up before it is replaced; a file that did not get smaller
+  stays as it was. A progress screen shows percent, elapsed and estimated remaining time and the finished files; a report follows.
+- **Automatic backup and restore** (File → Backup and restore) — by default a verified backup of the catalog, settings **and your photos and
+  videos** (incremental copy) is made once a day, keeping the latest 10. It cannot quietly "forget": several things wake it up and any one is
+  enough — a Windows scheduled task (hourly and at every sign-in, catching up on runs missed while the PC was off), a Run entry at sign-in,
+  and the app itself (at start-up and every 5 minutes). The background run is a small separate program, `photag-backup.exe`, with no window,
+  low priority and Windows background mode; it exits as soon as it is done. Failures are recorded, shown in the backup dialog and in a
+  notice at start-up, and retried after 30 minutes. You can change the interval, how many to keep and the folder (a different disk is best).
+  Restoring first makes a safety copy of the current state, so a restore can be undone; photo files are never deleted by a restore.
+- **Map** — select photos and click the map button in the toolbar (next to "People"): every place where they were taken gets a pin (photos
+  from the same place share one pin with a count); click a pin to see the photos. With nothing selected, all photos in view are shown. The
+  metadata panel has a small map for the selected photo. The map is Leaflet, bundled with the app; **tiles are loaded from OpenStreetMap, so
+  an internet connection is needed** (offline you see the pins on an empty background), and the tiles you view are requested from their servers.
+- **Asks before deleting** — moving to the trash (with a "don't ask again" option; it is always restorable), going back to the original
+  file, deleting a collection, a backup or an API key.
+- **Automatic updates** — at start-up photag checks the GitHub releases (`giamat13/photag`); if a newer one exists, a window shows "What's
+  new" with "Update now" / "Later" / "Skip this version". The download is verified with SHA-256 before it runs. Manual check: Help → Check for
+  updates. The update is installed *over* the existing app (never uninstall-then-install); your photos and data live outside the program folder
+  and are not touched. Before installing, a verified copy of the program is saved: if the PC shuts down or the installer is closed halfway, the
+  previous version is restored automatically (on the next start, or through a Windows RunOnce script at the next sign-in if the program itself
+  is damaged). After an update the release notes of the new version are shown, fetched from GitHub.
+- **Video player** — our own controls over the browser player: progress bar with buffered range and frame preview on hover, ±10 s, volume,
+  speed (0.25×–2×), loop, frame step (`,` and `.`), picture-in-picture, full screen and shortcuts (Space, `Shift+←/→`, `↑/↓`, `M`, `F`).
+  For formats it cannot play there is an "Open in external player" button — VLC if installed, otherwise the Windows default player.
+- **Import from a folder / memory card** — copies into the library by year taken, detects duplicates, and can add keywords and a
+  collection during import. Includes RAW files (CR2/CR3/NEF/ARW/DNG/…) through the preview the camera stores in the file.
+- **Import from a Lightroom Classic catalog (`.lrcat`)** — ratings, flags, color labels, captions, dates, GPS, keywords ("person" keywords
+  become people), collections and the quick collection. Develop edits are not transferred (a Lightroom format) — the original file is imported.
+- **Import from Google Takeout** — reads the ZIP directly (no need to unpack 19 GB), keeps each photo once (dedup by SHA-256) and restores
+  albums, descriptions, dates taken, GPS, favorites, Google's people tags, memory titles and comments on shared albums.
+  All of these imports are in **one Import screen** (File → Import…) where you choose the source.
+- **Face recognition** — InsightFace `buffalo_l` (ONNX Runtime) → cosine distance → SciPy average-linkage clustering at a threshold of
+  **0.38**. Cluster names are seeded from Google's people tags (majority vote); the rest can be named by hand.
+- **Simple photo editing** — rotate, crop, brightness / contrast / saturation, black and white. The original is always kept and restorable.
+- **Metadata editing** — description, date, GPS, favorite, rating, tags, with optional write-back to EXIF (JPG).
+- **Storage transparency** — the settings screen shows exactly where everything is kept, and the location can be changed.
 
-## שפות
-עברית, English, العربية, Русский, Español, Français, Deutsch, Italiano, Português, Nederlands,
-Polski, Українська, Türkçe, 中文, 日本語, 한국어, हिन्दी — תצוגה ← שפה. ברירת המחדל לפי שפת
-המערכת. כל מחרוזת בממשק היא מפתח בעברית; התרגומים ב‑`app/ui/locales/<code>.json`.
+## Languages
+English (default), עברית, العربية, Русский, Español, Français, Deutsch, Italiano, Português, Nederlands, Polski, Українська, Türkçe, 中文,
+日本語, 한국어, हिन्दी — View → Language. Every UI string is a (Hebrew) key; translations are in `app/ui/locales/<code>.json`.
 ```bat
-python tools\i18n.py extract   REM אחרי שינוי טקסט בממשק: בונה מחדש את locales\_keys.json
-python tools\i18n.py check     REM בודק שכל קובצי השפה שלמים ושה‑{placeholders} נשמרו
+python tools\i18n.py extract   REM after changing UI text: rebuilds locales\_keys.json
+python tools\i18n.py check     REM checks that every language file is complete and the {placeholders} are intact
 ```
 
-## איפה נשמרות התמונות
-ברירת מחדל: `%USERPROFILE%\photag\` (התקנה מלפני שינוי השם ממשיכה להשתמש ב‑`%USERPROFILE%\PhotoManager\`)
-- `media\` — קבצי התמונות/וידאו
-- `thumbs\` — תמונות ממוזערות
-- `catalog.db` — מסד הנתונים (SQLite)
+## Where your photos are kept
+Default: `%USERPROFILE%\photag\` (an install from before the rename keeps using `%USERPROFILE%\PhotoManager\`)
+- `media\` — the photo / video files
+- `thumbs\` — thumbnails
+- `catalog.db` — the database (SQLite)
+- `backups\` — backups (unless you chose another folder)
 
-מצביע המיקום נשמר ב‑`%APPDATA%\photag\config.json`. אפשר לשנות מסך ההגדרות.
+The location pointer is stored in `%APPDATA%\photag\config.json` and can be changed in the settings screen.
 
-## הרצה (פיתוח)
+## Run from source
 ```bat
 pip install -r requirements.txt
-python photag.py            REM חלון דסקטופ (WebView2)
+python photag.py            REM desktop window (WebView2)
 ```
-או ב‑VS Code: F5 → "photag (חלון דסקטופ)".
+Or in VS Code: F5 → "photag (desktop window)".
 
-## בניית EXE
+## Build the installer
 ```bat
-pip install pyinstaller
-pyinstaller photag.spec
-REM התוצאה: dist\photag.exe
+pip install -r requirements.txt pyinstaller
+build.bat                   REM builds dist\photag.exe, dist\photag-backup.exe and installer_output\photagSetup.exe
 ```
-המודל `buffalo_l` (~300MB) יורד אוטומטית בהרצה הראשונה של זיהוי פרצופים.
+`build.bat` needs Python 3.12 and [Inno Setup 6](https://jrsoftware.org/isdl.php). The `buffalo_l` model (~300 MB) is downloaded on the first
+face detection. To test a build on a clean Windows, `python tools/sandbox/make_wsb.py` creates a Windows Sandbox configuration that installs,
+exercises and uninstalls it automatically (see `tools/sandbox`).
 
-## רישיון
+## License
 
-photag היא תוכנה חופשית ברישיון **GNU General Public License גרסה 3** (GPL‑3.0), ראו [LICENSE](LICENSE). מותר להשתמש, ללמוד, לשנות ולהפיץ
-אותה, גם בשינויים, בתנאי שהגרסאות המופצות נשארות תחת אותו רישיון וקוד המקור שלהן זמין. אין שום אחריות.
+photag is free software under the **GNU General Public License version 3** (GPL-3.0), see [LICENSE](LICENSE). You may use, study, change and
+redistribute it, including with changes, as long as distributed versions stay under the same license and their source code is available.
+There is no warranty.
 
-הרישיון נבחר גם בגלל רכיבים שנארזים באפליקציה: ‏**ffmpeg** (גרסת GPL של imageio‑ffmpeg) משמש לאימות דחיסה ולתמונות ממוזערות של סרטונים.
-קוד המקור של ffmpeg זמין ב‑<https://ffmpeg.org/download.html#get-sources>.
+The license was chosen partly because of components bundled with the app: **ffmpeg** (the GPL build from imageio-ffmpeg) is used to verify
+compression and to make video thumbnails. FFmpeg's source code is available at <https://ffmpeg.org/download.html#get-sources>.
 
-מה שלא מצורף ולכן לא נכלל ברישיון הזה:
-- **HandBrake** (GPL) — המשתמש מתקין בנפרד; האפליקציה רק מפעילה את `HandBrakeCLI`.
-- **משקולות זיהוי הפנים** (InsightFace `buffalo_l`) — יורדות בהרצה הראשונה, **לשימוש לא‑מסחרי / מחקר בלבד** לפי תנאי המפתחים שלהן. אם מפיצים
-  גרסה מסחרית צריך להחליף את המודל.
-- **אריחי המפה** — מגיעים מ‑OpenStreetMap (© תורמי OpenStreetMap, ‏ODbL) ודורשים אינטרנט.
-- ספריות פייתון נוספות (FastAPI, Pillow, NumPy ועוד), Leaflet והגופנים נשארים תחת הרישיונות שלהם. הרשימה המלאה, כולל הצעת קוד מקור ל‑ffmpeg,
-  ב‑[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) (נוצרת בפקודה `python tools/gen_notices.py`).
+Not bundled, and therefore not covered by this license:
+- **HandBrake** (GPL) — installed separately by the user; photag only runs `HandBrakeCLI`.
+- **Face-recognition model weights** (InsightFace `buffalo_l`) — downloaded on first use, **for non-commercial / research use only** under the
+  terms of their authors. A commercial version would need a different model.
+- **Map tiles** — from OpenStreetMap (© OpenStreetMap contributors, ODbL); an internet connection is required.
+- Other Python libraries (FastAPI, Pillow, NumPy, …), Leaflet and the fonts keep their own licenses. The full list, including the written offer
+  of FFmpeg source code, is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) (generated with `python tools/gen_notices.py`).
 
-## זרימת עבודה
-1. הגדרות → ודאו את מיקום הספרייה.
-2. «ייבוא מגוגל פוטוס» → הדביקו נתיב ל‑ZIP → התחל.
-3. ספרייה → «זיהוי פנים» כדי לקבץ אנשים. מילות מפתח מוסיפים בפאנל «תיוג מילות מפתח».
-4. אנשים → תנו/תקנו שמות. גלריה/אלבומים/תגיות → עיון וחיפוש.
+## Typical workflow
+1. Settings → check the library location.
+2. File → Import… → choose the source (folder / memory card, Lightroom catalog, or Google Takeout ZIP) → start.
+3. Library → "Face recognition" to group people. Add keywords in the "Keywording" panel.
+4. People → name or correct the names. Catalog / collections / keywords → browse and search.

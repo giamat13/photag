@@ -2246,9 +2246,7 @@ async function pollJob(name, label){
 const sep='-';
 const MENUS = [
   [t('קובץ'), [
-    [t('ייבוא תמונות וסרטונים...'), 'Ctrl+Shift+I', ()=>openImport('folder')],
-    [t('ייבוא מקטלוג Lightroom...'), '', ()=>openImport('lrcat')],
-    [t('ייבוא מ‑Google Takeout...'), '', ()=>openImport('zip')],
+    [t('ייבוא...'), 'Ctrl+Shift+I', ()=>openImport('folder')],        // one screen: choose the source there (folder / card, Lightroom, Google Takeout)
     [t('ייצוא...'), 'Ctrl+Shift+E', openExport],
     sep,
     [t('גיבוי ושחזור...'), '', backupDialog],

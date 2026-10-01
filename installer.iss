@@ -31,7 +31,7 @@ UninstallDisplayName=photag
 UninstallDisplayIcon={app}\photag.exe
 
 [Tasks]
-Name: "desktopicon"; Description: "צור קיצור דרך בשולחן העבודה"; GroupDescription: "קיצורי דרך:"
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
 
 [Files]
 Source: "dist\photag.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -49,7 +49,7 @@ Filename: "schtasks.exe"; Parameters: "/Delete /TN ""photag-backup"" /F"; Flags:
 Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v photag-backup /f"; Flags: runhidden; RunOnceId: "DelBackupRunKey"
 
 [Run]
-Filename: "{app}\photag.exe"; Description: "הפעל את photag"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\photag.exe"; Description: "Launch photag"; Flags: nowait postinstall skipifsilent
 ; started by the in-app updater (photagSetup.exe /SILENT /update=1): relaunch the app when the update is done
 Filename: "{app}\photag.exe"; Flags: nowait; Check: IsUpdateRun
 

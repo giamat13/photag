@@ -15,8 +15,7 @@ const I18N = (() => {
   const codes = LANGS.map(l => l[0]);
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem('pm.lang')); } catch {}
-  const sys = (navigator.languages || [navigator.language || 'en']).map(l => l.toLowerCase().split('-')[0]);
-  const lang = codes.includes(saved) ? saved : sys.includes('he') ? 'he' : (sys.find(l => codes.includes(l)) || 'en');
+  const lang = codes.includes(saved) ? saved : 'en';        // English unless the user picked another language (View > Language)
   let dict = {};
   if (lang !== 'he') {
     try {
