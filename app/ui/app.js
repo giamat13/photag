@@ -1492,7 +1492,7 @@ document.addEventListener('keydown', e=>{
   const typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type!=='checkbox' && e.target.type!=='range';
   const k=e.key, ctrl=e.ctrlKey||e.metaKey;
   if(!$('#slideshow').classList.contains('hidden')){
-    if(k==='Escape') ssStop(); else if(k==='ArrowLeft') ssStep(1); else if(k==='ArrowRight') ssStep(-1); else if(k===' '){ e.preventDefault(); ssToggle(); }
+    if(k==='Escape') ssStop(); else if(k==='ArrowLeft') ssStep(RTL?1:-1); else if(k==='ArrowRight') ssStep(RTL?-1:1); else if(k===' '){ e.preventDefault(); ssToggle(); }
     return;
   }
   if(!$('#modal').classList.contains('hidden')){ if(k==='Escape') closeModal(); return; }
