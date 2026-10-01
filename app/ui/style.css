@@ -574,3 +574,21 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 .kwai .cfg{width:30px;padding:0}
 .hint.ok{color:var(--green)}
 .hint.err{color:var(--red)}
+
+/* video compression dialog + report */
+.cmp{gap:12px}
+.cmp-file{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding-bottom:6px;border-bottom:1px solid #3d3d3d}
+.cmp-file span{color:var(--t3)}
+.cmp-sl{display:flex;flex-direction:column;gap:2px}
+.cmp-sl-h{display:flex;justify-content:space-between;align-items:baseline}
+.cmp-sl-h output{color:#fff}
+.cmp-ends{display:flex;justify-content:space-between;color:var(--t3);font-size:11px}
+.linkbtn{background:none;border:0;padding:0;height:auto;justify-content:flex-start;color:var(--t2)}
+.linkbtn:hover{background:none;color:#fff}
+.cmp-restore{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid #3d3d3d;color:var(--t3)}
+.chk{display:grid;grid-template-columns:18px 190px 1fr;gap:8px;align-items:start;padding:6px 0;border-bottom:1px solid #3a3a3a}
+.chk .ic{width:15px;height:15px;margin-top:2px}
+.chk.ok .ic{color:var(--green)}
+.chk.bad .ic{color:var(--red)}
+.chk span{color:var(--t2)}
+.hint.warn{color:var(--yellow)}

@@ -91,6 +91,10 @@ def pick_file(kind: str = "zip", title: str = ""):
     try:
         if kind == "folder":
             path = filedialog.askdirectory(title=title or "Select folder", parent=root)
+        elif kind == "exe":
+            path = filedialog.askopenfilename(
+                title=title or "Select HandBrakeCLI.exe", parent=root,
+                filetypes=[("HandBrakeCLI", "HandBrakeCLI*.exe"), ("Programs", "*.exe"), ("All files", "*.*")])
         elif kind == "lrcat":
             path = filedialog.askopenfilename(
                 title=title or "Select Lightroom catalog", parent=root,
@@ -157,6 +161,8 @@ def handbrake_set_path(body: HandbrakePathIn):
     p = body.path.strip().strip('"')
     if p and not Path(p).is_file():
         raise err(404, "הקובץ לא נמצא")
+    if p and not compress.handbrake_version(p):
+        raise err(400, "הקובץ שנבחר לא נראה כמו HandBrakeCLI")
     config.set_handbrake_path(p or None)
     return compress.status()
 
