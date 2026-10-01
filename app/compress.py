@@ -1,4 +1,4 @@
-"""Compress a video with HandBrake, then prove the result is good before touching the original.
+"""Compress videos (HandBrake) and photos (Pillow), then prove the result is good before touching the original.
 
 Flow: probe the source -> HandBrakeCLI -> probe the output -> verify -> only if every check passes,
 back up the old file and swap the new one in. Any failure leaves the library file exactly as it was.
@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import config, db, ffmpeg, images
+from . import config, db, ffmpeg, images, importer
 from .config import PATHS
 
 HANDBRAKE_PAGE = "https://handbrake.fr/downloads2.php"      # the "Command Line Version" lives on this page
@@ -85,7 +85,8 @@ def status() -> dict:
     exe = find_handbrake()
     return {"found": bool(exe), "path": exe, "version": handbrake_version(exe) if exe else None,
             "page": HANDBRAKE_PAGE, "ffmpeg": ffmpeg.available(),
-            "encoders": ENCODERS, "defaults": DEFAULTS}
+            "encoders": ENCODERS, "defaults": DEFAULTS, "image_defaults": IMG_DEFAULTS,
+            "video_ext": sorted(VIDEO_OK), "image_ext": sorted(IMAGE_OK)}
 
 
 # ------------------------------------------------------------------ options -> HandBrakeCLI arguments
@@ -189,16 +190,23 @@ def _unique(p: Path) -> Path:
     return p
 
 
+class DuplicateError(Exception):
+    """The new file is byte-identical to another photo already in the library."""
+
+
 def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, report: dict | None, reuse_row: int | None = None):
     """Back up the photo's current file, put `new_file` in its place and update the catalog.
     The backup is verified byte for byte before anything is replaced."""
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     old_path = PATHS.media / r["rel_path"]
     old_sha = images.sha256_file(old_path)
+    new_sha0 = images.sha256_file(new_file)
+    if con.execute("SELECT 1 FROM photos WHERE sha256=? AND id!=?", (new_sha0, pid)).fetchone():
+        raise DuplicateError()
     bdir = PATHS.media / ".originals"
     bdir.mkdir(exist_ok=True)
     safe_name = re.sub(r'[<>:"/\\|?*]', "_", r["filename"])
-    backup = _unique(bdir / f"video_{pid}_{int(time.time())}_{safe_name}")
+    backup = _unique(bdir / f"{'video' if r['is_video'] else 'photo'}_{pid}_{int(time.time())}_{safe_name}")
     shutil.copy2(old_path, backup)
     if images.sha256_file(backup) != old_sha:
         backup.unlink(missing_ok=True)
@@ -221,6 +229,8 @@ def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, r
                json.dumps(report) if report else None)
         con.execute("UPDATE photos SET filename=?, rel_path=?, mime=?, bytes=?, sha256=? WHERE id=?",
                     (final.name, rel, final.suffix.lstrip(".").lower(), final.stat().st_size, new_sha, pid))
+        if not r["is_video"]:
+            _sync_dimensions(con, pid, r, final)
         if reuse_row:
             con.execute("UPDATE video_backups SET backup_rel=?, orig_rel=?, orig_filename=?, orig_sha=?, orig_bytes=?, "
                         "created_at=?, kind=?, report=? WHERE id=?", (*row, reuse_row))
@@ -238,6 +248,18 @@ def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, r
     images.thumb_path(old_sha).unlink(missing_ok=True)
     images.make_thumb(final, new_sha)
     return final
+
+
+def _sync_dimensions(con, pid: int, old_row, final: Path):
+    """A photo that changed size: store the new size and scale its face boxes (pixel coordinates) with it."""
+    w, h = images.dimensions(final)
+    if not (w and h):
+        return
+    con.execute("UPDATE photos SET width=?, height=? WHERE id=?", (w, h, pid))
+    ow, oh = old_row["width"], old_row["height"]
+    if ow and oh and max(w, h) != max(ow, oh):
+        f = max(w, h) / max(ow, oh)
+        con.execute("UPDATE faces SET x1=x1*?, y1=y1*?, x2=x2*?, y2=y2*? WHERE photo_id=?", (f, f, f, f, pid))
 
 
 def restore_previous(pid: int) -> dict:
@@ -339,6 +361,8 @@ def run_compress(pid: int, raw_options: dict, progress):
         progress.state = "done"
         progress.say_parts(("הסרטון נדחס ל‑{pct}% מהגודל", {"pct": round(result["ratio"] * 100)}),
                            ("הגרסה הקודמת נשמרה בגיבויים", {}))
+    except DuplicateError:
+        progress.fail("תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה")
     except Exception as e:
         progress.fail("הדחיסה נכשלה: {error}", error=str(e))
     finally:
@@ -349,3 +373,223 @@ def run_compress(pid: int, raw_options: dict, progress):
 def _cancelled(progress):
     progress.state = "done"
     progress.say("הדחיסה בוטלה")
+
+
+# ================================================================== photos
+IMAGE_OK = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}     # RAW / HEIC / GIF are left alone
+IMG_DEFAULTS = {"quality": 86, "max_side": 0}
+IMG_Q_RANGE = (40, 98)
+IMG_SSIM_FLOOR = 0.80
+
+
+def normalize_image(raw: dict | None) -> dict:
+    o = {**IMG_DEFAULTS, **{k: v for k, v in (raw or {}).items() if k in IMG_DEFAULTS and v is not None}}
+    o["quality"] = int(max(IMG_Q_RANGE[0], min(IMG_Q_RANGE[1], round(float(o["quality"])))))
+    ms = int(o["max_side"] or 0)
+    o["max_side"] = ms if 256 <= ms <= 16384 else 0
+    return o
+
+
+def _expected_size(w: int, h: int, max_side: int) -> tuple[int, int]:
+    if max_side and max(w, h) > max_side:
+        s = max_side / max(w, h)
+        return max(1, round(w * s)), max(1, round(h * s))
+    return w, h
+
+
+def _encode_image(src: Path, dst: Path, o: dict) -> dict:
+    """Re-encode `src` into `dst` (same pixels unless a size cap applies). Metadata and the colour profile are carried
+    over; the EXIF orientation tag is kept as it is, so the pixels are never rotated. Returns what was done."""
+    from PIL import Image
+    ext = src.suffix.lower()
+    with Image.open(src) as im:
+        if getattr(im, "n_frames", 1) > 1:
+            raise ValueError("animated")
+        im.load()
+        exif, icc = im.info.get("exif"), im.info.get("icc_profile")
+        size0 = im.size
+        w, h = _expected_size(*im.size, o["max_side"])
+        if (w, h) != im.size:
+            im = im.resize((w, h), Image.LANCZOS)
+        kw = {}
+        if exif: kw["exif"] = exif
+        if icc: kw["icc_profile"] = icc
+        if ext in (".jpg", ".jpeg"):
+            if im.mode not in ("RGB", "L", "CMYK"):
+                im = im.convert("RGB")
+            im.save(dst, "JPEG", quality=o["quality"], optimize=True, progressive=True,
+                    subsampling="keep" if (o["quality"] >= 95 and ext in (".jpg", ".jpeg") and im.mode == "YCbCr") else 2, **kw)
+            how = "jpeg"
+        elif ext == ".webp":
+            im.save(dst, "WEBP", quality=o["quality"], method=6, **kw)
+            how = "webp"
+        elif ext in (".tif", ".tiff"):
+            im.save(dst, "TIFF", compression="tiff_adobe_deflate", **({"icc_profile": icc} if icc else {}))
+            how = "tiff-lossless"
+        else:       # .png and .bmp: lossless
+            im.save(dst, "PNG", optimize=True, compress_level=9, **kw)
+            how = "png-lossless"
+    return {"how": how, "size0": size0}
+
+
+def _read_meta(path: Path) -> dict:
+    from PIL import Image
+    with Image.open(path) as im:
+        return {"exif": im.info.get("exif") or b"", "icc": im.info.get("icc_profile") or b"", "size": im.size,
+                "frames": getattr(im, "n_frames", 1)}
+
+
+def verify_image(src: dict, out: dict, o: dict, ssim: dict, lossless_kind: bool, src_bytes: int, out_bytes: int) -> list[dict]:
+    checks = []
+    def add(cid, ok, expected, actual, **extra):
+        checks.append({"id": cid, "ok": bool(ok), "expected": expected, "actual": actual, **extra})
+
+    ew, eh = _expected_size(*src["size"], o["max_side"])
+    ok = abs(out["size"][0] - ew) <= 1 and abs(out["size"][1] - eh) <= 1
+    add("resolution", ok, f"{ew}×{eh}", f"{out['size'][0]}×{out['size'][1]}")
+    add("metadata", out["exif"] == src["exif"] and out["icc"] == src["icc"], "same", "same" if out["exif"] == src["exif"] and out["icc"] == src["icc"] else "changed")
+    add("size", out_bytes < src_bytes, f"<{src_bytes}", out_bytes)
+    add("ssim", ssim["mean"] >= IMG_SSIM_FLOOR, f"≥{IMG_SSIM_FLOOR:.2f}", f"{ssim['mean']:.4f}",
+        mean=round(ssim["mean"], 4), min=round(ssim["mean"], 4), frames=1, grade=grade(ssim["mean"]), lossless=lossless_kind)
+    return checks
+
+
+def run_compress_image(pid: int, raw_options: dict, progress):
+    con = db.init_db()
+    tmp = None
+    result = {"applied": False, "ok": False, "checks": [], "kind": "image"}
+    progress.result = result
+    cancelled = lambda: bool(getattr(progress, "cancel", False))
+    try:
+        o = normalize_image(raw_options)
+        row = con.execute("SELECT * FROM photos WHERE id=? AND is_video=0", (pid,)).fetchone()
+        if not row:
+            return progress.fail("הקובץ אינו תמונה")
+        src_path = PATHS.media / row["rel_path"]
+        ext = src_path.suffix.lower()
+        if ext not in IMAGE_OK:
+            return progress.fail("סוג הקובץ הזה לא נתמך לדחיסה ({ext})", ext=ext)
+        if not ffmpeg.available():
+            return progress.fail("חסר ffmpeg לאימות התוצאה. הריצו: pip install imageio-ffmpeg")
+
+        progress.state = "probing"; progress.total = 0; progress.say("בודק את התמונה המקורית…")
+        src = _read_meta(src_path)
+        if src["frames"] > 1:
+            return progress.fail("תמונה מונפשת לא נתמכת לדחיסה")
+        if cancelled():
+            return _cancelled(progress)
+        tdir = PATHS.media / ".compress_tmp"
+        tdir.mkdir(exist_ok=True)
+        out_ext = ".png" if ext == ".bmp" else ext
+        tmp = tdir / f"{pid}_{int(time.time())}{out_ext}"
+
+        progress.state = "encoding"; progress.total = 0; progress.say("דוחס…")
+        done = _encode_image(src_path, tmp, o)
+        if cancelled():
+            return _cancelled(progress)
+
+        progress.state = "verifying"; progress.say("מאמת את התוצאה…")
+        out = _read_meta(tmp)
+        ssim = ffmpeg.ssim(str(tmp), str(src_path), cancel=cancelled)
+        if cancelled():
+            return _cancelled(progress)
+        s_bytes, o_bytes = src_path.stat().st_size, tmp.stat().st_size
+        checks = verify_image(src, out, o, ssim, done["how"].endswith("lossless"), s_bytes, o_bytes)
+        result.update(checks=checks, ok=all(c["ok"] for c in checks), options=o, how=done["how"],
+                      src={"width": src["size"][0], "height": src["size"][1], "bytes": s_bytes},
+                      out={"width": out["size"][0], "height": out["size"][1], "bytes": o_bytes},
+                      saved=s_bytes - o_bytes, ratio=round(o_bytes / s_bytes, 4),
+                      failed=[c["id"] for c in checks if not c["ok"]])
+        if not result["ok"]:
+            return progress.fail("התוצאה לא עברה אימות ({checks}), הקובץ המקורי לא שונה", checks=", ".join(result["failed"]))
+
+        progress.state = "replacing"; progress.say("שומר גיבוי ומחליף את הקובץ…")
+        _install(con, pid, tmp, None, "compress", result)
+        tmp = None
+        result["applied"] = True
+        progress.state = "done"
+        progress.say_parts(("התמונה נדחסה ל‑{pct}% מהגודל", {"pct": round(result["ratio"] * 100)}),
+                           ("הגרסה הקודמת נשמרה בגיבויים", {}))
+    except DuplicateError:
+        progress.fail("תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה")
+    except Exception as e:
+        progress.fail("הדחיסה נכשלה: {error}", error=str(e))
+    finally:
+        if tmp and tmp.exists():
+            tmp.unlink(missing_ok=True)
+
+
+# ================================================================== several files at once (photos and/or videos)
+_BUSY = ("probing", "encoding", "verifying", "replacing")
+
+
+class _Sub(importer.Progress):
+    """Progress of one file inside a batch: shares the batch's cancel flag and mirrors itself into the batch."""
+    cancel = property(lambda s: s.parent.cancel, lambda s, v: None)
+
+    def __init__(self, parent, idx: int, n: int, name: str):
+        super().__init__()
+        self.parent, self.idx, self.n, self.name = parent, idx, n, name
+
+    def say(self, key, **vars):
+        super().say(key, **vars)
+        p = self.parent
+        p.done = int((self.idx + (self.done / self.total if self.total else 0)) * 1000)
+        p.total = self.n * 1000
+        if self.state in _BUSY:
+            p.state = self.state
+        p.say_parts(("קובץ {i} מתוך {n}: {name}", {"i": self.idx + 1, "n": self.n, "name": self.name}), (key, vars))
+
+
+def run_compress_batch(ids: list[int], video_options: dict, image_options: dict, progress):
+    """Compress many files in turn. One file failing (or not getting smaller) never stops the others;
+    every file is verified and backed up on its own exactly like a single compression."""
+    con = db.init_db()
+    items, saved, n = [], 0, len(ids)
+    result = {"batch": True, "applied": False, "items": items, "saved": 0, "counts": {}}
+    progress.result = result
+    progress.state = "probing"; progress.total = n * 1000; progress.done = 0
+    hb = find_handbrake()
+    for i, pid in enumerate(ids):
+        if progress.cancel:
+            break
+        row = con.execute("SELECT id, filename, rel_path, is_video, bytes FROM photos WHERE id=?", (pid,)).fetchone()
+        if not row:
+            continue
+        ext = Path(row["rel_path"]).suffix.lower()
+        item = {"id": pid, "filename": row["filename"], "kind": "video" if row["is_video"] else "image",
+                "status": "failed", "src_bytes": row["bytes"]}
+        items.append(item)
+        if (row["is_video"] and ext not in VIDEO_OK) or (not row["is_video"] and ext not in IMAGE_OK):
+            item.update(status="skipped", error_key="סוג הקובץ הזה לא נתמך לדחיסה ({ext})", error_vars={"ext": ext})
+            progress.done = (i + 1) * 1000
+            continue
+        if row["is_video"] and not hb:
+            item.update(status="skipped", error_key="HandBrakeCLI לא נמצא. התקינו אותו ונסו שוב", error_vars={})
+            progress.done = (i + 1) * 1000
+            continue
+        sub = _Sub(progress, i, n, row["filename"])
+        sub.state = "starting"
+        (run_compress if row["is_video"] else run_compress_image)(pid, video_options if row["is_video"] else image_options, sub)
+        r = sub.result or {}
+        if sub.state == "error":
+            only_size = r.get("checks") and [c["id"] for c in r["checks"] if not c["ok"]] == ["size"]
+            item.update(status="no_gain" if only_size else "failed",
+                        error_key=sub.error_key, error_vars=sub.vars)
+        elif r.get("applied"):
+            item.update(status="done", applied=True, out_bytes=r["out"]["bytes"], ratio=r["ratio"],
+                        grade=next((c.get("grade") for c in r["checks"] if c["id"] == "ssim"), None))
+            saved += r["saved"]
+        else:
+            item.update(status="cancelled")
+        progress.done = (i + 1) * 1000
+    counts = {}
+    for it in items:
+        counts[it["status"]] = counts.get(it["status"], 0) + 1
+    result.update(applied=bool(counts.get("done")), saved=saved, counts=counts, cancelled=bool(progress.cancel))
+    progress.state = "done"
+    if progress.cancel:
+        progress.say_parts(("הדחיסה בוטלה", {}), ("נדחסו {n} קבצים", {"n": counts.get("done", 0)}))
+    else:
+        progress.say_parts(("נדחסו {n} קבצים", {"n": counts.get("done", 0)}),
+                           *([("{n} קבצים לא נדחסו", {"n": n - counts.get("done", 0)})] if n > counts.get("done", 0) else []))

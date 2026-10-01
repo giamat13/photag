@@ -178,9 +178,6 @@ def update_install(body: InstallIn):
 
 
 # ---- video compression (HandBrake) -------------------------------------------
-class CompressIn(BaseModel):
-    options: dict = {}
-
 class HandbrakePathIn(BaseModel):
     path: str = ""
 
@@ -214,9 +211,30 @@ def handbrake_set_path(body: HandbrakePathIn):
     return compress.status()
 
 
+class CompressIn(BaseModel):
+    options: dict = {}
+
+class CompressBatchIn(BaseModel):
+    ids: list[int]
+    video: dict = {}
+    image: dict = {}
+
+
 @app.post("/api/photo/{pid}/compress")
 def start_compress(pid: int, body: CompressIn):
-    _start("compress", compress.run_compress, pid, body.options)
+    row = db.connect().execute("SELECT is_video FROM photos WHERE id=?", (pid,)).fetchone()
+    if not row:
+        raise HTTPException(404)
+    _start("compress", compress.run_compress if row["is_video"] else compress.run_compress_image, pid, body.options)
+    return {"ok": True}
+
+
+@app.post("/api/compress/batch")
+def start_compress_batch(body: CompressBatchIn):
+    ids = list(dict.fromkeys(body.ids))
+    if not ids:
+        raise err(400, "לא נבחרו קבצים")
+    _start("compress", compress.run_compress_batch, ids, body.video, body.image)
     return {"ok": True}
 
 
