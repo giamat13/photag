@@ -13,7 +13,11 @@ except Exception:
 from .config import PATHS
 
 VIDEO_EXT = {".mp4", ".mov", ".gif", ".3gp", ".webm", ".mkv", ".avi"}
-IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".bmp", ".tiff"}
+# Camera RAW: Pillow can't decode these, but nearly every RAW file carries a
+# full-size JPEG preview from the camera -> that's what we show and analyse.
+RAW_EXT = {".cr2", ".cr3", ".nef", ".nrw", ".arw", ".srf", ".sr2", ".dng", ".orf", ".rw2",
+           ".raf", ".pef", ".srw", ".x3f", ".3fr", ".iiq", ".rwl", ".erf", ".mos", ".kdc"}
+IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".bmp", ".tiff", ".tif"} | RAW_EXT
 
 
 def sha256_file(path: Path, buf=1 << 20) -> str:
@@ -28,9 +32,46 @@ def is_video(path: Path) -> bool:
     return path.suffix.lower() in VIDEO_EXT
 
 
+def is_raw(path: Path) -> bool:
+    return path.suffix.lower() in RAW_EXT
+
+
+def raw_preview_bytes(path: Path) -> bytes | None:
+    """The largest JPEG embedded in a RAW file (the camera's full preview)."""
+    import io
+    data = path.read_bytes()
+    best, best_px, start = None, 0, data.find(b"\xff\xd8\xff")
+    while start != -1:
+        end = data.find(b"\xff\xd9", start + 4)
+        while end != -1:  # thumbnails nest inside previews; take the first span that decodes
+            chunk = data[start:end + 2]
+            if len(chunk) > 2000:
+                try:
+                    with Image.open(io.BytesIO(chunk)) as im:
+                        im.load()
+                        px = im.width * im.height
+                    if px > best_px:  # by pixels: a span can decode as the small image it starts with
+                        best, best_px = chunk, px
+                    break
+                except Exception:
+                    pass
+            end = data.find(b"\xff\xd9", end + 2)
+            if end != -1 and end - start > 60_000_000:
+                break
+        start = data.find(b"\xff\xd8\xff", start + 3)
+    return best
+
+
 def open_image(path: Path) -> Image.Image:
     """Open + apply EXIF orientation so faces/thumbs aren't sideways."""
-    im = Image.open(path)
+    if is_raw(path):
+        import io
+        data = raw_preview_bytes(path)
+        if not data:
+            raise ValueError("no preview in RAW file")
+        im = Image.open(io.BytesIO(data))
+    else:
+        im = Image.open(path)
     im = ImageOps.exif_transpose(im)
     return im.convert("RGB")
 
@@ -73,6 +114,11 @@ def _video_thumb(src: Path, out: Path, size: int) -> Path | None:
 def dimensions(path: Path):
     if is_video(path):
         return (None, None)
+    if is_raw(path):
+        try:
+            return open_image(path).size
+        except Exception:
+            return (None, None)
     try:
         with Image.open(path) as im:
             return im.size
@@ -92,6 +138,8 @@ def exif_info(path: Path):
             ex = im.getexif()
             sub = ex.get_ifd(0x8769)  # Exif IFD
             raw = sub.get(36867) or sub.get(36868) or ex.get(306)  # DateTimeOriginal / Digitized / DateTime
+            if isinstance(raw, bytes):
+                raw = raw.decode("ascii", "ignore")
             if raw:
                 dt = datetime.datetime.strptime(str(raw).strip("\x00 ")[:19], "%Y:%m:%d %H:%M:%S")
                 taken = calendar.timegm(dt.timetuple())

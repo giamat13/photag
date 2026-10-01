@@ -101,6 +101,10 @@ def pick_file(kind: str = "zip", title: str = ""):
     try:
         if kind == "folder":
             path = filedialog.askdirectory(title=title or "בחר תיקייה", parent=root)
+        elif kind == "lrcat":
+            path = filedialog.askopenfilename(
+                title="בחר קטלוג Lightroom", parent=root,
+                filetypes=[("Lightroom Catalog", "*.lrcat"), ("כל הקבצים", "*.*")])
         else:
             path = filedialog.askopenfilename(
                 title="בחר קובץ ZIP של Google Takeout",
@@ -333,7 +337,19 @@ def media(pid: int):
     p = PATHS.media / r["rel_path"]
     if not p.exists():
         raise HTTPException(404)
+    if images.is_raw(p):
+        return _raw_jpeg(p)
     return FileResponse(p)
+
+
+def _raw_jpeg(p: Path):
+    out = PATHS.thumbs / f"raw_{images.sha256_file(p)[:24]}.jpg"
+    if not out.exists():
+        try:
+            images.open_image(p).save(out, "JPEG", quality=92)   # oriented, cached
+        except Exception:
+            raise HTTPException(415, "לא נמצאה תצוגה מקדימה בקובץ ה‑RAW")
+    return FileResponse(out, media_type="image/jpeg")
 
 
 # ---- edit metadata ---------------------------------------------------------
@@ -470,6 +486,8 @@ def _editable(con, pid):
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r or r["is_video"]:
         raise HTTPException(400, "לא ניתן לערוך")
+    if images.is_raw(Path(r["rel_path"])):
+        raise HTTPException(400, "עריכת קובצי RAW לא נתמכת — ייצאו JPEG וערכו אותו")
     return r
 
 
@@ -534,6 +552,8 @@ def original(pid: int):
     p = PATHS.media / (r["orig_backup"] or r["rel_path"])
     if not p.exists():
         raise HTTPException(404)
+    if images.is_raw(p):
+        return _raw_jpeg(p)
     return FileResponse(p)
 
 
@@ -614,6 +634,26 @@ def local_thumb(path: str):
         return Response(status_code=204)
     data = images.small_preview(p)
     return Response(data, media_type="image/jpeg") if data else Response(status_code=204)
+
+
+class LrcatIn(BaseModel):
+    path: str
+
+@app.get("/api/lrcat-info")
+def lrcat_info(path: str):
+    if not Path(path).is_file():
+        raise HTTPException(404, "הקטלוג לא נמצא")
+    try:
+        return importer.lrcat_info(path)
+    except Exception as e:
+        raise HTTPException(400, f"לא ניתן לקרוא את הקטלוג: {e}")
+
+@app.post("/api/import-lrcat")
+def start_import_lrcat(body: LrcatIn):
+    if not Path(body.path).is_file():
+        raise HTTPException(404, "הקטלוג לא נמצא")
+    _start("import", _then_autotag, importer.run_lrcat_import, body.path)
+    return {"ok": True}
 
 
 class ImportFolderIn(BaseModel):

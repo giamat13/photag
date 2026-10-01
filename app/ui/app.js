@@ -1254,7 +1254,7 @@ function openExport(){
 }
 
 // ---------- import (full-window dialog like Lightroom's) ----------
-const IM = {mode:'folder', path:'', zip:'', recursive:true, files:[], on:new Set(), skipDup:true, show:'all'};
+const IM = {mode:'folder', path:'', zip:'', lrcat:'', lrinfo:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all'};
 function openImport(mode){
   IM.mode = mode || IM.mode;
   IM.path = IM.path || pref.get('importPath','');
@@ -1264,16 +1264,17 @@ function openImport(mode){
 }
 function closeImport(){ $('#import').classList.add('hidden'); }
 function renderImport(){
-  const el=$('#import'), folder=IM.mode==='folder';
+  const el=$('#import'), folder=IM.mode==='folder', lr=IM.mode==='lrcat', li=IM.lrinfo;
   const shown = IM.files.filter(f=>IM.show==='all' || !f.dup);
   const chosen = IM.files.filter(f=>IM.on.has(f.path));
   const bytes = chosen.reduce((a,f)=>a+f.bytes,0);
   const recent = pref.get('importRecent', []);
+  const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : IM.zip;
   el.innerHTML = `
   <div class="im-top">
-    <div class="blk"><span>מקור</span><b>${esc(folder ? (IM.path||'בחרו תיקייה') : (IM.zip||'בחרו קובץ ZIP'))}</b></div>
+    <div class="blk"><span>מקור</span><b>${esc(folder ? (IM.path||'בחרו תיקייה') : lr ? (IM.lrcat||'בחרו קטלוג Lightroom') : (IM.zip||'בחרו קובץ ZIP'))}</b></div>
     <span class="im-arrow">←</span>
-    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">העתק<small>מתיקייה / כרטיס זיכרון</small></a><a data-im="zip" class="${folder?'':'on'}">Google Takeout<small>קובץ ZIP מגוגל פוטוס</small></a></nav>
+    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">העתק<small>מתיקייה / כרטיס זיכרון</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>קטלוג ‎.lrcat</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>קובץ ZIP מגוגל פוטוס</small></a></nav>
     <span class="im-arrow">←</span>
     <div class="blk"><span>יעד</span><b>${esc(S.status?.media_path||'')}</b></div>
   </div>
@@ -1283,6 +1284,8 @@ function renderImport(){
         ${folder ? `<div class="btnrow"><button id="im-pick">${I('folder')} בחר תיקייה...</button></div>
           <label class="check"><input type="checkbox" id="im-rec" ${IM.recursive?'checked':''}> כולל תיקיות משנה</label>
           ${recent.length?`<div class="lbl-sub" style="padding-top:8px">אחרונים</div>${recent.map(p=>`<div class="row" data-recent="${esc(p)}">${I('folder')}<span class="nm" dir="ltr" title="${esc(p)}">${esc(p)}</span></div>`).join('')}`:''}`
+        : lr ? `<div class="btnrow"><button id="im-lrcat">${I('import')} בחר קטלוג Lightroom...</button></div>
+          <div class="hint">קובץ ‎<code>.lrcat</code>‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.</div>`
         : `<div class="btnrow"><button id="im-zip">${I('import')} בחר קובץ ZIP...</button></div>
           <div class="hint">הורידו את הספרייה מ‑takeout.google.com (Google Photos). הקובץ נקרא ישירות, בלי לפרוס אותו.</div>`}
       </div></section>
@@ -1295,6 +1298,9 @@ function renderImport(){
             <input type="checkbox" ${IM.on.has(f.path)?'checked':''}>${f.dup?'<span class="dup" title="כבר בקטלוג (אותו שם וגודל)">כפילות</span>':''}
             ${f.is_video?`<span class="vid">${I('play')}</span>`:`<img loading="lazy" src="/api/local-thumb?path=${encodeURIComponent(f.path)}" alt="">`}
             <span class="nm">${esc(f.name)}</span></div>`).join('') + (shown.length>3000?`<div class="im-empty">מוצגות 3,000 הראשונות מתוך ${num(shown.length)} — כולן ייובאו אם מסומנות.</div>`:'')}</div>`
+      : lr ? `<div class="im-grid"><div class="im-empty">${IM.lrloading?'קורא את הקטלוג…':!li?'בחרו קטלוג Lightroom Classic מהלוח „מקור".'
+          : `<b dir="ltr">${esc(IM.lrcat)}</b><br>${num(li.images)} תמונות · ${num(li.keywords)} מילות מפתח · ${num(li.collections)} אוספים · ${fsize(li.bytes)}
+             ${li.missing?`<br><span style="color:var(--yellow)">${num(li.missing)} קבצים שהקטלוג מפנה אליהם לא נמצאו בדיסק ולא ייובאו.</span>`:''}`}</div></div>`
       : `<div class="im-grid"><div class="im-empty">${IM.zip?`<b dir="ltr">${esc(IM.zip)}</b><br>ייבוא ישמור אלבומים, תאריכים, מיקומים, מועדפים, תגי אנשים וזיכרונות. תמונות שכבר בקטלוג לא ישוכפלו.`:'בחרו את קובץ ה‑ZIP מ‑Google Takeout.'}</div></div>`}
     </div>
     <aside class="im-side">
@@ -1305,12 +1311,16 @@ function renderImport(){
         <label class="fld" style="padding:4px 12px"><span>מילות מפתח</span><input type="text" id="im-kw" placeholder="חופשה, משפחה"></label>
         <label class="fld" style="padding:4px 12px"><span>הוסף לאוסף</span><input type="text" id="im-album" list="im-albums" placeholder="ללא"></label>
         <datalist id="im-albums">${S.albums.filter(a=>a.kind==='album').map(a=>`<option value="${esc(a.name)}">`).join('')}</datalist></div></section>`:''}
+      ${lr?`<section class="pnl"><h3><span>מה מיובא</span></h3><div class="pbody"><div class="hint">
+        דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם" הופכות לאנשים), אוספים והאוסף המהיר.
+        הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי.
+        עותקים וירטואליים ואוספים חכמים מדולגים.</div></div></section>`:''}
       <section class="pnl"><h3><span>יעד</span></h3><div class="pbody">
         <div class="hint"><code>${esc(S.status?.media_path||'')}</code><br>מסודר בתיקיות לפי שנת צילום (למשל <code>2024</code>). ניתן לשנות מקובץ ← הגדרות קטלוג.</div></div></section>
     </aside>
   </div>
-  <div class="im-foot">${folder?`${num(chosen.length)} תמונות / ${fsize(bytes)}`:''}<span class="spacer"></span>
-    <button id="im-cancel">ביטול</button><button class="primary" id="im-go" ${folder?(chosen.length?'':'disabled'):(IM.zip?'':'disabled')}>ייבוא</button></div>`;
+  <div class="im-foot">${folder?`${num(chosen.length)} תמונות / ${fsize(bytes)}`:lr&&li?`${num(li.images-li.missing)} תמונות / ${fsize(li.bytes)}`:''}<span class="spacer"></span>
+    <button id="im-cancel">ביטול</button><button class="primary" id="im-go" ${ready?'':'disabled'}>ייבוא</button></div>`;
 }
 async function scanImport(){
   if(!IM.path) return;
@@ -1327,6 +1337,9 @@ $('#import').addEventListener('click', async e=>{
   if(t.closest('#im-cancel')) return closeImport();
   if(t.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent('בחר תיקייה לייבוא')); if(r.path){ IM.path=r.path; scanImport(); } return; }
   if(t.closest('#im-zip')){ const r=await api('/api/pick-file?kind=zip'); if(r.path){ IM.zip=r.path; renderImport(); } return; }
+  if(t.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat'); if(!r.path) return;
+    IM.lrcat=r.path; IM.lrinfo=null; IM.lrloading=true; renderImport();
+    try{ IM.lrinfo=await api('/api/lrcat-info?'+new URLSearchParams({path:r.path})); } finally { IM.lrloading=false; renderImport(); } return; }
   const rec=t.closest('[data-recent]'); if(rec){ IM.path=rec.dataset.recent; scanImport(); return; }
   const sh=t.closest('[data-show]'); if(sh){ IM.show=sh.dataset.show; renderImport(); return; }
   const ck=t.closest('[data-chk]'); if(ck){ IM.on = ck.dataset.chk==='all' ? new Set(IM.files.filter(f=>IM.show==='all'||!f.dup).map(f=>f.path)) : new Set(); renderImport(); return; }
@@ -1336,6 +1349,7 @@ $('#import').addEventListener('click', async e=>{
     $('#im-go').disabled=!chosen.length; return; }
   if(t.closest('#im-go')){
     if(IM.mode==='zip'){ await send('POST','/api/import',{zip_path:IM.zip}); closeImport(); pollJob('import','ייבוא מ‑Google'); return; }
+    if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import','ייבוא מ‑Lightroom'); return; }
     const paths=IM.files.filter(f=>IM.on.has(f.path)).map(f=>f.path);
     await send('POST','/api/import-folder',{paths, keywords:($('#im-kw').value||'').split(','), album:$('#im-album').value||null});
     closeImport(); IM.files=[]; pollJob('import','ייבוא');
@@ -1376,6 +1390,7 @@ const sep='-';
 const MENUS = [
   ['קובץ', [
     ['ייבוא תמונות וסרטונים...', 'Ctrl+Shift+I', ()=>openImport('folder')],
+    ['ייבוא מקטלוג Lightroom...', '', ()=>openImport('lrcat')],
     ['ייבוא מ‑Google Takeout...', '', ()=>openImport('zip')],
     ['ייצוא...', 'Ctrl+Shift+E', openExport],
     sep,

@@ -305,6 +305,33 @@ def scan_folder(folder: str, recursive: bool = True, cap: int = 20000) -> list[d
     return out
 
 
+def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, bool]:
+    """Copy one file into the library (filed by capture year) unless an
+    identical file is already there. Returns (photo_id, newly_added)."""
+    import shutil
+    sha = images.sha256_file(src)
+    row = con.execute("SELECT id FROM photos WHERE sha256=?", (sha,)).fetchone()
+    if row:
+        return row["id"], False
+    e_taken, e_lat, e_lng = images.exif_info(src)
+    taken = taken or e_taken or int(src.stat().st_mtime)
+    if lat is None or lng is None:
+        lat, lng = e_lat, e_lng
+    sub = PATHS.media / str(time.gmtime(taken).tm_year)
+    sub.mkdir(parents=True, exist_ok=True)
+    dest = _unique_dest(sub / _safe_component(src.name))
+    shutil.copy2(src, dest)
+    w, h = images.dimensions(dest)
+    photo_id = con.execute(
+        "INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,"
+        "taken_at,created_at,lat,lng,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (sha, src.name, str(dest.relative_to(PATHS.media)), src.suffix.lower().lstrip("."),
+         1 if images.is_video(dest) else 0, w, h, dest.stat().st_size,
+         taken, int(time.time()), lat, lng, int(time.time()))).lastrowid
+    images.make_thumb(dest, sha)
+    return photo_id, True
+
+
 def mark_import_start(con):
     """'Previous Import' in the catalog = everything imported since this moment."""
     db.set_setting(con, "last_import", int(time.time()))
@@ -332,27 +359,8 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
             src = Path(path)
             if not src.is_file():
                 continue
-            sha = images.sha256_file(src)
-            row = con.execute("SELECT id FROM photos WHERE sha256=?", (sha,)).fetchone()
-            if row:
-                photo_id = row["id"]; dupes += 1
-            else:
-                taken, lat, lng = images.exif_info(src)
-                taken = taken or int(src.stat().st_mtime)
-                sub = PATHS.media / str(time.gmtime(taken).tm_year)
-                sub.mkdir(parents=True, exist_ok=True)
-                dest = _unique_dest(sub / _safe_component(src.name))
-                import shutil
-                shutil.copy2(src, dest)
-                w, h = images.dimensions(dest)
-                photo_id = con.execute(
-                    "INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,"
-                    "taken_at,created_at,lat,lng,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (sha, src.name, str(dest.relative_to(PATHS.media)), src.suffix.lower().lstrip("."),
-                     1 if images.is_video(dest) else 0, w, h, dest.stat().st_size,
-                     taken, int(time.time()), lat, lng, int(time.time()))).lastrowid
-                images.make_thumb(dest, sha)
-                added += 1
+            photo_id, new = _ingest_file(con, src)
+            added += new; dupes += not new
             if album_id:
                 con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (photo_id, album_id))
             for tid in tag_ids:
@@ -364,6 +372,139 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
     except Exception as e:
         con.commit()
         progress.state = "error"; progress.error = str(e)
+
+
+# ---------- import a Lightroom Classic catalog (.lrcat) ----------
+# A .lrcat is SQLite. We read it read-only and copy each photo's original file
+# into the library with what Lightroom knew about it. Develop edits live in
+# Lightroom's own settings format and are not converted (originals come in).
+LR_LABELS = {"red": "red", "yellow": "yellow", "green": "green", "blue": "blue", "purple": "purple",
+             "אדום": "red", "צהוב": "yellow", "ירוק": "green", "כחול": "blue", "סגול": "purple"}
+
+
+def _lr_open(path: str):
+    import sqlite3
+    from urllib.parse import quote
+    con = sqlite3.connect(f"file:{quote(str(Path(path).resolve()).replace(chr(92), '/'))}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def _lr_has(lr, table, col=None):
+    cols = [r[1] for r in lr.execute(f"PRAGMA table_info({table})")]
+    return bool(cols) and (col is None or col in cols)
+
+
+def _lr_time(s) -> int | None:
+    """Lightroom captureTime: '2019-05-04T13:22:10' (+ optional fraction / zone)."""
+    import calendar, datetime, re as _re
+    if not s:
+        return None
+    m = _re.match(r"(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?", str(s))
+    if not m:
+        return None
+    y, mo, d, h, mi, sec = (int(x) if x else 0 for x in m.groups())
+    try:
+        return calendar.timegm(datetime.datetime(y, mo, d, h, mi, sec).timetuple())
+    except ValueError:
+        return None
+
+
+def _lr_images(lr):
+    q = ("SELECT i.id_local id, i.captureTime, i.rating, i.pick, i.colorLabels, "
+         "rf.absolutePath || fo.pathFromRoot || fi.baseName || '.' || fi.extension path "
+         "FROM Adobe_images i JOIN AgLibraryFile fi ON fi.id_local=i.rootFile "
+         "JOIN AgLibraryFolder fo ON fo.id_local=fi.folder JOIN AgLibraryRootFolder rf ON rf.id_local=fo.rootFolder")
+    if _lr_has(lr, "Adobe_images", "masterImage"):
+        q += " WHERE i.masterImage IS NULL"   # virtual copies share their master's file
+    return lr.execute(q).fetchall()
+
+
+def lrcat_info(path: str) -> dict:
+    """Counts for the import dialog, before anything is copied."""
+    lr = _lr_open(path)
+    imgs = _lr_images(lr)
+    missing = sum(1 for r in imgs if not Path(r["path"]).is_file())
+    n_kw = lr.execute("SELECT COUNT(*) FROM AgLibraryKeyword WHERE name IS NOT NULL").fetchone()[0]
+    n_coll = lr.execute("SELECT COUNT(*) FROM AgLibraryCollection WHERE creationId='com.adobe.ag.library.collection' "
+                        "AND COALESCE(systemOnly,0)=0").fetchone()[0]
+    return {"images": len(imgs), "missing": missing, "keywords": n_kw, "collections": n_coll,
+            "bytes": sum(Path(r["path"]).stat().st_size for r in imgs if Path(r["path"]).is_file())}
+
+
+def run_lrcat_import(path: str, progress: Progress):
+    con = db.init_db()
+    mark_import_start(con)
+    progress.state = "scanning"; progress.msg = "קורא את קטלוג Lightroom…"
+    try:
+        lr = _lr_open(path)
+        imgs = _lr_images(lr)
+        gps = {}
+        if _lr_has(lr, "AgHarvestedExifMetadata", "gpsLatitude"):
+            gps = {r["image"]: (r["gpsLatitude"], r["gpsLongitude"]) for r in lr.execute(
+                "SELECT image, gpsLatitude, gpsLongitude FROM AgHarvestedExifMetadata WHERE gpsLatitude IS NOT NULL")}
+        captions = {}
+        if _lr_has(lr, "AgLibraryIPTC", "caption"):
+            captions = {r["image"]: r["caption"] for r in lr.execute(
+                "SELECT image, caption FROM AgLibraryIPTC WHERE caption IS NOT NULL AND caption<>''")}
+        person = "keywordType" if _lr_has(lr, "AgLibraryKeyword", "keywordType") else "NULL"
+        kw = {}
+        for r in lr.execute(f"SELECT ki.image, k.name, {person} kind FROM AgLibraryKeywordImage ki "
+                            f"JOIN AgLibraryKeyword k ON k.id_local=ki.tag WHERE k.name IS NOT NULL"):
+            kw.setdefault(r["image"], []).append((r["name"], r["kind"] == "person"))
+        colls, quick = {}, set()
+        for r in lr.execute("SELECT ci.image, c.name, COALESCE(c.systemOnly,0) sys FROM AgLibraryCollectionImage ci "
+                            "JOIN AgLibraryCollection c ON c.id_local=ci.collection "
+                            "WHERE c.creationId='com.adobe.ag.library.collection'"):
+            if r["sys"] or (r["name"] or "").lower() == "quick collection":
+                quick.add(r["image"])
+            elif r["name"]:
+                colls.setdefault(r["image"], []).append(r["name"])
+
+        progress.state = "importing"; progress.total = len(imgs); progress.done = 0
+        added = dupes = missing = 0
+        for r in imgs:
+            progress.done += 1
+            if progress.done % 10 == 0:
+                progress.msg = f"Lightroom — {progress.done}/{progress.total}"
+                con.commit()
+            src = Path(r["path"])
+            if not src.is_file():
+                missing += 1
+                continue
+            lat, lng = gps.get(r["id"], (None, None))
+            pid, new = _ingest_file(con, src, taken=_lr_time(r["captureTime"]), lat=lat, lng=lng)
+            added += new; dupes += not new
+            pick = int(r["pick"] or 0)
+            fields = {"rating": int(r["rating"] or 0), "flag": 1 if pick > 0 else -1 if pick < 0 else 0,
+                      "label": LR_LABELS.get((r["colorLabels"] or "").strip().lower()),
+                      "quick": 1 if r["id"] in quick else 0}
+            if r["id"] in captions:
+                fields["description"] = captions[r["id"]]
+            if not new:  # already in the catalog: add what Lightroom knows, never clear what's here
+                fields = {k: v for k, v in fields.items() if v}
+            if fields:
+                con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in fields)} WHERE id=?", (*fields.values(), pid))
+            for name, is_person in kw.get(r["id"], []):
+                if is_person:
+                    con.execute("INSERT OR IGNORE INTO people(name,source) VALUES(?, 'lightroom')", (name,))
+                    per = con.execute("SELECT id FROM people WHERE name=?", (name,)).fetchone()["id"]
+                    con.execute("INSERT OR IGNORE INTO photo_people(photo_id,person_id,source) VALUES(?,?, 'lightroom')", (pid, per))
+                else:
+                    con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (name,))
+                    tid = con.execute("SELECT id FROM tags WHERE name=?", (name,)).fetchone()["id"]
+                    con.execute("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'lightroom')", (pid, tid))
+            for name in colls.get(r["id"], []):
+                con.execute("INSERT OR IGNORE INTO albums(name,kind) VALUES(?, 'album')", (name,))
+                aid = con.execute("SELECT id FROM albums WHERE name=?", (name,)).fetchone()["id"]
+                con.execute("INSERT OR IGNORE INTO photo_albums(photo_id,album_id) VALUES(?,?)", (pid, aid))
+        con.commit()
+        progress.state = "done"
+        progress.msg = (f"יובאו {added} פריטים מ‑Lightroom" + (f" · {dupes} כבר היו בקטלוג" if dupes else "")
+                        + (f" · {missing} קבצים חסרים בדיסק" if missing else ""))
+    except Exception as e:
+        con.commit()
+        progress.state = "error"; progress.error = f"ייבוא מ‑Lightroom נכשל: {e}"
 
 
 def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
