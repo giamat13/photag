@@ -29,7 +29,7 @@ from . import config, db
 from .config import PATHS
 from .version import __version__
 
-DEFAULTS = {"enabled": True, "interval_hours": 24, "keep": 10, "include_media": False, "folder": None}
+DEFAULTS = {"enabled": True, "interval_hours": 24, "keep": 10, "include_media": True, "folder": None}
 REASONS = ("auto", "manual", "before-restore", "before-update")
 NAME_RE = re.compile(r"^photag-\d{8}-\d{6}-(auto|manual|before-restore|before-update)(-\d+)?\.zip$")
 MIRROR = "media-mirror"
@@ -114,29 +114,53 @@ def _counts(con) -> dict:
 def _mirror_media(progress=None) -> dict:
     """Copy new / changed photo files into <backup folder>/media-mirror (incremental)."""
     dst = backup_dir() / MIRROR
+    dst.mkdir(parents=True, exist_ok=True)
     files = [p for p in PATHS.media.rglob("*") if p.is_file() and ".compress_tmp" not in p.parts]
-    copied = nbytes = 0
-    if progress:
-        progress.total = len(files); progress.done = 0
-    for i, src in enumerate(files):
-        rel = src.relative_to(PATHS.media)
-        out = dst / rel
+    todo, need = [], 0
+    for src in files:                                   # what is new or changed since the last backup
+        out = dst / src.relative_to(PATHS.media)
         st = src.stat()
         try:
             same = out.exists() and out.stat().st_size == st.st_size and int(out.stat().st_mtime) >= int(st.st_mtime) - 2
         except OSError:
             same = False
         if not same:
-            out.parent.mkdir(parents=True, exist_ok=True)
-            tmp = out.with_name(out.name + ".part")
-            shutil.copy2(src, tmp); os.replace(tmp, out)
-            copied += 1; nbytes += st.st_size
-        if progress and i % 20 == 0:
-            progress.done = i + 1
-            progress.say("מעתיק קבצי תמונות… {done} מתוך {total}", done=i + 1, total=len(files))
-        if progress and getattr(progress, "cancel", False):
-            break
+            todo.append((src, out)); need += st.st_size
+    free = shutil.disk_usage(dst).free
+    if need + 200 * 1024 * 1024 > free:                 # never fill the backup disk to the brim
+        raise NoSpaceError(need, free)
+    copied = nbytes = 0
+    if progress:
+        progress.total = max(1, need); progress.done = 0
+    for src, out in todo:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        tmp = out.with_name(out.name + ".part")
+        shutil.copy2(src, tmp); os.replace(tmp, out)
+        n = out.stat().st_size
+        copied += 1; nbytes += n
+        if progress:
+            progress.done = nbytes
+            progress.say("מעתיק קבצי תמונות וסרטונים… {done} מתוך {total} קבצים", done=copied, total=len(todo))
+            if getattr(progress, "cancel", False):
+                break
     return {"files": len(files), "copied": copied, "bytes_copied": nbytes}
+
+
+class NoSpaceError(Exception):
+    def __init__(self, need: int, free: int):
+        super().__init__(f"need {need} bytes, {free} free")
+        self.need, self.free = need, free
+
+
+def folder_bytes(path: Path) -> int:
+    total = 0
+    for root, _, names in os.walk(path):
+        for n in names:
+            try:
+                total += os.path.getsize(os.path.join(root, n))
+            except OSError:
+                pass
+    return total
 
 
 def create_snapshot(reason: str = "manual", progress=None) -> dict:
@@ -274,6 +298,9 @@ def run_backup(reason: str, progress):
         progress.result = m
         progress.state = "done"
         progress.say_parts(("הגיבוי נשמר", {}), ("{n} תמונות בקטלוג", {"n": m["photos"]}))
+    except NoSpaceError as e:
+        progress.fail("אין מספיק מקום פנוי בדיסק של הגיבויים: צריך {need} MB, פנויים {free} MB. בחרו תיקייה בדיסק אחר",
+                      need=round(e.need / 1048576), free=round(e.free / 1048576))
     except Exception as e:
         progress.fail("הגיבוי נכשל: {error}", error=str(e)[:200])
 

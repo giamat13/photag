@@ -705,7 +705,6 @@
  "ידני": "Elle",
  "יש גרסה קודמת של התמונה בגיבויים.": "Bu görselin önceki bir sürümü yedeklerde var.",
  "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב": "Şu anda başka bir görev çalışıyor. Bitmesini bekleyin ve tekrar deneyin",
- "כולל קבצים": "Dosyalar dahil",
  "כל 12 שעות": "12 saatte bir",
  "כל 3 ימים": "3 günde bir",
  "כל 30 יום": "30 günde bir",
@@ -744,5 +743,9 @@
  "תדירות": "Sıklık",
  "תיקיית הגיבויים (עדיף דיסק אחר)": "Yedekleme klasörü (tercihen başka bir disk)",
  "תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה": "Sonuçla aynı bir görsel kitaplıkta zaten var; özgün dosya değiştirilmedi",
- "תמונה מונפשת לא נתמכת לדחיסה": "Hareketli görseller sıkıştırma için desteklenmiyor"
+ "תמונה מונפשת לא נתמכת לדחיסה": "Hareketli görseller sıkıştırma için desteklenmiyor",
+ "הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.": "Yedek, kataloğu ve ayrıca tüm fotoğraf ve videoları içerir ({0}). Yedek klasörünün boyutu: {1} (bunun {2} kadarı medya dosyaları); yedek diskinde boş alan: {3}.",
+ "כולל תמונות וסרטונים": "Fotoğraf ve videoları içerir",
+ "קטלוג בלבד": "Yalnızca katalog",
+ "שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.": "Dikkat: yedek şu anda yalnızca kataloğu (etiketler, albümler, derecelendirmeler) içeriyor, fotoğraf ve videoların kendisini içermiyor; bu yüzden küçük. Her şeyi yedeklemek için «Fotoğraf ve video dosyalarını da yedekle» seçeneğini işaretleyin."
 }

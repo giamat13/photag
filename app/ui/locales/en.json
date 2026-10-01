@@ -705,7 +705,6 @@
  "ידני": "Manual",
  "יש גרסה קודמת של התמונה בגיבויים.": "A previous version of this image exists in backups.",
  "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב": "Another task is currently running. Wait for it to finish and try again",
- "כולל קבצים": "Includes files",
  "כל 12 שעות": "Every 12 hours",
  "כל 3 ימים": "Every 3 days",
  "כל 30 יום": "Every 30 days",
@@ -744,5 +743,9 @@
  "תדירות": "Frequency",
  "תיקיית הגיבויים (עדיף דיסק אחר)": "Backups folder (preferably on another disk)",
  "תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה": "An image identical to the result already exists in the library; the original file was not changed",
- "תמונה מונפשת לא נתמכת לדחיסה": "Animated images are not supported for compression"
+ "תמונה מונפשת לא נתמכת לדחיסה": "Animated images are not supported for compression",
+ "הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.": "The backup includes the catalog and all photos and videos ({0}). Backups folder size: {1} (of which media files {2}); free space on the backup drive: {3}.",
+ "כולל תמונות וסרטונים": "Includes photos and videos",
+ "קטלוג בלבד": "Catalog only",
+ "שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.": "Note: the backup currently includes only the catalog (tags, albums, ratings) and not the photos and videos themselves, so it is small. Check «Also back up photo and video files» to back up everything."
 }

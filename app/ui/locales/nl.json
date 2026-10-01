@@ -705,7 +705,6 @@
  "ידני": "Handmatig",
  "יש גרסה קודמת של התמונה בגיבויים.": "Er is een eerdere versie van deze afbeelding in de back-ups.",
  "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב": "Er loopt al een andere taak. Wacht tot die klaar is en probeer het opnieuw",
- "כולל קבצים": "Inclusief bestanden",
  "כל 12 שעות": "Elke 12 uur",
  "כל 3 ימים": "Elke 3 dagen",
  "כל 30 יום": "Elke 30 dagen",
@@ -744,5 +743,9 @@
  "תדירות": "Frequentie",
  "תיקיית הגיבויים (עדיף דיסק אחר)": "Back-upmap (bij voorkeur op een andere schijf)",
  "תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה": "Een afbeelding identiek aan het resultaat staat al in de bibliotheek; het originele bestand is niet gewijzigd",
- "תמונה מונפשת לא נתמכת לדחיסה": "Geanimeerde afbeeldingen worden niet ondersteund voor compressie"
+ "תמונה מונפשת לא נתמכת לדחיסה": "Geanimeerde afbeeldingen worden niet ondersteund voor compressie",
+ "הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.": "De back-up bevat de catalogus en ook alle foto's en video's ({0}). Grootte van de back-upmap: {1} (waarvan mediabestanden {2}); vrije ruimte op de back-upschijf: {3}.",
+ "כולל תמונות וסרטונים": "Inclusief foto's en video's",
+ "קטלוג בלבד": "Alleen catalogus",
+ "שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.": "Let op: de back-up bevat momenteel alleen de catalogus (tags, albums, beoordelingen) en niet de foto's en video's zelf, daarom is hij klein. Vink «Ook foto- en videobestanden back-uppen» aan om alles te back-uppen."
 }

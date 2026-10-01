@@ -705,7 +705,6 @@
  "ידני": "Ręcznie",
  "יש גרסה קודמת של התמונה בגיבויים.": "Poprzednia wersja tego obrazu jest w kopiach zapasowych.",
  "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב": "Aktualnie działa inne zadanie. Poczekaj na jego zakończenie i spróbuj ponownie",
- "כולל קבצים": "Wraz z plikami",
  "כל 12 שעות": "Co 12 godzin",
  "כל 3 ימים": "Co 3 dni",
  "כל 30 יום": "Co 30 dni",
@@ -744,5 +743,9 @@
  "תדירות": "Częstotliwość",
  "תיקיית הגיבויים (עדיף דיסק אחר)": "Folder kopii zapasowych (najlepiej na innym dysku)",
  "תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה": "Obraz identyczny z wynikiem już istnieje w bibliotece; oryginalny plik nie został zmieniony",
- "תמונה מונפשת לא נתמכת לדחיסה": "Obrazy animowane nie są obsługiwane przez kompresję"
+ "תמונה מונפשת לא נתמכת לדחיסה": "Obrazy animowane nie są obsługiwane przez kompresję",
+ "הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.": "Kopia zapasowa zawiera katalog oraz wszystkie zdjęcia i filmy ({0}). Rozmiar folderu kopii zapasowych: {1} (w tym pliki multimedialne: {2}); wolne miejsce na dysku kopii zapasowych: {3}.",
+ "כולל תמונות וסרטונים": "Ze zdjęciami i filmami",
+ "קטלוג בלבד": "Tylko katalog",
+ "שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.": "Uwaga: kopia zapasowa obejmuje obecnie tylko katalog (tagi, albumy, oceny), a nie same zdjęcia i filmy, dlatego jest niewielka. Zaznacz «Kopiuj także pliki zdjęć i filmów», aby zarchiwizować wszystko."
 }

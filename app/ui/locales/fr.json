@@ -705,7 +705,6 @@
  "ידני": "Manuelle",
  "יש גרסה קודמת של התמונה בגיבויים.": "Une version précédente de cette image existe dans les sauvegardes.",
  "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב": "Une autre tâche est en cours. Attendez qu'elle se termine et réessayez",
- "כולל קבצים": "Fichiers inclus",
  "כל 12 שעות": "Toutes les 12 heures",
  "כל 3 ימים": "Tous les 3 jours",
  "כל 30 יום": "Tous les 30 jours",
@@ -744,5 +743,9 @@
  "תדירות": "Fréquence",
  "תיקיית הגיבויים (עדיף דיסק אחר)": "Dossier des sauvegardes (de préférence sur un autre disque)",
  "תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה": "Une image identique au résultat existe déjà dans la bibliothèque ; le fichier d'origine n'a pas été modifié",
- "תמונה מונפשת לא נתמכת לדחיסה": "Les images animées ne sont pas prises en charge pour la compression"
+ "תמונה מונפשת לא נתמכת לדחיסה": "Les images animées ne sont pas prises en charge pour la compression",
+ "הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.": "La sauvegarde inclut le catalogue ainsi que toutes les photos et vidéos ({0}). Taille du dossier de sauvegardes : {1} (dont {2} de fichiers multimédias) ; espace libre sur le disque de sauvegarde : {3}.",
+ "כולל תמונות וסרטונים": "Inclut les photos et vidéos",
+ "קטלוג בלבד": "Catalogue uniquement",
+ "שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.": "Attention : la sauvegarde n’inclut actuellement que le catalogue (étiquettes, albums, notes) et non les photos et vidéos elles-mêmes, ce qui explique sa petite taille. Cochez « Sauvegarder aussi les fichiers de photos et vidéos » pour tout sauvegarder."
 }

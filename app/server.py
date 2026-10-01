@@ -1,6 +1,7 @@
 """FastAPI backend: catalog queries, media/thumbnail serving, metadata &
 image editing, and background jobs (import / faces)."""
 import os
+import shutil
 import threading
 import time
 from pathlib import Path
@@ -212,7 +213,9 @@ def backup_info():
     last = next((m["created"] for m in snaps if m["reason"] in ("auto", "manual")), None)
     return {"settings": s, "folder": str(backup.backup_dir()), "snapshots": snaps, "last": last,
             "next": backup.next_due(), "media_bytes": con.execute("SELECT COALESCE(SUM(bytes),0) FROM photos").fetchone()[0],
-            "mirror": (backup.backup_dir() / backup.MIRROR).is_dir()}
+            "mirror": (backup.backup_dir() / backup.MIRROR).is_dir(),
+            "mirror_bytes": backup.folder_bytes(backup.backup_dir() / backup.MIRROR),
+            "free_bytes": shutil.disk_usage(backup.backup_dir()).free}
 
 
 @app.post("/api/backup/settings")

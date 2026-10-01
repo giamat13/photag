@@ -705,7 +705,6 @@
  "ידני": "Manual",
  "יש גרסה קודמת של התמונה בגיבויים.": "Hay una versión anterior de esta imagen en las copias de seguridad.",
  "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב": "Hay otra tarea en ejecución. Espera a que termine e inténtalo de nuevo",
- "כולל קבצים": "Incluye archivos",
  "כל 12 שעות": "Cada 12 horas",
  "כל 3 ימים": "Cada 3 días",
  "כל 30 יום": "Cada 30 días",
@@ -744,5 +743,9 @@
  "תדירות": "Frecuencia",
  "תיקיית הגיבויים (עדיף דיסק אחר)": "Carpeta de copias de seguridad (mejor en otro disco)",
  "תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה": "Ya existe en la biblioteca una imagen idéntica al resultado; el archivo original no se modificó",
- "תמונה מונפשת לא נתמכת לדחיסה": "Las imágenes animadas no se pueden comprimir"
+ "תמונה מונפשת לא נתמכת לדחיסה": "Las imágenes animadas no se pueden comprimir",
+ "הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.": "La copia de seguridad incluye el catálogo y también todas las fotos y vídeos ({0}). Tamaño de la carpeta de copias: {1} (de los cuales {2} son archivos multimedia); espacio libre en el disco de copias: {3}.",
+ "כולל תמונות וסרטונים": "Incluye fotos y vídeos",
+ "קטלוג בלבד": "Solo el catálogo",
+ "שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.": "Atención: la copia de seguridad incluye actualmente solo el catálogo (etiquetas, álbumes, valoraciones) y no las fotos y vídeos en sí, por eso es pequeña. Marca «Copiar también los archivos de fotos y vídeos» para copiarlo todo."
 }

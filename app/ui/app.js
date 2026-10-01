@@ -1711,19 +1711,28 @@ async function backupDialog(){
     const next = !s.enabled ? t('הגיבוי האוטומטי כבוי') : t('הגיבוי הבא: {0}', [ltr(fdt(Math.max(i.next, Date.now() / 1000)))]);
     return `${last} · ${next}`;
   };
+  const coverage = () => {
+    const s = i.settings, cat = i.snapshots.reduce((a, m) => a + m.bytes, 0);
+    return s.include_media
+      ? t('הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.',
+          [fmtBytes(i.media_bytes), fmtBytes(cat + i.mirror_bytes), fmtBytes(i.mirror_bytes), fmtBytes(i.free_bytes)])
+      : t('שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.');
+  };
   const rows = () => i.snapshots.length ? i.snapshots.map(m => `<div class="bk-row"><span class="bk-d">${ltr(fdt(m.created))}</span>
-      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} תמונות', [num(m.photos)])} · ${fmtBytes(m.bytes)}${m.includes_media ? ' · ' + t('כולל קבצים') : ''}</span>
+      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} תמונות', [num(m.photos)])} · ${ltr(m.bytes < 1048576 ? Math.max(1, Math.round(m.bytes / 1024)) + ' KB' : (m.bytes / 1048576).toFixed(1) + ' MB')}${m.includes_media ? ' · ' + t('כולל תמונות וסרטונים') : ' · ' + t('קטלוג בלבד')}</span>
       <button data-restore="${esc(m.name)}">${t('שחזר…')}</button><button data-del="${esc(m.name)}" title="${t('מחק')}">✕</button></div>`).join('')
     : `<span class="hint" style="padding:0">${t('אין עדיין גיבויים.')}</span>`;
   const draw = () => {
     const s = i.settings;
     $('#bk-status').textContent = status();
+    $('#bk-cover').textContent = coverage(); $('#bk-cover').classList.toggle('warn', !s.include_media);
     $('#bk-on').checked = s.enabled; $('#bk-int').value = String(s.interval_hours); $('#bk-keep').value = s.keep; $('#bk-media').checked = s.include_media;
     $('#bk-folder').value = i.folder; $('#bk-list').innerHTML = rows();
     $('#bk-int').disabled = $('#bk-keep').disabled = !s.enabled;
   };
   modal(`<h3>${t('גיבוי ושחזור')}</h3><div class="mb bk">
     <div class="bk-status" id="bk-status"></div>
+    <div class="bk-cover" id="bk-cover"></div>
     <label class="chkrow"><input type="checkbox" id="bk-on"> ${t('גיבוי אוטומטי של הקטלוג וההגדרות')}</label>
     <div class="two"><label class="fld"><span>${t('תדירות')}</span><select id="bk-int">${INTERVALS.map(([h, l]) => `<option value="${h}">${l}</option>`).join('')}</select></label>
       <label class="fld"><span>${t('כמה גיבויים לשמור')}</span><input type="number" id="bk-keep" min="3" max="200" dir="ltr"></label></div>

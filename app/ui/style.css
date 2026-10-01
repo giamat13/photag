@@ -596,6 +596,8 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 .cmp-rows{max-height:46vh;overflow:auto}
 .bk{display:flex;flex-direction:column;gap:10px;min-width:460px}
 .bk-status{color:#fff}
+.bk-cover{padding:8px 12px;background:#2a2a2a;border:1px solid #1e1e1e;border-radius:3px;color:var(--t2)}
+.bk-cover.warn{border-color:var(--yellow);color:var(--yellow)}
 .chkrow{display:flex;align-items:center;gap:8px}.chkrow.off{opacity:.5}
 .bk-path{display:flex;gap:6px}.bk-path input{flex:1;min-width:0}
 .bk-list{max-height:30vh;overflow:auto;border:1px solid #1e1e1e;background:#2a2a2a;border-radius:3px;padding:4px 8px}

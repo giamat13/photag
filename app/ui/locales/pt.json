@@ -705,7 +705,6 @@
  "ידני": "Manual",
  "יש גרסה קודמת של התמונה בגיבויים.": "Há uma versão anterior desta imagem nos backups.",
  "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב": "Há outra tarefa em execução. Aguarde ela terminar e tente novamente",
- "כולל קבצים": "Inclui arquivos",
  "כל 12 שעות": "A cada 12 horas",
  "כל 3 ימים": "A cada 3 dias",
  "כל 30 יום": "A cada 30 dias",
@@ -744,5 +743,9 @@
  "תדירות": "Frequência",
  "תיקיית הגיבויים (עדיף דיסק אחר)": "Pasta de backups (de preferência em outro disco)",
  "תמונה זהה לתוצאה כבר קיימת בספרייה, הקובץ המקורי לא שונה": "Já existe na biblioteca uma imagem idêntica ao resultado; o arquivo original não foi alterado",
- "תמונה מונפשת לא נתמכת לדחיסה": "Imagens animadas não são compatíveis com a compressão"
+ "תמונה מונפשת לא נתמכת לדחיסה": "Imagens animadas não são compatíveis com a compressão",
+ "הגיבוי כולל את הקטלוג וגם את כל התמונות והסרטונים ({0}). גודל תיקיית הגיבויים: {1} (מזה קבצי המדיה {2}); דיסק הגיבוי פנוי: {3}.": "O backup inclui o catálogo e também todas as fotos e vídeos ({0}). Tamanho da pasta de backups: {1} (dos quais {2} são arquivos de mídia); espaço livre no disco de backup: {3}.",
+ "כולל תמונות וסרטונים": "Inclui fotos e vídeos",
+ "קטלוג בלבד": "Somente o catálogo",
+ "שימו לב: הגיבוי כולל כרגע רק את הקטלוג (תיוגים, אלבומים, דירוגים) ולא את התמונות והסרטונים עצמם, ולכן הוא קטן. סמנו «לגבות גם את קבצי התמונות והסרטונים» כדי לגבות הכול.": "Atenção: o backup inclui atualmente apenas o catálogo (tags, álbuns, avaliações) e não as fotos e vídeos em si, por isso é pequeno. Marque «Fazer backup também dos arquivos de fotos e vídeos» para fazer backup de tudo."
 }
