@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "앱이 닫혀 있어도 백업이 실행됩니다. Windows 작업이 매시간 및 로그인할 때마다 확인하고, 놓친 실행을 보충하며, 낮은 우선순위로 백그라운드에서 실행되고, 끝나면 즉시 종료됩니다. 또한 앱이 열려 있을 때는 앱 자체도 확인합니다.",
  "The previous version was restored automatically.": "이전 버전이 자동으로 복원되었습니다.",
  "The previous version was left in place and works as usual.": "이전 버전이 그대로 남아 있으며 정상적으로 작동합니다.",
- "The previous version was saved in the backups": "이전 버전이 백업에 저장되었습니다",
  "This version will be skipped. You can always check manually in the Help menu.": "이 버전은 건너뜁니다. 도움말 메뉴에서 언제든지 직접 확인할 수 있습니다.",
  "Compression was cancelled": "압축이 취소되었습니다",
  "The compression was not applied. The original file was not changed.": "압축이 적용되지 않았습니다. 원본 파일은 변경되지 않았습니다.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "AI 제공업체 오류: {error}",
  "Error: ": "오류: ",
  "{0} items restored": "항목 {0}개를 복원했습니다",
- "Saving backup and replacing the file…": "백업을 저장하고 파일을 교체하는 중…",
  "Black & White": "흑백",
  "High-Contrast Black & White": "고대비 흑백",
  "Restore from backup": "백업에서 복원",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0}개 항목이 파일과 함께 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
  "{0} items deleted permanently": "{0}개 항목을 영구 삭제했습니다",
  "Empty the trash": "휴지통 비우기",
- "Date in Trash": "휴지통으로 이동한 날짜"
+ "Date in Trash": "휴지통으로 이동한 날짜",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "이 백업 이후 변경된 파일(예: 압축한 사진과 동영상)도 백업의 버전으로 바꾸기",
+ "Before compression": "압축 전",
+ "Could not make a backup before compressing ({error}); nothing was changed": "압축 전에 백업을 만들지 못했습니다({error}). 아무것도 변경되지 않았습니다",
+ "Making a backup first…": "먼저 백업을 만드는 중…",
+ "Replacing the file…": "파일을 바꾸는 중…",
+ "The previous version is in the backup made before compressing": "이전 버전은 압축 전에 만든 백업에 있습니다"
 }

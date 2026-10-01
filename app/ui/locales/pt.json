@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "O backup também roda com o aplicativo fechado: uma tarefa do Windows verifica a cada hora e a cada início de sessão, completa uma execução perdida, roda em segundo plano com prioridade baixa e se encerra assim que termina. Além disso, o próprio aplicativo verifica enquanto está aberto.",
  "The previous version was restored automatically.": "A versão anterior foi restaurada automaticamente.",
  "The previous version was left in place and works as usual.": "A versão anterior ficou no lugar e funciona normalmente.",
- "The previous version was saved in the backups": "A versão anterior foi salva nos backups",
  "This version will be skipped. You can always check manually in the Help menu.": "Esta versão será ignorada. Você sempre pode verificar manualmente no menu Ajuda.",
  "Compression was cancelled": "A compressão foi cancelada",
  "The compression was not applied. The original file was not changed.": "A compressão não foi aplicada. O arquivo original não foi alterado.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "Erro do provedor de IA: {error}",
  "Error: ": "Erro: ",
  "{0} items restored": "{0} itens restaurados",
- "Saving backup and replacing the file…": "A guardar o backup e a substituir o ficheiro…",
  "Black & White": "Preto e branco",
  "High-Contrast Black & White": "Preto e branco de alto contraste",
  "Restore from backup": "Restaurar de um backup",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} itens serão excluídos permanentemente, junto com os arquivos. Isso não pode ser desfeito.",
  "{0} items deleted permanently": "{0} itens excluídos permanentemente",
  "Empty the trash": "Esvaziar a lixeira",
- "Date in Trash": "Data na lixeira"
+ "Date in Trash": "Data na lixeira",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Substituir também os arquivos alterados desde este backup (por exemplo, fotos e vídeos comprimidos) pelas versões do backup",
+ "Before compression": "Antes da compressão",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Não foi possível fazer um backup antes de comprimir ({error}); nada foi alterado",
+ "Making a backup first…": "Fazendo um backup primeiro…",
+ "Replacing the file…": "Substituindo o arquivo…",
+ "The previous version is in the backup made before compressing": "A versão anterior está no backup feito antes da compressão"
 }

@@ -22,7 +22,7 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          for t in test_import_stats test_takeout_parts test_update_rollback test_server_security test_port_instance test_library_default test_backup_media_sets test_trash_menu; do
+          for t in test_import_stats test_takeout_parts test_update_rollback test_server_security test_port_instance test_library_default test_backup_media_sets test_trash_menu test_compress_backup; do
             echo "=== $t"; python tools/$t.py || exit 1
           done
       - name: UI smoke test (Edge)

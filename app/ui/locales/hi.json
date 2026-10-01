@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "ऐप बंद होने पर भी बैकअप चलता है: एक Windows टास्क हर घंटे और हर साइन-इन पर जाँच करता है, छूटा हुआ रन पूरा करता है, कम प्राथमिकता से बैकग्राउंड में चलता है और पूरा होते ही बंद हो जाता है। इसके अलावा ऐप खुला होने पर वह खुद भी जाँच करता है।",
  "The previous version was restored automatically.": "पिछला संस्करण अपने आप बहाल कर दिया गया।",
  "The previous version was left in place and works as usual.": "पिछला संस्करण अपनी जगह पर रहा और सामान्य रूप से काम कर रहा है।",
- "The previous version was saved in the backups": "पिछला संस्करण बैकअप में सहेजा गया",
  "This version will be skipped. You can always check manually in the Help menu.": "इस संस्करण को छोड़ दिया जाएगा। आप हमेशा सहायता मेनू से मैन्युअल रूप से जाँच सकते हैं।",
  "Compression was cancelled": "कंप्रेशन रद्द किया गया",
  "The compression was not applied. The original file was not changed.": "कंप्रेशन लागू नहीं हुआ। मूल फ़ाइल में कोई बदलाव नहीं हुआ।",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "AI प्रदाता से त्रुटि: {error}",
  "Error: ": "त्रुटि: ",
  "{0} items restored": "{0} आइटम पुनर्स्थापित किए गए",
- "Saving backup and replacing the file…": "बैकअप सहेजा जा रहा है और फ़ाइल बदली जा रही है…",
  "Black & White": "श्वेत-श्याम",
  "High-Contrast Black & White": "उच्च कंट्रास्ट श्वेत-श्याम",
  "Restore from backup": "बैकअप से बहाल करें",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} आइटम उनकी फ़ाइलों सहित हमेशा के लिए हटा दिए जाएँगे। इसे पूर्ववत नहीं किया जा सकता।",
  "{0} items deleted permanently": "{0} आइटम हमेशा के लिए हटाए गए",
  "Empty the trash": "ट्रैश खाली करें",
- "Date in Trash": "ट्रैश में डालने की तिथि"
+ "Date in Trash": "ट्रैश में डालने की तिथि",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "इस बैकअप के बाद बदली गई फ़ाइलों (जैसे कंप्रेस की गई फ़ोटो और वीडियो) को भी बैकअप के संस्करणों से बदलें",
+ "Before compression": "कंप्रेस करने से पहले",
+ "Could not make a backup before compressing ({error}); nothing was changed": "कंप्रेस करने से पहले बैकअप नहीं बन सका ({error}); कुछ भी नहीं बदला",
+ "Making a backup first…": "पहले बैकअप बनाया जा रहा है…",
+ "Replacing the file…": "फ़ाइल बदली जा रही है…",
+ "The previous version is in the backup made before compressing": "पिछला संस्करण कंप्रेस करने से पहले बने बैकअप में है"
 }

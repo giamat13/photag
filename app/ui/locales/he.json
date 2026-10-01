@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "הגיבוי רץ גם כשהאפליקציה סגורה: משימת Windows בודקת כל שעה ובכל כניסה למחשב, משלימה ריצה שהוחמצה, רצה ברקע בעדיפות נמוכה ונסגרת מיד בסיום. בנוסף האפליקציה עצמה בודקת כשהיא פתוחה.",
  "The previous version was restored automatically.": "הגרסה הקודמת הוחזרה אוטומטית.",
  "The previous version was left in place and works as usual.": "הגרסה הקודמת נשארה במקומה ועובדת כרגיל.",
- "The previous version was saved in the backups": "הגרסה הקודמת נשמרה בגיבויים",
  "This version will be skipped. You can always check manually in the Help menu.": "הגרסה תידלג. אפשר תמיד לבדוק ידנית בתפריט עזרה.",
  "Compression was cancelled": "הדחיסה בוטלה",
  "The compression was not applied. The original file was not changed.": "הדחיסה לא הוחלה. הקובץ המקורי לא שונה.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "שגיאה מספק ה‑AI: {error}",
  "Error: ": "שגיאה: ",
  "{0} items restored": "שוחזרו {0} פריטים",
- "Saving backup and replacing the file…": "שומר גיבוי ומחליף את הקובץ…",
  "Black & White": "שחור-לבן",
  "High-Contrast Black & White": "שחור-לבן בניגודיות גבוהה",
  "Restore from backup": "שחזור מגיבוי",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} פריטים יימחקו לצמיתות יחד עם הקבצים שלהם. אי אפשר לבטל את זה.",
  "{0} items deleted permanently": "{0} פריטים נמחקו לצמיתות",
  "Empty the trash": "רוקן את הפח",
- "Date in Trash": "תאריך הכנסה לפח"
+ "Date in Trash": "תאריך הכנסה לפח",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "החלף גם קבצים ששונו מאז הגיבוי הזה (למשל תמונות וסרטונים שנדחסו) בגרסאות מהגיבוי",
+ "Before compression": "לפני דחיסה",
+ "Could not make a backup before compressing ({error}); nothing was changed": "לא הצלחתי ליצור גיבוי לפני הדחיסה ({error}); שום דבר לא שונה",
+ "Making a backup first…": "יוצר קודם גיבוי…",
+ "Replacing the file…": "מחליף את הקובץ…",
+ "The previous version is in the backup made before compressing": "הגרסה הקודמת נמצאת בגיבוי שנעשה לפני הדחיסה"
 }

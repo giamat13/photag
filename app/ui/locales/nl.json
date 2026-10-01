@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "De back-up draait ook als de app gesloten is: een Windows-taak controleert elk uur en bij elke aanmelding, haalt een gemiste run in, draait op de achtergrond met lage prioriteit en sluit direct na afloop af. Daarnaast controleert de app zelf terwijl hij geopend is.",
  "The previous version was restored automatically.": "De vorige versie is automatisch hersteld.",
  "The previous version was left in place and works as usual.": "De vorige versie is blijven staan en werkt zoals gewoonlijk.",
- "The previous version was saved in the backups": "De vorige versie is opgeslagen in de back-ups",
  "This version will be skipped. You can always check manually in the Help menu.": "Deze versie wordt overgeslagen. U kunt altijd handmatig controleren via het menu Help.",
  "Compression was cancelled": "De compressie is geannuleerd",
  "The compression was not applied. The original file was not changed.": "De compressie is niet toegepast. Het originele bestand is niet gewijzigd.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "Fout van de AI-provider: {error}",
  "Error: ": "Fout: ",
  "{0} items restored": "{0} items hersteld",
- "Saving backup and replacing the file…": "Back-up opslaan en bestand vervangen…",
  "Black & White": "Zwart-wit",
  "High-Contrast Black & White": "Zwart-wit met hoog contrast",
  "Restore from backup": "Herstellen vanaf back-up",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} items worden samen met hun bestanden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.",
  "{0} items deleted permanently": "{0} items definitief verwijderd",
  "Empty the trash": "Prullenbak legen",
- "Date in Trash": "Datum in prullenbak"
+ "Date in Trash": "Datum in prullenbak",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Ook bestanden vervangen die sinds deze back-up zijn gewijzigd (bijvoorbeeld gecomprimeerde foto’s en video’s) door de versies uit de back-up",
+ "Before compression": "Vóór het comprimeren",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Kon geen back-up maken vóór het comprimeren ({error}); er is niets gewijzigd",
+ "Making a backup first…": "Eerst een back-up maken…",
+ "Replacing the file…": "Bestand vervangen…",
+ "The previous version is in the backup made before compressing": "De vorige versie staat in de back-up die vóór het comprimeren is gemaakt"
 }

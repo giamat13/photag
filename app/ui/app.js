@@ -1806,7 +1806,7 @@ const fdt = ts => new Date(ts * 1000).toLocaleString(I18N.locale || undefined, {
 async function backupDialog(){
   let i = await api('/api/backup');
   const INTERVALS = [[1, t('Every hour')], [6, t('Every 6 hours')], [12, t('Every 12 hours')], [24, t('Every day')], [72, t('Every 3 days')], [168, t('Every week')], [720, t('Every 30 days')]];
-  const REASON = () => ({auto: t('Automatic'), manual: t('Manual'), 'before-restore': t('Before restore'), 'before-update': t('Before update')});
+  const REASON = () => ({auto: t('Automatic'), manual: t('Manual'), 'before-restore': t('Before restore'), 'before-update': t('Before update'), 'before-compress': t('Before compression')});
   const status = () => {
     const s = i.settings, last = i.last ? t('Last backup: {0}', [ltr(fdt(i.last))]) : t('No backup yet');
     const next = !s.enabled ? t('Automatic backup is off') : t('Next backup: {0}', [ltr(fdt(Math.max(i.next, Date.now() / 1000)))]);
@@ -1882,11 +1882,12 @@ function backupRestoreDialog(m, i){
     <p>${t('The catalog (tags, albums, ratings, people and edits) will be restored to its state from {0}: {1} photos.', [ltr(fdt(m.created)), num(m.photos)])}</p>
     <p>${t('A backup of the current state is saved before restoring, so you can undo the restore. Photo files are never deleted by a restore.')}</p>
     <label class="chkrow ${canMedia ? '' : 'off'}"><input type="checkbox" id="rs-media" ${canMedia ? 'checked' : 'disabled'}> ${t('Also restore image files missing from the folder (from the backup)')}</label>
+    <label class="chkrow ${canMedia ? '' : 'off'}"><input type="checkbox" id="rs-over" ${canMedia ? '' : 'disabled'}> ${t('Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup')}</label>
     <label class="chkrow"><input type="checkbox" id="rs-set"> ${t('Also restore AI settings and the HandBrake path')}</label>
   </div><div class="mf"><button id="rs-cancel">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="rs-go">${t('Restore')}</button></div>`);
   $('#rs-cancel').onclick = () => backupDialog();
   $('#rs-go').onclick = async () => {
-    const body = {name: m.name, media: canMedia && $('#rs-media').checked, settings: $('#rs-set').checked};
+    const body = {name: m.name, media: canMedia && $('#rs-media').checked, settings: $('#rs-set').checked, overwrite: canMedia && $('#rs-media').checked && $('#rs-over').checked};
     closeModal();
     try{ await send('POST', '/api/backup/restore', body); pollJob('backup', t('Restore from backup')); } catch(e){ toast(e.message); }
   };

@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "Резервное копирование работает и при закрытом приложении: задача Windows проверяет каждый час и при каждом входе в систему, выполняет пропущенный запуск, работает в фоне с низким приоритетом и сразу завершается. Кроме того, приложение само проверяет, пока оно открыто.",
  "The previous version was restored automatically.": "Предыдущая версия восстановлена автоматически.",
  "The previous version was left in place and works as usual.": "Предыдущая версия осталась на месте и работает как обычно.",
- "The previous version was saved in the backups": "Предыдущая версия сохранена в резервных копиях",
  "This version will be skipped. You can always check manually in the Help menu.": "Эта версия будет пропущена. Вы всегда можете проверить вручную в меню «Справка».",
  "Compression was cancelled": "Сжатие отменено",
  "The compression was not applied. The original file was not changed.": "Сжатие не применено. Исходный файл не изменён.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "Ошибка провайдера ИИ: {error}",
  "Error: ": "Ошибка: ",
  "{0} items restored": "Восстановлено элементов: {0}",
- "Saving backup and replacing the file…": "Сохранение резервной копии и замена файла…",
  "Black & White": "Чёрно-белый",
  "High-Contrast Black & White": "Чёрно-белый с высоким контрастом",
  "Restore from backup": "Восстановление из копии",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "Элементов: {0} будет удалено навсегда вместе с файлами. Это нельзя отменить.",
  "{0} items deleted permanently": "Удалено навсегда: {0}",
  "Empty the trash": "Очистить корзину",
- "Date in Trash": "Дата помещения в корзину"
+ "Date in Trash": "Дата помещения в корзину",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Также заменить файлы, изменённые после этой копии (например, сжатые фото и видео), версиями из копии",
+ "Before compression": "Перед сжатием",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Не удалось создать резервную копию перед сжатием ({error}); ничего не изменено",
+ "Making a backup first…": "Сначала создаётся резервная копия…",
+ "Replacing the file…": "Замена файла…",
+ "The previous version is in the backup made before compressing": "Предыдущая версия находится в копии, сделанной перед сжатием"
 }

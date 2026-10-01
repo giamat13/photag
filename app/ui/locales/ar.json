@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "يعمل النسخ الاحتياطي أيضًا والتطبيق مغلق: مهمة Windows تفحص كل ساعة وعند كل تسجيل دخول إلى الجهاز، وتستكمل أي تشغيل فائت، وتعمل في الخلفية بأولوية منخفضة وتُغلق فور الانتهاء. كما يفحص التطبيق نفسه أثناء فتحه.",
  "The previous version was restored automatically.": "تمت استعادة الإصدار السابق تلقائيًا.",
  "The previous version was left in place and works as usual.": "بقي الإصدار السابق في مكانه ويعمل كالمعتاد.",
- "The previous version was saved in the backups": "تم حفظ النسخة السابقة في النسخ الاحتياطية",
  "This version will be skipped. You can always check manually in the Help menu.": "سيتم تخطي هذا الإصدار. يمكنك دائمًا التحقق يدويًا من قائمة المساعدة.",
  "Compression was cancelled": "تم إلغاء الضغط",
  "The compression was not applied. The original file was not changed.": "لم يُطبَّق الضغط. لم يتغير الملف الأصلي.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "خطأ من مزوّد AI: {error}",
  "Error: ": "خطأ: ",
  "{0} items restored": "تمت استعادة {0} عنصرًا",
- "Saving backup and replacing the file…": "جارٍ حفظ نسخة احتياطية واستبدال الملف…",
  "Black & White": "أبيض وأسود",
  "High-Contrast Black & White": "أبيض وأسود عالي التباين",
  "Restore from backup": "استعادة من نسخة احتياطية",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "سيتم حذف {0} عنصر نهائيًا مع ملفاتها. لا يمكن التراجع عن ذلك.",
  "{0} items deleted permanently": "تم حذف {0} عنصر نهائيًا",
  "Empty the trash": "إفراغ سلة المهملات",
- "Date in Trash": "تاريخ الحذف"
+ "Date in Trash": "تاريخ الحذف",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "استبدل أيضًا الملفات التي تغيّرت منذ هذه النسخة الاحتياطية (مثل الصور ومقاطع الفيديو المضغوطة) بالإصدارات الموجودة في النسخة الاحتياطية",
+ "Before compression": "قبل الضغط",
+ "Could not make a backup before compressing ({error}); nothing was changed": "تعذّر إنشاء نسخة احتياطية قبل الضغط ({error})؛ لم يتغيّر أي شيء",
+ "Making a backup first…": "جارٍ إنشاء نسخة احتياطية أولًا…",
+ "Replacing the file…": "جارٍ استبدال الملف…",
+ "The previous version is in the backup made before compressing": "الإصدار السابق موجود في النسخة الاحتياطية التي أُنشئت قبل الضغط"
 }

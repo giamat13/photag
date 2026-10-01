@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "Резервне копіювання працює і при закритій програмі: завдання Windows перевіряє щогодини та при кожному вході в систему, виконує пропущений запуск, працює у фоні з низьким пріоритетом і негайно завершується. Крім того, сама програма перевіряє, поки вона відкрита.",
  "The previous version was restored automatically.": "Попередню версію відновлено автоматично.",
  "The previous version was left in place and works as usual.": "Попередня версія залишилася на місці й працює як зазвичай.",
- "The previous version was saved in the backups": "Попередню версію збережено в резервних копіях",
  "This version will be skipped. You can always check manually in the Help menu.": "Цю версію буде пропущено. Ви завжди можете перевірити вручну в меню «Довідка».",
  "Compression was cancelled": "Стиснення скасовано",
  "The compression was not applied. The original file was not changed.": "Стиснення не застосовано. Вихідний файл не змінено.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "Помилка провайдера ШІ: {error}",
  "Error: ": "Помилка: ",
  "{0} items restored": "Відновлено елементів: {0}",
- "Saving backup and replacing the file…": "Збереження резервної копії та заміна файлу…",
  "Black & White": "Чорно-білий",
  "High-Contrast Black & White": "Чорно-білий з високим контрастом",
  "Restore from backup": "Відновлення з копії",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "Елементів: {0} буде видалено назавжди разом з файлами. Це не можна скасувати.",
  "{0} items deleted permanently": "Видалено назавжди: {0}",
  "Empty the trash": "Очистити кошик",
- "Date in Trash": "Дата переміщення в кошик"
+ "Date in Trash": "Дата переміщення в кошик",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Також замінити файли, змінені після цієї копії (наприклад, стиснуті фото та відео), версіями з копії",
+ "Before compression": "Перед стисненням",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Не вдалося створити резервну копію перед стисненням ({error}); нічого не змінено",
+ "Making a backup first…": "Спочатку створюється резервна копія…",
+ "Replacing the file…": "Заміна файлу…",
+ "The previous version is in the backup made before compressing": "Попередня версія є в копії, створеній перед стисненням"
 }

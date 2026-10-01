@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "应用关闭时备份也会运行：一个 Windows 任务会每小时以及每次登录时检查，补上错过的运行，以低优先级在后台运行，并在完成后立即退出。此外，应用打开时自身也会检查。",
  "The previous version was restored automatically.": "已自动恢复到上一版本。",
  "The previous version was left in place and works as usual.": "上一版本保持原样，可正常使用。",
- "The previous version was saved in the backups": "上一版本已保存到备份中",
  "This version will be skipped. You can always check manually in the Help menu.": "将跳过此版本。您随时可以在“帮助”菜单中手动检查。",
  "Compression was cancelled": "压缩已取消",
  "The compression was not applied. The original file was not changed.": "压缩未应用。原始文件未被更改。",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "AI 提供商返回错误：{error}",
  "Error: ": "错误： ",
  "{0} items restored": "已恢复 {0} 个项目",
- "Saving backup and replacing the file…": "正在保存备份并替换文件…",
  "Black & White": "黑白",
  "High-Contrast Black & White": "高对比度黑白",
  "Restore from backup": "从备份恢复",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} 个项目及其文件将被永久删除。此操作无法撤销。",
  "{0} items deleted permanently": "已永久删除 {0} 个项目",
  "Empty the trash": "清空回收站",
- "Date in Trash": "移入回收站的日期"
+ "Date in Trash": "移入回收站的日期",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "同时将自此备份以来已更改的文件（例如已压缩的照片和视频）替换为备份中的版本",
+ "Before compression": "压缩前",
+ "Could not make a backup before compressing ({error}); nothing was changed": "压缩前无法创建备份（{error}）；未做任何更改",
+ "Making a backup first…": "正在先创建备份…",
+ "Replacing the file…": "正在替换文件…",
+ "The previous version is in the backup made before compressing": "之前的版本在压缩前创建的备份中"
 }

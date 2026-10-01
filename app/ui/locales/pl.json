@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "Kopia zapasowa działa także przy zamkniętej aplikacji: zadanie systemu Windows sprawdza co godzinę i przy każdym logowaniu, nadrabia pominięte uruchomienie, działa w tle z niskim priorytetem i kończy się zaraz po zakończeniu. Dodatkowo sama aplikacja sprawdza, gdy jest otwarta.",
  "The previous version was restored automatically.": "Poprzednia wersja została przywrócona automatycznie.",
  "The previous version was left in place and works as usual.": "Poprzednia wersja pozostała na miejscu i działa jak zwykle.",
- "The previous version was saved in the backups": "Poprzednia wersja została zapisana w kopiach zapasowych",
  "This version will be skipped. You can always check manually in the Help menu.": "Ta wersja zostanie pominięta. Zawsze możesz sprawdzić ręcznie w menu Pomoc.",
  "Compression was cancelled": "Kompresja została anulowana",
  "The compression was not applied. The original file was not changed.": "Kompresja nie została zastosowana. Plik oryginalny nie został zmieniony.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "Błąd dostawcy AI: {error}",
  "Error: ": "Błąd: ",
  "{0} items restored": "Przywrócono {0} elementów",
- "Saving backup and replacing the file…": "Zapisywanie kopii zapasowej i zastępowanie pliku…",
  "Black & White": "Czarno-biały",
  "High-Contrast Black & White": "Czarno-biały o wysokim kontraście",
  "Restore from backup": "Przywróć z kopii zapasowej",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "Elementy ({0}) zostaną usunięte na stałe wraz z plikami. Tej operacji nie można cofnąć.",
  "{0} items deleted permanently": "Usunięto na stałe: {0}",
  "Empty the trash": "Opróżnij kosz",
- "Date in Trash": "Data przeniesienia do kosza"
+ "Date in Trash": "Data przeniesienia do kosza",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Zastąp też pliki zmienione od tej kopii (np. skompresowane zdjęcia i filmy) wersjami z kopii zapasowej",
+ "Before compression": "Przed kompresją",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Nie udało się utworzyć kopii zapasowej przed kompresją ({error}); nic nie zmieniono",
+ "Making a backup first…": "Najpierw tworzę kopię zapasową…",
+ "Replacing the file…": "Zastępowanie pliku…",
+ "The previous version is in the backup made before compressing": "Poprzednia wersja jest w kopii zapasowej utworzonej przed kompresją"
 }

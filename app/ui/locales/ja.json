@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "アプリを閉じていてもバックアップは実行されます。Windows のタスクが 1 時間ごと、およびサインインのたびに確認し、実行されなかった分を補い、低い優先度でバックグラウンド実行し、完了するとすぐに終了します。さらに、アプリ自体も開いている間は確認します。",
  "The previous version was restored automatically.": "以前のバージョンが自動的に復元されました。",
  "The previous version was left in place and works as usual.": "以前のバージョンはそのまま残り、通常どおり動作します。",
- "The previous version was saved in the backups": "以前のバージョンはバックアップに保存されました",
  "This version will be skipped. You can always check manually in the Help menu.": "このバージョンはスキップされます。ヘルプメニューからいつでも手動で確認できます。",
  "Compression was cancelled": "圧縮がキャンセルされました",
  "The compression was not applied. The original file was not changed.": "圧縮は適用されませんでした。元のファイルは変更されていません。",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "AI プロバイダーからのエラー：{error}",
  "Error: ": "エラー： ",
  "{0} items restored": "{0} 項目を復元しました",
- "Saving backup and replacing the file…": "バックアップを保存してファイルを置き換えています…",
  "Black & White": "白黒",
  "High-Contrast Black & White": "ハイコントラスト白黒",
  "Restore from backup": "バックアップから復元",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} 個の項目をファイルごと完全に削除します。この操作は元に戻せません。",
  "{0} items deleted permanently": "{0} 個の項目を完全に削除しました",
  "Empty the trash": "ごみ箱を空にする",
- "Date in Trash": "ごみ箱に入れた日"
+ "Date in Trash": "ごみ箱に入れた日",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "このバックアップ以降に変更されたファイル（圧縮した写真や動画など）も、バックアップ内のバージョンに置き換える",
+ "Before compression": "圧縮前",
+ "Could not make a backup before compressing ({error}); nothing was changed": "圧縮前のバックアップを作成できませんでした（{error}）。何も変更されていません",
+ "Making a backup first…": "まずバックアップを作成しています…",
+ "Replacing the file…": "ファイルを置き換えています…",
+ "The previous version is in the backup made before compressing": "以前のバージョンは、圧縮前に作成したバックアップにあります"
 }

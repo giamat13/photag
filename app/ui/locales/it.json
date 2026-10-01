@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "Il backup viene eseguito anche quando l'app è chiusa: un'attività di Windows controlla ogni ora e a ogni accesso, recupera un'esecuzione saltata, gira in background con priorità bassa e si chiude subito al termine. Inoltre l'app stessa controlla mentre è aperta.",
  "The previous version was restored automatically.": "La versione precedente è stata ripristinata automaticamente.",
  "The previous version was left in place and works as usual.": "La versione precedente è rimasta al suo posto e funziona normalmente.",
- "The previous version was saved in the backups": "La versione precedente è stata salvata nei backup",
  "This version will be skipped. You can always check manually in the Help menu.": "Questa versione verrà saltata. Puoi sempre controllare manualmente dal menu Aiuto.",
  "Compression was cancelled": "La compressione è stata annullata",
  "The compression was not applied. The original file was not changed.": "La compressione non è stata applicata. Il file originale non è stato modificato.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "Errore dal provider IA: {error}",
  "Error: ": "Errore: ",
  "{0} items restored": "{0} elementi ripristinati",
- "Saving backup and replacing the file…": "Salvataggio del backup e sostituzione del file…",
  "Black & White": "Bianco e nero",
  "High-Contrast Black & White": "Bianco e nero ad alto contrasto",
  "Restore from backup": "Ripristina da backup",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} elementi verranno eliminati definitivamente insieme ai loro file. Non si può annullare.",
  "{0} items deleted permanently": "{0} elementi eliminati definitivamente",
  "Empty the trash": "Svuota il cestino",
- "Date in Trash": "Data di eliminazione"
+ "Date in Trash": "Data di eliminazione",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Sostituisci anche i file modificati dopo questo backup (ad esempio foto e video compressi) con le versioni del backup",
+ "Before compression": "Prima della compressione",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Impossibile creare un backup prima della compressione ({error}); non è stato modificato nulla",
+ "Making a backup first…": "Prima creo un backup…",
+ "Replacing the file…": "Sostituzione del file…",
+ "The previous version is in the backup made before compressing": "La versione precedente è nel backup fatto prima della compressione"
 }

@@ -250,6 +250,7 @@ class RestoreIn(BaseModel):
     name: str
     media: bool = False
     settings: bool = False
+    overwrite: bool = False
 
 
 @app.get("/api/backup")
@@ -290,7 +291,7 @@ def backup_restore(body: RestoreIn):
         raise err(409, "Another task is currently running. Wait for it to finish and try again")
     if not backup.NAME_RE.match(body.name) or not (backup.backup_dir() / body.name).is_file():
         raise err(404, "Backup not found")
-    _start("backup", backup.run_restore, body.name, body.media, body.settings)
+    _start("backup", backup.run_restore, body.name, body.media, body.settings, body.overwrite)
     return {"ok": True}
 
 

@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "La sauvegarde s'exécute aussi lorsque l'application est fermée : une tâche Windows vérifie toutes les heures et à chaque ouverture de session, rattrape une exécution manquée, s'exécute en arrière-plan avec une priorité basse et se ferme dès qu'elle a terminé. L'application vérifie aussi elle-même lorsqu'elle est ouverte.",
  "The previous version was restored automatically.": "La version précédente a été restaurée automatiquement.",
  "The previous version was left in place and works as usual.": "La version précédente est restée en place et fonctionne normalement.",
- "The previous version was saved in the backups": "La version précédente a été enregistrée dans les sauvegardes",
  "This version will be skipped. You can always check manually in the Help menu.": "Cette version sera ignorée. Vous pouvez toujours vérifier manuellement dans le menu Aide.",
  "Compression was cancelled": "La compression a été annulée",
  "The compression was not applied. The original file was not changed.": "La compression n’a pas été appliquée. Le fichier d’origine n’a pas été modifié.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "Erreur du fournisseur d'IA : {error}",
  "Error: ": "Erreur : ",
  "{0} items restored": "{0} éléments restaurés",
- "Saving backup and replacing the file…": "Enregistrement de la sauvegarde et remplacement du fichier…",
  "Black & White": "Noir et blanc",
  "High-Contrast Black & White": "Noir et blanc très contrasté",
  "Restore from backup": "Restaurer depuis une sauvegarde",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} éléments seront supprimés définitivement avec leurs fichiers. Cette action est irréversible.",
  "{0} items deleted permanently": "{0} éléments supprimés définitivement",
  "Empty the trash": "Vider la corbeille",
- "Date in Trash": "Date de mise à la corbeille"
+ "Date in Trash": "Date de mise à la corbeille",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Remplacer aussi les fichiers modifiés depuis cette sauvegarde (par exemple des photos et vidéos compressées) par les versions de la sauvegarde",
+ "Before compression": "Avant la compression",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Impossible de faire une sauvegarde avant la compression ({error}) ; rien n’a été modifié",
+ "Making a backup first…": "Sauvegarde préalable en cours…",
+ "Replacing the file…": "Remplacement du fichier…",
+ "The previous version is in the backup made before compressing": "La version précédente se trouve dans la sauvegarde faite avant la compression"
 }

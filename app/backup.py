@@ -35,10 +35,11 @@ from .config import PATHS
 from .version import __version__
 
 DEFAULTS = {"enabled": True, "interval_hours": 24, "keep": 10, "include_media": True, "folder": None}
-REASONS = ("auto", "manual", "before-restore", "before-update")
-NAME_RE = re.compile(r"^photag-\d{8}-\d{6}-(auto|manual|before-restore|before-update)(-\d+)?\.zip$")
+REASONS = ("auto", "manual", "before-restore", "before-update", "before-compress")
+NAME_RE = re.compile(r"^photag-\d{8}-\d{6}-(auto|manual|before-restore|before-update|before-compress)(-\d+)?\.zip$")
 MIRROR = "media-mirror"
 KEEP_MIN, KEEP_MAX = 3, 200
+MAX_SAFETY = 3                   # backups made automatically before a restore / update / compression: this many of each kind are kept
 
 
 # ------------------------------------------------------------------ settings
@@ -366,10 +367,10 @@ def _lock() -> Path:
     raise BusyError()
 
 
-def create_snapshot(reason: str = "manual", progress=None) -> dict:
+def create_snapshot(reason: str = "manual", progress=None, force_media: bool = False) -> dict:
     lock = _lock()
     try:
-        return _create_snapshot(reason, progress)
+        return _create_snapshot(reason, progress, force_media)
     finally:
         lock.unlink(missing_ok=True)
 
@@ -428,7 +429,7 @@ def health(now: float | None = None) -> dict:
             "last_error": st.get("last_error"), "fail_count": st.get("fail_count", 0), "task": backup_task.status()}
 
 
-def _create_snapshot(reason: str = "manual", progress=None) -> dict:
+def _create_snapshot(reason: str = "manual", progress=None, force_media: bool = False) -> dict:
     if reason not in REASONS:
         raise ValueError(reason)
     s = get_settings()
@@ -462,7 +463,8 @@ def _create_snapshot(reason: str = "manual", progress=None) -> dict:
             raise RuntimeError(f"integrity_check: {ok}")
         settings = {k: v for k, v in config.read_all().items() if k not in ("library_root", "update_skipped", "backup")}
         media, mdir, mpart = None, None, None
-        if s["include_media"] and reason in ("auto", "manual"):
+        # a backup taken before compressing always holds the photo files (that is what makes the compression undoable)
+        if (s["include_media"] and reason in ("auto", "manual")) or force_media or reason == "before-compress":
             if progress: progress.say("Copying photo files…")
             mdir = media_dir_name(final.name)
             mpart = d / (mdir + ".part")
@@ -493,10 +495,12 @@ def _create_snapshot(reason: str = "manual", progress=None) -> dict:
 
 def prune(keep: int):
     """Keep the newest `keep` snapshots (of every kind) and delete the older ones."""
-    snaps = list_snapshots()
-    extra = snaps[keep:]
-    for m in extra:
-        _remove(m)
+    seen: dict[str, int] = {}
+    for m in list_snapshots():                            # newest first; each kind has its own allowance, so a
+        kind = "regular" if m["reason"] in ("auto", "manual") else m["reason"]       # run of compressions never pushes out the daily backups
+        seen[kind] = seen.get(kind, 0) + 1
+        if seen[kind] > (keep if kind == "regular" else MAX_SAFETY):
+            _remove(m)
     _drop_old_mirror()
 
 
@@ -527,7 +531,8 @@ def delete_snapshot(name: str):
 
 
 # ------------------------------------------------------------------ restoring
-def restore_snapshot(name: str, restore_media: bool = False, restore_settings: bool = False, progress=None) -> dict:
+def restore_snapshot(name: str, restore_media: bool = False, restore_settings: bool = False, progress=None,
+                     overwrite_changed: bool = False) -> dict:
     if not NAME_RE.match(name):
         raise ValueError("name")
     path = backup_dir() / name
@@ -547,7 +552,8 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
             if snap.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise RuntimeError("catalog in the backup is damaged")
             if progress: progress.say("Saving a safety copy of the current state…")
-            safety = create_snapshot("before-restore")        # restoring is itself undoable
+            # restoring is itself undoable; when files will be replaced the safety copy holds the current files too
+            safety = create_snapshot("before-restore", force_media=bool(restore_media and overwrite_changed))
             if progress: progress.say("Restoring the catalog…")
             live = db.connect()
             try:
@@ -567,7 +573,7 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
             if progress: progress.total = len(files); progress.done = 0
             for i, src in enumerate(files):
                 out = PATHS.media / src.relative_to(mirror)
-                if not out.exists():
+                if not out.exists() or (overwrite_changed and not _same(src, out.stat())):
                     out.parent.mkdir(parents=True, exist_ok=True)
                     tmp = out.with_name(out.name + ".part")
                     shutil.copy2(src, tmp); os.replace(tmp, out); copied += 1
@@ -604,10 +610,10 @@ def run_backup(reason: str, progress):
         progress.fail("Backup failed: {error}", error=str(e)[:200])
 
 
-def run_restore(name: str, restore_media: bool, restore_settings: bool, progress):
+def run_restore(name: str, restore_media: bool, restore_settings: bool, overwrite_changed: bool, progress):
     try:
         progress.state = "restoring"; progress.say("Restoring from backup…")
-        r = restore_snapshot(name, restore_media, restore_settings, progress)
+        r = restore_snapshot(name, restore_media, restore_settings, progress, overwrite_changed)
         progress.result = r
         progress.state = "done"
         parts = [("Catalog restored", {}), ("{n} photos", {"n": r["photos"]})]

@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import config, db, ffmpeg, images, importer
+from . import backup, config, db, ffmpeg, images, importer
 from .config import PATHS
 
 HANDBRAKE_PAGE = "https://handbrake.fr/downloads2.php"      # the "Command Line Version" lives on this page
@@ -194,9 +194,12 @@ class DuplicateError(Exception):
     """The new file is byte-identical to another photo already in the library."""
 
 
-def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, report: dict | None, reuse_row: int | None = None):
+def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, report: dict | None, reuse_row: int | None = None,
+             keep_backup: bool = True):
     """Back up the photo's current file, put `new_file` in its place and update the catalog.
-    The backup is verified byte for byte before anything is replaced."""
+    The backup is verified byte for byte before anything is replaced. With keep_backup=False (compression, which makes
+    a regular backup of the whole library first) the file is only held aside while the swap happens, as a hard link
+    where possible, and is dropped once the catalog is updated."""
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     old_path = PATHS.media / r["rel_path"]
     old_sha = images.sha256_file(old_path)
@@ -207,10 +210,17 @@ def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, r
     bdir.mkdir(exist_ok=True)
     safe_name = re.sub(r'[<>:"/\\|?*]', "_", r["filename"])
     backup = _unique(bdir / f"{'video' if r['is_video'] else 'photo'}_{pid}_{int(time.time())}_{safe_name}")
-    shutil.copy2(old_path, backup)
-    if images.sha256_file(backup) != old_sha:
-        backup.unlink(missing_ok=True)
-        raise RuntimeError("backup verification failed")
+    linked = False
+    if not keep_backup:
+        try:
+            os.link(old_path, backup); linked = True            # same data, no copy: it only keeps the old file alive during the swap
+        except OSError:
+            pass
+    if not linked:
+        shutil.copy2(old_path, backup)
+        if images.sha256_file(backup) != old_sha:
+            backup.unlink(missing_ok=True)
+            raise RuntimeError("backup verification failed")
 
     if target_rel:
         final = PATHS.media / target_rel
@@ -231,13 +241,17 @@ def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, r
                     (final.name, rel, final.suffix.lstrip(".").lower(), final.stat().st_size, new_sha, pid))
         if not r["is_video"]:
             _sync_dimensions(con, pid, r, final)
-        if reuse_row:
+        if not keep_backup:
+            pass
+        elif reuse_row:
             con.execute("UPDATE video_backups SET backup_rel=?, orig_rel=?, orig_filename=?, orig_sha=?, orig_bytes=?, "
                         "created_at=?, kind=?, report=? WHERE id=?", (*row, reuse_row))
         else:
             con.execute("INSERT INTO video_backups(photo_id, backup_rel, orig_rel, orig_filename, orig_sha, orig_bytes, "
                         "created_at, kind, report) VALUES(?,?,?,?,?,?,?,?,?)", (pid, *row))
         con.commit()
+        if not keep_backup:
+            backup.unlink(missing_ok=True)
     except Exception:
         con.rollback()                                  # put the previous file back; the catalog never changed
         if backup.exists():
@@ -278,6 +292,41 @@ def restore_previous(pid: int) -> dict:
 
 # ------------------------------------------------------------------ the job
 _PCT = re.compile(rb"Encoding: task \d+ of \d+, (\d+(?:\.\d+)?) %(?: \((?:\d+(?:\.\d+)?) fps, avg (\d+(?:\.\d+)?) fps, ETA (\d+)h(\d+)m(\d+)s\))?")
+
+
+class _BackupProgress:
+    """Lets the backup report what it is doing without touching the compression's own progress numbers."""
+    cancel = False
+    total = done = 0
+
+    def __init__(self, real):
+        self.real = real
+
+    def say(self, key, **vars):
+        self.real.say(key, **vars)
+
+
+def ensure_backup(progress) -> bool:
+    """A regular backup (catalog + a full set of the photos and videos) before the first file is replaced; once per
+    compression job. False = it could not be made: the job is marked failed and nothing was changed."""
+    root = getattr(progress, "parent", progress)
+    if getattr(root, "backed_up", False):
+        return True
+    progress.say("Making a backup first…")
+    try:
+        backup.create_snapshot("before-compress", _BackupProgress(progress))
+    except backup.BusyError:
+        progress.fail("Another backup is running right now, try again in a few minutes")
+        return False
+    except backup.NoSpaceError as e:
+        progress.fail("Not enough free space on the backup disk: {need} MB needed, {free} MB free. Choose a folder on another disk",
+                      need=round(e.need / 1048576), free=round(e.free / 1048576))
+        return False
+    except Exception as e:
+        progress.fail("Could not make a backup before compressing ({error}); nothing was changed", error=str(e)[:160])
+        return False
+    root.backed_up = True
+    return True
 
 
 def run_compress(pid: int, raw_options: dict, progress):
@@ -357,13 +406,16 @@ def run_compress(pid: int, raw_options: dict, progress):
             bad = [c["id"] for c in checks if not c["ok"]]
             return progress.fail("The result failed verification ({checks}); the original file was not changed", checks=", ".join(bad))
 
-        progress.state = "replacing"; progress.say("Saving backup and replacing the file…")
-        _install(con, pid, tmp, None, "compress", result)
+        progress.state = "replacing"
+        if not ensure_backup(progress):
+            return
+        progress.say("Replacing the file…")
+        _install(con, pid, tmp, None, "compress", result, keep_backup=False)
         tmp = None
         result["applied"] = True
         progress.state = "done"
         progress.say_parts(("Video compressed to {pct}% of its size", {"pct": round(result["ratio"] * 100)}),
-                           ("The previous version was saved in the backups", {}))
+                           ("The previous version is in the backup made before compressing", {}))
     except DuplicateError:
         progress.fail("An image identical to the result already exists in the library; the original file was not changed")
     except Exception as e:
@@ -506,13 +558,16 @@ def run_compress_image(pid: int, raw_options: dict, progress):
         if not result["ok"]:
             return progress.fail("The result failed verification ({checks}); the original file was not changed", checks=", ".join(result["failed"]))
 
-        progress.state = "replacing"; progress.say("Saving backup and replacing the file…")
-        _install(con, pid, tmp, None, "compress", result)
+        progress.state = "replacing"
+        if not ensure_backup(progress):
+            return
+        progress.say("Replacing the file…")
+        _install(con, pid, tmp, None, "compress", result, keep_backup=False)
         tmp = None
         result["applied"] = True
         progress.state = "done"
         progress.say_parts(("Image compressed to {pct}% of its size", {"pct": round(result["ratio"] * 100)}),
-                           ("The previous version was saved in the backups", {}))
+                           ("The previous version is in the backup made before compressing", {}))
     except DuplicateError:
         progress.fail("An image identical to the result already exists in the library; the original file was not changed")
     except Exception as e:

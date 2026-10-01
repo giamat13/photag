@@ -236,7 +236,6 @@
  "Backup also runs when the app is closed: a Windows task checks every hour and at every sign-in, completes a missed run, runs in the background at low priority and exits as soon as it finishes. The app itself also checks while it is open.": "Yedekleme uygulama kapalıyken de çalışır: bir Windows görevi her saat ve her oturum açılışında kontrol eder, kaçırılan bir çalıştırmayı tamamlar, arka planda düşük öncelikle çalışır ve iş bitince hemen kapanır. Ayrıca uygulamanın kendisi de açıkken kontrol eder.",
  "The previous version was restored automatically.": "Önceki sürüm otomatik olarak geri yüklendi.",
  "The previous version was left in place and works as usual.": "Önceki sürüm yerinde kaldı ve normal şekilde çalışıyor.",
- "The previous version was saved in the backups": "Önceki sürüm yedeklere kaydedildi",
  "This version will be skipped. You can always check manually in the Help menu.": "Bu sürüm atlanacak. Yardım menüsünden her zaman elle kontrol edebilirsiniz.",
  "Compression was cancelled": "Sıkıştırma iptal edildi",
  "The compression was not applied. The original file was not changed.": "Sıkıştırma uygulanmadı. Orijinal dosya değiştirilmedi.",
@@ -706,7 +705,6 @@
  "Error from the AI provider: {error}": "AI sağlayıcısından hata: {error}",
  "Error: ": "Hata: ",
  "{0} items restored": "{0} öğe geri yüklendi",
- "Saving backup and replacing the file…": "Yedek kaydediliyor ve dosya değiştiriliyor…",
  "Black & White": "Siyah Beyaz",
  "High-Contrast Black & White": "Yüksek Kontrastlı Siyah Beyaz",
  "Restore from backup": "Yedekten geri yükle",
@@ -821,5 +819,11 @@
  "{0} items will be deleted permanently, together with their files. This cannot be undone.": "{0} öğe dosyalarıyla birlikte kalıcı olarak silinecek. Bu işlem geri alınamaz.",
  "{0} items deleted permanently": "{0} öğe kalıcı olarak silindi",
  "Empty the trash": "Çöp kutusunu boşalt",
- "Date in Trash": "Çöpe atılma tarihi"
+ "Date in Trash": "Çöpe atılma tarihi",
+ "Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup": "Bu yedekten sonra değişen dosyaları (örneğin sıkıştırılmış fotoğraflar ve videolar) da yedekteki sürümlerle değiştir",
+ "Before compression": "Sıkıştırmadan önce",
+ "Could not make a backup before compressing ({error}); nothing was changed": "Sıkıştırmadan önce yedek oluşturulamadı ({error}); hiçbir şey değiştirilmedi",
+ "Making a backup first…": "Önce yedek oluşturuluyor…",
+ "Replacing the file…": "Dosya değiştiriliyor…",
+ "The previous version is in the backup made before compressing": "Önceki sürüm, sıkıştırmadan önce alınan yedekte"
 }
