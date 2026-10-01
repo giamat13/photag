@@ -14,8 +14,10 @@ from pydantic import BaseModel
 from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task
 from .version import __version__
 from .config import PATHS
+from .security import LocalOnlyMiddleware
 
 app = FastAPI(title="photag")
+app.add_middleware(LocalOnlyMiddleware)       # only photag's own window may use this server (see app/security.py)
 
 
 def err(code: int, key: str, **vars) -> HTTPException:
