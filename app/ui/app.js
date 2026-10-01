@@ -2323,7 +2323,7 @@ const MENUS = [
     [t('קיצורי מקשים'), 'Ctrl+/', shortcuts],
     [t('בדוק עדכונים...'), '', ()=>updateCheck(true)],
     [t('מה חדש בגרסה הזו...'), '', ()=>whatsNew(true)],
-    [t('אודות photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('גרסה {0}', [ltr(S.status?.version || '')])}</p><p>${t("ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`)],
+    [t('אודות photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('גרסה {0}', [ltr(S.status?.version || '')])}</p><p>${t("ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.")}</p><p class="hint" style="padding:0">${t("תוכנה חופשית ברישיון GPL‑3.0, ללא אחריות. אפשר לשנות ולהפיץ אותה בתנאי הרישיון.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`)],
   ]],
 ];
 let MENU_OPEN=null;

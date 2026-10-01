@@ -26,6 +26,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=app\ui\icon.ico
+LicenseFile=LICENSE
 UninstallDisplayName=photag
 UninstallDisplayIcon={app}\photag.exe
 
@@ -34,6 +35,7 @@ Name: "desktopicon"; Description: "צור קיצור דרך בשולחן העב�
 
 [Files]
 Source: "dist\photag.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\photag"; Filename: "{app}\photag.exe"

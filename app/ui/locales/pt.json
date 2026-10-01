@@ -774,5 +774,6 @@
  "לתמונות הנבחרות אין מיקום": "As fotos selecionadas não têm localização",
  "לתמונות שנבחרו אין מיקום GPS. אפשר להוסיף קו רוחב וקו אורך בלוח המטא-נתונים בצד.": "As fotos selecionadas não têm localização GPS. Você pode adicionar latitude e longitude no painel de metadados ao lado.",
  "מפה": "Mapa",
- "מפה: תמונות שנבחרו על המפה": "Mapa: fotos selecionadas no mapa"
+ "מפה: תמונות שנבחרו על המפה": "Mapa: fotos selecionadas no mapa",
+ "תוכנה חופשית ברישיון GPL‑3.0, ללא אחריות. אפשר לשנות ולהפיץ אותה בתנאי הרישיון.": "Software livre sob a licença GPL-3.0, sem garantia. Você pode modificá-lo e redistribuí-lo conforme os termos da licença."
 }
