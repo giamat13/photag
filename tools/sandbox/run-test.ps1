@@ -52,7 +52,7 @@ while (((Get-Date) - $t).TotalSeconds -lt 240) {
 }
 $secs = ((Get-Date) - $t).TotalSeconds
 Check 'the app starts and its server answers' $up ("{0:n0}s, exited={1}" -f $secs, $app.HasExited)
-Check 'first start is not slow (< 30 s)' ($up -and $secs -lt 30) ("{0:n0}s" -f $secs)
+Check 'first start is quick (< 12 s)' ($up -and $secs -lt 12) ("{0:n0}s" -f $secs)
 $slog = Join-Path $env:APPDATA 'photag\startup.log'
 if (Test-Path $slog) { Copy-Item $slog (Join-Path $out 'startup.log') -Force; Say "startup.log copied to results" }
 $hasWin = $false

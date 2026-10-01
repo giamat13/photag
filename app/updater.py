@@ -184,7 +184,7 @@ RUNONCE_NAME = "photag-update-recovery"
 STALE_AFTER = 10 * 60          # a started update with no done.flag after this long is treated as failed
 
 RECOVER_PS1 = r"""param([string]$StateDir, [int]$WaitPid = 0, [switch]$NoLaunch)
-# photag: put the previous program file back if an update did not finish (see app/updater.py)
+# photag: put the previous program folder back if an update did not finish (see app/updater.py)
 $ErrorActionPreference = 'Stop'
 $log = Join-Path $StateDir 'recovery.log'
 function Log($m) { Add-Content -Path $log -Value ("{0} {1}" -f (Get-Date -Format s), $m) }
@@ -195,16 +195,13 @@ if ($WaitPid -gt 0) { try { Wait-Process -Id $WaitPid -Timeout 60 } catch { } }
 $deadline = (Get-Date).AddMinutes(5)       # an installer that is still running gets time to finish
 while ((Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'photagSetup*' }) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
 if (Test-Path (Join-Path $StateDir 'done.flag')) { Log 'update finished, nothing to restore'; exit 0 }
-if (-not (Test-Path $j.backup)) { Log 'no rollback copy found'; exit 1 }
-$have = ''
-if (Test-Path $j.exe) { $have = (Get-FileHash $j.exe -Algorithm SHA256).Hash.ToLower() }
-if ($have -ne $j.exe_sha) {
-  Log ('restoring the previous version ' + $j.from_version)
-  $tmp = $j.exe + '.restore'
-  Copy-Item $j.backup $tmp -Force
-  Move-Item $tmp $j.exe -Force
-  Log 'restored'
-} else { Log 'installed program is the previous version and intact' }
+if (-not (Test-Path $j.backup_dir)) { Log 'no rollback copy found'; exit 1 }
+Log ('restoring the previous version ' + $j.from_version)
+# mirror the saved folder over the program folder: restores changed and deleted files, removes files a half-done update added;
+# the uninstaller files (unins*) are left alone
+& robocopy $j.backup_dir $j.app_dir /MIR /XF 'unins*.exe' 'unins*.dat' 'unins*.msg' /R:3 /W:2 /NFL /NDL /NJH /NJS /NP | Out-Null
+if ($LASTEXITCODE -ge 8) { Log ("robocopy failed, exit code " + $LASTEXITCODE); exit 1 }
+Log 'restored'
 Remove-Item $pj -Force
 if (-not $NoLaunch) { Start-Process $j.exe }
 """
@@ -215,6 +212,17 @@ def _sha(path: Path) -> str:
     with open(path, "rb") as f:
         while chunk := f.read(1 << 20):
             h.update(chunk)
+    return h.hexdigest()
+
+
+def _tree_fingerprint(root: Path) -> str:
+    """Cheap fingerprint of a folder (names, sizes, times): tells whether a half-done update changed anything.
+    The uninstaller files are ignored: they are not part of the program."""
+    h = hashlib.sha256()
+    for p in sorted(root.rglob("*")):
+        if p.is_file() and not p.name.lower().startswith("unins"):
+            st = p.stat()
+            h.update(f"{p.relative_to(root).as_posix()}|{st.st_size}|{st.st_mtime_ns}\n".encode())
     return h.hexdigest()
 
 
@@ -250,20 +258,21 @@ def prepare_rollback(installer: Path, to_version: str) -> dict:
     exe = _exe_path()
     if not exe.is_file():
         raise UpdateError("program file not found")
+    app_dir = exe.parent
     rb = d / "rollback"
     shutil.rmtree(rb, ignore_errors=True)
-    rb.mkdir()
-    backup = rb / "photag.exe"
-    shutil.copy2(exe, backup)
-    sha = _sha(exe)
-    if _sha(backup) != sha:
-        raise UpdateError("rollback copy does not match the program file")
+    backup_dir = rb / "app"
+    shutil.copytree(app_dir, backup_dir, ignore=shutil.ignore_patterns("unins*"))        # the whole program folder
+    fingerprint = _tree_fingerprint(app_dir)
+    if _sha(backup_dir / exe.name) != _sha(exe):
+        raise UpdateError("rollback copy does not match the program")
     (d / "done.flag").unlink(missing_ok=True)
     (d / "just_failed.json").unlink(missing_ok=True)
     script = d / "recover.ps1"
     script.write_text(RECOVER_PS1, "utf-8-sig")             # BOM: Windows PowerShell 5 reads it as UTF-8
     journal = {"from_version": __version__, "to_version": to_version, "installer": str(installer), "exe": str(exe),
-               "backup": str(backup), "exe_sha": sha, "started": time.time(), "pid": os.getpid()}
+               "app_dir": str(app_dir), "backup_dir": str(backup_dir), "fingerprint": fingerprint,
+               "started": time.time(), "pid": os.getpid()}
     _write_json(d / "pending.json", journal)
     _runonce(True, script, d)
     return journal
@@ -281,8 +290,8 @@ def reconcile() -> dict:
     """Run at every start. Settles an update that was started earlier:
     updated        - the installer finished and this is the new version (the UI shows "what's new")
     in_progress    - started a moment ago, the installer may still be running: leave everything alone
-    failed_intact  - it never finished, but the previous program is intact: nothing to restore
-    restoring      - it never finished and the program file is not the old one: a recovery script puts it back"""
+    failed_intact  - it never finished, but the program folder is exactly as before: nothing to restore
+    restoring      - it never finished and the program folder changed: a recovery script puts the saved folder back"""
     d = state_dir()
     pj = d / "pending.json"
     if not pj.exists():
@@ -301,8 +310,8 @@ def reconcile() -> dict:
         return {"state": "in_progress"}
     if time.time() - j.get("started", 0) < STALE_AFTER:
         return {"state": "in_progress"}
-    exe = Path(j.get("exe", ""))
-    if exe.is_file() and _sha(exe) == j.get("exe_sha"):
+    app_dir = Path(j.get("app_dir", ""))
+    if app_dir.is_dir() and _tree_fingerprint(app_dir) == j.get("fingerprint"):
         _write_json(d / "just_failed.json", {"to": j.get("to_version"), "restored": False})
         _clear_pending(d)
         return {"state": "failed_intact"}

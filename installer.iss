@@ -34,10 +34,14 @@ UninstallDisplayIcon={app}\photag.exe
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
 
 [Files]
-Source: "dist\photag.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\photag\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "dist\photag-backup.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+
+[InstallDelete]
+; an update replaces the program's own files completely (no stale libraries from older versions); data lives elsewhere
+Type: filesandordirs; Name: "{app}\_internal"
 
 [Icons]
 Name: "{autoprograms}\photag"; Filename: "{app}\photag.exe"
