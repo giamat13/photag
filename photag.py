@@ -34,6 +34,7 @@ def _ensure_std_streams():
 _ensure_std_streams()
 
 if "--backup" in sys.argv:       # headless: used by the Windows scheduled task, never opens a window
+    os.environ["PHOTAG_BACKGROUND"] = "1"      # a background run never moves the library folder
     from app import backup_cli
     _rc = backup_cli.main(sys.argv[1:])
     sys.stdout.flush(); sys.stderr.flush()

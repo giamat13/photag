@@ -780,5 +780,18 @@
  "Catalog restored": "تمت استعادة الفهرس",
  "{n} photos": "{n} صورة",
  "{n} photo files are missing from the folder": "{n} من ملفات الصور مفقودة من المجلد",
- "Restore failed: {error}": "فشلت الاستعادة: {error}"
+ "Restore failed: {error}": "فشلت الاستعادة: {error}",
+ "Almost done": "أوشكنا على الانتهاء",
+ "Close photag and open it again to finish moving your library.": "أغلق photag وافتحه مرة أخرى لإكمال نقل مكتبتك.",
+ "Don't ask again": "لا تسأل مرة أخرى",
+ "Move it": "انقلها",
+ "Move your library to the new folder?": "هل تريد نقل مكتبتك إلى المجلد الجديد؟",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "النقل يعيد تسمية المجلد فقط: لا يتم نسخ أو حذف أي شيء، ويستغرق لحظات. سيحدث ذلك عند تشغيل photag في المرة القادمة.",
+ "Not now": "ليس الآن",
+ "The library could not be moved": "تعذّر نقل المكتبة",
+ "There is no PhotoManager library to move": "لا توجد مكتبة PhotoManager لنقلها",
+ "Your library was moved": "تم نقل مكتبتك",
+ "Your photos are still in {0}. Reason: {1}": "لا تزال صورك في {0}. السبب: {1}",
+ "Your photos, catalog and backups are now in {0}.": "صورك والفهرس والنسخ الاحتياطية موجودة الآن في {0}.",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "أصبح photag يحفظ بياناته الآن في {0}. لا تزال مكتبتك في المجلد القديم {1}."
 }

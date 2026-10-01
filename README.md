@@ -66,7 +66,7 @@ python tools\i18n.py check     REM checks that every language file is complete a
 ```
 
 ## Where your photos are kept
-Default: `%USERPROFILE%\photag\` (an install from before the rename keeps using `%USERPROFILE%\PhotoManager\`)
+Default: `%USERPROFILE%\Photag\` (an older library in `%USERPROFILE%\PhotoManager\` keeps working; photag offers to move it to `Photag` with a simple rename, nothing is copied)
 - `media\` — the photo / video files
 - `thumbs\` — thumbnails
 - `catalog.db` — the database (SQLite)

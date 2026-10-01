@@ -780,5 +780,18 @@
  "Catalog restored": "カタログを復元しました",
  "{n} photos": "{n} 枚の写真",
  "{n} photo files are missing from the folder": "フォルダーに写真ファイルが {n} 個見つかりません",
- "Restore failed: {error}": "復元に失敗しました: {error}"
+ "Restore failed: {error}": "復元に失敗しました: {error}",
+ "Almost done": "もうすぐ完了です",
+ "Close photag and open it again to finish moving your library.": "ライブラリの移動を完了するには、photag を閉じてもう一度開いてください。",
+ "Don't ask again": "今後は確認しない",
+ "Move it": "移動する",
+ "Move your library to the new folder?": "ライブラリを新しいフォルダーに移動しますか？",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "移動ではフォルダー名が変更されるだけで、コピーや削除は行われず、すぐに終わります。次回 photag を起動したときに実行されます。",
+ "Not now": "今はしない",
+ "The library could not be moved": "ライブラリを移動できませんでした",
+ "There is no PhotoManager library to move": "移動する PhotoManager ライブラリがありません",
+ "Your library was moved": "ライブラリを移動しました",
+ "Your photos are still in {0}. Reason: {1}": "写真は引き続き {0} にあります。理由: {1}",
+ "Your photos, catalog and backups are now in {0}.": "写真、カタログ、バックアップは現在 {0} にあります。",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag はデータを {0} に保存するようになりました。ライブラリは古いフォルダー {1} に残っています。"
 }

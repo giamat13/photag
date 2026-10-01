@@ -780,5 +780,18 @@
  "Catalog restored": "Katalog geri yüklendi",
  "{n} photos": "{n} fotoğraf",
  "{n} photo files are missing from the folder": "Klasörde {n} fotoğraf dosyası eksik",
- "Restore failed: {error}": "Geri yükleme başarısız: {error}"
+ "Restore failed: {error}": "Geri yükleme başarısız: {error}",
+ "Almost done": "Neredeyse bitti",
+ "Close photag and open it again to finish moving your library.": "Kitaplığınızı taşımayı tamamlamak için photag'ı kapatıp yeniden açın.",
+ "Don't ask again": "Bir daha sorma",
+ "Move it": "Taşı",
+ "Move your library to the new folder?": "Kitaplık yeni klasöre taşınsın mı?",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "Taşıma yalnızca klasörün adını değiştirir: hiçbir şey kopyalanmaz veya silinmez ve kısa sürer. photag'ı bir sonraki başlatışınızda yapılır.",
+ "Not now": "Şimdi değil",
+ "The library could not be moved": "Kitaplık taşınamadı",
+ "There is no PhotoManager library to move": "Taşınacak bir PhotoManager kitaplığı yok",
+ "Your library was moved": "Kitaplığınız taşındı",
+ "Your photos are still in {0}. Reason: {1}": "Fotoğraflarınız hâlâ {0} içinde. Neden: {1}",
+ "Your photos, catalog and backups are now in {0}.": "Fotoğraflarınız, kataloğunuz ve yedekleriniz artık {0} içinde.",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag artık verilerini {0} içinde tutuyor. Kitaplığınız hâlâ eski klasör olan {1} içinde."
 }

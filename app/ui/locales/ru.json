@@ -780,5 +780,18 @@
  "Catalog restored": "Каталог восстановлен",
  "{n} photos": "Фото: {n}",
  "{n} photo files are missing from the folder": "Файлов фото отсутствует в папке: {n}",
- "Restore failed: {error}": "Не удалось восстановить: {error}"
+ "Restore failed: {error}": "Не удалось восстановить: {error}",
+ "Almost done": "Почти готово",
+ "Close photag and open it again to finish moving your library.": "Закройте photag и откройте его снова, чтобы завершить перенос библиотеки.",
+ "Don't ask again": "Больше не спрашивать",
+ "Move it": "Перенести",
+ "Move your library to the new folder?": "Перенести библиотеку в новую папку?",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "При переносе папка только переименовывается: ничего не копируется и не удаляется, это занимает несколько секунд. Это произойдёт при следующем запуске photag.",
+ "Not now": "Не сейчас",
+ "The library could not be moved": "Не удалось перенести библиотеку",
+ "There is no PhotoManager library to move": "Нет библиотеки PhotoManager для переноса",
+ "Your library was moved": "Библиотека перенесена",
+ "Your photos are still in {0}. Reason: {1}": "Ваши фотографии по-прежнему в {0}. Причина: {1}",
+ "Your photos, catalog and backups are now in {0}.": "Ваши фотографии, каталог и резервные копии теперь в {0}.",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "Теперь photag хранит данные в {0}. Ваша библиотека по-прежнему в старой папке {1}."
 }

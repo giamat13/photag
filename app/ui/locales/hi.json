@@ -780,5 +780,18 @@
  "Catalog restored": "कैटलॉग पुनर्स्थापित हो गया",
  "{n} photos": "{n} फ़ोटो",
  "{n} photo files are missing from the folder": "फ़ोल्डर में {n} फ़ोटो फ़ाइलें नहीं मिल रहीं",
- "Restore failed: {error}": "पुनर्स्थापना विफल: {error}"
+ "Restore failed: {error}": "पुनर्स्थापना विफल: {error}",
+ "Almost done": "लगभग पूरा हो गया",
+ "Close photag and open it again to finish moving your library.": "अपनी लाइब्रेरी का स्थानांतरण पूरा करने के लिए photag को बंद करके दोबारा खोलें।",
+ "Don't ask again": "दोबारा न पूछें",
+ "Move it": "स्थानांतरित करें",
+ "Move your library to the new folder?": "क्या अपनी लाइब्रेरी को नए फ़ोल्डर में ले जाएँ?",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "स्थानांतरण में केवल फ़ोल्डर का नाम बदलता है: कुछ भी कॉपी या हटाया नहीं जाता, और इसमें बस थोड़ा समय लगता है। यह अगली बार photag शुरू करने पर होगा।",
+ "Not now": "अभी नहीं",
+ "The library could not be moved": "लाइब्रेरी को स्थानांतरित नहीं किया जा सका",
+ "There is no PhotoManager library to move": "स्थानांतरित करने के लिए कोई PhotoManager लाइब्रेरी नहीं है",
+ "Your library was moved": "आपकी लाइब्रेरी स्थानांतरित हो गई",
+ "Your photos are still in {0}. Reason: {1}": "आपकी फ़ोटो अब भी {0} में हैं। कारण: {1}",
+ "Your photos, catalog and backups are now in {0}.": "आपकी फ़ोटो, कैटलॉग और बैकअप अब {0} में हैं।",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag अब अपना डेटा {0} में रखता है। आपकी लाइब्रेरी अब भी पुराने फ़ोल्डर {1} में है।"
 }

@@ -780,5 +780,18 @@
  "Catalog restored": "Katalog wiederhergestellt",
  "{n} photos": "{n} Fotos",
  "{n} photo files are missing from the folder": "{n} Fotodateien fehlen im Ordner",
- "Restore failed: {error}": "Wiederherstellung fehlgeschlagen: {error}"
+ "Restore failed: {error}": "Wiederherstellung fehlgeschlagen: {error}",
+ "Almost done": "Fast fertig",
+ "Close photag and open it again to finish moving your library.": "Schließen Sie photag und öffnen Sie es erneut, um das Verschieben Ihrer Bibliothek abzuschließen.",
+ "Don't ask again": "Nicht mehr fragen",
+ "Move it": "Verschieben",
+ "Move your library to the new folder?": "Bibliothek in den neuen Ordner verschieben?",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "Beim Verschieben wird nur der Ordner umbenannt: Es wird nichts kopiert oder gelöscht, und es dauert nur einen Moment. Das geschieht beim nächsten Start von photag.",
+ "Not now": "Nicht jetzt",
+ "The library could not be moved": "Die Bibliothek konnte nicht verschoben werden",
+ "There is no PhotoManager library to move": "Es gibt keine PhotoManager-Bibliothek zum Verschieben",
+ "Your library was moved": "Ihre Bibliothek wurde verschoben",
+ "Your photos are still in {0}. Reason: {1}": "Ihre Fotos befinden sich weiterhin in {0}. Grund: {1}",
+ "Your photos, catalog and backups are now in {0}.": "Ihre Fotos, der Katalog und die Backups befinden sich jetzt in {0}.",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag speichert seine Daten jetzt in {0}. Ihre Bibliothek befindet sich noch im alten Ordner {1}."
 }

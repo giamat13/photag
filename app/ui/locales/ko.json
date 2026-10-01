@@ -780,5 +780,18 @@
  "Catalog restored": "카탈로그가 복원되었습니다",
  "{n} photos": "사진 {n}장",
  "{n} photo files are missing from the folder": "폴더에 사진 파일 {n}개가 없습니다",
- "Restore failed: {error}": "복원 실패: {error}"
+ "Restore failed: {error}": "복원 실패: {error}",
+ "Almost done": "거의 완료되었습니다",
+ "Close photag and open it again to finish moving your library.": "라이브러리 이동을 마치려면 photag를 닫았다가 다시 여세요.",
+ "Don't ask again": "다시 묻지 않기",
+ "Move it": "이동",
+ "Move your library to the new folder?": "라이브러리를 새 폴더로 이동할까요?",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "이동은 폴더 이름만 바꿉니다. 복사되거나 삭제되는 항목은 없으며 잠시면 끝납니다. 다음에 photag를 시작할 때 진행됩니다.",
+ "Not now": "나중에",
+ "The library could not be moved": "라이브러리를 이동할 수 없습니다",
+ "There is no PhotoManager library to move": "이동할 PhotoManager 라이브러리가 없습니다",
+ "Your library was moved": "라이브러리를 이동했습니다",
+ "Your photos are still in {0}. Reason: {1}": "사진은 여전히 {0}에 있습니다. 이유: {1}",
+ "Your photos, catalog and backups are now in {0}.": "사진, 카탈로그, 백업이 이제 {0}에 있습니다.",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag는 이제 데이터를 {0}에 보관합니다. 라이브러리는 아직 이전 폴더 {1}에 있습니다."
 }

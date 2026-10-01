@@ -780,5 +780,18 @@
  "Catalog restored": "Catalogus hersteld",
  "{n} photos": "{n} foto’s",
  "{n} photo files are missing from the folder": "{n} fotobestanden ontbreken in de map",
- "Restore failed: {error}": "Herstellen mislukt: {error}"
+ "Restore failed: {error}": "Herstellen mislukt: {error}",
+ "Almost done": "Bijna klaar",
+ "Close photag and open it again to finish moving your library.": "Sluit photag en open het opnieuw om het verplaatsen van je bibliotheek af te ronden.",
+ "Don't ask again": "Niet meer vragen",
+ "Move it": "Verplaatsen",
+ "Move your library to the new folder?": "Je bibliotheek naar de nieuwe map verplaatsen?",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "Bij het verplaatsen wordt alleen de map hernoemd: er wordt niets gekopieerd of verwijderd en het duurt maar even. Dit gebeurt de volgende keer dat je photag start.",
+ "Not now": "Niet nu",
+ "The library could not be moved": "De bibliotheek kon niet worden verplaatst",
+ "There is no PhotoManager library to move": "Er is geen PhotoManager-bibliotheek om te verplaatsen",
+ "Your library was moved": "Je bibliotheek is verplaatst",
+ "Your photos are still in {0}. Reason: {1}": "Je foto's staan nog in {0}. Reden: {1}",
+ "Your photos, catalog and backups are now in {0}.": "Je foto's, catalogus en back-ups staan nu in {0}.",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag bewaart zijn gegevens nu in {0}. Je bibliotheek staat nog in de oude map {1}."
 }

@@ -780,5 +780,18 @@
  "Catalog restored": "הקטלוג שוחזר",
  "{n} photos": "{n} תמונות",
  "{n} photo files are missing from the folder": "{n} קבצי תמונות חסרים בתיקייה",
- "Restore failed: {error}": "השחזור נכשל: {error}"
+ "Restore failed: {error}": "השחזור נכשל: {error}",
+ "Almost done": "כמעט סיימנו",
+ "Close photag and open it again to finish moving your library.": "סגרו את photag ופתחו אותו שוב כדי לסיים להעביר את הספרייה.",
+ "Don't ask again": "אל תשאל שוב",
+ "Move it": "העבר",
+ "Move your library to the new folder?": "להעביר את הספרייה לתיקייה החדשה?",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "ההעברה רק משנה את שם התיקייה: שום דבר לא מועתק או נמחק, וזה לוקח רגע. זה יקרה בפעם הבאה שתפעילו את photag.",
+ "Not now": "לא עכשיו",
+ "The library could not be moved": "לא ניתן היה להעביר את הספרייה",
+ "There is no PhotoManager library to move": "אין ספריית PhotoManager להעברה",
+ "Your library was moved": "הספרייה הועברה",
+ "Your photos are still in {0}. Reason: {1}": "התמונות שלכם עדיין ב-{0}. סיבה: {1}",
+ "Your photos, catalog and backups are now in {0}.": "התמונות, הקטלוג והגיבויים שלכם נמצאים עכשיו ב-{0}.",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag שומר עכשיו את הנתונים שלו ב-{0}. הספרייה שלכם עדיין בתיקייה הישנה {1}."
 }

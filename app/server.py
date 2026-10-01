@@ -108,6 +108,9 @@ def status():
         },
         "trash_days": config.TRASH_RETENTION_DAYS,
         "version": __version__,
+        "legacy_library": config.legacy_library_in_use(),
+        "target_library": str(config.TARGET_LIBRARY),
+        "move_notice": config.move_notice(),
         "last_import": int(db.get_setting(con, "last_import", 0) or 0),
     }
 
@@ -139,6 +142,21 @@ def pick_file(kind: str = "zip", title: str = ""):
     finally:
         root.destroy()
     return {"path": path or None}
+
+
+@app.post("/api/library/move-legacy")
+def move_legacy_library():
+    """Move ~/PhotoManager to ~/Photag the next time photag starts."""
+    if not config.legacy_library_in_use():
+        raise err(400, "There is no PhotoManager library to move")
+    config.request_legacy_move()
+    return {"ok": True}
+
+
+@app.post("/api/library/move-ack")
+def move_ack():
+    config.ack_move_notice()
+    return {"ok": True}
 
 
 class LibraryIn(BaseModel):

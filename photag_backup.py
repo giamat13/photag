@@ -6,6 +6,8 @@ uses very little memory; the big photag.exe is not involved. Usage: photag-backu
 import os
 import sys
 
+os.environ["PHOTAG_BACKGROUND"] = "1"      # before app.config is imported (see _apply_pending_move)
+
 from app import backup_cli
 
 _rc = backup_cli.main(sys.argv[1:] or ["--backup"])

@@ -21,9 +21,23 @@ def _appdata_dir() -> Path:
 
 _POINTER = _appdata_dir() / "config.json"
 _HOME = Path(os.path.expanduser("~"))
-# An install from before the rename keeps its photos where they already are.
-_DEFAULT_LIBRARY = (_HOME / OLD_APP_NAME if (_HOME / OLD_APP_NAME / "catalog.db").exists()
-                    and not (_HOME / APP_NAME).exists() else _HOME / APP_NAME)
+TARGET_LIBRARY = _HOME / "Photag"            # where new libraries go: C:\Users\<you>\Photag
+LEGACY_LIBRARY = _HOME / OLD_APP_NAME        # C:\Users\<you>\PhotoManager, the folder of installs from before the rename
+
+
+def _same_dir(a: Path, b: Path) -> bool:
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return str(a).rstrip("\\/").lower() == str(b).rstrip("\\/").lower()
+
+
+def _default_library() -> Path:
+    """New installs use ~/Photag. An existing PhotoManager library keeps being used (nothing is lost or hidden)
+    until the user agrees to move it, see request_legacy_move()."""
+    if (LEGACY_LIBRARY / "catalog.db").exists() and not (TARGET_LIBRARY / "catalog.db").exists():
+        return LEGACY_LIBRARY
+    return TARGET_LIBRARY
 
 
 def _read_pointer() -> dict:
@@ -49,7 +63,60 @@ def _write_pointer(**updates) -> None:
 
 def get_library_root() -> Path:
     p = _read_pointer().get("library_root")
-    return Path(p) if p else _DEFAULT_LIBRARY
+    return Path(p) if p else _default_library()
+
+
+def legacy_library_in_use() -> str | None:
+    """The old ~/PhotoManager folder, when that is the library in use and a move to ~/Photag is possible."""
+    if (LEGACY_LIBRARY / "catalog.db").exists() and _same_dir(get_library_root(), LEGACY_LIBRARY) and not (TARGET_LIBRARY / "catalog.db").exists():
+        return str(LEGACY_LIBRARY)
+    return None
+
+
+def request_legacy_move() -> None:
+    """The user agreed: the folder is renamed the next time the app starts (nothing has the files open then)."""
+    _write_pointer(move_legacy=True, move_error=None, moved_from=None)
+
+
+def move_notice() -> dict:
+    """What happened to a requested move, for the UI to report once: {"moved_from", "moved_to", "error"} (or empty)."""
+    d = _read_pointer()
+    out = {}
+    if d.get("moved_from"):
+        out["moved_from"], out["moved_to"] = d["moved_from"], d.get("library_root")
+    if d.get("move_error"):
+        out["error"] = d["move_error"]
+    return out
+
+
+def ack_move_notice() -> None:
+    _write_pointer(moved_from=None, move_error=None)
+
+
+def _apply_pending_move() -> None:
+    """At start-up, before anything opens the catalog: rename ~/PhotoManager to ~/Photag if the user asked for it."""
+    d = _read_pointer()
+    if not d.get("move_legacy"):
+        return
+    _write_pointer(move_legacy=None)                                  # one attempt per request
+    try:
+        if not (LEGACY_LIBRARY / "catalog.db").exists():
+            return
+        cur = d.get("library_root")
+        if cur and not _same_dir(Path(cur), LEGACY_LIBRARY):
+            return                                                    # the library in use is somewhere else: nothing to move
+        if TARGET_LIBRARY.exists():
+            if any(TARGET_LIBRARY.iterdir()):
+                raise OSError(f"{TARGET_LIBRARY} already exists and is not empty")
+            TARGET_LIBRARY.rmdir()                                    # an empty leftover folder
+        os.replace(LEGACY_LIBRARY, TARGET_LIBRARY)                    # a rename on the same drive: instant, nothing is copied
+        _write_pointer(library_root=str(TARGET_LIBRARY), moved_from=str(LEGACY_LIBRARY))
+    except OSError as e:
+        _write_pointer(move_error=str(e)[:300])
+
+
+if not os.environ.get("PHOTAG_BACKGROUND"):     # the background backup must never rename the folder under a running app
+    _apply_pending_move()
 
 
 def get_ai() -> dict:

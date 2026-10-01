@@ -68,7 +68,7 @@ python tools\i18n.py check     REM בודק שכל קובצי השפה שלמי�
 ```
 
 ## איפה נשמרות התמונות
-ברירת מחדל: `%USERPROFILE%\photag\` (התקנה מלפני שינוי השם ממשיכה להשתמש ב‑`%USERPROFILE%\PhotoManager\`)
+ברירת מחדל: `%USERPROFILE%\Photag\` (ספרייה ישנה ב‑`%USERPROFILE%\PhotoManager\` ממשיכה לעבוד; האפליקציה מציעה להעביר אותה ל‑`Photag` בשינוי שם פשוט, בלי העתקה)
 - `media\` — קבצי התמונות/וידאו
 - `thumbs\` — תמונות ממוזערות
 - `catalog.db` — מסד הנתונים (SQLite)

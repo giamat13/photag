@@ -780,5 +780,18 @@
  "Catalog restored": "目录已还原",
  "{n} photos": "{n} 张照片",
  "{n} photo files are missing from the folder": "文件夹中缺少 {n} 个照片文件",
- "Restore failed: {error}": "还原失败：{error}"
+ "Restore failed: {error}": "还原失败：{error}",
+ "Almost done": "即将完成",
+ "Close photag and open it again to finish moving your library.": "请关闭 photag 并重新打开，以完成资料库的移动。",
+ "Don't ask again": "不再询问",
+ "Move it": "移动",
+ "Move your library to the new folder?": "将资料库移动到新文件夹？",
+ "Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.": "移动只会重命名文件夹：不会复制或删除任何内容，只需片刻。将在您下次启动 photag 时进行。",
+ "Not now": "暂不",
+ "The library could not be moved": "无法移动资料库",
+ "There is no PhotoManager library to move": "没有可移动的 PhotoManager 资料库",
+ "Your library was moved": "您的资料库已移动",
+ "Your photos are still in {0}. Reason: {1}": "您的照片仍在 {0} 中。原因：{1}",
+ "Your photos, catalog and backups are now in {0}.": "您的照片、目录和备份现在位于 {0}。",
+ "photag now keeps its data in {0}. Your library is still in the old folder {1}.": "photag 现在将数据保存在 {0}。您的资料库仍在旧文件夹 {1} 中。"
 }

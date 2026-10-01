@@ -1877,6 +1877,30 @@ async function backupHealthNotice(){
   $('#bn-now').onclick = async () => { closeModal(); try{ await send('POST', '/api/backup/run'); pollJob('backup', t('Backup')); }catch(e){ toast(e.message); } };
 }
 
+// The default data folder is now ...\Photag: offer to move a library that still sits in ...\PhotoManager (a rename, nothing is copied).
+async function libraryMoveNotice(){
+  const st = S.status || await api('/api/status');
+  const n = st.move_notice || {};
+  if(n.moved_from || n.error){
+    modal(`<h3>${n.error ? t('The library could not be moved') : t('Your library was moved')}</h3><div class="mb">
+      <p>${n.error ? t('Your photos are still in {0}. Reason: {1}', [ltr(String(n.moved_from || st.library_root)), esc(n.error)]) : t('Your photos, catalog and backups are now in {0}.', [ltr(String(n.moved_to))])}</p></div>
+      <div class="mf"><span class="spacer"></span><button class="primary" id="lm-ok">${t('OK')}</button></div>`);
+    $('#lm-ok').onclick = async ()=>{ closeModal(); await send('POST', '/api/library/move-ack'); };
+    return true;
+  }
+  if(!st.legacy_library || pref.get('legacyMoveNo', false)) return false;
+  modal(`<h3>${t('Move your library to the new folder?')}</h3><div class="mb">
+    <p>${t('photag now keeps its data in {0}. Your library is still in the old folder {1}.', [ltr(st.target_library), ltr(st.legacy_library)])}</p>
+    <p>${t('Moving only renames the folder: nothing is copied or deleted, and it takes a moment. It happens the next time you start photag.')}</p></div>
+    <div class="mf"><button id="lm-never">${t("Don't ask again")}</button><span class="spacer"></span><button id="lm-later">${t('Not now')}</button><button class="primary" id="lm-go">${t('Move it')}</button></div>`);
+  $('#lm-later').onclick = closeModal;
+  $('#lm-never').onclick = ()=>{ pref.set('legacyMoveNo', true); closeModal(); };
+  $('#lm-go').onclick = async ()=>{ try{ await send('POST', '/api/library/move-legacy'); }catch(e){ toast(e.message); return; }
+    modal(`<h3>${t('Almost done')}</h3><div class="mb"><p>${t('Close photag and open it again to finish moving your library.')}</p></div><div class="mf"><span class="spacer"></span><button class="primary" id="lm-ok2">${t('OK')}</button></div>`);
+    $('#lm-ok2').onclick = closeModal; };
+  return true;
+}
+
 // ---------- compression progress screen: percent, elapsed / remaining time, steps ----------
 const CPG = {alive: false};
 const fmtDur = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
@@ -2442,7 +2466,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
-  setTimeout(async ()=>{ if(!(await whatsNew(false))) updateCheck(false); }, 2500);
+  setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false))) updateCheck(false); }, 2500);
   setTimeout(backupHealthNotice, 8000);   // quiet check on start-up; a window appears only when a newer release exists
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
