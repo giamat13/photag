@@ -2126,7 +2126,7 @@ function openExport(){
 }
 
 // ---------- import (full-window dialog like Lightroom's) ----------
-const IM = {mode:'folder', path:'', zip:'', lrcat:'', lrinfo:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all'};
+const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all'};
 function openImport(mode){
   IM.mode = mode || IM.mode;
   IM.path = IM.path || pref.get('importPath','');
@@ -2141,10 +2141,11 @@ function renderImport(){
   const chosen = IM.files.filter(f=>IM.on.has(f.path));
   const bytes = chosen.reduce((a,f)=>a+f.bytes,0);
   const recent = pref.get('importRecent', []);
-  const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : IM.zip;
+  const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : IM.zips.length;
+  const zipTotal = IM.zips.reduce((a, z) => a + z.bytes, 0);
   el.innerHTML = `
   <div class="im-top">
-    <div class="blk"><span>${t("Source")}</span><b>${esc(folder ? (IM.path||t('Choose a folder')) : lr ? (IM.lrcat||t('Choose a Lightroom catalog')) : (IM.zip||t('Choose a ZIP file')))}</b></div>
+    <div class="blk"><span>${t("Source")}</span><b>${esc(folder ? (IM.path||t('Choose a folder')) : lr ? (IM.lrcat||t('Choose a Lightroom catalog')) : (IM.zips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.zips.length), fsize(zipTotal)]) : IM.zips.length ? IM.zips[0].name : t('Choose a ZIP file')))}</b></div>
     <span class="im-arrow">←</span>
     <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("Copy")}<small>${t("From Folder / Memory Card")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("Catalog .lrcat")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("ZIP file from Google Photos")}</small></a></nav>
     <span class="im-arrow">←</span>
@@ -2158,8 +2159,8 @@ function renderImport(){
           ${recent.length?`<div class="lbl-sub" style="padding-top:8px">${t("Recent")}</div>${recent.map(p=>`<div class="row" data-recent="${esc(p)}">${I('folder')}<span class="nm" dir="ltr" title="${esc(p)}">${esc(p)}</span></div>`).join('')}`:''}`
         : lr ? `<div class="btnrow"><button id="im-lrcat">${I('import')} ${t(" Choose Lightroom catalog...")}</button></div>
           <div class="hint">${t("File ")}<code>.lrcat</code>${t(" from Lightroom Classic (usually in Pictures/Lightroom). Closing Lightroom before importing is recommended.")}</div>`
-        : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" Choose ZIP file...")}</button></div>
-          <div class="hint">${t("Download your library from takeout.google.com (Google Photos). The file is read directly, without extracting it.")}</div>`}
+        : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" Choose ZIP files...")}</button></div>
+          <div class="hint">${t("Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.")}</div>`}
       </div></section>
     </aside>
     <div class="im-center">
@@ -2173,7 +2174,11 @@ function renderImport(){
       : lr ? `<div class="im-grid"><div class="im-empty">${IM.lrloading?t('Reading the catalog…'):!li?t('Choose a Lightroom Classic catalog from the “Source” panel.')
           : `<b dir="ltr">${esc(IM.lrcat)}</b><br>${t("{0} photos · {1} keywords · {2} collections · {3}", [num(li.images), num(li.keywords), num(li.collections), fsize(li.bytes)])}
              ${li.missing?`<br><span style="color:var(--yellow)">${t("{0} files referenced by the catalog were not found on disk and will not be imported.", [num(li.missing)])}</span>`:''}`}</div></div>`
-      : `<div class="im-grid"><div class="im-empty">${IM.zip?`<b dir="ltr">${esc(IM.zip)}</b><br>${t("Import will keep albums, dates, locations, favorites, people tags and memories. Photos already in the catalog will not be duplicated.")}`:t('Choose the ZIP file from Google Takeout.')}</div></div>`}
+      : `<div class="im-grid"><div class="im-empty">${IM.zips.length ? `${IM.zips.map(z=>`<div dir="ltr"><b>${esc(z.name)}</b> · ${fsize(z.bytes)}</div>`).join('')}
+          ${IM.zipFound ? `<br>${t('{0} more parts from the same folder were added.', [num(IM.zipFound)])}` : ''}
+          ${IM.zipMissing.length ? `<br><span style="color:var(--yellow)">${t('Part {0} is missing: photos that are only in it will not be imported. You can import it later; photos that were already imported are skipped.', [IM.zipMissing.map(n=>String(n).padStart(3,'0')).join(', ')])}</span>` : ''}
+          <br><br>${t("Import will keep albums, dates, locations, favorites, people tags and memories. Photos already in the catalog will not be duplicated.")}`
+          : t('Choose the ZIP files from Google Takeout.')}</div></div>`}
     </div>
     <aside class="im-side">
       ${folder?`<section class="pnl"><h3><span>${t("File Handling")}</span></h3><div class="pbody">
@@ -2206,7 +2211,16 @@ $('#import').addEventListener('click', async e=>{
   const mode=tg.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport(); return; }
   if(tg.closest('#im-cancel')) return closeImport();
   if(tg.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose folder to import'))); if(r.path){ IM.path=r.path; scanImport(); } return; }
-  if(tg.closest('#im-zip')){ const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('Choose Google Takeout ZIP file'))); if(r.path){ IM.zip=r.path; renderImport(); } return; }
+  if(tg.closest('#im-zip')){
+    const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('Choose Google Takeout ZIP files')));
+    if(!(r.files||[]).length) return;
+    const picked = new Map(); r.files.forEach(f => picked.set(f.path.toLowerCase(), f));
+    let info = {parts:[], missing:[]}; try{ info = await api('/api/takeout/parts?path='+encodeURIComponent(r.files[0].path)); }catch{}
+    const added = info.parts.filter(p => !picked.has(p.path.toLowerCase())).length;
+    info.parts.forEach(p => picked.set(p.path.toLowerCase(), p));
+    IM.zips = [...picked.values()].sort((a,b)=>a.name.localeCompare(b.name));
+    IM.zipFound = added; IM.zipMissing = info.missing || [];
+    renderImport(); return; }
   if(tg.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat&title='+encodeURIComponent(t('Choose Lightroom catalog'))); if(!r.path) return;
     IM.lrcat=r.path; IM.lrinfo=null; IM.lrloading=true; renderImport();
     try{ IM.lrinfo=await api('/api/lrcat-info?'+new URLSearchParams({path:r.path})); } finally { IM.lrloading=false; renderImport(); } return; }
@@ -2218,7 +2232,7 @@ $('#import').addEventListener('click', async e=>{
     const chosen=IM.files.filter(f=>IM.on.has(f.path)); $('#import .im-foot').firstChild.textContent=`${t("{0} photos / {1}", [num(chosen.length), fsize(chosen.reduce((a,f)=>a+f.bytes,0))])}`;
     $('#im-go').disabled=!chosen.length; return; }
   if(tg.closest('#im-go')){
-    if(IM.mode==='zip'){ await send('POST','/api/import',{zip_path:IM.zip}); closeImport(); pollJob('import',t('Import from Google')); return; }
+    if(IM.mode==='zip'){ await send('POST','/api/import',{zip_paths:IM.zips.map(z=>z.path)}); closeImport(); pollJob('import',t('Import from Google')); return; }
     if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import',t('Import from Lightroom')); return; }
     const paths=IM.files.filter(f=>IM.on.has(f.path)).map(f=>f.path);
     await send('POST','/api/import-folder',{paths, keywords:($('#im-kw').value||'').split(','), album:$('#im-album').value||null});

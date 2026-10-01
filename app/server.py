@@ -136,9 +136,11 @@ def pick_file(kind: str = "zip", title: str = ""):
                 title=title or "Select Lightroom catalog", parent=root,
                 filetypes=[("Lightroom Catalog", "*.lrcat"), ("All files", "*.*")])
         else:
-            path = filedialog.askopenfilename(
-                title=title or "Select Google Takeout ZIP",
+            paths = filedialog.askopenfilenames(           # a Takeout export can be several ZIP files
+                title=title or "Select Google Takeout ZIP files",
                 filetypes=[("ZIP files", "*.zip"), ("All files", "*.*")], parent=root)
+            return {"path": paths[0] if paths else None, "paths": list(paths),
+                    "files": [{"path": p, "name": Path(p).name, "bytes": Path(p).stat().st_size} for p in paths]}
     finally:
         root.destroy()
     return {"path": path or None}
@@ -171,13 +173,24 @@ def set_library(body: LibraryIn):
 
 
 class ImportIn(BaseModel):
-    zip_path: str
+    zip_path: str | None = None
+    zip_paths: list[str] | None = None        # all the parts of a Takeout export
+
+
+@app.get("/api/takeout/parts")
+def takeout_parts(path: str):
+    """The other parts of a multi-file Takeout export that sit next to this ZIP, and the part numbers that are missing."""
+    if not Path(path).is_file():
+        raise err(404, "The ZIP file was not found")
+    return importer.takeout_parts(path)
+
 
 @app.post("/api/import")
 def start_import(body: ImportIn):
-    if not Path(body.zip_path).exists():
+    paths = body.zip_paths or ([body.zip_path] if body.zip_path else [])
+    if not paths or not all(Path(p).is_file() for p in paths):
         raise err(404, "The ZIP file was not found")
-    _start("import", importer.run_import, body.zip_path)
+    _start("import", importer.run_import, paths)
     return {"ok": True}
 
 

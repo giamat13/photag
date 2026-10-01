@@ -47,7 +47,7 @@ The interface is available in 17 languages (English by default). A Hebrew versio
   collection during import. Includes RAW files (CR2/CR3/NEF/ARW/DNG/…) through the preview the camera stores in the file.
 - **Import from a Lightroom Classic catalog (`.lrcat`)** — ratings, flags, color labels, captions, dates, GPS, keywords ("person" keywords
   become people), collections and the quick collection. Develop edits are not transferred (a Lightroom format) — the original file is imported.
-- **Import from Google Takeout** — reads the ZIP directly (no need to unpack 19 GB), keeps each photo once (dedup by SHA-256) and restores
+- **Import from Google Takeout** — reads the ZIP files directly (no need to unpack 19 GB); a large export comes as several ZIPs (`…-001.zip`, `…-002.zip`): choose them all, or just one and the other parts in the folder are added automatically (a missing part is reported, and importing it later never duplicates), keeps each photo once (dedup by SHA-256) and restores
   albums, descriptions, dates taken, GPS, favorites, Google's people tags, memory titles and comments on shared albums.
   All of these imports are in **one Import screen** (File → Import…) where you choose the source.
 - **Face recognition** — InsightFace `buffalo_l` (ONNX Runtime) → cosine distance → SciPy average-linkage clustering at a threshold of

@@ -152,12 +152,37 @@ class Progress:
                 "result": self.result, "extra": self.extra}
 
 
-def run_import(zip_path: str, progress: Progress):
+_PART_RE = re.compile(r"^(?P<stem>.+)-(?P<n>\d{3,})\.zip$", re.I)
+
+
+def takeout_parts(path: str) -> dict:
+    """A Takeout export can come as several files: takeout-<stamp>-001.zip, -002.zip, ... Given any one of them,
+    find the others in the same folder, and report part numbers that are missing in the sequence."""
+    p = Path(path)
+    m = _PART_RE.match(p.name)
+    parts = [p]
+    missing = []
+    if m:
+        stem = m.group("stem").lower()
+        sibs = {}
+        for q in p.parent.glob("*.zip"):
+            mm = _PART_RE.match(q.name)
+            if mm and mm.group("stem").lower() == stem:
+                sibs[int(mm.group("n"))] = q
+        if sibs:
+            parts = [sibs[k] for k in sorted(sibs)]
+            missing = [k for k in range(1, max(sibs) + 1) if k not in sibs]
+    return {"parts": [{"path": str(q), "name": q.name, "bytes": q.stat().st_size} for q in parts if q.exists()], "missing": missing}
+
+
+def run_import(zip_paths, progress: Progress):
+    """Import one Google Takeout ZIP or all the parts of an export (a path or a list of paths)."""
+    zip_paths = [zip_paths] if isinstance(zip_paths, (str, Path)) else list(zip_paths)
     con = db.init_db()
     mark_import_start(con)
     progress.state = "scanning"; progress.say("Reading the ZIP structure…")
     try:
-        _do_import(zip_path, con, progress)
+        _do_import(zip_paths, con, progress)
         progress.state = "done"; progress.say("Import complete")
     except Exception as e:  # surface to UI instead of dying silently
         progress.fail("Import failed: {error}", error=str(e))
@@ -166,44 +191,53 @@ def run_import(zip_path: str, progress: Progress):
         con.commit()
 
 
-def _do_import(zip_path, con, progress):
-    zf = zipfile.ZipFile(zip_path)
-    entries = [n for n in zf.namelist() if n.startswith(ROOT_PREFIX) and not n.endswith("/")]
+def _do_import(zip_paths, con, progress):
+    zfs = [zipfile.ZipFile(p) for p in sorted(zip_paths, key=lambda x: str(x).lower())]
+    try:
+        _import_zips(zfs, con, progress)
+    finally:
+        for z in zfs:
+            z.close()
 
-    # group by album folder (immediate child of Google Photos)
+
+def _import_zips(zfs, con, progress):
+    # Merge all the parts into one view: an album can span several ZIPs, and a photo's .json can sit in another part.
     folders: dict[str, dict] = {}
     specials = {"memory": None, "comments": None}
-    for n in entries:
-        rest = n[len(ROOT_PREFIX):]
-        parts = rest.split("/")
-        if len(parts) == 1:  # top-level special json (memory titles / comments)
-            b = parts[0]
-            if "זיכרונות" in b:
-                specials["memory"] = n
-            elif "תגובות" in b:
-                specials["comments"] = n
-            continue
-        album = parts[0]
-        f = folders.setdefault(album, {"media": {}, "json": {}, "album_meta": None})
-        base = parts[-1]
-        if base in ("מטא נתונים.json", "metadata.json"):
-            f["album_meta"] = n
-        elif base.lower().endswith(".json"):
-            f["json"][base] = n
-        else:
-            f["media"][base] = n
+    for zf in zfs:
+        for n in zf.namelist():
+            if not n.startswith(ROOT_PREFIX) or n.endswith("/"):
+                continue
+            rest = n[len(ROOT_PREFIX):]
+            parts = rest.split("/")
+            if len(parts) == 1:  # top-level special json (memory titles / comments)
+                b = parts[0]
+                if "זיכרונות" in b:
+                    specials["memory"] = specials["memory"] or (zf, n)
+                elif "תגובות" in b:
+                    specials["comments"] = specials["comments"] or (zf, n)
+                continue
+            album = parts[0]
+            f = folders.setdefault(album, {"media": {}, "json": {}, "album_meta": None})
+            base = parts[-1]
+            if base in ("מטא נתונים.json", "metadata.json"):
+                f["album_meta"] = f["album_meta"] or (zf, n)
+            elif base.lower().endswith(".json"):
+                f["json"].setdefault(base, (zf, n))
+            else:
+                f["media"].setdefault(base, []).append((zf, n))
 
     # special artifacts
     if specials["memory"]:
         try:
-            titles = json.loads(zf.read(specials["memory"]).decode("utf-8", "replace")).get("title", [])
+            titles = json.loads(specials["memory"][0].read(specials["memory"][1]).decode("utf-8", "replace")).get("title", [])
             con.execute("DELETE FROM memory_titles")
             con.executemany("INSERT INTO memory_titles(title) VALUES(?)", [(t,) for t in titles])
         except Exception:
             pass
     if specials["comments"]:
         try:
-            cm = json.loads(zf.read(specials["comments"]).decode("utf-8", "replace")).get("sharedAlbumComments", [])
+            cm = json.loads(specials["comments"][0].read(specials["comments"][1]).decode("utf-8", "replace")).get("sharedAlbumComments", [])
             con.execute("DELETE FROM shared_comments")
             con.executemany("INSERT INTO shared_comments(text,liked,created_at,content_url) VALUES(?,?,?,?)",
                             [(c.get("text"), 1 if c.get("liked") else 0,
@@ -211,33 +245,35 @@ def _do_import(zip_path, con, progress):
         except Exception:
             pass
 
-    total_media = sum(len(f["media"]) for f in folders.values())
+    total_media = sum(len(v) for f in folders.values() for v in f["media"].values())
     progress.total = total_media
     progress.state = "importing"
 
     for album, f in folders.items():
-        album_id = _upsert_album(con, zf, album, f["album_meta"])
+        album_id = _upsert_album(con, f["album_meta"], album)
         pairs = match_sidecars(list(f["media"]), list(f["json"]))
-        for base, entry in f["media"].items():
-            progress.done += 1
-            if progress.done % 25 == 0:
-                progress.say("{album} — {done}/{total}", album=album, done=progress.done, total=progress.total)
-                con.commit()
+        for base, items in f["media"].items():
             meta = {}
             if base in pairs:
                 try:
-                    meta = json.loads(zf.read(f["json"][pairs[base]]).decode("utf-8", "replace"))
+                    jz, jn = f["json"][pairs[base]]
+                    meta = json.loads(jz.read(jn).decode("utf-8", "replace"))
                 except Exception:
                     meta = {}
-            _ingest_media(con, zf, entry, base, album_id, meta)
+            for zf, entry in items:                       # the same name in two parts: both are looked at (identical files dedupe)
+                progress.done += 1
+                if progress.done % 25 == 0:
+                    progress.say("{album} — {done}/{total}", album=album, done=progress.done, total=progress.total)
+                    con.commit()
+                _ingest_media(con, zf, entry, base, album_id, meta)
     con.commit()
 
 
-def _upsert_album(con, zf, name, meta_entry) -> int:
+def _upsert_album(con, meta_entry, name) -> int:
     desc = access = None; adate = None
     if meta_entry:
         try:
-            m = json.loads(zf.read(meta_entry).decode("utf-8", "replace"))
+            m = json.loads(meta_entry[0].read(meta_entry[1]).decode("utf-8", "replace"))
             desc = m.get("description") or None
             access = m.get("access")
             adate = _ts(m.get("date", {}))

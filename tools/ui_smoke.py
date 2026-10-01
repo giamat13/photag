@@ -116,6 +116,13 @@ try:
             except Exception as e:
                 check(f"{name}: shown", False, str(e)[:120])
             ev("closeModal(); document.querySelector('#import').classList.add('hidden')")
+        ev("(()=>{ closeModal(); IM.mode = 'zip'; IM.zips = [{path:'C:\\t\\takeout-1-001.zip', name:'takeout-1-001.zip', bytes: 5e9}, {path:'C:\\t\\takeout-1-003.zip', name:'takeout-1-003.zip', bytes: 3e9}]; IM.zipMissing = [2]; IM.zipFound = 1; openImport('zip'); })()")
+        pg.wait_for_timeout(500)
+        zt = ev("document.querySelector('#import').innerText")
+        check("Takeout screen lists the parts, the total, the added parts and the missing-part warning (English)",
+              "takeout-1-001.zip" in zt and "2 ZIP files" in zt and "1 more parts" in zt and "Part 002 is missing" in zt and not HEB.search(zt), zt[:100].replace(chr(10), " "))
+        check("with parts chosen the Import button is enabled", not ev("document.querySelector('#im-go').disabled"))
+        ev("document.querySelector('#import').classList.add('hidden')")
         ev("(()=>{ setView('grid'); S.sel.clear(); S.sel.add(%d); S.act=%d; onSelChange(); trashSelected(); })()" % (img, img))
         pg.wait_for_selector("#cb-yes", timeout=5000)
         txt = ev("document.querySelector('#modal-box').innerText")
