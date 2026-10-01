@@ -1144,6 +1144,8 @@ function ssTimer(){ clearInterval(SS.t); if(SS.playing) SS.t=setInterval(()=>ssS
   $('#ss-pp').innerHTML = I(SS.playing?'pause':'play'); }
 window.ssStep=(d,auto)=>{ SS.i=(SS.i+d+SS.list.length)%SS.list.length; ssShow(); if(!auto) ssTimer(); };
 window.ssToggle=()=>{ SS.playing=!SS.playing; ssTimer(); };
+// Cast = Windows' own Connect flyout (Win+K): pick a TV / wireless display, then choose Duplicate.
+window.ssCast=()=>send('POST','/api/cast');
 window.ssStop=()=>{ clearInterval(SS.t); $('#slideshow').classList.add('hidden'); $('#ss-a').classList.remove('on'); $('#ss-b').classList.remove('on');
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); };
 $('#slideshow').addEventListener('mousemove', ()=>{ const s=$('#slideshow'); s.classList.add('ui'); clearTimeout(s._h); s._h=setTimeout(()=>s.classList.remove('ui'), 1800); });

@@ -537,6 +537,20 @@ def revert_image(pid: int):
     return {"ok": True}
 
 
+@app.post("/api/cast")
+def cast():
+    """Open Windows' Cast/Connect flyout (Win+K) so the slideshow can be sent to a
+    TV or wireless display. Windows owns the discovery and the connection."""
+    import sys
+    if sys.platform != "win32":
+        raise err(501, "שידור למסך זמין רק ב-Windows")
+    import ctypes
+    key = ctypes.windll.user32.keybd_event
+    VK_LWIN, VK_K, KEYUP = 0x5B, 0x4B, 0x2
+    key(VK_LWIN, 0, 0, 0); key(VK_K, 0, 0, 0); key(VK_K, 0, KEYUP, 0); key(VK_LWIN, 0, KEYUP, 0)
+    return {"ok": True}
+
+
 @app.post("/api/photo/{pid}/reveal")
 def reveal(pid: int):
     """Lightroom's "Show in Explorer": open the folder with the file selected."""

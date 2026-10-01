@@ -39,6 +39,7 @@
     <symbol id="i-dev" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></symbol>
+    <symbol id="i-cast" viewBox="0 0 24 24"><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6M2 12a9 9 0 0 1 8 8M2 16a5 5 0 0 1 4 4M2 20h.01"/></symbol>
     <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
@@ -189,6 +190,7 @@
     <button id="ss-pp" onclick="ssToggle()" aria-label="השהה"><svg class="ic"><use href="#i-pause"/></svg></button>
     <button onclick="ssStep(1)" aria-label="הבאה"><svg class="ic"><use href="#i-next"/></svg></button>
     <span id="ss-count"></span>
+    <button onclick="ssCast()" title="שידור למסך (Win+K)" aria-label="שידור למסך (Win+K)"><svg class="ic"><use href="#i-cast"/></svg></button>
     <button onclick="ssStop()" aria-label="סגור"><svg class="ic"><use href="#i-close"/></svg></button>
   </div>
 </div>

@@ -450,5 +450,7 @@
  "תצוגות": "Widoki",
  "תצוגת רשת (G)": "Widok siatki (G)",
  "‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.": " z Lightroom Classic (zwykle w Pictures/Lightroom). Zaleca się zamknąć Lightroom przed importem.",
- "חזרה למקור": "Przywróć oryginał"
+ "חזרה למקור": "Przywróć oryginał",
+ "שידור למסך (Win+K)": "Prześlij na ekran (Win+K)",
+ "שידור למסך זמין רק ב-Windows": "Przesyłanie na ekran jest dostępne tylko w systemie Windows"
 }

@@ -450,5 +450,7 @@
  "תצוגות": "视图",
  "תצוגת רשת (G)": "网格视图 (G)",
  "‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.": " 来自 Lightroom Classic (通常位于 Pictures/Lightroom)。建议在导入前关闭 Lightroom。",
- "חזרה למקור": "恢复原图"
+ "חזרה למקור": "恢复原图",
+ "שידור למסך (Win+K)": "投放到屏幕 (Win+K)",
+ "שידור למסך זמין רק ב-Windows": "仅 Windows 支持投放"
 }

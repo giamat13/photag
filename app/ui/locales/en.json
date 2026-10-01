@@ -450,5 +450,7 @@
  "תצוגות": "Views",
  "תצוגת רשת (G)": "Grid View (G)",
  "‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.": " from Lightroom Classic (usually in Pictures/Lightroom). Closing Lightroom before importing is recommended.",
- "חזרה למקור": "Revert"
+ "חזרה למקור": "Revert",
+ "שידור למסך (Win+K)": "Cast to screen (Win+K)",
+ "שידור למסך זמין רק ב-Windows": "Casting is only available on Windows"
 }

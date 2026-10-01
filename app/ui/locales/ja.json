@@ -450,5 +450,7 @@
  "תצוגות": "表示形式",
  "תצוגת רשת (G)": "グリッド表示 (G)",
  "‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.": " (Lightroom Classic のもの、通常は Pictures/Lightroom 内)。インポート前に Lightroom を閉じることをおすすめします。",
- "חזרה למקור": "元に戻す"
+ "חזרה למקור": "元に戻す",
+ "שידור למסך (Win+K)": "画面にキャスト (Win+K)",
+ "שידור למסך זמין רק ב-Windows": "キャストは Windows でのみ利用できます"
 }

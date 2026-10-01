@@ -450,5 +450,7 @@
  "תצוגות": "Ansichten",
  "תצוגת רשת (G)": "Rasteransicht (G)",
  "‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.": " aus Lightroom Classic (normalerweise unter Pictures/Lightroom). Es wird empfohlen, Lightroom vor dem Import zu schließen.",
- "חזרה למקור": "Original wiederherstellen"
+ "חזרה למקור": "Original wiederherstellen",
+ "שידור למסך (Win+K)": "Auf Bildschirm übertragen (Win+K)",
+ "שידור למסך זמין רק ב-Windows": "Übertragen ist nur unter Windows verfügbar"
 }

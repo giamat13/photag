@@ -450,5 +450,7 @@
  "תצוגות": "Vues",
  "תצוגת רשת (G)": "Affichage en grille (G)",
  "‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.": " de Lightroom Classic (en général dans Pictures/Lightroom). Il est recommandé de fermer Lightroom avant l'importation.",
- "חזרה למקור": "Rétablir l'original"
+ "חזרה למקור": "Rétablir l'original",
+ "שידור למסך (Win+K)": "Diffuser sur un écran (Win+K)",
+ "שידור למסך זמין רק ב-Windows": "La diffusion n'est disponible que sous Windows"
 }

@@ -450,5 +450,7 @@
  "תצוגות": "보기 방식",
  "תצוגת רשת (G)": "그리드 보기 (G)",
  "‎ של Lightroom Classic (בדרך כלל ב‑Pictures/Lightroom). מומלץ לסגור את Lightroom לפני הייבוא.": " (Lightroom Classic의 파일, 보통 Pictures/Lightroom에 있음). 가져오기 전에 Lightroom을 닫는 것이 좋습니다.",
- "חזרה למקור": "원본으로 복원"
+ "חזרה למקור": "원본으로 복원",
+ "שידור למסך (Win+K)": "화면으로 캐스트 (Win+K)",
+ "שידור למסך זמין רק ב-Windows": "캐스트는 Windows에서만 사용할 수 있습니다"
 }
