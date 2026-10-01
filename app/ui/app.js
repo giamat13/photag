@@ -1484,6 +1484,28 @@ function hbInstallDialog(st, retry){
   $('#hb-close').onclick = closeModal;
 }
 
+// plain-words description of the current choices ("what was chosen for you"), shown under the sliders
+const QUALITY_TEXT = () => [t('איכות כמעט זהה למקור'), t('איכות גבוהה, ההבדל כמעט לא נראה'), t('איכות טובה, אפשר להבחין בהבדל קל בקטעים מפורטים'),
+  t('איכות נמוכה יותר, ייתכנו פגמים בקטעים מורכבים'), t('איכות נמוכה, פגמים נראים לעין')];
+const KIND_TEXT = () => [t('דחיסה יסודית ואיטית: אותה איכות בקובץ קטן יותר'), t('דחיסה מאוזנת בין מהירות לגודל הקובץ'),
+  t('דחיסה מהירה: מסיימים מהר, אבל הקובץ גדול יותר מהאפשרי')];
+const ENCODER_NOTE = () => ({x264:t('H.264: מתנגן בכל מכשיר'), x265:t('H.265: קובץ קטן יותר, אך נתמך פחות'), svt_av1:t('AV1: הקובץ הקטן ביותר, איטי ונתמך פחות')});
+function compressSummary(o, e, speedIdx){
+  const frac = (o.quality - e.rf[0]) / (e.rf[1] - e.rf[0]);
+  const quality = QUALITY_TEXT()[Math.max(0, Math.min(4, Math.floor(frac * 5)))];
+  const lines = [
+    t('איכות: {0}', [o.max_height ? t('{0} (עד {1})', [quality, ltr(o.max_height + 'p')]) : quality]),
+    t('סוג הדחיסה: {0} · {1}', [KIND_TEXT()[speedIdx <= 2 ? 0 : speedIdx === 3 ? 1 : 2], ENCODER_NOTE()[o.encoder]]),
+    o.fps_mode === 'same' ? t('פריימים: כולם נשמרים')
+      : o.fps_mode === 'limit' ? t('פריימים: הקצב יוגבל ל‑{0} לשנייה (פריימים יוסרו)', [ltr(String(o.fps))])
+      : t('פריימים: קצב קבוע של {0} לשנייה (פריימים יוסרו או יוכפלו)', [ltr(String(o.fps))]),
+    o.audio === 'auto' ? t('אודיו: נשמר כמו שהוא (AAC), אחרת מומר ל‑AAC')
+      : o.audio === 'aac' ? t('אודיו: יומר ל‑AAC ב‑{0} kbps', [ltr(String(o.audio_bitrate))]) : t('אודיו: יוסר'),
+    t('הקובץ המקורי נשמר בגיבויים ואפשר להחזיר אותו'),
+  ];
+  return lines.map(l => `<li>${esc(l)}</li>`).join('');
+}
+
 async function compressDialog(pid){
   const p = S.byId.get(pid);
   if(!p || !p.is_video) return toast(t('בחרו סרטון כדי לדחוס'));
@@ -1501,7 +1523,8 @@ async function compressDialog(pid){
       <input type="range" id="cp-str" step="1"><div class="cmp-ends"><span>${t('חלשה מאוד')}</span><span>${t('חזקה מאוד')}</span></div></div>
     <div class="cmp-sl"><div class="cmp-sl-h"><label for="cp-spd">${t('מהירות')}</label><output id="cp-spd-v"></output></div>
       <input type="range" id="cp-spd" min="0" max="6" step="1"><div class="cmp-ends"><span>${t('איטי וטוב')}</span><span>${t('מהיר ופחות טוב')}</span></div></div>
-    <p class="hint" style="padding:0">${t('בקצב איטי המקודד משקיע יותר מאמץ: אותה איכות בקובץ קטן יותר, אבל זה לוקח יותר זמן. כל הפריימים נשמרים, הרזולוציה לא משתנה, והקובץ המקורי נשמר בגיבויים.')}</p>
+    <div class="cmp-sum"><div class="lbl-sub" style="padding:0">${t('מה נבחר בשבילך')}</div><ul id="cp-sum"></ul></div>
+    <p class="hint" style="padding:0">${t('בקצב איטי המקודד משקיע יותר מאמץ: אותה איכות בקובץ קטן יותר, אבל זה לוקח יותר זמן.')}</p>
     <button class="linkbtn" id="cp-adv-t">${t('מתקדם')} ▾</button>
     <div id="cp-adv" class="hidden">
       <label class="fld"><span>${t('מקודד')}</span><select id="cp-enc">${Object.entries(E).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join('')}</select></label>
@@ -1536,8 +1559,10 @@ async function compressDialog(pid){
     q('cp-h').value = String(o.max_height || 0); q('cp-fm').value = o.fps_mode; q('cp-fps').value = o.fps;
     q('cp-fps-row').classList.toggle('hidden', o.fps_mode === 'same');
     q('cp-au').value = o.audio; q('cp-ab').value = o.audio_bitrate;
+    q('cp-sum').innerHTML = compressSummary(o, e, idx);
   };
   sync('init');
+  const refreshSummary = ()=>{ q('cp-sum').innerHTML = compressSummary(o, enc(), stopIndex()); };   // summary only: don't rewrite a field that's being typed in
   q('cp-adv-t').onclick = ()=>q('cp-adv').classList.toggle('hidden');
   q('cp-str').oninput = ()=>{ o.quality = +q('cp-str').value; sync('str'); };
   q('cp-q').oninput = ()=>{ const v = parseFloat(q('cp-q').value), [lo, hi] = enc().rf; if(isFinite(v)){ o.quality = Math.max(lo, Math.min(hi, v)); sync('q'); } };
@@ -1548,11 +1573,11 @@ async function compressDialog(pid){
     const e = enc(), fq = (o.quality - e.rf[0]) / (e.rf[1] - e.rf[0]), si = stopIndex();
     o.encoder = q('cp-enc').value; const n = enc();
     o.quality = Math.round(n.rf[0] + fq * (n.rf[1] - n.rf[0])); o.preset = n.speed_stops[si]; sync('enc'); };
-  q('cp-h').onchange = ()=>{ o.max_height = +q('cp-h').value; };
+  q('cp-h').onchange = ()=>{ o.max_height = +q('cp-h').value; refreshSummary(); };
   q('cp-fm').onchange = ()=>{ o.fps_mode = q('cp-fm').value; sync('fm'); };
-  q('cp-fps').oninput = ()=>{ const v = parseFloat(q('cp-fps').value); if(v > 0) o.fps = v; };
-  q('cp-au').onchange = ()=>{ o.audio = q('cp-au').value; };
-  q('cp-ab').oninput = ()=>{ const v = parseInt(q('cp-ab').value); if(v > 0) o.audio_bitrate = v; };
+  q('cp-fps').oninput = ()=>{ const v = parseFloat(q('cp-fps').value); if(v > 0){ o.fps = v; refreshSummary(); } };
+  q('cp-au').onchange = ()=>{ o.audio = q('cp-au').value; refreshSummary(); };
+  q('cp-ab').oninput = ()=>{ const v = parseInt(q('cp-ab').value); if(v > 0){ o.audio_bitrate = v; refreshSummary(); } };
   q('cp-reset').onclick = ()=>{ Object.assign(o, def, {quality:null, preset:null}); o.quality = enc().rf[2]; o.preset = enc().default_preset; sync('enc'); };
   q('cp-cancel').onclick = closeModal;
   if(q('cp-restore')) q('cp-restore').onclick = async ()=>{ closeModal(); await compressRestore(pid); };
@@ -1593,6 +1618,64 @@ function compressReport(r, pid){
   </div><div class="mf">${ok ? `<button id="cr-restore">${t('החזר גרסה קודמת')}</button><span class="spacer"></span>` : ''}<button class="primary" id="cr-close">${t('סגור')}</button></div>`);
   $('#cr-close').onclick = closeModal;
   if(ok) $('#cr-restore').onclick = async ()=>{ closeModal(); await compressRestore(pid); };
+}
+
+// ---------- updates from GitHub releases ----------
+// Release notes are Markdown; show the common subset (headings, bullets, **bold**, `code`) -- escaped first, so it is always safe.
+function mdLite(md){
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  const out = []; let list = false;
+  for(const raw of String(md).split(/\r?\n/)){
+    const line = raw.trimEnd(), li = /^\s*[-*]\s+(.*)$/.exec(line), h = /^#{1,6}\s+(.*)$/.exec(line);
+    if(li){ if(!list){ out.push('<ul>'); list = true; } out.push('<li>' + inline(li[1]) + '</li>'); continue; }
+    if(list){ out.push('</ul>'); list = false; }
+    if(h) out.push('<h4>' + inline(h[1]) + '</h4>'); else if(line.trim()) out.push('<p>' + inline(line) + '</p>');
+  }
+  if(list) out.push('</ul>');
+  return out.join('');
+}
+
+async function updateCheck(manual){
+  let info;
+  try{ info = await api('/api/update/check' + (manual ? '?force=1' : '')); }
+  catch(e){ if(manual) toast(e.message); return; }
+  if(info.error){ if(manual) toast(t('לא ניתן לבדוק עדכונים: {0}', [info.error])); return; }
+  if(!info.available){ if(manual) toast(t('אתם משתמשים בגרסה העדכנית ({0})', [ltr(info.current)])); return; }
+  if(info.skipped && !manual) return;
+  updateDialog(info);
+}
+
+function updateDialog(info){
+  const auto = info.can_install && info.frozen;
+  modal(`<h3>${t('עדכון זמין')}</h3><div class="mb upd">
+    <p>${t('גרסה {0} זמינה. הגרסה המותקנת: {1}.', [ltr(info.latest), ltr(info.current)])}</p>
+    <div class="lbl-sub" style="padding:0">${t('מה חדש')}</div>
+    <div class="upd-notes">${info.notes.trim() ? mdLite(info.notes) : `<span class="hint" style="padding:0">${t('אין פירוט לגרסה הזו.')}</span>`}</div>
+    <div id="up-prog" class="hidden"><div class="progress"><i id="up-bar"></i></div></div>
+    <div class="hint" id="up-msg" style="padding:0;min-height:16px"></div>
+  </div><div class="mf"><button id="up-skip">${t('דלג על גרסה זו')}</button><span class="spacer"></span>
+    <button id="up-later">${t('אחר כך')}</button><button id="up-go" class="primary">${auto ? t('עדכן עכשיו') : t('פתח את דף השחרור')}</button></div>`);
+  const msg = (text, cls='') => { $('#up-msg').textContent = text; $('#up-msg').className = 'hint ' + cls; $('#up-msg').style.padding = '0'; };
+  const busy = on => ['up-skip', 'up-later', 'up-go'].forEach(id=>$('#' + id).disabled = on);
+  $('#up-later').onclick = closeModal;
+  $('#up-skip').onclick = async ()=>{ await send('POST', '/api/update/skip', {version:info.latest}); closeModal(); toast(t('הגרסה תידלג. אפשר תמיד לבדוק ידנית בתפריט עזרה.')); };
+  $('#up-go').onclick = async ()=>{
+    if(!auto){ await send('POST', '/api/update/open-page'); if(info.can_install) msg(t('בהרצה מקוד המקור אי אפשר להתקין עדכון אוטומטית. נפתח דף השחרור.')); return; }
+    busy(true); $('#up-prog').classList.remove('hidden');
+    try{
+      await send('POST', '/api/update/download');
+      let p;
+      do{ await new Promise(r=>setTimeout(r, 350)); p = await api('/api/job/update');
+          $('#up-bar').style.width = (p.total ? Math.round(100 * p.done / p.total) : 0) + '%';
+          msg(p.key ? t(p.key, p.vars) : (p.msg || '')); }
+      while(!['done', 'error'].includes(p.state));
+      if(p.state === 'error') throw new Error(p.error_key ? t(p.error_key, p.vars) : p.error);
+      const r = await send('POST', '/api/update/install', {path:p.result.path});
+      if(r.mode === 'dry-run') msg(t('(בדיקה) הקובץ הורד ואומת ולא הופעל'), 'ok');
+      else if(r.mode === 'page'){ await send('POST', '/api/update/open-page'); msg(t('בהרצה מקוד המקור אי אפשר להתקין עדכון אוטומטית. נפתח דף השחרור.')); busy(false); }
+      else msg(t('מתקין ומפעיל מחדש…'), 'ok');
+    }catch(e){ msg(e.message, 'err'); busy(false); $('#up-prog').classList.add('hidden'); }
+  };
 }
 
 function languageDialog(){
@@ -1858,7 +1941,8 @@ const MENUS = [
   ]],
   [t('עזרה'), [
     [t('קיצורי מקשים'), 'Ctrl+/', shortcuts],
-    [t('אודות photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p>${t("ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`)],
+    [t('בדוק עדכונים...'), '', ()=>updateCheck(true)],
+    [t('אודות photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('גרסה {0}', [ltr(S.status?.version || '')])}</p><p>${t("ניהול ושמירת תמונות מקומי בהשראת Lightroom Classic: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה לא הורסת — המקור תמיד נשמר.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("סגור")}</button></div>`)],
   ]],
 ];
 let MENU_OPEN=null;
@@ -1979,6 +2063,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
+  setTimeout(()=>updateCheck(false), 2500);   // quiet check on start-up; a window appears only when a newer release exists
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
   [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['aitag',t('תיוג AI')],['compress',t('דחיסת וידאו')],['export',t('ייצוא')]].forEach(async ([n,l])=>{

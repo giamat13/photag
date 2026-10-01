@@ -61,6 +61,15 @@ def set_ai(data: dict) -> None:
     _write_pointer(ai=data or None)
 
 
+def get_update_skipped() -> str | None:
+    """The release version the user chose to skip ("Skip this version")."""
+    return _read_pointer().get("update_skipped") or None
+
+
+def set_update_skipped(version: str | None) -> None:
+    _write_pointer(update_skipped=version or None)
+
+
 def get_handbrake_path() -> str | None:
     """User-chosen HandBrakeCLI location (when it's not on PATH or in a standard folder)."""
     return _read_pointer().get("handbrake_path") or None

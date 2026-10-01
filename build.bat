@@ -24,6 +24,9 @@ if errorlevel 1 (
   exit /b 1
 )
 
+for /f %%v in ('%PYEXE% -c "from app.version import __version__; print(__version__)"') do set VER=%%v
+echo === Version %VER% ===
+
 echo === Building installer (Inno Setup) ===
 set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 if not exist %ISCC% set ISCC="C:\Program Files\Inno Setup 6\ISCC.exe"
@@ -32,7 +35,7 @@ if not exist %ISCC% (
   echo Inno Setup Compiler ^(ISCC.exe^) not found. Install from https://jrsoftware.org/isdl.php
   exit /b 1
 )
-%ISCC% installer.iss
+%ISCC% /DMyAppVersion=%VER% installer.iss
 if errorlevel 1 (
   echo Inno Setup build failed.
   exit /b 1

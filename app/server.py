@@ -10,7 +10,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config
+from . import db, images, importer, faces, aitag, compress, config, updater
+from .version import __version__
 from .config import PATHS
 
 app = FastAPI(title="photag")
@@ -41,7 +42,7 @@ def _start_trash_purge():
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing", "encoding", "verifying", "replacing"):
+        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing", "encoding", "verifying", "replacing", "downloading"):
             raise err(409, "המשימה כבר רצה")
         prog = importer.Progress()
         prog.state = "starting"   # not "idle": a poll right after the start must not read the job as finished
@@ -75,6 +76,7 @@ def status():
             "trashed": c("SELECT COUNT(*) FROM photos WHERE trashed=1"),
         },
         "trash_days": config.TRASH_RETENTION_DAYS,
+        "version": __version__,
         "last_import": int(db.get_setting(con, "last_import", 0) or 0),
     }
 
@@ -128,6 +130,51 @@ def start_import(body: ImportIn):
         raise err(404, "קובץ ה-ZIP לא נמצא")
     _start("import", importer.run_import, body.zip_path)
     return {"ok": True}
+
+
+# ---- updates from GitHub releases ------------------------------------------------
+class SkipIn(BaseModel):
+    version: str
+
+class InstallIn(BaseModel):
+    path: str
+
+
+@app.get("/api/update/check")
+def update_check(force: int = 0):
+    info = updater.check(bool(force))
+    info["can_install"] = updater.can_install(info)
+    # packaged EXE only; the dry-run test mode (never launches anything) behaves like it so the whole flow can be tested
+    info["frozen"] = bool(getattr(__import__("sys"), "frozen", False)) or bool(os.environ.get("PHOTAG_UPDATE_DRY_RUN"))
+    return info
+
+
+@app.post("/api/update/open-page")
+def update_open_page():
+    page = updater.check()["page"]
+    if page.startswith("https://github.com/"):          # only ever this project's GitHub pages
+        _open_url(page)
+    return {"ok": True, "url": page}
+
+
+@app.post("/api/update/skip")
+def update_skip(body: SkipIn):
+    updater.skip(body.version)
+    return {"ok": True}
+
+
+@app.post("/api/update/download")
+def update_download():
+    _start("update", updater.run_download)
+    return {"ok": True}
+
+
+@app.post("/api/update/install")
+def update_install(body: InstallIn):
+    try:
+        return updater.launch(body.path)
+    except updater.UpdateError:
+        raise err(400, "קובץ העדכון לא נמצא. הורידו אותו שוב")
 
 
 # ---- video compression (HandBrake) -------------------------------------------
