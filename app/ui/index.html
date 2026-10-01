@@ -6,6 +6,7 @@
   <title>photag</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="mod-library">
@@ -138,6 +139,7 @@
       <div id="v-compare" class="v-compare hidden"></div>
       <div id="v-survey" class="v-survey hidden"></div>
       <div id="v-people" class="v-people hidden"></div>
+      <div id="v-map" class="v-map hidden" dir="ltr"><div id="map-canvas"></div><div id="map-note" class="map-note"></div></div>
       <div id="v-develop" class="v-develop hidden"><div id="dev-canvas" class="dev-canvas"><img id="dev-img" alt=""></div><div id="crop-ov" class="crop-ov hidden"></div><div id="dev-badge" class="dev-badge hidden">לפני</div></div>
       <div id="v-empty" class="v-empty hidden"></div>
     </div>
@@ -207,6 +209,7 @@
 <div id="import" class="importer hidden"></div>
 <div id="menu-pop" class="menu-pop hidden"></div>
 <div id="toast" class="toast hidden"></div>
+<script src="vendor/leaflet/leaflet.js"></script>
 <script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>

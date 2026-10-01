@@ -500,6 +500,24 @@ def folders():
             "folders": [{"name": k, "n": v} for k, v in sorted(counts.items(), reverse=True)]}
 
 
+class MapIn(BaseModel):
+    ids: list[int]
+
+
+@app.post("/api/map")
+def map_points(body: MapIn):
+    """GPS positions of the given photos (for the map view): those with a position, and how many have none."""
+    con = db.connect()
+    ids = list(dict.fromkeys(body.ids))[:20000]
+    pts = []
+    for i in range(0, len(ids), 500):
+        part = ids[i:i + 500]
+        pts += [dict(r) for r in con.execute(
+            f"SELECT id,filename,taken_at,lat,lng,is_video FROM photos WHERE trashed=0 AND lat IS NOT NULL AND lng IS NOT NULL "
+            f"AND id IN ({','.join('?' * len(part))})", part)]
+    return {"points": pts, "total": len(ids), "without": len(ids) - len(pts)}
+
+
 @app.get("/api/photos")
 def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
            favorite: int = 0, year: int = 0, trashed: int = 0,

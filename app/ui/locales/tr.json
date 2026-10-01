@@ -8,7 +8,6 @@
  " בחר תיקייה...": " Klasör seç...",
  " דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם\" הופכות לאנשים), אוספים והאוסף המהיר. הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי. עותקים וירטואליים ואוספים חכמים מדולגים.": " Derecelendirmeler, bayraklar, renk etiketleri, açıklamalar, çekim tarihleri, konumlar, anahtar kelimeler (“kişi” anahtar kelimeleri İnsanlar olur), koleksiyonlar ve Hızlı Koleksiyon. Dosyalar kitaplığa kopyalanır — orijinal değişmez. Geliştir düzenlemeleri Lightroom biçiminde kaydedilir ve aktarılmaz; orijinal dosya içe aktarılır. Sanal kopyalar ve akıllı koleksiyonlar atlanır.",
  " המקור, בלי עריכות": " Orijinal, düzenlemesiz",
- " הצג במפה": " Haritada göster",
  " הקובץ כפי שהוא בקטלוג (כולל עריכות)": " Dosya katalogdaki haliyle (düzenlemeler dahil)",
  " כולל תיקיות משנה": " Alt klasörleri dahil et",
  "&lt;מעורב&gt;": "&lt;karışık&gt;",
@@ -376,7 +375,6 @@
  "פיקסלים · איכות": "Piksel · Kalite",
  "פיתוח": "Geliştir",
  "פריטים נמחקים לצמיתות אחרי {0} יום": "Öğeler {0} gün sonra kalıcı olarak silinir",
- "פתח ב‑Google Photos": "Google Photos'ta aç",
  "צבע": "Renk",
  "צהוב": "Sarı",
  "צור אוסף": "Koleksiyon Oluştur",
@@ -765,5 +763,16 @@
  "לחזור לקובץ המקורי?": "Orijinal dosyaya dönülsün mü?",
  "למחוק את מפתח ה‑API?": "API anahtarı silinsin mi?",
  "משימת הגיבוי של Windows לא נרשמה: הגיבוי ירוץ רק כשהאפליקציה פתוחה.": "Windows yedekleme görevi kaydedilmedi: yedekleme yalnızca uygulama açıkken çalışacak.",
- "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "Henüz yedekleme yok: ilki yakında başlayacak veya «Şimdi yedekle» düğmesine tıklayın."
+ "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "Henüz yedekleme yok: ilki yakında başlayacak veya «Şimdi yedekle» düğmesine tıklayın.",
+ "{0} בלי מיקום": "{0} konumsuz",
+ "{0} תמונות במקום הזה": "Bu yerde {0} fotoğraf",
+ "{0} תמונות על המפה, {1} מקומות": "Haritada {0} fotoğraf, {1} yer",
+ "אין חיבור לאינטרנט, ולכן אריחי המפה לא נטענים. הנקודות עדיין מוצגות.": "İnternet bağlantısı yok, bu yüzden harita parçaları yüklenmiyor. İğneler yine de gösteriliyor.",
+ "אין מיקום לתמונה הזו. הקלידו קו רוחב וקו אורך כדי שתופיע על המפה.": "Bu fotoğrafın konumu yok. Haritada görünmesi için enlem ve boylam girin.",
+ "הצג את התמונות שנבחרו על המפה": "Seçili fotoğrafları haritada göster",
+ "לחצו כדי לפתוח את המפה הגדולה": "Büyük haritayı açmak için tıklayın",
+ "לתמונות הנבחרות אין מיקום": "Seçili fotoğrafların konumu yok",
+ "לתמונות שנבחרו אין מיקום GPS. אפשר להוסיף קו רוחב וקו אורך בלוח המטא-נתונים בצד.": "Seçili fotoğrafların GPS konumu yok. Enlem ve boylamı yan taraftaki meta veri panelinden ekleyebilirsiniz.",
+ "מפה": "Harita",
+ "מפה: תמונות שנבחרו על המפה": "Harita: haritadaki seçili fotoğraflar"
 }

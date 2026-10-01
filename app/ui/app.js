@@ -626,7 +626,7 @@ function setView(v){
   if(v==='loupe' && S.act==null && S.list.length) selectOnly(S.list[0].id);
   if(v==='compare' && S.act==null && S.list.length) selectOnly(S.list[0].id);
   S.prevView = S.view==='people'?S.prevView:S.view; S.view=v;
-  ['grid','loupe','compare','survey','people'].forEach(k=>$('#v-'+k).classList.toggle('hidden', k!==v));
+  ['grid','loupe','compare','survey','people','map'].forEach(k=>$('#v-'+k).classList.toggle('hidden', k!==v));
   $('#v-empty').classList.add('hidden');
   if(v!=='loupe'){ closeLoupeMedia(); }
   if(v==='grid'){ layoutGrid(true); scrollToAct(); $('#v-grid').focus({preventScroll:true}); if(!S.list.length){ $('#v-empty').classList.remove('hidden'); renderEmpty(); } }
@@ -634,6 +634,7 @@ function setView(v){
   if(v==='compare') renderCompare();
   if(v==='survey') renderSurvey();
   if(v==='people') renderPeople();
+  if(v==='map') renderMapView();
   renderToolbar(); renderRight(); updateNavigator();
 }
 // ---------- video player: custom controls over <video> ----------
@@ -902,10 +903,63 @@ $('#v-people').addEventListener('keydown', async e=>{
   await send('POST', `/api/cluster/${inp.dataset.nameCluster}/name`, {name:n}); toast(`${t("נקרא „{0}\"", [esc(n)])}`); await loadSide(); renderPeople();
 });
 
+// ---------- map: pins for the photos you selected (Leaflet, bundled; tiles from OpenStreetMap) ----------
+let MAP = null, MAPLAYER = null, SIDEMAP = null, MAPINFO = '', MAPSEQ = 0;
+const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+function mapTiles(onFail){
+  let bad = 0;
+  const l = L.tileLayer(TILES, {maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>', className: 'map-tiles'});
+  l.on('tileerror', ()=>{ if(++bad === 4 && onFail) onFail(); });
+  l.on('tileload', ()=>{ bad = 0; });
+  return l;
+}
+const pinIcon = n => L.divIcon({className: 'mp', html: `<i></i>${n > 1 ? `<b>${n > 99 ? '99+' : n}</b>` : ''}`, iconSize: [26, 26], iconAnchor: [13, 30], popupAnchor: [0, -28]});
+function drawMiniMap(d){
+  const m = L.map('mini-map', {zoomControl: false, attributionControl: false, scrollWheelZoom: false, dragging: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false})
+    .setView([d.lat, d.lng], 13);
+  mapTiles().addTo(m);
+  L.marker([d.lat, d.lng], {icon: pinIcon(1), interactive: false}).addTo(m);
+  SIDEMAP = m;
+}
+async function renderMapView(){
+  const note = $('#map-note'); note.className = 'map-note'; note.textContent = '';
+  if(!MAP){
+    MAP = L.map('map-canvas', {zoomControl: true, worldCopyJump: true}).setView([31.8, 35.0], 3);
+    mapTiles(()=>{ const n = $('#map-note'); n.classList.add('show', 'warn'); n.textContent = t('אין חיבור לאינטרנט, ולכן אריחי המפה לא נטענים. הנקודות עדיין מוצגות.'); }).addTo(MAP);
+    MAPLAYER = L.layerGroup().addTo(MAP);
+  }
+  MAP.invalidateSize();
+  const ids = S.sel.size ? [...S.sel] : S.list.map(p=>p.id);
+  const token = ++MAPSEQ;
+  let r; try{ r = await send('POST', '/api/map', {ids}); } catch(e){ return toast(e.message); }
+  if(token !== MAPSEQ) return;                    // a newer render started meanwhile: only the last one draws
+  MAPLAYER.clearLayers();
+  // photos taken at the same place share one pin (with a count)
+  const groups = new Map();
+  for(const p of r.points){ const k = p.lat.toFixed(4) + ',' + p.lng.toFixed(4); (groups.get(k) || groups.set(k, []).get(k)).push(p); }
+  const bounds = [];
+  for(const [, ps] of groups){
+    const m = L.marker([ps[0].lat, ps[0].lng], {icon: pinIcon(ps.length), title: ps.length === 1 ? ps[0].filename : ''}).addTo(MAPLAYER);
+    m.bindPopup(()=>`<div class="mp-pop" dir="auto"><div class="mp-grid">${ps.slice(0, 12).map(p=>`<img src="${thumbUrl(p.id)}" data-pid="${p.id}" title="${esc(p.filename)}" alt="">`).join('')}</div>
+      <div class="mp-cap">${ps.length === 1 ? `<bdi>${esc(ps[0].filename)}</bdi> · ${fdate(ps[0].taken_at)}` : t('{0} תמונות במקום הזה', [num(ps.length)])}</div></div>`, {minWidth: 190, maxWidth: 320});
+    bounds.push([ps[0].lat, ps[0].lng]);
+  }
+  if(bounds.length === 1) MAP.setView(bounds[0], 14);
+  else if(bounds.length) MAP.fitBounds(bounds, {padding: [50, 50], maxZoom: 15});
+  MAPINFO = r.points.length ? t('{0} תמונות על המפה, {1} מקומות', [num(r.points.length), num(groups.size)]) + (r.without ? ' · ' + t('{0} בלי מיקום', [num(r.without)]) : '')
+    : t('לתמונות הנבחרות אין מיקום');
+  const inf = $('#map-info'); if(inf) inf.textContent = MAPINFO;
+  if(!r.points.length){ note.classList.add('show'); note.textContent = t('לתמונות שנבחרו אין מיקום GPS. אפשר להוסיף קו רוחב וקו אורך בלוח המטא-נתונים בצד.'); }
+}
+$('#v-map').addEventListener('click', e=>{
+  const im = e.target.closest('[data-pid]'); if(!im) return;
+  selectOnly(+im.dataset.pid); setView('loupe');
+});
+
 // ---------- toolbar ----------
 function tbViews(){
   const b=(v,ic,tg)=>`<button class="tb-btn ${S.view===v?'on':''}" data-view="${v}" title="${tg}">${I(ic)}</button>`;
-  return `<div class="tb-grp">${b('grid','grid',t('תצוגת רשת (G)'))}${b('loupe','loupe',t('זכוכית מגדלת (E)'))}${b('compare','compare',t('השוואה (C)'))}${b('survey','survey',t('סקירה (N)'))}${b('people','face',t('אנשים (O)'))}</div>`;
+  return `<div class="tb-grp">${b('grid','grid',t('תצוגת רשת (G)'))}${b('loupe','loupe',t('זכוכית מגדלת (E)'))}${b('compare','compare',t('השוואה (C)'))}${b('survey','survey',t('סקירה (N)'))}${b('people','face',t('אנשים (O)'))}${b('map','pin',t('מפה: תמונות שנבחרו על המפה'))}</div>`;
 }
 function tbAttrs(){
   const p=actPhoto(), r=p?.rating||0;
@@ -928,6 +982,7 @@ function renderToolbar(){
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("מידע (I)")}">${t("מידע")}</button>`;
   else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("החלף בחירה ומועמד")}">${t("החלף")}</button><button class="tb-btn" data-t="done" title="${t("סיום (Esc)")}">${t("סיום")}</button>`;
   else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} תמונות בסקירה", [num(S.sel.size)])}</span>`;
+  else if(S.view==='map') h += `<span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
   else h += `<span class="spacer"></span><span class="tb-info">${t("הקלידו שם מתחת לפנים כדי לתת להן שם")}</span>`;
   tb.innerHTML = h;
 }
@@ -1061,6 +1116,7 @@ $('#p-kwlist').addEventListener('click', e=>{
 
 function renderMeta(ids, d){
   const el=$('#p-meta');
+  if(SIDEMAP){ SIDEMAP.remove(); SIDEMAP = null; }
   if(!ids.length || !d){ el.innerHTML=("<div class=\"hint\">"+t("לא נבחרה תמונה.")+"</div>"); return; }
   const multi = ids.length>1;
   const sel = ids.map(id=>S.byId.get(id)).filter(Boolean);
@@ -1084,22 +1140,24 @@ function renderMeta(ids, d){
     <div class="kv"><span>${t("גודל קובץ")}</span>${multi?MIX:fsize(d.bytes)}</div>
     <div class="kv"><span>${t("סוג")}</span>${multi&&!sel.every(p=>ext(p)===ext(sel[0]))?MIX:esc(ext(d))}${d.edited&&!multi?t(' · נערך'):''}</div>
     <div class="meta-sub">${t("מיקום")}</div>
-    ${multi?`<div class="kv"><span>GPS</span>${MIX}</div>`:`
+    ${multi?`<div class="kv"><span>GPS</span>${MIX}</div><div class="btnrow"><button id="m-showmap">${I('pin')} ${t('הצג את התמונות שנבחרו על המפה')}</button></div>`:`
     <div class="kv"><span>${t("קו רוחב")}</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>
     <div class="kv"><span>${t("קו אורך")}</span><input id="m-lng" type="number" step="any" dir="ltr" value="${d.lng??''}"></div>
-    ${d.lat!=null?`<div class="kv"><span></span><a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank">${I('pin','')} ${t(" הצג במפה")}</a></div>`:''}
+    ${d.lat!=null?`<div class="mini-map" id="mini-map" dir="ltr" title="${t('לחצו כדי לפתוח את המפה הגדולה')}"></div>`:`<div class="hint">${t('אין מיקום לתמונה הזו. הקלידו קו רוחב וקו אורך כדי שתופיע על המפה.')}</div>`}
     <div class="meta-sub">${t("קטלוג")}</div>
     <div class="kv tall"><span>${t("אוספים")}</span><span style="white-space:normal">${links(d.albums,'album')}</span></div>
     <div class="kv tall"><span>${t("אנשים")}</span><span style="white-space:normal">${links(d.people,'person')}</span></div>
     <div class="kv"><span>${t("מועדף Google")}</span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="m-fav" ${d.favorited?'checked':''}></label></div>
     <div class="kv"><span>${t("יובא")}</span>${fdate(d.imported_at)}</div>
-    ${d.gphotos_url?`<div class="kv"><span></span><a href="${esc(d.gphotos_url)}" target="_blank">${t("פתח ב‑Google Photos")} ${I('external')}</a></div>`:''}
     <div class="btnrow"><button id="m-exif" title="${t("כתוב תיאור, תאריך ומיקום לתוך קובץ ה‑JPG (Ctrl+S)")}">${t("שמור מטא-נתונים לקובץ")}</button><button id="m-reveal" title="Ctrl+R">${t("הצג בסייר")}</button></div>`}`;
+  if(!multi && d.lat!=null && $('#mini-map')) drawMiniMap(d);
 }
 $('#p-meta').addEventListener('click', e=>{
   const s=e.target.closest('[data-mr]'); if(s){ const n=+s.dataset.mr, p=actPhoto(); setRating(p&&p.rating===n&&targets().length===1?0:n); setTimeout(renderRight, 50); return; }
   const l=e.target.closest('[data-src-link]'); if(l){ setSource(srcFromKey(l.dataset.srcLink)); return; }
   if(e.target.id==='m-exif') saveMetaToFile();
+  if(e.target.closest('#m-showmap')) setView('map');
+  if(e.target.closest('#mini-map') && !e.target.closest('.leaflet-control')) setView('map');
   if(e.target.id==='m-reveal') reveal();
 });
 $('#p-meta').addEventListener('change', async e=>{
@@ -1138,7 +1196,7 @@ async function setModule(m){
   if(m==='develop'){
     if(S.act==null && S.list.length) selectOnly(S.list[0].id);
     closeLoupeMedia();
-    ['grid','loupe','compare','survey','people','empty'].forEach(k=>$('#v-'+k).classList.add('hidden'));
+    ['grid','loupe','compare','survey','people','map','empty'].forEach(k=>$('#v-'+k).classList.add('hidden'));
     $('#v-develop').classList.remove('hidden');
     devOpen();
   } else {
@@ -2250,7 +2308,7 @@ const MENUS = [
     [t('שפה') + (I18N.lang==='en' ? '' : ' / Language') + '...', '', languageDialog],
     sep,
     [t('רשת'), 'G', ()=>setView('grid')], [t('זכוכית מגדלת'), 'E', ()=>setView('loupe')], [t('השוואה'), 'C', ()=>setView('compare')],
-    [t('סקירה'), 'N', ()=>setView('survey')], [t('אנשים'), 'O', ()=>setView('people')], [t('פיתוח'), 'D', ()=>setModule('develop')],
+    [t('סקירה'), 'N', ()=>setView('survey')], [t('אנשים'), 'O', ()=>setView('people')], [t('מפה'), '', ()=>setView('map')], [t('פיתוח'), 'D', ()=>setModule('develop')],
     [t('מצגת'), 'Ctrl+Enter', ssStart],
     sep,
     [t('החלף סגנון תאים'), 'J', cycleCellStyle],

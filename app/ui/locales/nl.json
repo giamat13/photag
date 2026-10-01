@@ -8,7 +8,6 @@
  " בחר תיקייה...": " Map kiezen...",
  " דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם\" הופכות לאנשים), אוספים והאוסף המהיר. הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי. עותקים וירטואליים ואוספים חכמים מדולגים.": " Beoordelingen, vlaggen, kleurlabels, bijschriften, opnamedatums, locaties, trefwoorden (trefwoorden van het type ‘persoon’ worden Personen), collecties en de Snelle collectie. De bestanden worden naar de bibliotheek gekopieerd — het origineel blijft ongewijzigd. Bewerkingen uit Ontwikkelen worden in het Lightroom-formaat opgeslagen en niet overgenomen; het originele bestand wordt geïmporteerd. Virtuele kopieën en slimme collecties worden overgeslagen.",
  " המקור, בלי עריכות": " Het origineel, zonder bewerkingen",
- " הצג במפה": " Tonen op kaart",
  " הקובץ כפי שהוא בקטלוג (כולל עריכות)": " Het bestand zoals het in de catalogus staat (inclusief bewerkingen)",
  " כולל תיקיות משנה": " Inclusief submappen",
  "&lt;מעורב&gt;": "&lt;gemengd&gt;",
@@ -376,7 +375,6 @@
  "פיקסלים · איכות": "Pixels · Kwaliteit",
  "פיתוח": "Ontwikkelen",
  "פריטים נמחקים לצמיתות אחרי {0} יום": "Items worden na {0} dagen definitief verwijderd",
- "פתח ב‑Google Photos": "Openen in Google Photos",
  "צבע": "Kleur",
  "צהוב": "Geel",
  "צור אוסף": "Collectie maken",
@@ -765,5 +763,16 @@
  "לחזור לקובץ המקורי?": "Terug naar het oorspronkelijke bestand?",
  "למחוק את מפתח ה‑API?": "De API-sleutel verwijderen?",
  "משימת הגיבוי של Windows לא נרשמה: הגיבוי ירוץ רק כשהאפליקציה פתוחה.": "De Windows-back-uptaak is niet geregistreerd: de back-up draait alleen terwijl de app geopend is.",
- "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "Nog geen back-up: de eerste start binnenkort, of klik op «Nu back-up maken»."
+ "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "Nog geen back-up: de eerste start binnenkort, of klik op «Nu back-up maken».",
+ "{0} בלי מיקום": "{0} zonder locatie",
+ "{0} תמונות במקום הזה": "{0} foto's op deze plek",
+ "{0} תמונות על המפה, {1} מקומות": "{0} foto's op de kaart, {1} plekken",
+ "אין חיבור לאינטרנט, ולכן אריחי המפה לא נטענים. הנקודות עדיין מוצגות.": "Geen internetverbinding, dus de kaarttegels worden niet geladen. De markeringen worden nog wel getoond.",
+ "אין מיקום לתמונה הזו. הקלידו קו רוחב וקו אורך כדי שתופיע על המפה.": "Deze foto heeft geen locatie. Voer een breedtegraad en lengtegraad in om hem op de kaart te tonen.",
+ "הצג את התמונות שנבחרו על המפה": "Geselecteerde foto's op de kaart tonen",
+ "לחצו כדי לפתוח את המפה הגדולה": "Klik om de grote kaart te openen",
+ "לתמונות הנבחרות אין מיקום": "De geselecteerde foto's hebben geen locatie",
+ "לתמונות שנבחרו אין מיקום GPS. אפשר להוסיף קו רוחב וקו אורך בלוח המטא-נתונים בצד.": "De geselecteerde foto's hebben geen GPS-locatie. Je kunt een breedtegraad en lengtegraad toevoegen in het metadatapaneel aan de zijkant.",
+ "מפה": "Kaart",
+ "מפה: תמונות שנבחרו על המפה": "Kaart: geselecteerde foto's op de kaart"
 }

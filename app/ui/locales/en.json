@@ -8,7 +8,6 @@
  " בחר תיקייה...": " Choose folder...",
  " דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם\" הופכות לאנשים), אוספים והאוסף המהיר. הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי. עותקים וירטואליים ואוספים חכמים מדולגים.": " Ratings, flags, color labels, captions, capture dates, locations, keywords (“person” keywords become People), collections and the Quick Collection. Files are copied into the library — the original is not changed. Develop edits are saved in Lightroom's format and are not transferred; the original file is imported. Virtual copies and smart collections are skipped.",
  " המקור, בלי עריכות": " The original, without edits",
- " הצג במפה": " Show on map",
  " הקובץ כפי שהוא בקטלוג (כולל עריכות)": " The file as it is in the catalog (including edits)",
  " כולל תיקיות משנה": " Include subfolders",
  "&lt;מעורב&gt;": "&lt;mixed&gt;",
@@ -376,7 +375,6 @@
  "פיקסלים · איכות": "Pixels · Quality",
  "פיתוח": "Develop",
  "פריטים נמחקים לצמיתות אחרי {0} יום": "Items are permanently deleted after {0} days",
- "פתח ב‑Google Photos": "Open in Google Photos",
  "צבע": "Color",
  "צהוב": "Yellow",
  "צור אוסף": "Create Collection",
@@ -765,5 +763,16 @@
  "לחזור לקובץ המקורי?": "Revert to the original file?",
  "למחוק את מפתח ה‑API?": "Delete the API key?",
  "משימת הגיבוי של Windows לא נרשמה: הגיבוי ירוץ רק כשהאפליקציה פתוחה.": "The Windows backup task was not registered: backup will only run while the app is open.",
- "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "No backup yet: the first one will start soon, or click «Back up now»."
+ "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "No backup yet: the first one will start soon, or click «Back up now».",
+ "{0} בלי מיקום": "{0} without location",
+ "{0} תמונות במקום הזה": "{0} photos at this place",
+ "{0} תמונות על המפה, {1} מקומות": "{0} photos on the map, {1} places",
+ "אין חיבור לאינטרנט, ולכן אריחי המפה לא נטענים. הנקודות עדיין מוצגות.": "No internet connection, so map tiles can't load. The pins are still shown.",
+ "אין מיקום לתמונה הזו. הקלידו קו רוחב וקו אורך כדי שתופיע על המפה.": "This photo has no location. Enter a latitude and longitude to make it appear on the map.",
+ "הצג את התמונות שנבחרו על המפה": "Show the selected photos on the map",
+ "לחצו כדי לפתוח את המפה הגדולה": "Click to open the large map",
+ "לתמונות הנבחרות אין מיקום": "The selected photos have no location",
+ "לתמונות שנבחרו אין מיקום GPS. אפשר להוסיף קו רוחב וקו אורך בלוח המטא-נתונים בצד.": "The selected photos have no GPS location. You can add a latitude and longitude in the metadata panel on the side.",
+ "מפה": "Map",
+ "מפה: תמונות שנבחרו על המפה": "Map: selected photos on the map"
 }

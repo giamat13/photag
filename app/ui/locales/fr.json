@@ -8,7 +8,6 @@
  " בחר תיקייה...": " Choisir un dossier...",
  " דירוגים, דגלים, תוויות צבע, כיתובים, תאריכי צילום, מיקומים, מילות מפתח (מילות „אדם\" הופכות לאנשים), אוספים והאוסף המהיר. הקבצים מועתקים לספרייה — המקור לא משתנה. עריכות Develop נשמרות בפורמט של Lightroom ולא מועברות; מיובא הקובץ המקורי. עותקים וירטואליים ואוספים חכמים מדולגים.": " Notes, drapeaux, étiquettes de couleur, légendes, dates de prise de vue, lieux, mots-clés (les mots-clés « personne » deviennent des Personnes), collections et collection rapide. Les fichiers sont copiés dans la bibliothèque — l'original n'est pas modifié. Les modifications de Développement sont enregistrées au format Lightroom et ne sont pas transférées ; le fichier original est importé. Les copies virtuelles et les collections dynamiques sont ignorées.",
  " המקור, בלי עריכות": " L'original, sans modifications",
- " הצג במפה": " Afficher sur la carte",
  " הקובץ כפי שהוא בקטלוג (כולל עריכות)": " Le fichier tel qu'il est dans le catalogue (modifications incluses)",
  " כולל תיקיות משנה": " Inclure les sous-dossiers",
  "&lt;מעורב&gt;": "&lt;mixte&gt;",
@@ -376,7 +375,6 @@
  "פיקסלים · איכות": "Pixels · Qualité",
  "פיתוח": "Développement",
  "פריטים נמחקים לצמיתות אחרי {0} יום": "Les éléments sont supprimés définitivement après {0} jours",
- "פתח ב‑Google Photos": "Ouvrir dans Google Photos",
  "צבע": "Couleur",
  "צהוב": "Jaune",
  "צור אוסף": "Créer une collection",
@@ -765,5 +763,16 @@
  "לחזור לקובץ המקורי?": "Revenir au fichier d'origine ?",
  "למחוק את מפתח ה‑API?": "Supprimer la clé API ?",
  "משימת הגיבוי של Windows לא נרשמה: הגיבוי ירוץ רק כשהאפליקציה פתוחה.": "La tâche de sauvegarde Windows n'a pas été enregistrée : la sauvegarde ne s'exécutera que lorsque l'application est ouverte.",
- "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "Pas encore de sauvegarde : la première démarrera bientôt, ou cliquez sur « Sauvegarder maintenant »."
+ "עוד לא נעשה גיבוי: הראשון יתחיל בקרוב, או לחצו «גבה עכשיו».": "Pas encore de sauvegarde : la première démarrera bientôt, ou cliquez sur « Sauvegarder maintenant ».",
+ "{0} בלי מיקום": "{0} sans position",
+ "{0} תמונות במקום הזה": "{0} photos à cet endroit",
+ "{0} תמונות על המפה, {1} מקומות": "{0} photos sur la carte, {1} lieux",
+ "אין חיבור לאינטרנט, ולכן אריחי המפה לא נטענים. הנקודות עדיין מוצגות.": "Pas de connexion internet, les tuiles de la carte ne se chargent donc pas. Les repères restent affichés.",
+ "אין מיקום לתמונה הזו. הקלידו קו רוחב וקו אורך כדי שתופיע על המפה.": "Cette photo n'a pas de position. Saisissez une latitude et une longitude pour qu'elle apparaisse sur la carte.",
+ "הצג את התמונות שנבחרו על המפה": "Afficher les photos sélectionnées sur la carte",
+ "לחצו כדי לפתוח את המפה הגדולה": "Cliquez pour ouvrir la grande carte",
+ "לתמונות הנבחרות אין מיקום": "Les photos sélectionnées n'ont pas de position",
+ "לתמונות שנבחרו אין מיקום GPS. אפשר להוסיף קו רוחב וקו אורך בלוח המטא-נתונים בצד.": "Les photos sélectionnées n'ont pas de position GPS. Vous pouvez ajouter une latitude et une longitude dans le panneau des métadonnées sur le côté.",
+ "מפה": "Carte",
+ "מפה: תמונות שנבחרו על המפה": "Carte : photos sélectionnées sur la carte"
 }
