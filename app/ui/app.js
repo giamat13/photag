@@ -2468,7 +2468,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setView('grid');
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false))) updateCheck(false); }, 2500);
   setTimeout(backupHealthNotice, 8000);   // quiet check on start-up; a window appears only when a newer release exists
-  if(!S.all.length && !S.status.counts.trashed) openImport('folder');
+  // an empty catalog shows the empty-state screen with an Import button; it never jumps to the Import screen by itself
   // resume the activity indicator if a job is already running (e.g. after a reload)
   [['import',t('Import')],['faces',t('Face Detection')],['aitag',t('AI tagging')],['compress',t('Video compression')],['backup',t('Backup')],['export',t('Export')]].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}

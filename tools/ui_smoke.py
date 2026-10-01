@@ -52,6 +52,18 @@ try:
         except Exception:
             time.sleep(0.5)
     call("POST", "/api/settings/library", {"path": str(tmp / "lib")})
+    # an empty library: the main window shows the empty state, it must not jump to the Import screen by itself
+    with sync_playwright() as pw0:
+        b0 = pw0.chromium.launch(channel="msedge", headless=True)
+        p0 = b0.new_page(viewport={"width": 1400, "height": 900})
+        p0.goto(APP + "/")
+        p0.wait_for_selector("#v-empty:not(.hidden)", timeout=20000)
+        p0.wait_for_timeout(1500)
+        check("empty library: the empty-state screen is shown", p0.evaluate("!document.querySelector('#v-empty').classList.contains('hidden')"))
+        check("empty library: the Import screen does NOT open by itself", p0.evaluate("document.querySelector('#import').classList.contains('hidden')"))
+        empty_text = p0.evaluate("document.querySelector('#v-empty').innerText")
+        check("empty library: the empty state offers an Import button", "Import" in empty_text, empty_text[:80].replace(chr(10), " "))
+        b0.close()
     files = [str(p) for p in sorted((ROOT / "tools" / "sandbox" / "photos").iterdir())]
     call("POST", "/api/import-folder", {"paths": files, "keywords": [], "album": None})
     while call("GET", "/api/job/import")["state"] not in ("done", "error"):
