@@ -316,6 +316,38 @@ def _record(ok: bool, by: str, error=None, now: float | None = None):
     os.replace(tmp, STATE_FILE)
 
 
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+        k = ctypes.windll.kernel32
+        h = k.OpenProcess(0x1000, False, pid)                  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return False                                       # no such process
+        try:
+            code = ctypes.c_ulong()
+            return bool(k.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259     # STILL_ACTIVE
+        finally:
+            k.CloseHandle(h)
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def _lock_is_stale(p: Path) -> bool:
+    """A lock is left over when its backup died (the installer closed it, a crash, a power cut) or is absurdly old."""
+    try:
+        if time.time() - p.stat().st_mtime > LOCK_STALE:
+            return True
+        pid = int(p.read_text().split()[0])
+    except (OSError, ValueError, IndexError):
+        return False
+    return not _pid_alive(pid)
+
+
 def _lock() -> Path:
     p = backup_dir() / ".backup.lock"
     for _ in range(2):
@@ -324,12 +356,12 @@ def _lock() -> Path:
             os.write(fd, f"{os.getpid()} {time.time()}".encode()); os.close(fd)
             return p
         except FileExistsError:
-            try:
-                if time.time() - p.stat().st_mtime > LOCK_STALE:      # left behind by a crash
+            if _lock_is_stale(p):
+                try:
                     p.unlink()
-                    continue
-            except OSError:
-                pass
+                except OSError:
+                    pass
+                continue
             raise BusyError()
     raise BusyError()
 
@@ -407,6 +439,9 @@ def _create_snapshot(reason: str = "manual", progress=None) -> dict:
     n = 1
     while final.exists():
         final = d / f"{base}-{n}.zip"; n += 1
+    for old in list(d.glob("media-*.part")) + list(d.glob("photag-backup-*")):      # leftovers of a backup that died
+        if old.is_dir():
+            shutil.rmtree(old, ignore_errors=True)
     work = Path(tempfile.mkdtemp(prefix="photag-backup-", dir=d))
     try:
         if progress: progress.say("Creating a copy of the catalog…")

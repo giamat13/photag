@@ -81,6 +81,24 @@ try:
     check("the first backup after an upgrade links the old mirror's files (no copying)", s4["media"]["copied"] == 0 and s4["media"]["linked"] == 5, s4["media"])
     check("the old mirror is deleted once no backup needs it", not (old / "media-mirror").exists())
     check("and the backup still has all its files", len(list((old / s4["media_dir"]).rglob("*.jpg"))) == 5)
+
+    # a backup that died (installer closed it, crash) leaves a lock and a half-written photo folder behind
+    import subprocess, time
+    dead = subprocess.Popen([sys.executable, "-c", "pass"]); dead.wait()
+    d = backup.backup_dir()
+    (d / ".backup.lock").write_text(f"{dead.pid} {time.time()}")
+    (d / "media-photag-19990101-000000-auto.part").mkdir()
+    ((d / "media-photag-19990101-000000-auto.part") / "x.jpg").write_bytes(b"x")
+    s5 = backup.create_snapshot("manual")
+    check("a lock left by a dead backup does not block the next one", s5["name"].endswith(".zip"))
+    check("the half-written photo folder of the dead backup is cleaned up", not (d / "media-photag-19990101-000000-auto.part").exists())
+    (d / ".backup.lock").write_text(f"{os.getpid()} {time.time()}")                  # this very process is alive
+    try:
+        backup.create_snapshot("manual"); busy = False
+    except backup.BusyError:
+        busy = True
+    check("a lock held by a live backup still blocks (no two backups at once)", busy)
+    (d / ".backup.lock").unlink(missing_ok=True)
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 print(f"\n{sum(res)}/{len(res)} passed")
