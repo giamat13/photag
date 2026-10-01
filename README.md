@@ -74,6 +74,24 @@ Default: `%USERPROFILE%\Photag\` (an older library in `%USERPROFILE%\PhotoManage
 
 The location pointer is stored in `%APPDATA%\photag\config.json` and can be changed in the settings screen.
 
+## Privacy
+- Everything runs on your computer: the catalog, thumbnails, face recognition, search, backups and the map pins. photag has no account, no
+  telemetry and no analytics.
+- It only talks to the internet when you use these features: **AI tagging** (sends small thumbnails to the provider *you* choose, with your own
+  key, and only when you start it), **map tiles** (OpenStreetMap, the tile requests reveal the area you look at), **update check** (asks GitHub
+  for the latest release), and the one-time download of the face model (~300 MB).
+- The local server listens on `127.0.0.1` only and refuses requests that do not come from photag's own window (Host / Origin checks), so a web
+  page open in your browser cannot reach your library.
+- Your AI key is stored encrypted with Windows DPAPI (readable only by your Windows user).
+
+## Windows says the installer is blocked (Smart App Control)
+photag is not code-signed yet (a signing certificate costs money; we are applying for free signing for open-source projects). Windows 11
+**Smart App Control** (when it is on) blocks unsigned programs it does not know, with no "run anyway" button. SmartScreen only warns
+("More info" → "Run anyway"). If the installer is blocked:
+1. Right-click `photagSetup.exe` → Properties → tick **Unblock** if shown, OK, and run it again. Or run it from File Explorer instead of a terminal.
+2. Otherwise run photag from source (see below), or turn Smart App Control off in *Windows Security → App & browser control → Smart App Control*
+   (this cannot be turned on again without reinstalling Windows, so only do it if you accept that).
+
 ## Run from source
 ```bat
 pip install -r requirements.txt
@@ -83,7 +101,7 @@ Or in VS Code: F5 → "photag (desktop window)".
 
 ## Build the installer
 ```bat
-pip install -r requirements.txt pyinstaller
+pip install -r requirements-dev.txt
 build.bat                   REM builds dist\photag.exe, dist\photag-backup.exe and installer_output\photagSetup.exe
 ```
 `build.bat` needs Python 3.12 and [Inno Setup 6](https://jrsoftware.org/isdl.php). The `buffalo_l` model (~300 MB) is downloaded on the first

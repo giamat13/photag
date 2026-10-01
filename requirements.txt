@@ -1,11 +1,13 @@
-fastapi
-uvicorn
-pywebview
-pillow
-pillow-heif
-piexif
-numpy
-scipy
-onnxruntime
-insightface
-imageio-ffmpeg
+# Versions this release was built and tested with (Python 3.12). Newer versions usually work; update deliberately.
+fastapi==0.141.1
+uvicorn==0.53.0
+pywebview==6.2.1
+pillow==12.3.0
+pillow-heif==1.7.0
+piexif==1.1.3
+numpy==2.5.3
+scipy==1.18.1
+onnxruntime==1.30.0
+insightface==2.0
+imageio-ffmpeg==0.6.0
+certifi==2026.7.22

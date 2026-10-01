@@ -1,0 +1,31 @@
+name: tests
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Translations are complete
+        run: python tools/i18n.py check
+      - name: Server, import, backup, update and library tests
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          for t in test_import_stats test_takeout_parts test_update_rollback test_server_security test_port_instance test_library_default test_backup_media_sets; do
+            echo "=== $t"; python tools/$t.py || exit 1
+          done
+      - name: UI smoke test (Edge)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python tools/ui_smoke.py
