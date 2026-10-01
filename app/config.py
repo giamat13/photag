@@ -70,6 +70,24 @@ def set_update_skipped(version: str | None) -> None:
     _write_pointer(update_skipped=version or None)
 
 
+def read_all() -> dict:
+    """Every saved setting (for backups)."""
+    return dict(_read_pointer())
+
+
+def merge_settings(updates: dict) -> None:
+    _write_pointer(**updates)
+
+
+def get_backup() -> dict:
+    """Backup settings: enabled, interval_hours, keep, include_media, folder."""
+    return _read_pointer().get("backup") or {}
+
+
+def set_backup(data: dict) -> None:
+    _write_pointer(backup=data or None)
+
+
 def get_handbrake_path() -> str | None:
     """User-chosen HandBrakeCLI location (when it's not on PATH or in a standard folder)."""
     return _read_pointer().get("handbrake_path") or None

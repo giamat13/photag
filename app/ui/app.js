@@ -1700,6 +1700,72 @@ function compressReport(r, pid){
   if(ok) $('#cr-restore').onclick = async ()=>{ closeModal(); await compressRestore(pid); };
 }
 
+// ---------- backups: automatic, with settings, restorable from here ----------
+const fdt = ts => new Date(ts * 1000).toLocaleString(I18N.locale || undefined, {dateStyle: 'medium', timeStyle: 'short'});
+async function backupDialog(){
+  let i = await api('/api/backup');
+  const INTERVALS = [[1, t('כל שעה')], [6, t('כל 6 שעות')], [12, t('כל 12 שעות')], [24, t('כל יום')], [72, t('כל 3 ימים')], [168, t('כל שבוע')], [720, t('כל 30 יום')]];
+  const REASON = () => ({auto: t('אוטומטי'), manual: t('ידני'), 'before-restore': t('לפני שחזור'), 'before-update': t('לפני עדכון')});
+  const status = () => {
+    const s = i.settings, last = i.last ? t('הגיבוי האחרון: {0}', [ltr(fdt(i.last))]) : t('עוד לא נעשה גיבוי');
+    const next = !s.enabled ? t('הגיבוי האוטומטי כבוי') : t('הגיבוי הבא: {0}', [ltr(fdt(Math.max(i.next, Date.now() / 1000)))]);
+    return `${last} · ${next}`;
+  };
+  const rows = () => i.snapshots.length ? i.snapshots.map(m => `<div class="bk-row"><span class="bk-d">${ltr(fdt(m.created))}</span>
+      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} תמונות', [num(m.photos)])} · ${fmtBytes(m.bytes)}${m.includes_media ? ' · ' + t('כולל קבצים') : ''}</span>
+      <button data-restore="${esc(m.name)}">${t('שחזר…')}</button><button data-del="${esc(m.name)}" title="${t('מחק')}">✕</button></div>`).join('')
+    : `<span class="hint" style="padding:0">${t('אין עדיין גיבויים.')}</span>`;
+  const draw = () => {
+    const s = i.settings;
+    $('#bk-status').textContent = status();
+    $('#bk-on').checked = s.enabled; $('#bk-int').value = String(s.interval_hours); $('#bk-keep').value = s.keep; $('#bk-media').checked = s.include_media;
+    $('#bk-folder').value = i.folder; $('#bk-list').innerHTML = rows();
+    $('#bk-int').disabled = $('#bk-keep').disabled = !s.enabled;
+  };
+  modal(`<h3>${t('גיבוי ושחזור')}</h3><div class="mb bk">
+    <div class="bk-status" id="bk-status"></div>
+    <label class="chkrow"><input type="checkbox" id="bk-on"> ${t('גיבוי אוטומטי של הקטלוג וההגדרות')}</label>
+    <div class="two"><label class="fld"><span>${t('תדירות')}</span><select id="bk-int">${INTERVALS.map(([h, l]) => `<option value="${h}">${l}</option>`).join('')}</select></label>
+      <label class="fld"><span>${t('כמה גיבויים לשמור')}</span><input type="number" id="bk-keep" min="3" max="200" dir="ltr"></label></div>
+    <label class="chkrow"><input type="checkbox" id="bk-media"> ${t('לגבות גם את קבצי התמונות והסרטונים')}</label>
+    <div class="hint" style="padding:0">${t('הקטלוג כולל תיוגים, אלבומים, דירוגים, אנשים ועריכות. קבצי המדיה בנפח כ‑{0}: הגיבוי הראשון יעתיק את כולם, והבאים רק קבצים חדשים.', [fmtBytes(i.media_bytes)])}</div>
+    <label class="fld"><span>${t('תיקיית הגיבויים (עדיף דיסק אחר)')}</span>
+      <div class="bk-path"><input id="bk-folder" readonly dir="ltr"><button id="bk-pick">${t('בחר…')}</button><button id="bk-reset">${t('ברירת מחדל')}</button></div></label>
+    <div class="lbl-sub" style="padding:0">${t('גיבויים קיימים')}</div><div class="bk-list" id="bk-list"></div>
+  </div><div class="mf"><button class="primary" id="bk-now">${t('גבה עכשיו')}</button><span class="spacer"></span><button id="bk-close">${t('סגור')}</button></div>`);
+  draw();
+  const save = async patch => { try{ i = await send('POST', '/api/backup/settings', patch); draw(); } catch(e){ toast(e.message); draw(); } };
+  $('#bk-on').onchange = () => save({enabled: $('#bk-on').checked});
+  $('#bk-int').onchange = () => save({interval_hours: +$('#bk-int').value});
+  $('#bk-keep').onchange = () => save({keep: +$('#bk-keep').value});
+  $('#bk-media').onchange = () => save({include_media: $('#bk-media').checked});
+  $('#bk-pick').onclick = async () => { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(t('בחר תיקייה לגיבויים'))); if(r.path) save({folder: r.path}); };
+  $('#bk-reset').onclick = () => save({folder: null});
+  $('#bk-close').onclick = closeModal;
+  $('#bk-now').onclick = async () => { closeModal(); await send('POST', '/api/backup/run'); pollJob('backup', t('גיבוי')); };
+  $('#bk-list').onclick = async e => {
+    const r = e.target.closest('[data-restore]'), d = e.target.closest('[data-del]');
+    if(r) return backupRestoreDialog(i.snapshots.find(m => m.name === r.dataset.restore), i);
+    if(d){ const ok = await confirmBox(t('מחיקת גיבוי'), t('למחוק את הגיבוי הזה?')); if(ok) await send('DELETE', '/api/backup/' + encodeURIComponent(d.dataset.del)); backupDialog(); }
+  };
+}
+
+function backupRestoreDialog(m, i){
+  const canMedia = m.includes_media && i.mirror;
+  modal(`<h3>${t('שחזור מגיבוי')}</h3><div class="mb bk">
+    <p>${t('הקטלוג (תיוגים, אלבומים, דירוגים, אנשים ועריכות) יוחזר למצב של {0}: {1} תמונות.', [ltr(fdt(m.created)), num(m.photos)])}</p>
+    <p>${t('לפני השחזור נשמר גיבוי של המצב הנוכחי, כך שאפשר לבטל את השחזור. קבצי תמונות אף פעם לא נמחקים בשחזור.')}</p>
+    <label class="chkrow ${canMedia ? '' : 'off'}"><input type="checkbox" id="rs-media" ${canMedia ? 'checked' : 'disabled'}> ${t('החזר גם קבצי תמונות שחסרים בתיקייה (מתוך הגיבוי)')}</label>
+    <label class="chkrow"><input type="checkbox" id="rs-set"> ${t('החזר גם את הגדרות ה‑AI והנתיב ל‑HandBrake')}</label>
+  </div><div class="mf"><button id="rs-cancel">${t('ביטול')}</button><span class="spacer"></span><button class="primary" id="rs-go">${t('שחזר')}</button></div>`);
+  $('#rs-cancel').onclick = () => backupDialog();
+  $('#rs-go').onclick = async () => {
+    const body = {name: m.name, media: canMedia && $('#rs-media').checked, settings: $('#rs-set').checked};
+    closeModal();
+    try{ await send('POST', '/api/backup/restore', body); pollJob('backup', t('שחזור מגיבוי')); } catch(e){ toast(e.message); }
+  };
+}
+
 // ---------- compression progress screen: percent, elapsed / remaining time, steps ----------
 const CPG = {alive: false};
 const fmtDur = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
@@ -2046,11 +2112,11 @@ async function pollJob(name, label){
     act.classList.add('hidden');
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('הושלם'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
-    if(['import','faces','aitag','compress'].includes(name)){
+    if(['import','faces','aitag','compress','backup'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
       if(S.view==='people') renderPeople();
-      if(name==='aitag') renderRight();
+      if(name==='aitag' || name==='backup') renderRight();
       if(name==='compress'){
         if(p.result && p.result.batch){
           for(const it of p.result.items) if(it.status === 'done') VER[it.id] = Date.now();
@@ -2074,6 +2140,7 @@ const MENUS = [
     [t('ייבוא מ‑Google Takeout...'), '', ()=>openImport('zip')],
     [t('ייצוא...'), 'Ctrl+Shift+E', openExport],
     sep,
+    [t('גיבוי ושחזור...'), '', backupDialog],
     [t('הגדרות קטלוג...'), 'Ctrl+Alt+,', catalogSettings],
     [t('העדפות...'), 'Ctrl+,', preferences],
   ]],
@@ -2269,7 +2336,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setTimeout(async ()=>{ if(!(await whatsNew(false))) updateCheck(false); }, 2500);   // quiet check on start-up; a window appears only when a newer release exists
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
-  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['aitag',t('תיוג AI')],['compress',t('דחיסת וידאו')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
+  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['aitag',t('תיוג AI')],['compress',t('דחיסת וידאו')],['backup',t('גיבוי')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}
   });
 })();

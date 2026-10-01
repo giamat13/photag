@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater
+from . import db, images, importer, faces, aitag, compress, config, updater, backup
 from .version import __version__
 from .config import PATHS
 
@@ -27,6 +27,26 @@ JOBS: dict[str, importer.Progress] = {}
 _LOCK = threading.Lock()  # ponytail: one job at a time is plenty for a desktop app
 
 
+BUSY_STATES = ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing",
+               "encoding", "verifying", "replacing", "downloading", "backing_up", "restoring")
+
+
+def _other_job_running(except_name: str = "") -> bool:
+    return any(p.state in BUSY_STATES for n, p in JOBS.items() if n != except_name)
+
+
+def _backup_loop():
+    """Automatic backups: every few minutes, check whether one is due (never while another job is running)."""
+    time.sleep(90)                                  # let the app finish starting first
+    while True:
+        try:
+            if backup.get_settings()["enabled"] and backup.is_due() and not _other_job_running():
+                _start("backup", backup.run_backup, "auto")
+        except Exception:
+            pass
+        time.sleep(300)
+
+
 def _trash_purge_loop():
     while True:
         importer.purge_expired_trash(db.init_db())
@@ -36,6 +56,7 @@ def _trash_purge_loop():
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
+    threading.Thread(target=_backup_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
     except Exception:
@@ -46,7 +67,7 @@ def _start_trash_purge():
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing", "encoding", "verifying", "replacing", "downloading"):
+        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing", "encoding", "verifying", "replacing", "downloading", "backing_up", "restoring"):
             raise err(409, "המשימה כבר רצה")
         prog = importer.Progress()
         prog.state = "starting"   # not "idle": a poll right after the start must not read the job as finished
@@ -169,6 +190,65 @@ def update_whatsnew_ack():
     return {"ok": True}
 
 
+# ---- backups -------------------------------------------------------------------
+class BackupSettingsIn(BaseModel):
+    enabled: bool | None = None
+    interval_hours: int | None = None
+    keep: int | None = None
+    include_media: bool | None = None
+    folder: str | None = None
+
+class RestoreIn(BaseModel):
+    name: str
+    media: bool = False
+    settings: bool = False
+
+
+@app.get("/api/backup")
+def backup_info():
+    con = db.connect()
+    s = backup.get_settings()
+    snaps = backup.list_snapshots()
+    last = next((m["created"] for m in snaps if m["reason"] in ("auto", "manual")), None)
+    return {"settings": s, "folder": str(backup.backup_dir()), "snapshots": snaps, "last": last,
+            "next": backup.next_due(), "media_bytes": con.execute("SELECT COALESCE(SUM(bytes),0) FROM photos").fetchone()[0],
+            "mirror": (backup.backup_dir() / backup.MIRROR).is_dir()}
+
+
+@app.post("/api/backup/settings")
+def backup_settings(body: BackupSettingsIn):
+    try:
+        backup.set_settings(body.model_dump(exclude_unset=True))
+    except OSError:
+        raise err(400, "אי אפשר לכתוב לתיקייה שנבחרה")
+    return backup_info()
+
+
+@app.post("/api/backup/run")
+def backup_run():
+    _start("backup", backup.run_backup, "manual")
+    return {"ok": True}
+
+
+@app.post("/api/backup/restore")
+def backup_restore(body: RestoreIn):
+    if _other_job_running("backup"):
+        raise err(409, "יש משימה אחרת שרצה כרגע. חכו שתסתיים ונסו שוב")
+    if not backup.NAME_RE.match(body.name) or not (backup.backup_dir() / body.name).is_file():
+        raise err(404, "הגיבוי לא נמצא")
+    _start("backup", backup.run_restore, body.name, body.media, body.settings)
+    return {"ok": True}
+
+
+@app.delete("/api/backup/{name}")
+def backup_delete(name: str):
+    try:
+        backup.delete_snapshot(name)
+    except ValueError:
+        raise err(404, "הגיבוי לא נמצא")
+    return {"ok": True}
+
+
 @app.post("/api/update/open-page")
 def update_open_page():
     page = updater.check()["page"]
@@ -191,6 +271,10 @@ def update_download():
 
 @app.post("/api/update/install")
 def update_install(body: InstallIn):
+    try:
+        backup.create_snapshot("before-update")      # a catalog copy right before the program is replaced (cheap insurance)
+    except Exception:
+        pass
     try:
         return updater.launch(body.path)
     except updater.UpdateError:
