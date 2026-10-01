@@ -8,8 +8,11 @@ A snapshot is one ZIP in the backup folder (default: <library>/backups):
 The ZIP is written under a temporary name and renamed only when it is complete and verified, so a power
 cut never leaves a half-written snapshot that looks real.
 
-"include photo files" adds an incremental mirror (<backup folder>/media-mirror): only new or changed files
-are copied each time, so the second backup is fast.
+"include photo files" gives every snapshot its OWN complete set of photo files (<backup folder>/media-<snapshot>):
+files that did not change since the previous snapshot are hard links to it (no extra space, no copying), new or
+changed files are copied. So each backup is a full point-in-time copy, a photo deleted or damaged later is still in
+the older ones, and the second backup is fast. Where hard links are not possible (FAT, network drives) the files
+are simply copied. Snapshots made before this change share one folder, media-mirror, and still restore from it.
 
 Restoring first takes a safety snapshot of the current state ("before-restore"), then loads the chosen
 catalog into the live database in one transaction. Photo files are only ever ADDED back (never deleted).
@@ -147,6 +150,8 @@ def list_snapshots() -> list[dict]:
     except OSError:
         return []
     out = [m for p in d.glob("photag-*.zip") if NAME_RE.match(p.name) and (m := _manifest(p))]
+    for m in out:                                         # can this snapshot's photo files be restored?
+        m["media_ok"] = bool(m.get("includes_media")) and (d / (m.get("media_dir") or MIRROR)).is_dir()
     return sorted(out, key=lambda m: m["created"], reverse=True)
 
 
@@ -180,39 +185,67 @@ def _counts(con) -> dict:
             "tags": one("SELECT COUNT(*) FROM tags"), "people": one("SELECT COUNT(*) FROM people")}
 
 
-def _mirror_media(progress=None) -> dict:
-    """Copy new / changed photo files into <backup folder>/media-mirror (incremental)."""
-    dst = backup_dir() / MIRROR
+def media_dir_name(snapshot_name: str) -> str:
+    return "media-" + snapshot_name[:-4]                  # photag-<date>-<reason>.zip -> media-photag-<date>-<reason>
+
+
+def _previous_media_dir() -> Path | None:
+    """The newest complete media set: the media folder of the newest snapshot that has one, else the old shared mirror."""
+    d = backup_dir()
+    for m in list_snapshots():
+        if m.get("media_dir") and (d / m["media_dir"]).is_dir():
+            return d / m["media_dir"]
+    old = d / MIRROR
+    return old if old.is_dir() else None
+
+
+def _same(a: Path, st) -> bool:
+    try:
+        o = a.stat()
+        return o.st_size == st.st_size and int(o.st_mtime) >= int(st.st_mtime) - 2
+    except OSError:
+        return False
+
+
+def _mirror_media(dst: Path, progress=None) -> dict:
+    """Build a complete copy of the photo files in dst (a new folder): hard-link what the previous set already has,
+    copy the rest."""
+    prev = _previous_media_dir()
     dst.mkdir(parents=True, exist_ok=True)
     files = [p for p in PATHS.media.rglob("*") if p.is_file() and ".compress_tmp" not in p.parts]
-    todo, need = [], 0
-    for src in files:                                   # what is new or changed since the last backup
-        out = dst / src.relative_to(PATHS.media)
+    plan, need = [], 0
+    for src in files:
+        rel = src.relative_to(PATHS.media)
         st = src.stat()
-        try:
-            same = out.exists() and out.stat().st_size == st.st_size and int(out.stat().st_mtime) >= int(st.st_mtime) - 2
-        except OSError:
-            same = False
-        if not same:
-            todo.append((src, out)); need += st.st_size
+        old = prev / rel if prev else None
+        if old is not None and _same(old, st):
+            plan.append((src, dst / rel, old))
+        else:
+            plan.append((src, dst / rel, None)); need += st.st_size
     free = shutil.disk_usage(dst).free
-    if need + 200 * 1024 * 1024 > free:                 # never fill the backup disk to the brim
+    if need + 200 * 1024 * 1024 > free:                  # never fill the backup disk to the brim
         raise NoSpaceError(need, free)
-    copied = nbytes = 0
+    copied = nbytes = linked = 0
+    n_copy = sum(1 for _, _, o in plan if o is None)
     if progress:
         progress.total = max(1, need); progress.done = 0
-    for src, out in todo:
+    for src, out, old in plan:
         out.parent.mkdir(parents=True, exist_ok=True)
+        if old is not None:
+            try:
+                os.link(old, out); linked += 1
+                continue
+            except OSError:
+                pass                                       # no hard links here: copy instead
         tmp = out.with_name(out.name + ".part")
         shutil.copy2(src, tmp); os.replace(tmp, out)
-        n = out.stat().st_size
-        copied += 1; nbytes += n
+        copied += 1; nbytes += out.stat().st_size
         if progress:
             progress.done = nbytes
-            progress.say("Copying photo and video files… {done} of {total} files", done=copied, total=len(todo))
+            progress.say("Copying photo and video files… {done} of {total} files", done=copied, total=max(n_copy, copied))
             if getattr(progress, "cancel", False):
-                break
-    return {"files": len(files), "copied": copied, "bytes_copied": nbytes}
+                raise RuntimeError("cancelled")
+    return {"files": len(files), "copied": copied, "linked": linked, "bytes_copied": nbytes}
 
 
 class NoSpaceError(Exception):
@@ -221,15 +254,29 @@ class NoSpaceError(Exception):
         self.need, self.free = need, free
 
 
-def folder_bytes(path: Path) -> int:
-    total = 0
-    for root, _, names in os.walk(path):
-        for n in names:
-            try:
-                total += os.path.getsize(os.path.join(root, n))
-            except OSError:
-                pass
+def folder_bytes(*paths: Path) -> int:
+    """Real space used: a file that is hard-linked into several snapshots counts once."""
+    total, seen = 0, set()
+    for path in paths:
+        for root, _, names in os.walk(path):
+            for n in names:
+                try:
+                    st = os.stat(os.path.join(root, n))
+                except OSError:
+                    continue
+                if st.st_nlink > 1:
+                    key = (st.st_dev, st.st_ino)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                total += st.st_size
     return total
+
+
+def media_bytes() -> int:
+    """Space used by all photo copies in the backup folder (shared files counted once)."""
+    d = backup_dir()
+    return folder_bytes(*[p for p in d.iterdir() if p.is_dir() and (p.name == MIRROR or p.name.startswith("media-"))])
 
 
 # ------------------------------------------------------------------ never silently forget: state, lock, health
@@ -372,12 +419,15 @@ def _create_snapshot(reason: str = "manual", progress=None) -> dict:
         if ok != "ok":
             raise RuntimeError(f"integrity_check: {ok}")
         settings = {k: v for k, v in config.read_all().items() if k not in ("library_root", "update_skipped", "backup")}
-        media = None
+        media, mdir, mpart = None, None, None
         if s["include_media"] and reason in ("auto", "manual"):
             if progress: progress.say("Copying photo files…")
-            media = _mirror_media(progress)
+            mdir = media_dir_name(final.name)
+            mpart = d / (mdir + ".part")
+            shutil.rmtree(mpart, ignore_errors=True)
+            media = _mirror_media(mpart, progress)
         manifest = {"created": now, "reason": reason, "app_version": __version__, "includes_media": bool(media),
-                    "media": media, **counts}
+                    "media": media, "media_dir": mdir, **counts}
         part = final.with_name(final.name + ".part")
         with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
             z.write(tmpdb, "catalog.db")
@@ -386,11 +436,15 @@ def _create_snapshot(reason: str = "manual", progress=None) -> dict:
         with zipfile.ZipFile(part) as z:
             if z.testzip() is not None:
                 raise RuntimeError("zip verification failed")
+        if mpart is not None:
+            os.replace(mpart, d / mdir)                       # the photo set appears only when complete
         os.replace(part, final)                               # appears only when complete and verified
     finally:
         shutil.rmtree(work, ignore_errors=True)
         for p in d.glob("*.part"):
             p.unlink(missing_ok=True)
+        for p in d.glob("media-*.part"):
+            shutil.rmtree(p, ignore_errors=True)
     prune(s["keep"])
     return {**manifest, "name": final.name, "bytes": final.stat().st_size}
 
@@ -400,13 +454,34 @@ def prune(keep: int):
     snaps = list_snapshots()
     extra = snaps[keep:]
     for m in extra:
-        (backup_dir() / m["name"]).unlink(missing_ok=True)
+        _remove(m)
+    _drop_old_mirror()
+
+
+def _remove(m: dict):
+    d = backup_dir()
+    (d / m["name"]).unlink(missing_ok=True)
+    if m.get("media_dir"):
+        shutil.rmtree(d / m["media_dir"], ignore_errors=True)   # hard-linked files stay for the snapshots that share them
+
+
+def _drop_old_mirror():
+    """The shared media-mirror of older versions goes when no snapshot needs it any more."""
+    d = backup_dir()
+    old = d / MIRROR
+    if old.is_dir() and not any(m.get("includes_media") and not m.get("media_dir") for m in list_snapshots()):
+        shutil.rmtree(old, ignore_errors=True)
 
 
 def delete_snapshot(name: str):
     if not NAME_RE.match(name):
         raise ValueError("name")
-    (backup_dir() / name).unlink(missing_ok=True)
+    m = next((x for x in list_snapshots() if x["name"] == name), None)
+    if m:
+        _remove(m)
+    else:
+        (backup_dir() / name).unlink(missing_ok=True)
+    _drop_old_mirror()
 
 
 # ------------------------------------------------------------------ restoring
@@ -444,7 +519,7 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
         if restore_settings and settings:
             config.merge_settings({k: v for k, v in settings.items() if k in ("ai", "handbrake_path")})
         copied = 0
-        mirror = backup_dir() / MIRROR
+        mirror = backup_dir() / (manifest.get("media_dir") or MIRROR)
         if restore_media and mirror.is_dir():
             files = [p for p in mirror.rglob("*") if p.is_file() and not p.name.endswith(".part")]
             if progress: progress.total = len(files); progress.done = 0

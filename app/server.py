@@ -262,9 +262,9 @@ def backup_info():
     folder = Path(s["folder"]) if s["folder"] else PATHS.root / "backups"       # shown even when it cannot be reached
     return {"settings": s, "folder": str(folder), "snapshots": snaps, "last": last,
             "next": backup.next_due(), "media_bytes": con.execute("SELECT COALESCE(SUM(bytes),0) FROM photos").fetchone()[0],
-            "mirror": (not ferr) and (folder / backup.MIRROR).is_dir(),
+            "mirror": (not ferr) and any(m.get("media_ok") for m in snaps),
             "health": backup.health(),
-            "mirror_bytes": 0 if ferr else backup.folder_bytes(folder / backup.MIRROR),
+            "mirror_bytes": 0 if ferr else backup.media_bytes(),
             "free_bytes": 0 if ferr else shutil.disk_usage(folder).free}
 
 
