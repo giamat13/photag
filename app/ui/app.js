@@ -1506,19 +1506,51 @@ function compressSummary(o, e, speedIdx){
   return lines.map(l => `<li>${esc(l)}</li>`).join('');
 }
 
-async function compressDialog(pid){
-  const p = S.byId.get(pid);
-  if(!p || !p.is_video) return toast(t('בחרו סרטון כדי לדחוס'));
-  const [st, d] = await Promise.all([api('/api/handbrake'), api('/api/photo/' + pid)]);
-  if(!st.found) return hbInstallDialog(st, ()=>compressDialog(pid));
+// the same dialog serves one video, one photo, or any mix of several: only the sections that apply are shown
+const IMG_Q = [40, 98];
+const IMG_MAX_SIDES = [0, 4096, 3000, 2560, 2048, 1600, 1200];
+function compressSummaryImg(o){
+  const frac = (IMG_Q[1] - o.quality) / (IMG_Q[1] - IMG_Q[0]);
+  const lines = [
+    t('איכות: {0}', [QUALITY_TEXT()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]]),
+    o.max_side ? t('גודל התמונה יוקטן עד {0} פיקסלים בצלע הארוכה', [ltr(String(o.max_side))]) : t('גודל התמונה (בפיקסלים) לא ישתנה'),
+    t('PNG, BMP ו‑TIFF נדחסים ללא שום אובדן איכות; ההגדרה משפיעה על JPEG ו‑WebP'),
+    t('פרטי הצילום (EXIF), המיקום והכיוון נשמרים'),
+    t('הקובץ המקורי נשמר בגיבויים ואפשר להחזיר אותו'),
+  ];
+  return lines.map(l => `<li>${esc(l)}</li>`).join('');
+}
+
+async function compressDialog(arg){
+  const ids = (Array.isArray(arg) ? arg : [arg]).filter(id => S.byId.has(id));
+  const st = await api('/api/handbrake');
+  const fx = p => (p.filename.match(/\.[^.]+$/) || [''])[0].toLowerCase();
+  const items = ids.map(id => S.byId.get(id));
+  const vids = items.filter(p => p.is_video && st.video_ext.includes(fx(p)));
+  const imgs = items.filter(p => !p.is_video && st.image_ext.includes(fx(p)));
+  const skipped = items.length - vids.length - imgs.length;
+  if(!vids.length && !imgs.length) return toast(items.length ? t('אין בבחירה קבצים שאפשר לדחוס (JPG, PNG, WebP, TIFF, BMP וסרטונים)') : t('בחרו תמונות או סרטונים כדי לדחוס'));
+  if(vids.length && !imgs.length && !st.found) return hbInstallDialog(st, ()=>compressDialog(ids));
+  const hasV = vids.length > 0 && st.found, hasI = imgs.length > 0;
+  const single = items.length === 1 ? await api('/api/photo/' + items[0].id) : null;
   const E = st.encoders, def = st.defaults, enc = ()=>E[o.encoder];
   const o = {...def, ...(pref.get('compress', null) || {})};
   if(!E[o.encoder]) o.encoder = def.encoder;
   const norm = ()=>{ const e = enc(); if(!(o.quality >= e.rf[0] && o.quality <= e.rf[1])) o.quality = e.rf[2]; if(!e.presets.includes(String(o.preset))) o.preset = e.default_preset; };
   if(o.quality == null) o.quality = enc().rf[2];
   norm();
-  modal(`<h3>${t('דחיסת סרטון')}</h3><div class="mb cmp">
-    <div class="cmp-file"><b dir="ltr">${esc(d.filename)}</b><span>${fmtBytes(d.bytes)}</span></div>
+  const idef = st.image_defaults, oi = {...idef, ...(pref.get('compress_img', null) || {})};
+  oi.quality = Math.max(IMG_Q[0], Math.min(IMG_Q[1], +oi.quality || idef.quality));
+  if(!IMG_MAX_SIDES.includes(+oi.max_side)) oi.max_side = 0;
+
+  const title = single ? (single.is_video ? t('דחיסת סרטון') : t('דחיסת תמונה')) : t('דחיסת קבצים');
+  const head = single
+    ? `<div class="cmp-file"><b dir="ltr">${esc(single.filename)}</b><span>${fmtBytes(single.bytes)}</span></div>`
+    : `<div class="cmp-file"><b>${t('{0} קבצים', [num(vids.length + imgs.length)])}</b><span>${[vids.length ? t('{0} סרטונים', [num(vids.length)]) : '', imgs.length ? t('{0} תמונות', [num(imgs.length)]) : ''].filter(Boolean).join(' · ')} · ${fmtBytes([...vids, ...imgs].reduce((a, p) => a + (p.bytes || 0), 0))}</span></div>`
+      + (skipped ? `<div class="hint warn" style="padding:0">${t('{0} קבצים מסוג שאינו נתמך ידולגו', [num(skipped)])}</div>` : '');
+  const sect = h => (hasV && hasI) ? `<div class="cmp-h">${h}</div>` : '';
+
+  const videoHtml = hasV ? `${sect(t('סרטונים'))}
     <div class="cmp-sl"><div class="cmp-sl-h"><label for="cp-str">${t('עוצמת דחיסה')}</label><output id="cp-str-v"></output></div>
       <input type="range" id="cp-str" step="1"><div class="cmp-ends"><span>${t('חלשה מאוד')}</span><span>${t('חזקה מאוד')}</span></div></div>
     <div class="cmp-sl"><div class="cmp-sl-h"><label for="cp-spd">${t('מהירות')}</label><output id="cp-spd-v"></output></div>
@@ -1537,55 +1569,100 @@ async function compressDialog(pid){
       <div class="two"><label class="fld"><span>${t('אודיו')}</span><select id="cp-au"><option value="auto">${t('שמור AAC, אחרת המר ל‑AAC')}</option><option value="aac">${t('המר ל‑AAC')}</option><option value="none">${t('הסר אודיו')}</option></select></label>
         <label class="fld"><span>${t('קצב סיביות לאודיו (kbps)')}</span><input type="number" id="cp-ab" min="32" max="512" step="16" dir="ltr"></label></div>
       <div class="hint" style="padding:0">HandBrake ${esc(st.version || '')} · <bdi dir="ltr">${esc(st.path)}</bdi></div>
-    </div>
-    ${d.video_backups ? `<div class="cmp-restore"><span>${t('יש גרסה קודמת של הסרטון בגיבויים.')}</span><button id="cp-restore">${t('החזר גרסה קודמת')}</button></div>` : ''}
+    </div>` : '';
+  const hbNote = (vids.length && !st.found) ? `${sect(t('סרטונים'))}<div class="cmp-sum"><p class="hint warn" style="padding:0">${t('HandBrake לא מותקן, ולכן הסרטונים ידולגו.')}</p>
+    <button class="linkbtn" id="cp-hb">${t('פתח את דף ההתקנה')}</button></div>` : '';
+  const imageHtml = hasI ? `${sect(t('תמונות'))}
+    <div class="cmp-sl"><div class="cmp-sl-h"><label for="ci-str">${t('עוצמת דחיסה')}</label><output id="ci-str-v"></output></div>
+      <input type="range" id="ci-str" min="0" max="${IMG_Q[1] - IMG_Q[0]}" step="1"><div class="cmp-ends"><span>${t('חלשה מאוד')}</span><span>${t('חזקה מאוד')}</span></div></div>
+    <div class="cmp-sum"><div class="lbl-sub" style="padding:0">${t('מה נבחר בשבילך')}</div><ul id="ci-sum"></ul></div>
+    <button class="linkbtn" id="ci-adv-t">${t('מתקדם')} ▾</button>
+    <div id="ci-adv" class="hidden"><div class="two">
+      <label class="fld"><span>${t('איכות JPEG / WebP (גבוה = איכות גבוהה)')}</span><input type="number" id="ci-q" min="${IMG_Q[0]}" max="${IMG_Q[1]}" step="1" dir="ltr"></label>
+      <label class="fld"><span>${t('הצלע הארוכה מרבית')}</span><select id="ci-ms"><option value="0">${t('ללא שינוי')}</option>${IMG_MAX_SIDES.slice(1).map(v=>`<option value="${v}">${v}px</option>`).join('')}</select></label></div></div>` : '';
+  const restoreHtml = (single && single.video_backups)
+    ? `<div class="cmp-restore"><span>${single.is_video ? t('יש גרסה קודמת של הסרטון בגיבויים.') : t('יש גרסה קודמת של התמונה בגיבויים.')}</span><button id="cp-restore">${t('החזר גרסה קודמת')}</button></div>` : '';
+  modal(`<h3>${title}</h3><div class="mb cmp">${head}${videoHtml}${hbNote}${imageHtml}${restoreHtml}
   </div><div class="mf"><button id="cp-reset">${t('ברירת מחדל')}</button><span class="spacer"></span><button id="cp-cancel">${t('ביטול')}</button><button id="cp-go" class="primary">${t('התחל דחיסה')}</button></div>`);
 
   const q = id => $('#' + id);
-  // the two sliders and the advanced fields are one state (o): moving any of them moves the others
-  const stopIndex = ()=>{ const e = enc(), pos = e.presets.indexOf(String(o.preset)); let best = 0, bd = 1e9;
-    e.speed_stops.forEach((s,i)=>{ const dd = Math.abs(e.presets.indexOf(s) - pos); if(dd < bd){ bd = dd; best = i; } }); return best; };
-  const sync = src => {
-    const e = enc(), [lo, hi] = e.rf, frac = (o.quality - lo) / (hi - lo), idx = stopIndex();
-    q('cp-enc').value = o.encoder;
-    if(src !== 'str'){ q('cp-str').min = lo; q('cp-str').max = hi; q('cp-str').value = Math.round(o.quality); }
-    q('cp-str-v').textContent = `${STRENGTH_LABELS()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]} · ${ltr('RF ' + +(+o.quality).toFixed(1))}`;
-    if(src !== 'q') q('cp-q').value = +(+o.quality).toFixed(1);
-    q('cp-q').min = lo; q('cp-q').max = hi;
-    if(src === 'enc' || src === 'init') q('cp-pre').innerHTML = e.presets.map(pr=>`<option value="${pr}">${pr}</option>`).join('');
-    if(src !== 'pre') q('cp-pre').value = o.preset;
-    if(src !== 'spd') q('cp-spd').value = idx;
-    q('cp-spd-v').textContent = `${SPEED_LABELS()[idx]} · ${ltr(String(o.preset))}`;
-    q('cp-h').value = String(o.max_height || 0); q('cp-fm').value = o.fps_mode; q('cp-fps').value = o.fps;
-    q('cp-fps-row').classList.toggle('hidden', o.fps_mode === 'same');
-    q('cp-au').value = o.audio; q('cp-ab').value = o.audio_bitrate;
-    q('cp-sum').innerHTML = compressSummary(o, e, idx);
+  let syncV = ()=>{}, syncI = ()=>{};
+  if(hasV){
+    // the two sliders and the advanced fields are one state (o): moving any of them moves the others
+    const stopIndex = ()=>{ const e = enc(), pos = e.presets.indexOf(String(o.preset)); let best = 0, bd = 1e9;
+      e.speed_stops.forEach((s,i)=>{ const dd = Math.abs(e.presets.indexOf(s) - pos); if(dd < bd){ bd = dd; best = i; } }); return best; };
+    const sync = src => {
+      const e = enc(), [lo, hi] = e.rf, frac = (o.quality - lo) / (hi - lo), idx = stopIndex();
+      q('cp-enc').value = o.encoder;
+      if(src !== 'str'){ q('cp-str').min = lo; q('cp-str').max = hi; q('cp-str').value = Math.round(o.quality); }
+      q('cp-str-v').textContent = `${STRENGTH_LABELS()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]} · ${ltr('RF ' + +(+o.quality).toFixed(1))}`;
+      if(src !== 'q') q('cp-q').value = +(+o.quality).toFixed(1);
+      q('cp-q').min = lo; q('cp-q').max = hi;
+      if(src === 'enc' || src === 'init') q('cp-pre').innerHTML = e.presets.map(pr=>`<option value="${pr}">${pr}</option>`).join('');
+      if(src !== 'pre') q('cp-pre').value = o.preset;
+      if(src !== 'spd') q('cp-spd').value = idx;
+      q('cp-spd-v').textContent = `${SPEED_LABELS()[idx]} · ${ltr(String(o.preset))}`;
+      q('cp-h').value = String(o.max_height || 0); q('cp-fm').value = o.fps_mode; q('cp-fps').value = o.fps;
+      q('cp-fps-row').classList.toggle('hidden', o.fps_mode === 'same');
+      q('cp-au').value = o.audio; q('cp-ab').value = o.audio_bitrate;
+      q('cp-sum').innerHTML = compressSummary(o, e, idx);
+    };
+    syncV = sync; sync('init');
+    const refreshSummary = ()=>{ q('cp-sum').innerHTML = compressSummary(o, enc(), stopIndex()); };   // summary only: don't rewrite a field that's being typed in
+    q('cp-adv-t').onclick = ()=>q('cp-adv').classList.toggle('hidden');
+    q('cp-str').oninput = ()=>{ o.quality = +q('cp-str').value; sync('str'); };
+    q('cp-q').oninput = ()=>{ const v = parseFloat(q('cp-q').value), [lo, hi] = enc().rf; if(isFinite(v)){ o.quality = Math.max(lo, Math.min(hi, v)); sync('q'); } };
+    q('cp-q').onchange = ()=>sync('init2');
+    q('cp-spd').oninput = ()=>{ o.preset = enc().speed_stops[+q('cp-spd').value]; sync('spd'); };
+    q('cp-pre').onchange = ()=>{ o.preset = q('cp-pre').value; sync('pre'); };
+    q('cp-enc').onchange = ()=>{   // keep "how strong" and "how slow" when the encoder (and its scales) change
+      const e = enc(), fq = (o.quality - e.rf[0]) / (e.rf[1] - e.rf[0]), si = stopIndex();
+      o.encoder = q('cp-enc').value; const n = enc();
+      o.quality = Math.round(n.rf[0] + fq * (n.rf[1] - n.rf[0])); o.preset = n.speed_stops[si]; sync('enc'); };
+    q('cp-h').onchange = ()=>{ o.max_height = +q('cp-h').value; refreshSummary(); };
+    q('cp-fm').onchange = ()=>{ o.fps_mode = q('cp-fm').value; sync('fm'); };
+    q('cp-fps').oninput = ()=>{ const v = parseFloat(q('cp-fps').value); if(v > 0){ o.fps = v; refreshSummary(); } };
+    q('cp-au').onchange = ()=>{ o.audio = q('cp-au').value; refreshSummary(); };
+    q('cp-ab').oninput = ()=>{ const v = parseInt(q('cp-ab').value); if(v > 0){ o.audio_bitrate = v; refreshSummary(); } };
+  }
+  if(q('cp-hb')) q('cp-hb').onclick = ()=>send('POST', '/api/handbrake/open-page');
+  if(hasI){
+    // photo: strength slider (0 = weakest) <-> JPEG/WebP quality field, one state (oi)
+    syncI = src => {
+      const frac = (IMG_Q[1] - oi.quality) / (IMG_Q[1] - IMG_Q[0]);
+      if(src !== 'str') q('ci-str').value = IMG_Q[1] - oi.quality;
+      q('ci-str-v').textContent = `${STRENGTH_LABELS()[Math.max(0, Math.min(4, Math.floor(frac * 5)))]} · ${ltr(t('איכות {0}', [oi.quality]))}`;
+      if(src !== 'q') q('ci-q').value = oi.quality;
+      q('ci-ms').value = String(oi.max_side || 0);
+      q('ci-sum').innerHTML = compressSummaryImg(oi);
+    };
+    syncI('init');
+    q('ci-adv-t').onclick = ()=>q('ci-adv').classList.toggle('hidden');
+    q('ci-str').oninput = ()=>{ oi.quality = IMG_Q[1] - +q('ci-str').value; syncI('str'); };
+    q('ci-q').oninput = ()=>{ const v = parseInt(q('ci-q').value); if(isFinite(v)){ oi.quality = Math.max(IMG_Q[0], Math.min(IMG_Q[1], v)); syncI('q'); } };
+    q('ci-q').onchange = ()=>syncI('init2');
+    q('ci-ms').onchange = ()=>{ oi.max_side = +q('ci-ms').value; syncI('ms'); };
+  }
+  q('cp-reset').onclick = ()=>{
+    if(hasV){ Object.assign(o, def, {quality:null, preset:null}); o.quality = enc().rf[2]; o.preset = enc().default_preset; syncV('enc'); }
+    if(hasI){ Object.assign(oi, idef); syncI('init'); }
   };
-  sync('init');
-  const refreshSummary = ()=>{ q('cp-sum').innerHTML = compressSummary(o, enc(), stopIndex()); };   // summary only: don't rewrite a field that's being typed in
-  q('cp-adv-t').onclick = ()=>q('cp-adv').classList.toggle('hidden');
-  q('cp-str').oninput = ()=>{ o.quality = +q('cp-str').value; sync('str'); };
-  q('cp-q').oninput = ()=>{ const v = parseFloat(q('cp-q').value), [lo, hi] = enc().rf; if(isFinite(v)){ o.quality = Math.max(lo, Math.min(hi, v)); sync('q'); } };
-  q('cp-q').onchange = ()=>sync('init2');
-  q('cp-spd').oninput = ()=>{ o.preset = enc().speed_stops[+q('cp-spd').value]; sync('spd'); };
-  q('cp-pre').onchange = ()=>{ o.preset = q('cp-pre').value; sync('pre'); };
-  q('cp-enc').onchange = ()=>{   // keep "how strong" and "how slow" when the encoder (and its scales) change
-    const e = enc(), fq = (o.quality - e.rf[0]) / (e.rf[1] - e.rf[0]), si = stopIndex();
-    o.encoder = q('cp-enc').value; const n = enc();
-    o.quality = Math.round(n.rf[0] + fq * (n.rf[1] - n.rf[0])); o.preset = n.speed_stops[si]; sync('enc'); };
-  q('cp-h').onchange = ()=>{ o.max_height = +q('cp-h').value; refreshSummary(); };
-  q('cp-fm').onchange = ()=>{ o.fps_mode = q('cp-fm').value; sync('fm'); };
-  q('cp-fps').oninput = ()=>{ const v = parseFloat(q('cp-fps').value); if(v > 0){ o.fps = v; refreshSummary(); } };
-  q('cp-au').onchange = ()=>{ o.audio = q('cp-au').value; refreshSummary(); };
-  q('cp-ab').oninput = ()=>{ const v = parseInt(q('cp-ab').value); if(v > 0){ o.audio_bitrate = v; refreshSummary(); } };
-  q('cp-reset').onclick = ()=>{ Object.assign(o, def, {quality:null, preset:null}); o.quality = enc().rf[2]; o.preset = enc().default_preset; sync('enc'); };
   q('cp-cancel').onclick = closeModal;
-  if(q('cp-restore')) q('cp-restore').onclick = async ()=>{ closeModal(); await compressRestore(pid); };
+  if(q('cp-restore')) q('cp-restore').onclick = async ()=>{ closeModal(); await compressRestore(items[0].id); };
   q('cp-go').onclick = async ()=>{
-    pref.set('compress', o);
-    closeModal(); CMP_PID = pid;
-    await send('POST', `/api/photo/${pid}/compress`, {options:o});
-    pollJob('compress', t('דחיסת וידאו'));
+    if(hasV) pref.set('compress', o);
+    if(hasI) pref.set('compress_img', oi);
+    closeModal();
+    compressProgressOpen(items.length === 1 ? [items[0]] : [...(hasV ? vids : []), ...imgs]);
+    if(items.length === 1){
+      const p = items[0]; CMP_PID = p.id;
+      await send('POST', `/api/photo/${p.id}/compress`, {options: p.is_video ? o : oi});
+      pollJob('compress', p.is_video ? t('דחיסת וידאו') : t('דחיסת תמונה'));
+    } else {
+      CMP_PID = null;
+      await send('POST', '/api/compress/batch', {ids: [...(hasV ? vids : []), ...imgs].map(p => p.id), video: o, image: oi});
+      pollJob('compress', t('דחיסת קבצים'));
+    }
   };
 }
 
@@ -1596,28 +1673,110 @@ async function afterVideoChanged(pid){
 }
 async function compressRestore(pid){
   await send('POST', `/api/photo/${pid}/compress/restore`);
-  toast(t('הוחלפה הגרסה של הסרטון'));
+  toast((S.byId.has(pid) && !S.byId.get(pid).is_video) ? t('הוחלפה הגרסה של התמונה') : t('הוחלפה הגרסה של הסרטון'));
   await afterVideoChanged(pid);
 }
 
 function compressReport(r, pid){
   if(!r || !r.checks || !r.checks.length) return;
-  const names = {frames:t('מספר פריימים'), duration:t('אורך הסרטון'), resolution:t('רזולוציה'), audio:t('אודיו'), size:t('גודל קובץ'), ssim:t('דמיון לתמונה המקורית (SSIM)')};
+  const names = {frames:t('מספר פריימים'), duration:t('אורך הסרטון'), resolution:t('רזולוציה'), audio:t('אודיו'), size:t('גודל קובץ'), ssim:t('דמיון לתמונה המקורית (SSIM)'), metadata:t('פרטי הצילום (EXIF) ופרופיל הצבע')};
+  const img = r.kind === 'image';
   const yn = v => v === 'yes' ? t('יש') : t('אין');
   const detail = c => c.id==='frames' ? t('צפוי {0} · התקבל {1}', [ltr(String(c.expected)), ltr(num(c.actual))])
     : c.id==='duration' ? t('סטייה {0} (מותר {1}) · מיכל {2} ms, וידאו {3} ms', [ltr(c.actual), ltr(c.expected), ltr(String(c.container_ms)), ltr(String(c.video_ms))])
     : c.id==='resolution' ? t('צפוי {0} · התקבל {1}', [ltr(c.expected), ltr(c.actual)])
     : c.id==='audio' ? t('צפוי {0} · התקבל {1}', [yn(c.expected), yn(c.actual)])
     : c.id==='size' ? t('{0} ← {1}', [fmtBytes(r.src.bytes), fmtBytes(r.out.bytes)])
+    : c.id==='metadata' ? (c.ok ? t('נשמרו ללא שינוי') : t('השתנו'))
+    : img ? t('דמיון {0} · {1}', [ltr(String(c.mean)), GRADE_LABELS()[c.grade]])
     : t('ממוצע {0} · הפריים הגרוע ביותר {1} · {2}', [ltr(String(c.mean)), ltr(String(c.min)), GRADE_LABELS()[c.grade]]);
   const ok = r.applied;
   modal(`<h3>${t('דוח דחיסה')}</h3><div class="mb">
-    <p style="color:${ok?'var(--green)':'var(--yellow)'}">${ok ? t('הסרטון נדחס. הגרסה הקודמת נשמרה בגיבויים.') : t('הדחיסה לא הוחלה. הקובץ המקורי לא שונה.')}</p>
+    <p style="color:${ok?'var(--green)':'var(--yellow)'}">${ok ? (img ? t('התמונה נדחסה. הגרסה הקודמת נשמרה בגיבויים.') : t('הסרטון נדחס. הגרסה הקודמת נשמרה בגיבויים.')) : t('הדחיסה לא הוחלה. הקובץ המקורי לא שונה.')}</p>
     <p>${t('הגודל: {0} ← {1} ({2}% מהמקור)', [fmtBytes(r.src.bytes), fmtBytes(r.out.bytes), ltr(String(Math.round(r.ratio * 100)))])}</p>
     <div>${r.checks.map(c=>`<div class="chk ${c.ok?'ok':'bad'}">${I(c.ok ? 'check' : 'close')}<b>${names[c.id]}</b><span>${esc(detail(c))}</span></div>`).join('')}</div>
   </div><div class="mf">${ok ? `<button id="cr-restore">${t('החזר גרסה קודמת')}</button><span class="spacer"></span>` : ''}<button class="primary" id="cr-close">${t('סגור')}</button></div>`);
   $('#cr-close').onclick = closeModal;
   if(ok) $('#cr-restore').onclick = async ()=>{ closeModal(); await compressRestore(pid); };
+}
+
+// ---------- compression progress screen: percent, elapsed / remaining time, steps ----------
+const CPG = {alive: false};
+const fmtDur = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return ltr((h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0')); };
+function compressProgressOpen(items){
+  Object.assign(CPG, {alive: true, t0: Date.now(), n: items.length, items, ts: {}, f: 0});
+  modal(`<h3>${t('דוחס…')}</h3><div class="mb cpg">
+    <div class="cpg-file" id="cpg-file"><bdi>${esc(items[0].filename)}</bdi></div>
+    <div class="cpg-bar"><i id="cpg-fill"></i><span id="cpg-pct">0%</span></div>
+    <div class="cpg-stats"><span>${t('זמן שחלף')}: <b id="cpg-el">${fmtDur(0)}</b></span><span>${t('זמן משוער שנותר')}: <b id="cpg-eta">…</b></span><span id="cpg-fps"></span></div>
+    <ul class="cpg-steps" id="cpg-steps"></ul>
+    <div class="cpg-list" id="cpg-list"></div>
+    <p class="hint" style="padding:0">${t('אפשר להמשיך לעבוד באפליקציה בזמן הדחיסה.')}</p>
+  </div><div class="mf"><span class="spacer"></span><button id="cpg-bg">${t('המשך ברקע')}</button><button id="cpg-cancel">${t('בטל דחיסה')}</button></div>`);
+  $('#cpg-bg').onclick = ()=>{ CPG.alive = false; closeModal(); };
+  $('#cpg-cancel').onclick = async ()=>{ $('#cpg-cancel').disabled = true; $('#cpg-cancel').textContent = t('מבטל…'); await send('POST', '/api/compress/cancel'); };
+  compressProgressUpdate({state: 'probing', done: 0, total: 0, extra: {}, result: null});
+}
+function compressProgressUpdate(p){
+  if(!CPG.alive || !document.getElementById('cpg-fill')) return;
+  const now = Date.now(), st = p.state, ex = p.extra || {};
+  const i = CPG.n === 1 ? 0 : (ex.i ?? 0);
+  const cur = CPG.items[Math.min(i, CPG.items.length - 1)];
+  const isVid = ex.kind ? ex.kind === 'video' : !!cur.is_video;
+  const W = isVid ? {probing: [0, .04], encoding: [.04, .85], verifying: [.85, .98], replacing: [.98, 1]}
+                  : {probing: [0, .1], encoding: [.1, .55], verifying: [.55, .95], replacing: [.95, 1]};
+  const key = s => i + ':' + s;
+  if(W[st]) CPG.ts[key(st)] = CPG.ts[key(st)] || now;
+  let ff = 0;
+  if(W[st]){
+    const [a, b] = W[st]; let w = 0.5;
+    if(st === 'encoding' && isVid) w = p.total ? p.done / p.total : 0;
+    else if(st === 'verifying' && isVid){        // no real percentage from the check: assume it takes ~1/4 of the encoding time
+      const enc = (CPG.ts[key('verifying')] - (CPG.ts[key('encoding')] || CPG.ts[key('verifying')])) || 8000;
+      w = Math.min(1, (now - CPG.ts[key('verifying')]) / Math.max(2000, enc * .25));
+    }
+    ff = a + (b - a) * w;
+  }
+  const f = Math.max(CPG.f, Math.min(.995, (i + ff) / CPG.n)); CPG.f = f;
+  const el = (now - CPG.t0) / 1000;
+  let eta = f > .03 ? el * (1 - f) / f : null;
+  if(CPG.n === 1 && isVid && st === 'encoding' && ex.eta != null) eta = ex.eta * 1.25 + 3;      // HandBrake's own estimate, plus the check afterwards
+  $('#cpg-fill').style.width = (f * 100).toFixed(1) + '%';
+  $('#cpg-pct').textContent = Math.floor(f * 100) + '%';
+  $('#cpg-el').textContent = fmtDur(el);
+  $('#cpg-eta').textContent = eta == null ? '…' : '~' + fmtDur(eta);
+  $('#cpg-fps').textContent = (isVid && st === 'encoding' && ex.fps) ? t('{0} פריימים לשנייה', [ltr(String(Math.round(ex.fps)))]) : '';
+  $('#cpg-file').innerHTML = CPG.n === 1 ? `<bdi>${esc(cur.filename)}</bdi>` : `${t('קובץ {0} מתוך {1}', [num(i + 1), num(CPG.n)])}: <bdi>${esc(cur.filename)}</bdi>`;
+  const order = ['probing', 'encoding', 'verifying', 'replacing'], at = order.indexOf(st);
+  const names = [t('בדיקת הקובץ המקורי'), t('דחיסה'), t('אימות התוצאה'), t('גיבוי והחלפת הקובץ')];
+  $('#cpg-steps').innerHTML = names.map((nm, k) => `<li class="${k < at ? 'done' : k === at ? 'cur' : ''}"><i>${k < at ? '✓' : k === at ? '●' : '○'}</i>${nm}</li>`).join('');
+  const items = (p.result && p.result.items) || [];
+  const fin = items.filter(it => it.status !== 'running');
+  if(CPG.n > 1){
+    const saved = fin.reduce((a, it) => a + (it.status === 'done' ? it.src_bytes - it.out_bytes : 0), 0);
+    $('#cpg-list').innerHTML = fin.length ? `<div class="hint" style="padding:0">${t('הושלמו {0} מתוך {1} · נחסכו עד כה {2}', [num(fin.length), num(CPG.n), fmtBytes(saved)])}</div>`
+      + fin.slice(-6).map(it => `<div class="cpg-row ${it.status === 'done' ? 'ok' : it.status === 'failed' ? 'bad' : 'warn'}"><i>${it.status === 'done' ? '✓' : it.status === 'failed' ? '✗' : '–'}</i><bdi>${esc(it.filename)}</bdi></div>`).join('') : '';
+  }
+}
+
+// report for a batch: one row per file
+function compressBatchReport(r){
+  const c = r.counts || {}, n = r.items.length;
+  const label = {done:t('נדחס'), no_gain:t('לא נחסך מקום: הקובץ כבר דחוס היטב, הוא נשאר כמו שהיה'), skipped:t('דולג'), failed:t('נכשל'), cancelled:t('בוטל')};
+  const row = it => {
+    const ok = it.status === 'done';
+    const detail = ok ? t('{0} ← {1} ({2}% מהמקור)', [fmtBytes(it.src_bytes), fmtBytes(it.out_bytes), ltr(String(Math.round(it.ratio * 100)))]) + (it.grade ? ' · ' + GRADE_LABELS()[it.grade] : '')
+      : it.status !== 'no_gain' && it.error_key ? t(it.error_key, it.error_vars) : label[it.status];
+    const cls = ok ? 'ok' : (it.status === 'no_gain' || it.status === 'skipped' || it.status === 'cancelled') ? 'warn' : 'bad';
+    return `<div class="chk ${cls}">${I(ok ? 'check' : 'close')}<b><bdi>${esc(it.filename)}</bdi></b><span>${esc(detail)}</span></div>`;
+  };
+  modal(`<h3>${t('דוח דחיסה')}</h3><div class="mb">
+    <p style="color:${c.done ? 'var(--green)' : 'var(--yellow)'}">${t('נדחסו {0} מתוך {1} קבצים · נחסכו {2}', [num(c.done || 0), num(n), fmtBytes(r.saved || 0)])}</p>
+    <p class="hint" style="padding:0">${t('כל קובץ נבדק בנפרד, והגרסה הקודמת שלו נשמרה בגיבויים.')}</p>
+    <div class="cmp-rows">${r.items.map(row).join('')}</div>
+  </div><div class="mf"><span class="spacer"></span><button class="primary" id="cr-close">${t('סגור')}</button></div>`);
+  $('#cr-close').onclick = closeModal;
 }
 
 // ---------- updates from GitHub releases ----------
@@ -1840,6 +1999,7 @@ $('#import').addEventListener('change', e=>{
 async function runJob(url, name, label, body){ await send('POST', url, body); pollJob(name, label); }
 async function pollJob(name, label){
   let p; try{ p=await api('/api/job/'+name); }catch{ return; }
+  if(name==='compress') compressProgressUpdate(p);
   const act=$('#activity'), bar=$('.act-bar');
   act.classList.remove('hidden');
   const pct = p.total ? Math.round(100*p.done/p.total) : null;
@@ -1850,13 +2010,21 @@ async function pollJob(name, label){
   act.onclick = ()=>toast(`<b>${label}</b><br>${esc(msg)}${p.total?` (${num(p.done)}/${num(p.total)})`:''}`);
   if(['done','error','idle'].includes(p.state)){
     act.classList.add('hidden');
+    if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('הושלם'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(['import','faces','aitag','compress'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
       if(S.view==='people') renderPeople();
       if(name==='aitag') renderRight();
-      if(name==='compress'){ const pid = CMP_PID ?? S.act; await afterVideoChanged(pid); compressReport(p.result, pid); }
+      if(name==='compress'){
+        if(p.result && p.result.batch){
+          for(const it of p.result.items) if(it.status === 'done') VER[it.id] = Date.now();
+          await reloadAll();
+          if(S.view === 'loupe'){ $('#loupe-media').dataset.id = ''; renderLoupe(); }
+          compressBatchReport(p.result);
+        } else { const pid = CMP_PID ?? S.act; await afterVideoChanged(pid); compressReport(p.result, pid); }
+      }
     }
     return;
   }
@@ -1910,6 +2078,9 @@ const MENUS = [
     ...LABELS.map(([k,n,key])=>[`${t("תווית: {0}", [n])}`, key, ()=>setLabel(k)]),
     [t('ללא תווית'), '', ()=>setAttr({label:''})],
     sep,
+    [t('דחיסת הקבצים שנבחרו...'), '', ()=>compressDialog(targets())],
+    [t('עצור דחיסה'), '', ()=>send('POST','/api/compress/cancel')],
+    sep,
     [t('העבר לאשפה / שחזר'), 'Delete', trashSelected],
   ]],
   [t('מטא-נתונים'), [
@@ -1917,9 +2088,6 @@ const MENUS = [
     [t('תיוג AI לתמונות שנבחרו...'), '', aiRun],
     [t('הגדרות תיוג AI...'), '', aiSettings],
     [t('עצור תיוג AI'), '', ()=>send('POST','/api/aitag/cancel')],
-    sep,
-    [t('דחיסת סרטון...'), '', ()=>compressDialog(S.act)],
-    [t('עצור דחיסה'), '', ()=>send('POST','/api/compress/cancel')],
     sep,
     [t('שמור מטא-נתונים לקובץ'), 'Ctrl+S', saveMetaToFile],
     [t('סנכרן מטא-נתונים'), '', ()=>$('#btn-sync-meta').click()],

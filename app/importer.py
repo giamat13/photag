@@ -131,6 +131,7 @@ class Progress:
         self.key = None; self.vars = {}; self.parts = None; self.error_key = None
         self.cancel = False   # set by the UI to stop a long job (AI tagging, compression)
         self.result = None    # structured outcome for the UI (e.g. the compression report)
+        self.extra = {}       # live details for the progress screen (encoder fps / ETA, which file of a batch...)
 
     def say(self, key, **vars):
         self.key, self.vars, self.parts = key, vars, None
@@ -148,7 +149,7 @@ class Progress:
     def as_dict(self):
         return {"state": self.state, "done": self.done, "total": self.total, "msg": self.msg, "error": self.error,
                 "key": self.key, "vars": self.vars, "parts": self.parts, "error_key": self.error_key,
-                "result": self.result}
+                "result": self.result, "extra": self.extra}
 
 
 def run_import(zip_path: str, progress: Progress):

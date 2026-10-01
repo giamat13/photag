@@ -277,7 +277,7 @@ def restore_previous(pid: int) -> dict:
 
 
 # ------------------------------------------------------------------ the job
-_PCT = re.compile(rb"Encoding: task \d+ of \d+, (\d+(?:\.\d+)?) %")
+_PCT = re.compile(rb"Encoding: task \d+ of \d+, (\d+(?:\.\d+)?) %(?: \((?:\d+(?:\.\d+)?) fps, avg (\d+(?:\.\d+)?) fps, ETA (\d+)h(\d+)m(\d+)s\))?")
 
 
 def run_compress(pid: int, raw_options: dict, progress):
@@ -324,6 +324,9 @@ def run_compress(pid: int, raw_options: dict, progress):
                     m = _PCT.search(line)
                     if m:
                         pct = float(m.group(1))
+                        if m.group(2):
+                            progress.extra = {**progress.extra, "fps": float(m.group(2)),
+                                              "eta": int(m.group(3)) * 3600 + int(m.group(4)) * 60 + int(m.group(5))}
                         progress.done = int(pct * 10); progress.say("דוחס… {pct}%", pct=int(pct))
                     elif line.strip():
                         tail.append(line[-300:]); del tail[:-8]
@@ -527,9 +530,9 @@ class _Sub(importer.Progress):
     """Progress of one file inside a batch: shares the batch's cancel flag and mirrors itself into the batch."""
     cancel = property(lambda s: s.parent.cancel, lambda s, v: None)
 
-    def __init__(self, parent, idx: int, n: int, name: str):
+    def __init__(self, parent, idx: int, n: int, name: str, kind: str):
         super().__init__()
-        self.parent, self.idx, self.n, self.name = parent, idx, n, name
+        self.parent, self.idx, self.n, self.name, self.kind = parent, idx, n, name, kind
 
     def say(self, key, **vars):
         super().say(key, **vars)
@@ -538,6 +541,7 @@ class _Sub(importer.Progress):
         p.total = self.n * 1000
         if self.state in _BUSY:
             p.state = self.state
+        p.extra = {**self.extra, "i": self.idx, "n": self.n, "name": self.name, "kind": self.kind}
         p.say_parts(("קובץ {i} מתוך {n}: {name}", {"i": self.idx + 1, "n": self.n, "name": self.name}), (key, vars))
 
 
@@ -558,7 +562,7 @@ def run_compress_batch(ids: list[int], video_options: dict, image_options: dict,
             continue
         ext = Path(row["rel_path"]).suffix.lower()
         item = {"id": pid, "filename": row["filename"], "kind": "video" if row["is_video"] else "image",
-                "status": "failed", "src_bytes": row["bytes"]}
+                "status": "running", "src_bytes": row["bytes"]}
         items.append(item)
         if (row["is_video"] and ext not in VIDEO_OK) or (not row["is_video"] and ext not in IMAGE_OK):
             item.update(status="skipped", error_key="סוג הקובץ הזה לא נתמך לדחיסה ({ext})", error_vars={"ext": ext})
@@ -568,7 +572,7 @@ def run_compress_batch(ids: list[int], video_options: dict, image_options: dict,
             item.update(status="skipped", error_key="HandBrakeCLI לא נמצא. התקינו אותו ונסו שוב", error_vars={})
             progress.done = (i + 1) * 1000
             continue
-        sub = _Sub(progress, i, n, row["filename"])
+        sub = _Sub(progress, i, n, row["filename"], item["kind"])
         sub.state = "starting"
         (run_compress if row["is_video"] else run_compress_image)(pid, video_options if row["is_video"] else image_options, sub)
         r = sub.result or {}
