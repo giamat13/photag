@@ -993,6 +993,7 @@ function renderKeywording(ids, kws){
   el.innerHTML = `<div class="lbl-sub">${t("מילות מפתח")}${ids.length>1?` ${t("· {0} תמונות (* = רק בחלק מהן)", [num(ids.length)])}`:''}</div>
     <label class="kwbox"><textarea id="kw-text" spellcheck="false" placeholder="${t("הקלידו מילות מפתח מופרדות בפסיקים")}">${esc(txt)}</textarea></label>
     <label class="kwadd"><input id="kw-add" placeholder="${t("לחצו כאן כדי להוסיף מילות מפתח")}"></label>
+    <div class="kwai"><button id="kw-ai" title="${esc(t('תייג בעזרת AI את התמונות שנבחרו'))}">${I('spark')}${t('תיוג AI')}</button><button id="kw-ai-cfg" class="cfg" title="${esc(t('הגדרות תיוג AI'))}" aria-label="${esc(t('הגדרות תיוג AI'))}">${I('dev')}</button></div>
     <div class="lbl-sub" style="padding-top:8px">${t("הצעות למילות מפתח")}</div>
     <div class="kwsug">${sug.map(n=>`<a data-kwadd="${esc(n)}" title="${esc(n)}">${esc(n)}</a>`).join('')}</div>`;
   el._orig = kws; el._ids = ids;
@@ -1023,7 +1024,8 @@ $('#p-kwing').addEventListener('keydown', e=>{
   if(e.target.id==='kw-text' && e.key==='Enter' && !e.shiftKey){ e.preventDefault(); e.target.blur(); }
   if(e.target.id==='kw-add' && e.key==='Enter'){ const v=e.target.value.split(',').map(s=>s.trim()).filter(Boolean); e.target.value=''; commitKeywords(v, []); }
 });
-$('#p-kwing').addEventListener('click', e=>{ const a=e.target.closest('[data-kwadd]'); if(a) commitKeywords([a.dataset.kwadd], []); });
+$('#p-kwing').addEventListener('click', e=>{ const a=e.target.closest('[data-kwadd]'); if(a) commitKeywords([a.dataset.kwadd], []);
+  if(e.target.closest('#kw-ai')) aiRun(); else if(e.target.closest('#kw-ai-cfg')) aiSettings(); });
 
 let KWF='';
 function renderKwList(selKws, nSel){
@@ -1368,12 +1370,93 @@ async function catalogSettings(){
 async function preferences(){
   const s=await api('/api/status');
   modal(`<h3>${t("העדפות · זיהוי פנים")}</h3><div class="mb">
-    <p>${t("הכול רץ מקומית במחשב — שום תמונה לא נשלחת לשירות חיצוני, ואין צורך להתקין שום דבר.")}</p>
+    <p>${t("זיהוי הפנים רץ מקומית במחשב, בלי לשלוח תמונות. תיוג AI שולח תמונות ממוזערות לספק שבחרתם, רק כשמפעילים אותו.")}</p>
     <div class="pathrow"><span>${t("זיהוי פנים")}</span><span>${t("InsightFace · {0} פרצופים זוהו עד כה", [num(s.counts.faces)])}</span></div>
   </div><div class="mf"><button onclick="closeModal()">${t("סגור")}</button>
-    <button class="primary" id="pf-faces">${t("זהה פנים")}</button></div>`);
+    <button id="pf-ai">${t("הגדרות תיוג AI")}</button><button class="primary" id="pf-faces">${t("זהה פנים")}</button></div>`);
+  $('#pf-ai').onclick=()=>{ closeModal(); aiSettings(); };
   $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('זיהוי פנים')); };
 }
+// ---------- AI tagging: OpenAI / Claude / Gemini / OpenRouter / any OpenAI-compatible API ----------
+const AI_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openrouter', 'custom'];
+const aiShort = id => ({openai:'OpenAI', anthropic:'Claude', gemini:'Gemini', openrouter:'OpenRouter'})[id] || t('שרת מותאם אישית');
+const aiLabel = id => id==='custom' ? t('מותאם אישית (תואם OpenAI: Groq, Together, Ollama ועוד)')
+  : id==='openrouter' ? 'OpenRouter · ' + t('כל המודלים עם מפתח אחד')
+  : id==='anthropic' ? 'Claude (Anthropic)' : id==='gemini' ? 'Gemini (Google)' : 'OpenAI';
+
+async function aiSettings(){
+  const s = await api('/api/ai/settings');
+  modal(`<h3>${t('הגדרות תיוג AI')}</h3><div class="mb">
+    <p>${t('מילות המפתח נוצרות על ידי ספק AI, עם המפתח שלכם. נשלחת תמונה ממוזערת (עד 512px) של כל תמונה שמתייגים, ורק כשמפעילים תיוג. המפתח נשמר מוצפן בחשבון ה‑Windows שלכם.')}</p>
+    <label class="fld"><span>${t('ספק')}</span><select id="ai-provider">${AI_PROVIDERS.map(id=>`<option value="${id}" ${id===s.provider?'selected':''}>${esc(aiLabel(id))}</option>`).join('')}</select></label>
+    <label class="fld hidden" id="ai-base-row"><span>${t('כתובת ה‑API (עד /v1)')}</span><input type="text" id="ai-base" dir="ltr" value="${esc(s.base_url)}" placeholder="http://localhost:11434/v1"></label>
+    <div class="fld"><span>${t('מפתח API')}</span>
+      <div class="frow"><input type="password" id="ai-key" dir="ltr" autocomplete="off" spellcheck="false"><button id="ai-key-del" class="hidden">${t('הסר מפתח')}</button></div>
+      <span class="hint" id="ai-key-hint" style="margin:0;padding:0"></span></div>
+    <div class="fld"><span>${t('מודל')}</span>
+      <label class="check" style="padding:0"><input type="radio" name="ai-m" value="auto"> ${t('אוטומטי (מומלץ): נבחר מודל זול ומהיר שמבין תמונות')}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ai-m" value="manual"> ${t('בחירה ידנית')}</label>
+      <div class="frow"><input type="text" id="ai-model" list="ai-models" dir="ltr" autocomplete="off" spellcheck="false" placeholder="model-id"><datalist id="ai-models"></datalist><button id="ai-load">${t('טען רשימת מודלים')}</button></div></div>
+    <label class="fld"><span>${t('שפת מילות המפתח')}</span><select id="ai-lang">${LANGS.map(([c,n])=>`<option value="${c}" ${c===s.language?'selected':''}>${n}</option>`).join('')}</select></label>
+    <div class="hint" id="ai-status" style="min-height:18px;padding:0"></div>
+  </div><div class="mf"><button id="ai-close">${t('סגור')}</button><button id="ai-save" class="primary">${t('שמור')}</button></div>`);
+  const q = id => $('#'+id), radio = v => $(`input[name=ai-m][value=${v}]`);
+  const status = (msg, cls='') => { q('ai-status').textContent = msg; q('ai-status').className = 'hint ' + cls; };
+  radio(s.model ? 'manual' : 'auto').checked = true; q('ai-model').value = s.model;
+  const refresh = ()=>{
+    const p = q('ai-provider').value, info = s.providers[p] || {};
+    q('ai-base-row').classList.toggle('hidden', p!=='custom');
+    q('ai-key-hint').textContent = info.has_key ? t('מפתח שמור: {0}', [info.hint]) : p==='custom' ? t('מפתח אופציונלי (שרת מקומי בדרך כלל לא צריך)') : t('לא נשמר מפתח');
+    q('ai-key-del').classList.toggle('hidden', !info.has_key);
+    q('ai-model').disabled = !radio('manual').checked;
+  };
+  refresh();
+  q('ai-provider').onchange = ()=>{ radio('auto').checked = true; q('ai-model').value = ''; q('ai-models').innerHTML = ''; status(''); refresh(); };
+  $$('input[name=ai-m]').forEach(r=>r.onchange = refresh);
+  q('ai-key-del').onclick = async ()=>{ s.providers = (await send('DELETE', '/api/ai/key/' + q('ai-provider').value)).providers; refresh(); };
+  const probe = ()=>({provider:q('ai-provider').value, base_url:q('ai-base').value.trim(), api_key:q('ai-key').value.trim() || null});
+  q('ai-load').onclick = async ()=>{
+    status(t('טוען…'));
+    try{
+      const r = await send('POST', '/api/ai/models', probe());
+      q('ai-models').innerHTML = r.models.map(m=>`<option value="${esc(m.id)}">${esc(m.name!==m.id ? m.name : '')}</option>`).join('');
+      status(t('נמצאו {0} מודלים · במצב אוטומטי ייבחר: {1}', [r.models.length, r.auto || '—']), 'ok');
+    }catch(e){ status(e.message, 'err'); }
+  };
+  q('ai-save').onclick = async ()=>{
+    const manual = radio('manual').checked, model = q('ai-model').value.trim();
+    if(manual && !model) return status(t('הקלידו מזהה מודל, או בחרו אוטומטי'), 'err');
+    try{
+      await send('POST', '/api/ai/settings', {...probe(), model: manual ? model : '', language: q('ai-lang').value});
+      closeModal(); toast(t('ההגדרות נשמרו'));
+    }catch(e){ status(e.message, 'err'); }
+  };
+  q('ai-close').onclick = closeModal;
+}
+
+async function aiRun(){
+  const s = await api('/api/ai/settings');
+  if(!(s.providers[s.provider]||{}).has_key && s.provider!=='custom') return aiSettings();   // not set up yet
+  const sel = targets().filter(id=>!(S.byId.get(id)||{}).is_video);
+  const untagged = S.all.filter(p=>!p.is_video && !p.has_kw).length;
+  const name = esc(aiShort(s.provider));
+  modal(`<h3>${t('תיוג AI')}</h3><div class="mb">
+    <p>${t('{0} · מודל: {1}', [name, esc(s.model || t('אוטומטי'))])}</p>
+    <div class="fld">
+      <label class="check" style="padding:0"><input type="radio" name="ai-scope" value="sel" ${sel.length?'checked':'disabled'}> ${t('התמונות שנבחרו ({0})', [num(sel.length)])}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ai-scope" value="untagged" ${sel.length?'':'checked'} ${untagged?'':'disabled'}> ${t('כל התמונות ללא מילות מפתח ({0})', [num(untagged)])}</label></div>
+    <p>${t('תמונה ממוזערת של כל תמונה תישלח אל {0}. מילות מפתח שנוצרו קודם על ידי AI בתמונות האלה יוחלפו; מילות מפתח ידניות לא ייפגעו.', [name])}</p>
+  </div><div class="mf"><button id="air-cfg">${t('הגדרות')}</button><span class="spacer"></span><button id="air-cancel">${t('ביטול')}</button><button class="primary" id="air-go">${t('התחל תיוג')}</button></div>`);
+  $('#air-cfg').onclick = ()=>{ closeModal(); aiSettings(); };
+  $('#air-cancel').onclick = closeModal;
+  $('#air-go').onclick = async ()=>{
+    const scope = $('input[name=ai-scope]:checked')?.value; if(!scope) return;
+    closeModal();
+    await send('POST', '/api/aitag', scope==='sel' ? {ids:sel} : {only_untagged:true});
+    pollJob('aitag', t('תיוג AI'));
+  };
+}
+
 function languageDialog(){
   modal(`<h3>${t('שפה')}${I18N.lang==='en'?'':' / Language'}</h3><div class="mb"><div class="lang-grid">
     ${LANGS.map(([c,n,d])=>`<button class="${c===I18N.lang?'primary':''}" data-lang="${c}" dir="${d}">${n}</button>`).join('')}</div>
@@ -1546,11 +1629,12 @@ async function pollJob(name, label){
   act.onclick = ()=>toast(`<b>${label}</b><br>${esc(msg)}${p.total?` (${num(p.done)}/${num(p.total)})`:''}`);
   if(['done','error','idle'].includes(p.state)){
     act.classList.add('hidden');
-    toast(`${label}: ${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('הושלם'))}`, 4000);
-    if(['import','faces'].includes(name)){
+    toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('הושלם'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
+    if(['import','faces','aitag'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
       if(S.view==='people') renderPeople();
+      if(name==='aitag') renderRight();
     }
     return;
   }
@@ -1608,6 +1692,10 @@ const MENUS = [
   ]],
   [t('מטא-נתונים'), [
     [t('הוסף מילות מפתח'), 'Ctrl+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
+    [t('תיוג AI לתמונות שנבחרו...'), '', aiRun],
+    [t('הגדרות תיוג AI...'), '', aiSettings],
+    [t('עצור תיוג AI'), '', ()=>send('POST','/api/aitag/cancel')],
+    sep,
     [t('שמור מטא-נתונים לקובץ'), 'Ctrl+S', saveMetaToFile],
     [t('סנכרן מטא-נתונים'), '', ()=>$('#btn-sync-meta').click()],
   ]],
@@ -1751,7 +1839,7 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setView('grid');
   if(!S.all.length && !S.status.counts.trashed) openImport('folder');
   // resume the activity indicator if a job is already running (e.g. after a reload)
-  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
+  [['import',t('ייבוא')],['faces',t('זיהוי פנים')],['aitag',t('תיוג AI')],['export',t('ייצוא')]].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}
   });
 })();

@@ -567,3 +567,10 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 /* the file-info overlay gets out of the way while the controls are hidden during playback */
 .loupe-info{transition:opacity .25s}
 .v-loupe:has(.vp.idle) .loupe-info{opacity:0}
+
+/* AI tagging */
+.kwai{display:flex;gap:6px;margin:8px 12px 0}
+.kwai button:first-child{flex:1}
+.kwai .cfg{width:30px;padding:0}
+.hint.ok{color:var(--green)}
+.hint.err{color:var(--red)}
