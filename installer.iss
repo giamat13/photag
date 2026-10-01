@@ -46,6 +46,7 @@ Name: "{autodesktop}\photag"; Filename: "{app}\photag.exe"; Tasks: desktopicon
 [UninstallRun]
 ; the app's backup task (created by the app itself) goes away with it; photos and backups are NOT touched
 Filename: "schtasks.exe"; Parameters: "/Delete /TN ""photag-backup"" /F"; Flags: runhidden; RunOnceId: "DelBackupTask"
+Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v photag-backup /f"; Flags: runhidden; RunOnceId: "DelBackupRunKey"
 
 [Run]
 Filename: "{app}\photag.exe"; Description: "הפעל את photag"; Flags: nowait postinstall skipifsilent

@@ -5,3 +5,5 @@ dist/
 *.spec.bak
 .venv/
 installer_output/
+tools/sandbox/results/
+tools/sandbox/photag.wsb
