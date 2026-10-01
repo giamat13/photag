@@ -152,6 +152,12 @@ def list_snapshots() -> list[dict]:
     out = [m for p in d.glob("photag-*.zip") if NAME_RE.match(p.name) and (m := _manifest(p))]
     for m in out:                                         # can this snapshot's photo files be restored?
         m["media_ok"] = bool(m.get("includes_media")) and (d / (m.get("media_dir") or MIRROR)).is_dir()
+        # size of the whole backup as the user thinks of it: catalog + all its photo files (shared files are
+        # hard links, so the disk is not used twice; see media_bytes() for the real space)
+        mb = (m.get("media") or {}).get("total_bytes")
+        if mb is None and m["media_ok"]:
+            mb = sum(f.stat().st_size for f in (d / MIRROR).rglob("*") if f.is_file())
+        m["total_bytes"] = m["bytes"] + (mb or 0)
     return sorted(out, key=lambda m: m["created"], reverse=True)
 
 
@@ -245,7 +251,8 @@ def _mirror_media(dst: Path, progress=None) -> dict:
             progress.say("Copying photo and video files… {done} of {total} files", done=copied, total=max(n_copy, copied))
             if getattr(progress, "cancel", False):
                 raise RuntimeError("cancelled")
-    return {"files": len(files), "copied": copied, "linked": linked, "bytes_copied": nbytes}
+    return {"files": len(files), "copied": copied, "linked": linked, "bytes_copied": nbytes,
+            "total_bytes": sum(src.stat().st_size for src, _, _ in plan)}
 
 
 class NoSpaceError(Exception):

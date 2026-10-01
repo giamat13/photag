@@ -1801,7 +1801,7 @@ async function backupDialog(){
       : t('Note: the backup currently includes only the catalog (tags, albums, ratings) and not the photos and videos themselves, so it is small. Check «Also back up photo and video files» to back up everything.');
   };
   const rows = () => i.snapshots.length ? i.snapshots.map(m => `<div class="bk-row"><span class="bk-d">${ltr(fdt(m.created))}</span>
-      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} photos', [num(m.photos)])} · ${ltr(m.bytes < 1048576 ? Math.max(1, Math.round(m.bytes / 1024)) + ' KB' : (m.bytes / 1048576).toFixed(1) + ' MB')}${m.includes_media ? ' · ' + t('Includes photos and videos') + (m.media ? ltr(` (${num(m.media.files)})`) : '') :' · ' + t('Catalog only')}</span>
+      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} photos', [num(m.photos)])} · ${fmtBytes(m.total_bytes)}${m.includes_media ? ' · ' + t('Includes photos and videos') + (m.media ? ltr(` (${num(m.media.files)})`) : '') :' · ' + t('Catalog only')}</span>
       <button data-restore="${esc(m.name)}">${t('Restore…')}</button><button data-del="${esc(m.name)}" title="${t('Delete')}">✕</button></div>`).join('')
     : `<span class="hint" style="padding:0">${t('No backups yet.')}</span>`;
   const draw = () => {

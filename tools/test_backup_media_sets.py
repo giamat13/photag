@@ -43,6 +43,9 @@ try:
     check("second backup lists all 5 files too, none copied again (linked)", s2["media"]["files"] == 5 and s2["media"]["copied"] == 0 and s2["media"]["linked"] == 5, s2["media"])
     check("each backup has its own media folder with all files",
           all(len(list((bk / m["media_dir"]).rglob("*.jpg"))) == 5 for m in (s1, s2)) and s1["media_dir"] != s2["media_dir"])
+    sz = {m["name"]: m["total_bytes"] for m in backup.list_snapshots()}
+    check("each backup is listed with its FULL size (catalog + all photo files), not just the catalog",
+          all(v > 250_000 for v in sz.values()) and len(sz) == 2, sz)
     check("shared files take the space once", backup.media_bytes() < 5 * 50_001 * 1.2, backup.media_bytes())
 
     # a photo is deleted and one is changed after the second backup
