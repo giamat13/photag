@@ -17,6 +17,7 @@ import urllib.error
 import urllib.request
 
 from . import config, db, images, keystore
+from .net import ssl_context
 from .config import PATHS
 
 PROVIDERS = {
@@ -97,7 +98,7 @@ def _http(method: str, url: str, headers: dict, body=None, timeout: float = 60, 
     req = urllib.request.Request(url, json.dumps(body).encode() if body is not None else None, method=method,
                                  headers={"Content-Type": "application/json", **headers})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with urllib.request.urlopen(req, timeout=timeout, context=ssl_context()) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         raw = e.read()[:3000].decode("utf-8", "replace")

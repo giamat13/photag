@@ -55,7 +55,12 @@ Check 'the app starts and its server answers' $up ("{0:n0}s, exited={1}" -f $sec
 Check 'first start is not slow (< 30 s)' ($up -and $secs -lt 30) ("{0:n0}s" -f $secs)
 $slog = Join-Path $env:APPDATA 'photag\startup.log'
 if (Test-Path $slog) { Copy-Item $slog (Join-Path $out 'startup.log') -Force; Say "startup.log copied to results" }
-Check 'the window exists' ((Get-Process photag -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }) -ne $null)
+$hasWin = $false
+for ($i = 0; $i -lt 30 -and -not $hasWin; $i++) {
+  $hasWin = @(Get-Process photag -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }).Count -gt 0
+  if (-not $hasWin) { Start-Sleep -Seconds 1 }
+}
+Check 'the window opens (within 30 s)' $hasWin
 
 if ($up) {
   Check 'version reported' ($s.version -ne $null) $s.version

@@ -35,6 +35,7 @@ import urllib.request
 from pathlib import Path
 
 from . import config
+from .net import ssl_context
 from .version import REPO, __version__
 
 API = os.environ.get("PHOTAG_UPDATE_API", "https://api.github.com").rstrip("/")     # tests point this at a mock
@@ -63,7 +64,7 @@ def is_newer(latest: str, current: str = __version__) -> bool:
 
 def _get(url: str, timeout: float = 10):
     req = urllib.request.Request(url, headers={"User-Agent": f"photag/{__version__}", "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.urlopen(req, timeout=timeout, context=ssl_context()) as r:
         return r.read()
 
 
@@ -157,7 +158,7 @@ def run_download(progress):
         progress.say("מוריד עדכון… {pct}%", pct=0)
         h = hashlib.sha256()
         req = urllib.request.Request(a["url"], headers={"User-Agent": f"photag/{__version__}"})
-        with urllib.request.urlopen(req, timeout=30) as r, open(part, "wb") as f:
+        with urllib.request.urlopen(req, timeout=30, context=ssl_context()) as r, open(part, "wb") as f:
             if not progress.total:
                 progress.total = int(r.headers.get("Content-Length") or 0)
             while chunk := r.read(1 << 20):
