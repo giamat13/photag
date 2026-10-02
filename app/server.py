@@ -1,5 +1,6 @@
 """FastAPI backend: catalog queries, media/thumbnail serving, metadata &
 image editing, and background jobs (import / faces)."""
+import json
 import os
 import shutil
 import subprocess
@@ -12,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -80,10 +81,24 @@ def _auto_import_loop():
         time.sleep(float(os.environ.get("PHOTAG_AUTOIMPORT_TICK", 60)))
 
 
+def _ref_loop():
+    """Photos that stay in the user's own folder: look for new / moved / removed files every few minutes (never while another task runs)."""
+    time.sleep(float(os.environ.get("PHOTAG_REF_DELAY", 25)))
+    while True:
+        try:
+            st = refmode.get(db.connect())
+            if st["enabled"] and st["folder"] and Path(st["folder"]).is_dir() and not _other_job_running():
+                _start("refscan", refmode.run_scan)
+        except Exception:
+            pass
+        time.sleep(float(os.environ.get("PHOTAG_REF_TICK", 300)))
+
+
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
     threading.Thread(target=_backup_loop, daemon=True).start()
+    threading.Thread(target=_ref_loop, daemon=True).start()
     threading.Thread(target=_auto_import_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
@@ -113,7 +128,14 @@ def job(name: str):
 @app.get("/api/background")
 def background():
     """What the window polls once a minute: did the automatic import bring in photos, did the weekly backup check find a problem."""
-    return {"auto_import": dict(importer.AUTO), "verify": backup.get_state().get("last_verify")}
+    con = db.connect()
+    try:
+        last = json.loads(db.get_setting(con, "ref_last_result", "") or "{}")
+    except ValueError:
+        last = {}
+    ref = {"at": db.get_setting(con, "ref_last_scan", None),
+           "added": last.get("added", 0), "moved": last.get("moved", 0), "removed": last.get("removed", 0), "changed": last.get("changed", 0)}
+    return {"auto_import": dict(importer.AUTO), "verify": backup.get_state().get("last_verify"), "ref": ref}
 
 
 # ---- automatic import from a folder ------------------------------------------------
@@ -151,6 +173,60 @@ def auto_import_set(body: AutoImportIn):
         db.set_setting(con, "auto_import_baseline", s["folder"])
     config.set_auto_import(s)
     return auto_import_info()
+
+
+# ---- photos that stay in the user's own folder ---------------------------------------
+class RefIn(BaseModel):
+    enabled: bool | None = None
+    folder: str | None = None
+
+
+def _ref_info():
+    con = db.connect()
+    st = refmode.get(con)
+    last = db.get_setting(con, "ref_last_result", "")
+    import json as _json
+    try:
+        last = _json.loads(last) if last else None
+    except ValueError:
+        last = None
+    return {**st, "folder_ok": bool(st["folder"]) and Path(st["folder"]).is_dir(), "last_scan": db.get_setting(con, "ref_last_scan", None),
+            "last_result": last, "photos": con.execute("SELECT COUNT(*) FROM ref_files").fetchone()[0]}
+
+
+@app.get("/api/ref")
+def ref_info():
+    return _ref_info()
+
+
+@app.post("/api/ref")
+def ref_set(body: RefIn):
+    """Turn "photos stay in my folder" on or off and choose the folder. Off by default. Turning it off keeps the photos in the
+    catalog (they stay where they are); nothing is moved or deleted either way."""
+    con = db.connect()
+    cur = refmode.get(con)
+    folder = (body.folder.strip().strip('"') if body.folder is not None else cur["folder"])
+    enabled = cur["enabled"] if body.enabled is None else body.enabled
+    if enabled or body.folder is not None:
+        if folder:
+            problem = refmode.folder_problem(folder)
+            if problem:
+                raise err(400, problem)
+        elif enabled:
+            raise err(400, "Folder not found")
+    refmode.set_state(con, enabled=enabled, folder=folder)
+    if enabled and folder:
+        try:
+            _start("refscan", refmode.run_scan)               # the first look at the folder starts right away
+        except HTTPException:
+            pass
+    return _ref_info()
+
+
+@app.post("/api/ref/scan")
+def ref_scan():
+    _start("refscan", refmode.run_scan)
+    return {"ok": True}
 
 
 # ---- the trash ---------------------------------------------------------------------
@@ -684,9 +760,9 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
         where.append("p.rel_path NOT LIKE '%\\%' AND p.rel_path NOT LIKE '%/%'")
     elif folder is not None:
         # rel_path is "<folder>\\<file>" (Windows) or "<folder>/<file>"
-        where.append("(p.rel_path LIKE ? ESCAPE '!' OR p.rel_path LIKE ? ESCAPE '!')")
+        where.append("(p.rel_path LIKE ? ESCAPE '!' OR p.rel_path LIKE ? ESCAPE '!' OR p.rel_path LIKE ? ESCAPE '!')")
         f = folder.replace("!", "!!").replace("%", "!%").replace("_", "!_")
-        args += [f + "\\%", f + "/%"]
+        args += [f + "\\%", f + "/%", f.replace("/", "\\") + "\\%"]      # the last one: photos of the user's own folder (absolute Windows paths)
     if year:
         where.append("CAST(strftime('%Y', p.taken_at, 'unixepoch') AS INT)=?"); args.append(year)
     if q:
@@ -810,6 +886,12 @@ class MetaIn(BaseModel):
 SIMPLE_FIELDS = ("description", "taken_at", "lat", "lng", "favorited", "rating", "flag", "quick", "trashed")
 
 
+def _not_in_own_folder(row):
+    """Photos of the user's own folder (app/refmode.py) are never changed by photag."""
+    if refmode.is_external(row["rel_path"]):
+        raise err(409, "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it")
+
+
 def _apply_meta(con, ids: list[int], m: MetaIn):
     fields = {k: v for k, v in m.dict().items() if k in SIMPLE_FIELDS and v is not None}
     if m.label is not None:
@@ -839,6 +921,8 @@ def update_meta(pid: int, m: MetaIn):
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r:
         raise HTTPException(404)
+    if m.write_exif:
+        _not_in_own_folder(r)
     _apply_meta(con, [pid], m)
     if m.write_exif:
         images.write_exif_jpeg(PATHS.media / r["rel_path"],
@@ -932,6 +1016,7 @@ def _editable(con, pid):
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
     if not r or r["is_video"]:
         raise err(400, "Cannot edit")
+    _not_in_own_folder(r)
     if images.is_raw(Path(r["rel_path"])):
         raise err(400, "Editing RAW files is not supported — export a JPEG and edit that")
     return r

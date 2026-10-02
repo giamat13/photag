@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "С момента запуска приложения автоматически импортировано фотографий: {0}",
  "{n} photo files of the backup {name} cannot be read": "Не удаётся прочитать файлов фотографий резервной копии {name}: {n}",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows заблокировала установщик обновления (Smart App Control). Открыта папка со скачанным обновлением: дважды щёлкните файл там или прочитайте README",
- "The update could not be applied: {error}": "Не удалось применить обновление: {error}"
+ "The update could not be applied: {error}": "Не удалось применить обновление: {error}",
+ "Adding photos from the folder… {done} of {total}": "Добавление фото из папки… {done} из {total}",
+ "Choose the folder with your photos": "Выберите папку с вашими фото",
+ "Could not read the photo folder: {error}": "Не удалось прочитать папку с фото: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "Последняя проверка: новых {0}, перемещено {1}, удалено {2}",
+ "Looking at the photo folder…": "Проверка папки с фото…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "Папка с фото обновлена: новых {0}, перемещено {1}, удалено {2}",
+ "Photos stay in my folder": "Фото остаются в моей папке",
+ "Scan now": "Проверить сейчас",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "Показывать фото одной папки там, где они лежат, не копируя, не перемещая и не изменяя их",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "Папка сейчас недоступна. В каталоге ничего не изменится, пока она не вернётся.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "Это фото находится в вашей собственной папке, которую photag никогда не изменяет. Импортируйте копию, если хотите его отредактировать",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag только показывает файлы изображений из папки и её подпапок и поддерживает список актуальным. Ваши файлы никогда не перемещаются, не переименовываются и не изменяются; каталог, миниатюры и резервные копии хранятся в собственной папке photag. Только когда вы окончательно удаляете фото из корзины, его файл отправляется в корзину Windows.",
+ "{0} photos from this folder": "{0} фото из этой папки"
 }

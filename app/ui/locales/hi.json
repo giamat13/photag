@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "ऐप शुरू होने के बाद से {0} फ़ोटो अपने-आप इंपोर्ट हुईं",
  "{n} photo files of the backup {name} cannot be read": "बैकअप {name} की {n} फ़ोटो फ़ाइलें पढ़ी नहीं जा सकतीं",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows ने अपडेट इंस्टॉलर को ब्लॉक कर दिया (Smart App Control)। डाउनलोड किए गए अपडेट वाला फ़ोल्डर खोल दिया गया है: वहाँ फ़ाइल पर डबल-क्लिक करें, या README देखें",
- "The update could not be applied: {error}": "अपडेट लागू नहीं किया जा सका: {error}"
+ "The update could not be applied: {error}": "अपडेट लागू नहीं किया जा सका: {error}",
+ "Adding photos from the folder… {done} of {total}": "फ़ोल्डर से फ़ोटो जोड़ी जा रही हैं… {total} में से {done}",
+ "Choose the folder with your photos": "अपनी फ़ोटो वाला फ़ोल्डर चुनें",
+ "Could not read the photo folder: {error}": "फ़ोटो फ़ोल्डर पढ़ा नहीं जा सका: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "पिछला स्कैन: {0} नई, {1} स्थानांतरित, {2} हटाई गईं",
+ "Looking at the photo folder…": "फ़ोटो फ़ोल्डर देखा जा रहा है…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "फ़ोटो फ़ोल्डर अपडेट हुआ: {0} नई, {1} स्थानांतरित, {2} हटाई गईं",
+ "Photos stay in my folder": "फ़ोटो मेरे फ़ोल्डर में ही रहें",
+ "Scan now": "अभी स्कैन करें",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "एक फ़ोल्डर की फ़ोटो वहीं दिखाएँ जहाँ वे हैं, बिना कॉपी, स्थानांतरित या बदले",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "फ़ोल्डर अभी उपलब्ध नहीं है। वापस आने तक कैटलॉग में कुछ नहीं बदलेगा।",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "यह फ़ोटो आपके अपने फ़ोल्डर में है, जिसे photag कभी नहीं बदलता। संपादित करना चाहें तो एक कॉपी आयात करें",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag केवल फ़ोल्डर और उसके उप-फ़ोल्डरों की छवि फ़ाइलें दिखाता है और सूची को अद्यतन रखता है। आपकी फ़ाइलें कभी स्थानांतरित, नाम-परिवर्तित या बदली नहीं जातीं; कैटलॉग, थंबनेल और बैकअप photag के अपने फ़ोल्डर में रहते हैं। केवल जब आप किसी फ़ोटो को ट्रैश से हमेशा के लिए हटाते हैं, तब उसकी फ़ाइल रीसायकल बिन में जाती है।",
+ "{0} photos from this folder": "इस फ़ोल्डर की {0} फ़ोटो"
 }

@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import backup, config, db, ffmpeg, images, importer
+from . import backup, config, db, ffmpeg, images, importer, refmode
 from .config import PATHS
 
 HANDBRAKE_PAGE = "https://handbrake.fr/downloads2.php"      # the "Command Line Version" lives on this page
@@ -340,6 +340,8 @@ def run_compress(pid: int, raw_options: dict, progress):
         row = con.execute("SELECT * FROM photos WHERE id=? AND is_video=1", (pid,)).fetchone()
         if not row:
             return progress.fail("The file is not a video")
+        if refmode.is_external(row["rel_path"]):
+            return progress.fail("This photo is in your own folder, which photag never changes. Import a copy if you want to edit it")
         src_path = PATHS.media / row["rel_path"]
         if src_path.suffix.lower() not in VIDEO_OK:
             return progress.fail("This file type is not supported for compression ({ext})", ext=src_path.suffix.lower())
@@ -520,6 +522,8 @@ def run_compress_image(pid: int, raw_options: dict, progress):
         row = con.execute("SELECT * FROM photos WHERE id=? AND is_video=0", (pid,)).fetchone()
         if not row:
             return progress.fail("The file is not an image")
+        if refmode.is_external(row["rel_path"]):
+            return progress.fail("This photo is in your own folder, which photag never changes. Import a copy if you want to edit it")
         src_path = PATHS.media / row["rel_path"]
         ext = src_path.suffix.lower()
         if ext not in IMAGE_OK:

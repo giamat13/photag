@@ -22,7 +22,7 @@ HEB = re.compile(r"[֐-׿]")
 LETTERS = re.compile(r"[A-Za-z]{2,}")
 # static text in index.html that is a name, not a sentence to translate
 STATIC_IGNORE = {"photag"}
-BACKEND_FILES = ("server.py", "importer.py", "faces.py", "aitag.py", "compress.py", "updater.py", "backup.py")
+BACKEND_FILES = ("server.py", "importer.py", "faces.py", "aitag.py", "compress.py", "updater.py", "backup.py", "refmode.py")
 
 
 def _js_keys() -> set[str]:

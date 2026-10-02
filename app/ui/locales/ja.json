@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "アプリの起動後に {0} 枚の写真を自動で取り込みました",
  "{n} photo files of the backup {name} cannot be read": "バックアップ {name} の写真ファイル {n} 個を読み取れません",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows が更新プログラムのインストーラーをブロックしました（Smart App Control）。ダウンロードした更新のあるフォルダーを開きました。そこでファイルをダブルクリックするか、README を参照してください",
- "The update could not be applied: {error}": "更新を適用できませんでした: {error}"
+ "The update could not be applied: {error}": "更新を適用できませんでした: {error}",
+ "Adding photos from the folder… {done} of {total}": "フォルダーの写真を追加しています… {done} / {total}",
+ "Choose the folder with your photos": "写真のあるフォルダーを選択",
+ "Could not read the photo folder: {error}": "写真フォルダーを読み取れませんでした: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "前回のスキャン: 新規 {0}、移動 {1}、削除 {2}",
+ "Looking at the photo folder…": "写真フォルダーを確認しています…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "写真フォルダーを更新しました: 新規 {0}、移動 {1}、削除 {2}",
+ "Photos stay in my folder": "写真は自分のフォルダーに置いたままにする",
+ "Scan now": "今すぐスキャン",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "1つのフォルダーの写真を、コピー・移動・変更せずにその場所のまま表示する",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "現在フォルダーにアクセスできません。戻るまでカタログは変更されません。",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "この写真はあなた自身のフォルダーにあり、photag は決して変更しません。編集したい場合はコピーを取り込んでください",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag はフォルダーとそのサブフォルダーの画像ファイルを一覧表示し、一覧を最新に保つだけです。ファイルが移動・名前変更・変更されることはありません。カタログ、サムネイル、バックアップは photag 自身のフォルダーに保存されます。ごみ箱から写真を完全に削除したときだけ、そのファイルが Windows のごみ箱に移動します。",
+ "{0} photos from this folder": "このフォルダーの写真 {0} 枚"
 }

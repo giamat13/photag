@@ -95,6 +95,12 @@ CREATE TABLE IF NOT EXISTS auto_import_seen(
   path TEXT PRIMARY KEY, size INTEGER, mtime INTEGER, failed INTEGER DEFAULT 0
 );
 
+-- photos that stay in the user's own folder (app/refmode.py): where each file was and how it looked when last read
+CREATE TABLE IF NOT EXISTS ref_files(
+  path TEXT PRIMARY KEY, size INTEGER, mtime_ns INTEGER, photo_id INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_ref_files_photo ON ref_files(photo_id);
+
 -- extra Takeout artifacts so nothing from the ZIP is lost
 CREATE TABLE IF NOT EXISTS memory_titles(title TEXT);
 CREATE TABLE IF NOT EXISTS shared_comments(

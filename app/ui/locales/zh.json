@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "自应用启动以来已自动导入 {0} 张照片",
  "{n} photo files of the backup {name} cannot be read": "备份 {name} 中有 {n} 个照片文件无法读取",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows 阻止了更新安装程序（Smart App Control）。已打开下载的更新所在的文件夹：请在那里双击该文件，或参阅 README",
- "The update could not be applied: {error}": "无法应用更新：{error}"
+ "The update could not be applied: {error}": "无法应用更新：{error}",
+ "Adding photos from the folder… {done} of {total}": "正在添加文件夹中的照片… {done} / {total}",
+ "Choose the folder with your photos": "选择存放照片的文件夹",
+ "Could not read the photo folder: {error}": "无法读取照片文件夹：{error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "上次扫描：新增 {0}，移动 {1}，移除 {2}",
+ "Looking at the photo folder…": "正在查看照片文件夹…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "照片文件夹已更新：新增 {0}，移动 {1}，移除 {2}",
+ "Photos stay in my folder": "照片保留在我的文件夹中",
+ "Scan now": "立即扫描",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "在原位置显示某个文件夹中的照片，不复制、不移动、不修改",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "目前无法访问该文件夹。在它恢复之前，目录不会有任何变化。",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "这张照片位于你自己的文件夹中，photag 绝不会修改它。如果想编辑，请导入一份副本",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag 只列出该文件夹及其子文件夹中的图片文件，并保持列表最新。你的文件绝不会被移动、重命名或修改；目录、缩略图和备份保存在 photag 自己的文件夹中。只有当你从回收站中永久删除照片时，它的文件才会被送入 Windows 回收站。",
+ "{0} photos from this folder": "此文件夹中的 {0} 张照片"
 }

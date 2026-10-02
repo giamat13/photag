@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "Sinds het starten van de app zijn {0} foto's automatisch geïmporteerd",
  "{n} photo files of the backup {name} cannot be read": "{n} fotobestanden van de back-up {name} kunnen niet worden gelezen",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows heeft het installatieprogramma van de update geblokkeerd (Smart App Control). De map met de gedownloade update is geopend: dubbelklik daar op het bestand, of lees de README",
- "The update could not be applied: {error}": "De update kon niet worden toegepast: {error}"
+ "The update could not be applied: {error}": "De update kon niet worden toegepast: {error}",
+ "Adding photos from the folder… {done} of {total}": "Foto’s uit de map toevoegen… {done} van {total}",
+ "Choose the folder with your photos": "Kies de map met je foto’s",
+ "Could not read the photo folder: {error}": "De fotomap kon niet worden gelezen: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "Laatste scan: {0} nieuw, {1} verplaatst, {2} verwijderd",
+ "Looking at the photo folder…": "De fotomap wordt bekeken…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "Fotomap bijgewerkt: {0} nieuw, {1} verplaatst, {2} verwijderd",
+ "Photos stay in my folder": "Foto’s blijven in mijn map",
+ "Scan now": "Nu scannen",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "De foto’s van één map tonen waar ze staan, zonder ze te kopiëren, te verplaatsen of te wijzigen",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "De map is nu niet bereikbaar. Er verandert niets in de catalogus tot hij weer beschikbaar is.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "Deze foto staat in je eigen map, die photag nooit wijzigt. Importeer een kopie als je hem wilt bewerken",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag toont alleen de afbeeldingsbestanden van de map en de submappen en houdt de lijst actueel. Je bestanden worden nooit verplaatst, hernoemd of gewijzigd; de catalogus, miniaturen en back-ups blijven in de eigen map van photag. Alleen als je een foto definitief uit de prullenbak verwijdert, gaat het bestand naar de Windows-prullenbak.",
+ "{0} photos from this folder": "{0} foto’s uit deze map"
 }

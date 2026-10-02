@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "{0} תמונות יובאו אוטומטית מאז שהאפליקציה הופעלה",
  "{n} photo files of the backup {name} cannot be read": "לא ניתן לקרוא {n} קובצי תמונות של הגיבוי {name}",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows חסם את מתקין העדכון (Smart App Control). נפתחה התיקייה עם העדכון שהורד: לחץ פעמיים על הקובץ שם, או ראה את ה-README",
- "The update could not be applied: {error}": "לא ניתן היה להחיל את העדכון: {error}"
+ "The update could not be applied: {error}": "לא ניתן היה להחיל את העדכון: {error}",
+ "Adding photos from the folder… {done} of {total}": "מוסיף תמונות מהתיקייה… {done} מתוך {total}",
+ "Choose the folder with your photos": "בחר את התיקייה עם התמונות שלך",
+ "Could not read the photo folder: {error}": "לא ניתן היה לקרוא את תיקיית התמונות: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "סריקה אחרונה: {0} חדשות, {1} הועברו, {2} הוסרו",
+ "Looking at the photo folder…": "בודק את תיקיית התמונות…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "תיקיית התמונות עודכנה: {0} חדשות, {1} הועברו, {2} הוסרו",
+ "Photos stay in my folder": "התמונות נשארות בתיקייה שלי",
+ "Scan now": "סרוק עכשיו",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "הצג את התמונות של תיקייה אחת איפה שהן נמצאות, בלי להעתיק, להזיז או לשנות אותן",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "אי אפשר להגיע לתיקייה כרגע. שום דבר בקטלוג לא ישתנה עד שהיא תחזור.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "התמונה הזאת נמצאת בתיקייה שלך, ש-photag אף פעם לא משנה. ייבא עותק אם אתה רוצה לערוך אותה",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag רק מציגה את קובצי התמונה של התיקייה ותת-התיקיות שלה ומעדכנת את הרשימה. הקבצים שלך אף פעם לא מועברים, לא משנים להם שם ולא משתנים; הקטלוג, התמונות הממוזערות והגיבויים נשארים בתיקייה של photag עצמה. רק כשמוחקים תמונה מהאשפה לצמיתות, הקובץ שלה עובר לסל המיחזור.",
+ "{0} photos from this folder": "{0} תמונות מהתיקייה הזאת"
 }

@@ -1602,7 +1602,7 @@ async function catalogSettings(){
   $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); HIST.undo.length = HIST.redo.length = 0; closeModal(); toast(t('Catalog replaced')); await reloadAll(); };
 }
 async function preferences(){
-  const [s, ai] = await Promise.all([api('/api/status'), api('/api/auto-import')]);
+  const [s, ai, rf0] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref')]);
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
@@ -1612,6 +1612,11 @@ async function preferences(){
     <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
     <label class="chkrow"><input type="checkbox" id="ai-existing"> ${t('Also import the photos already in the folder')}</label>
     <div class="hint" style="padding:0" id="ai-status"></div>
+    <div class="lbl-sub" style="padding:0">${t('Photos stay in my folder')}</div>
+    <label class="chkrow"><input type="checkbox" id="rf-on"> ${t('Show the photos of one folder where they are, without copying, moving or changing them')}</label>
+    <div class="bk-path"><input id="rf-folder" readonly dir="ltr"><button id="rf-pick">${t('Choose…')}</button><button id="rf-scan">${t('Scan now')}</button></div>
+    <div class="hint" style="padding:0" id="rf-status"></div>
+    <div class="hint" style="padding:0">${t("photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.")}</div>
   </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button>
     <button id="pf-ai">${t("AI tagging settings")}</button><button class="primary" id="pf-faces">${t("Detect Faces")}</button></div>`);
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
@@ -1632,6 +1637,27 @@ async function preferences(){
   };
   $('#ai-pick').onclick = async () => { const f = await pick(); if(f) await save({folder: f, enabled: true}); };
   drawAi();
+  // photos that stay in the user's own folder (off by default)
+  let rf = rf0;
+  const drawRf = () => {
+    $('#rf-on').checked = rf.enabled; $('#rf-folder').value = rf.folder; $('#rf-scan').disabled = !rf.enabled;
+    const r = rf.last_result;
+    $('#rf-status').textContent = !rf.enabled ? '' : !rf.folder_ok ? t("The folder can't be reached right now. Nothing is changed in the catalog until it is back.")
+      : [t('{0} photos from this folder', [num(rf.photos)]), r ? t('Last scan: {0} new, {1} moved, {2} removed', [num(r.added), num(r.moved), num(r.removed)]) : ''].filter(Boolean).join(' · ');
+  };
+  const saveRf = async body => {
+    try{ rf = await send('POST', '/api/ref', body); setTimeout(()=>pollJob('refscan', t('Photos stay in my folder')), 400); }
+    catch(e){ toast(e.message); rf = await api('/api/ref'); }
+    drawRf();
+  };
+  const pickRf = async () => { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(t('Choose the folder with your photos'))); return r.path || null; };
+  $('#rf-on').onchange = async e => {
+    if(e.target.checked && !rf.folder){ const f = await pickRf(); if(!f){ drawRf(); return; } await saveRf({folder: f, enabled: true}); }
+    else await saveRf({enabled: e.target.checked});
+  };
+  $('#rf-pick').onclick = async () => { const f = await pickRf(); if(f) await saveRf({folder: f, enabled: true}); };
+  $('#rf-scan').onclick = async () => { try{ await send('POST', '/api/ref/scan'); pollJob('refscan', t('Photos stay in my folder')); }catch(e){ toast(e.message); } };
+  drawRf();
 }
 // ---------- AI tagging: OpenAI / Claude / Gemini / OpenRouter / any OpenAI-compatible API ----------
 const AI_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openrouter', 'custom'];
@@ -2072,6 +2098,7 @@ async function backupHealthNotice(){
 
 // Once a minute: photos that the automatic import brought in appear by themselves, and a failed weekly backup check is reported.
 let BG_SEQ = null, BG_BUSY = false;
+let BG_REF = null;
 async function backgroundTick(){
   if(BG_BUSY) return; BG_BUSY = true;
   try{
@@ -2080,6 +2107,14 @@ async function backgroundTick(){
     else if(a.seq !== BG_SEQ){
       BG_SEQ = a.seq;
       if(S.mod === 'library'){ await reloadAll(); toast(t('{0} new photos imported automatically', [num(a.last_added)]), 3500); }
+    }
+    const rf = b.ref;      // the photo folder (Preferences): a quiet scan every few minutes; the window refreshes only when something changed
+    if(rf){
+      if(BG_REF === null) BG_REF = rf.at;
+      else if(rf.at !== BG_REF){
+        BG_REF = rf.at;
+        if(rf.added + rf.moved + rf.removed + rf.changed > 0 && S.mod === 'library'){ await reloadAll(); toast(t('Photo folder updated: {0} new, {1} moved, {2} removed', [num(rf.added), num(rf.moved), num(rf.removed)]), 3500); }
+      }
     }
     if(b.verify && !b.verify.ok && pref.get('bkVerifyAlerted', 0) !== b.verify.at && $('#modal').classList.contains('hidden')) await backupHealthNotice();
   }catch{} finally{ BG_BUSY = false; }
@@ -2574,7 +2609,7 @@ async function pollJob(name, label){
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
-    if(['import','faces','aitag','compress','backup'].includes(name)){
+    if(['import','faces','aitag','compress','backup','refscan'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
       if(S.view==='people') renderPeople();

@@ -107,6 +107,19 @@ Control and similar protections have nothing new to block; the previous code is 
 An update that changes the libraries inside photag comes as a normal installer instead (`codeboot.py` explains the rules; `RUNTIME` there is
 bumped for such releases). Every download is verified with the SHA-256 that GitHub publishes for the file.
 
+## Photos stay in my folder (optional)
+For people who already have a folder structure that is not all photos and do not want to reorganise it: in *Preferences* switch on
+**Photos stay in my folder** and choose the folder. photag then lists the image files of that folder and its subfolders where they are and
+keeps the list up to date (a quiet scan every few minutes, or *Scan now*): new files appear, files you move or rename inside the folder keep
+their ratings and keywords, files you delete disappear. It is **off by default**.
+- The files in that folder are **never moved, copied, renamed or changed** by photag. Develop edits, rotate, compress and "save metadata to the
+  file" are therefore not available for these photos (import a copy to edit it); ratings, flags, keywords, collections and descriptions work, they
+  live in the catalog.
+- The catalog, thumbnails, backups and settings stay in photag's own folder. Backups do not copy your folder (it is yours to back up).
+- The only time a file in your folder is touched: you delete a photo from the trash for good, and its file then goes to the **Recycle Bin**
+  (never deleted outright; on drives without a Recycle Bin photag leaves the file alone and keeps the photo in the trash).
+- A drive that is unplugged never empties the catalog: when the folder cannot be read, or an unusually large part of it vanishes at once, nothing is removed.
+
 ## Run from source
 ```bat
 pip install -r requirements.txt

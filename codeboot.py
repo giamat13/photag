@@ -53,7 +53,13 @@ class _CodeFirst:
 
     def find_spec(self, fullname, path=None, target=None):
         if fullname == "app":
-            return importlib.machinery.PathFinder.find_spec(fullname, [str(self.code)])
+            spec = importlib.machinery.PathFinder.find_spec(fullname, [str(self.code)])
+            frozen_app = os.path.join(getattr(sys, "_MEIPASS", ""), "app")
+            if spec is not None and getattr(sys, "frozen", False) and spec.submodule_search_locations is not None:
+                # PyInstaller's importer finds the built-in submodules through the package's path: keep its own location in the
+                # list too, so modules the code folder does not have (a partial update) still load from the exe
+                spec.submodule_search_locations.append(frozen_app)
+            return spec
         if fullname.startswith("app."):
             return importlib.machinery.PathFinder.find_spec(fullname, path)
         return None

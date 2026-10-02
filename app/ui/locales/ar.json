@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "تم استيراد {0} صورة تلقائيًا منذ بدء التطبيق",
  "{n} photo files of the backup {name} cannot be read": "تعذّرت قراءة {n} من ملفات الصور في النسخة الاحتياطية {name}",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "منع Windows مثبّت التحديث (Smart App Control). تم فتح المجلد الذي يحتوي على التحديث الذي تم تنزيله: انقر نقرًا مزدوجًا على الملف هناك، أو راجع ملف README",
- "The update could not be applied: {error}": "تعذّر تطبيق التحديث: {error}"
+ "The update could not be applied: {error}": "تعذّر تطبيق التحديث: {error}",
+ "Adding photos from the folder… {done} of {total}": "جارٍ إضافة الصور من المجلد… {done} من {total}",
+ "Choose the folder with your photos": "اختر المجلد الذي يحتوي على صورك",
+ "Could not read the photo folder: {error}": "تعذّرت قراءة مجلد الصور: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "آخر فحص: {0} جديدة، {1} نُقلت، {2} أُزيلت",
+ "Looking at the photo folder…": "جارٍ فحص مجلد الصور…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "تم تحديث مجلد الصور: {0} جديدة، {1} نُقلت، {2} أُزيلت",
+ "Photos stay in my folder": "تبقى الصور في مجلدي",
+ "Scan now": "افحص الآن",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "اعرض صور مجلد واحد في مكانها، دون نسخها أو نقلها أو تغييرها",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "يتعذّر الوصول إلى المجلد الآن. لن يتغيّر شيء في الفهرس حتى يعود.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "هذه الصورة موجودة في مجلدك الذي لا يغيّره photag أبدًا. استورد نسخة إذا أردت تعديلها",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "يعرض photag ملفات الصور في المجلد ومجلداته الفرعية فقط ويُبقي القائمة محدّثة. لا تُنقل ملفاتك ولا تُعاد تسميتها ولا تتغيّر أبدًا؛ ويبقى الفهرس والصور المصغّرة والنسخ الاحتياطية في مجلد photag نفسه. فقط عند حذف صورة من سلة المهملات نهائيًا ينتقل ملفها إلى سلة المحذوفات.",
+ "{0} photos from this folder": "{0} صورة من هذا المجلد"
 }

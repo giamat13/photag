@@ -125,6 +125,8 @@ if ($up) {
   Start-Process (Join-Path $dir 'photag.exe') | Out-Null
   $s2 = WaitApi
   Check 'code update: the downloaded code is used by the packaged exe' ($s2 -ne $null -and $s2.version -eq '9.9.9') ("{0} (built in: {1})" -f $(if ($s2) { $s2.version } else { 'no answer' }), $builtin)
+  Say ('startup.log (good code): ' + ((Get-Content (Join-Path $env:APPDATA 'photag\startup.log') -Tail 12) -join ' | '))
+  Say ('code folder: ' + ((Get-ChildItem $code -Recurse | ForEach-Object { $_.FullName.Substring($code.Length) }) -join ', '))
   Check 'code update: a good start was confirmed (counter back to 0)' ((Get-Content (Join-Path $code '.boots') -ErrorAction SilentlyContinue) -eq '0') (Get-Content (Join-Path $code '.boots') -ErrorAction SilentlyContinue)
   StopApp
   Remove-Item $code -Recurse -Force -ErrorAction SilentlyContinue

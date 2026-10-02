@@ -25,22 +25,32 @@ SUPP_RE = re.compile(r"\.supplemental[\w-]*\.json$", re.I)
 
 def delete_forever(con, rows) -> int:
     """Permanently delete these photos (rows with id, sha256, rel_path, orig_backup): their media / thumb / backup
-    files and every DB row referencing them. Only used on photos that are already in the trash."""
+    files and every DB row referencing them. Only used on photos that are already in the trash.
+    A photo that lives in the user's own folder (photag only references it) has its file sent to the Windows Recycle Bin,
+    never deleted outright; if that is not possible the photo stays in the trash (nothing is lost) and is not counted."""
+    from . import refmode
     rows = list(rows)
+    done = 0
     for r in rows:
-        for p in (PATHS.media / r["rel_path"], images.thumb_path(r["sha256"])):
-            p.unlink(missing_ok=True)
+        if refmode.is_external(r["rel_path"]):
+            if not refmode.recycle(r["rel_path"]):
+                continue
+            images.thumb_path(r["sha256"]).unlink(missing_ok=True)
+        else:
+            for p in (PATHS.media / r["rel_path"], images.thumb_path(r["sha256"])):
+                p.unlink(missing_ok=True)
         if r["orig_backup"]:
             (PATHS.media / r["orig_backup"]).unlink(missing_ok=True)
         for b in con.execute("SELECT backup_rel FROM video_backups WHERE photo_id=?", (r["id"],)).fetchall():
             (PATHS.media / b["backup_rel"]).unlink(missing_ok=True)
         pid = r["id"]
-        for table in ("photo_albums", "photo_people", "photo_tags", "faces", "video_backups"):
+        for table in ("photo_albums", "photo_people", "photo_tags", "faces", "video_backups", "ref_files"):
             con.execute(f"DELETE FROM {table} WHERE photo_id=?", (pid,))
         con.execute("DELETE FROM photos WHERE id=?", (pid,))
+        done += 1
     if rows:
         con.commit()
-    return len(rows)
+    return done
 
 
 def delete_trashed_by_id(con, ids) -> int:

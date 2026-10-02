@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "Uygulama başladığından beri {0} fotoğraf otomatik olarak içe aktarıldı",
  "{n} photo files of the backup {name} cannot be read": "{name} yedeğinin {n} fotoğraf dosyası okunamıyor",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows güncelleme yükleyicisini engelledi (Smart App Control). İndirilen güncellemenin bulunduğu klasör açıldı: oradaki dosyaya çift tıklayın veya README’ye bakın",
- "The update could not be applied: {error}": "Güncelleme uygulanamadı: {error}"
+ "The update could not be applied: {error}": "Güncelleme uygulanamadı: {error}",
+ "Adding photos from the folder… {done} of {total}": "Klasördeki fotoğraflar ekleniyor… {done} / {total}",
+ "Choose the folder with your photos": "Fotoğraflarınızın olduğu klasörü seçin",
+ "Could not read the photo folder: {error}": "Fotoğraf klasörü okunamadı: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "Son tarama: {0} yeni, {1} taşındı, {2} kaldırıldı",
+ "Looking at the photo folder…": "Fotoğraf klasörüne bakılıyor…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "Fotoğraf klasörü güncellendi: {0} yeni, {1} taşındı, {2} kaldırıldı",
+ "Photos stay in my folder": "Fotoğraflar kendi klasörümde kalsın",
+ "Scan now": "Şimdi tara",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "Bir klasörün fotoğraflarını kopyalamadan, taşımadan veya değiştirmeden olduğu yerde göster",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "Klasöre şu anda ulaşılamıyor. Klasör geri gelene kadar katalogda hiçbir şey değişmez.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "Bu fotoğraf photag’ın asla değiştirmediği kendi klasörünüzde. Düzenlemek isterseniz bir kopyasını içe aktarın",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag yalnızca klasörün ve alt klasörlerinin görüntü dosyalarını listeler ve listeyi güncel tutar. Dosyalarınız asla taşınmaz, yeniden adlandırılmaz veya değiştirilmez; katalog, küçük resimler ve yedekler photag’ın kendi klasöründe kalır. Yalnızca bir fotoğrafı çöp kutusundan kalıcı olarak sildiğinizde dosyası Windows Geri Dönüşüm Kutusu’na gider.",
+ "{0} photos from this folder": "Bu klasörden {0} fotoğraf"
 }

@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "앱 시작 이후 사진 {0}장을 자동으로 가져왔습니다",
  "{n} photo files of the backup {name} cannot be read": "백업 {name}의 사진 파일 {n}개를 읽을 수 없습니다",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows가 업데이트 설치 프로그램을 차단했습니다(Smart App Control). 다운로드한 업데이트가 있는 폴더를 열었습니다. 거기서 파일을 두 번 클릭하거나 README를 참조하세요",
- "The update could not be applied: {error}": "업데이트를 적용하지 못했습니다: {error}"
+ "The update could not be applied: {error}": "업데이트를 적용하지 못했습니다: {error}",
+ "Adding photos from the folder… {done} of {total}": "폴더에서 사진을 추가하는 중… {done}/{total}",
+ "Choose the folder with your photos": "사진이 있는 폴더 선택",
+ "Could not read the photo folder: {error}": "사진 폴더를 읽을 수 없습니다: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "마지막 검사: 새 사진 {0}, 이동 {1}, 제거 {2}",
+ "Looking at the photo folder…": "사진 폴더를 확인하는 중…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "사진 폴더가 업데이트되었습니다: 새 사진 {0}, 이동 {1}, 제거 {2}",
+ "Photos stay in my folder": "사진은 내 폴더에 그대로 두기",
+ "Scan now": "지금 검사",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "한 폴더의 사진을 복사, 이동, 변경하지 않고 있는 그대로 표시",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "지금은 폴더에 접근할 수 없습니다. 다시 접근할 수 있을 때까지 카탈로그는 변경되지 않습니다.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "이 사진은 photag가 절대 변경하지 않는 사용자의 폴더에 있습니다. 편집하려면 복사본을 가져오세요",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag는 폴더와 하위 폴더의 이미지 파일만 목록으로 보여 주고 목록을 최신으로 유지합니다. 파일은 이동, 이름 변경, 수정되지 않으며, 카탈로그, 미리보기, 백업은 photag의 자체 폴더에 저장됩니다. 휴지통에서 사진을 완전히 삭제할 때만 해당 파일이 Windows 휴지통으로 이동합니다.",
+ "{0} photos from this folder": "이 폴더의 사진 {0}장"
 }

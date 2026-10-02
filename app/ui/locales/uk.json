@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "Відколи запущено застосунок, автоматично імпортовано фотографій: {0}",
  "{n} photo files of the backup {name} cannot be read": "Не вдається прочитати файлів фотографій резервної копії {name}: {n}",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows заблокувала інсталятор оновлення (Smart App Control). Відкрито теку зі завантаженим оновленням: двічі клацніть файл там або прочитайте README",
- "The update could not be applied: {error}": "Не вдалося застосувати оновлення: {error}"
+ "The update could not be applied: {error}": "Не вдалося застосувати оновлення: {error}",
+ "Adding photos from the folder… {done} of {total}": "Додавання фото з теки… {done} з {total}",
+ "Choose the folder with your photos": "Виберіть теку з вашими фото",
+ "Could not read the photo folder: {error}": "Не вдалося прочитати теку з фото: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "Остання перевірка: нових {0}, переміщено {1}, видалено {2}",
+ "Looking at the photo folder…": "Перевірка теки з фото…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "Теку з фото оновлено: нових {0}, переміщено {1}, видалено {2}",
+ "Photos stay in my folder": "Фото залишаються в моїй теці",
+ "Scan now": "Перевірити зараз",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "Показувати фото однієї теки там, де вони лежать, не копіюючи, не переміщуючи і не змінюючи їх",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "Теку зараз недоступно. У каталозі нічого не зміниться, доки вона не повернеться.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "Це фото лежить у вашій власній теці, яку photag ніколи не змінює. Імпортуйте копію, якщо хочете його редагувати",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag лише показує файли зображень теки та її підтек і підтримує список актуальним. Ваші файли ніколи не переміщуються, не перейменовуються і не змінюються; каталог, мініатюри та резервні копії зберігаються у власній теці photag. Лише коли ви остаточно видаляєте фото з кошика, його файл потрапляє до кошика Windows.",
+ "{0} photos from this folder": "{0} фото з цієї теки"
 }

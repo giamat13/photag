@@ -872,5 +872,18 @@
  "{0} photos were imported automatically since the app started": "Seit dem Start der App wurden {0} Fotos automatisch importiert",
  "{n} photo files of the backup {name} cannot be read": "{n} Fotodateien des Backups {name} können nicht gelesen werden",
  "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows hat das Update-Installationsprogramm blockiert (Smart App Control). Der Ordner mit dem heruntergeladenen Update wurde geöffnet: Doppelklicke dort auf die Datei oder lies die README",
- "The update could not be applied: {error}": "Das Update konnte nicht angewendet werden: {error}"
+ "The update could not be applied: {error}": "Das Update konnte nicht angewendet werden: {error}",
+ "Adding photos from the folder… {done} of {total}": "Fotos aus dem Ordner werden hinzugefügt… {done} von {total}",
+ "Choose the folder with your photos": "Wähle den Ordner mit deinen Fotos",
+ "Could not read the photo folder: {error}": "Der Fotoordner konnte nicht gelesen werden: {error}",
+ "Last scan: {0} new, {1} moved, {2} removed": "Letzter Scan: {0} neu, {1} verschoben, {2} entfernt",
+ "Looking at the photo folder…": "Fotoordner wird durchsucht…",
+ "Photo folder updated: {0} new, {1} moved, {2} removed": "Fotoordner aktualisiert: {0} neu, {1} verschoben, {2} entfernt",
+ "Photos stay in my folder": "Fotos bleiben in meinem Ordner",
+ "Scan now": "Jetzt scannen",
+ "Show the photos of one folder where they are, without copying, moving or changing them": "Die Fotos eines Ordners dort anzeigen, wo sie liegen, ohne sie zu kopieren, zu verschieben oder zu ändern",
+ "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "Der Ordner ist gerade nicht erreichbar. Am Katalog ändert sich nichts, bis er wieder da ist.",
+ "This photo is in your own folder, which photag never changes. Import a copy if you want to edit it": "Dieses Foto liegt in deinem eigenen Ordner, den photag nie ändert. Importiere eine Kopie, wenn du es bearbeiten willst",
+ "photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.": "photag listet nur die Bilddateien des Ordners und seiner Unterordner auf und hält die Liste aktuell. Deine Dateien werden nie verschoben, umbenannt oder verändert; Katalog, Vorschaubilder und Sicherungen bleiben im Ordner von photag. Nur wenn du ein Foto endgültig aus dem Papierkorb löschst, kommt seine Datei in den Windows-Papierkorb.",
+ "{0} photos from this folder": "{0} Fotos aus diesem Ordner"
 }
