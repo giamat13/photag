@@ -117,7 +117,22 @@ def check(force: bool = False) -> dict:
     out["code_asset"] = _pick_code_asset(rel.get("assets") or [], out["latest"])
     out["available"] = bool(tag) and is_newer(tag)
     out["skipped"] = out["available"] and config.get_update_skipped() == out["latest"]
+    if out["available"]:
+        out["notes"] = _notes_since(__version__)       # several versions behind: show what's new in all of them, not just the latest
     return out
+
+
+def _notes_since(current: str) -> str:
+    """Release notes of every version newer than `current`, newest first, so updating across several versions at once
+    shows everything that changed, not just the last release's notes."""
+    try:
+        rels = json.loads(_get(f"{API}/repos/{REPO}/releases?per_page=20"))
+    except Exception:
+        return ""
+    newer = [r for r in rels if is_newer(r.get("tag_name") or "", current)]
+    if len(newer) <= 1:
+        return newer[0].get("body") or "" if newer else ""
+    return "\n\n---\n\n".join(f"## {r.get('tag_name', '')}\n\n{r.get('body') or ''}" for r in newer)
 
 
 def skip(version: str):

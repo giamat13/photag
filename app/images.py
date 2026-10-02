@@ -12,12 +12,14 @@ except Exception:
 
 from .config import PATHS
 
-VIDEO_EXT = {".mp4", ".mov", ".gif", ".3gp", ".webm", ".mkv", ".avi"}
+VIDEO_EXT = {".mp4", ".m4v", ".mov", ".gif", ".3gp", ".webm", ".mkv", ".avi",
+            ".wmv", ".mpg", ".mpeg", ".mts", ".m2ts", ".ts", ".flv"}         # kept in sync with compress.VIDEO_OK (HandBrake-compressible)
 # Camera RAW: Pillow can't decode these, but nearly every RAW file carries a
 # full-size JPEG preview from the camera -> that's what we show and analyse.
 RAW_EXT = {".cr2", ".cr3", ".nef", ".nrw", ".arw", ".srf", ".sr2", ".dng", ".orf", ".rw2",
-           ".raf", ".pef", ".srw", ".x3f", ".3fr", ".iiq", ".rwl", ".erf", ".mos", ".kdc"}
-IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".bmp", ".tiff", ".tif"} | RAW_EXT
+           ".raf", ".pef", ".srw", ".x3f", ".3fr", ".iiq", ".rwl", ".erf", ".mos", ".kdc", ".gpr"}
+# AVIF: decoded natively by this Pillow build, like HEIC -> importable and viewable, not (yet) a compress target.
+IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".avif", ".avifs", ".webp", ".bmp", ".tiff", ".tif"} | RAW_EXT
 
 
 def sha256_file(path: Path, buf=1 << 20) -> str:

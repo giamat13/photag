@@ -17,6 +17,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 PORT, MOCK = 8781, 8782
 APP = f"http://127.0.0.1:{PORT}"
 tmp = Path(tempfile.mkdtemp(prefix="photag_auto_update_"))
@@ -32,8 +33,11 @@ def check(name, ok, extra=""):
 class Mock(BaseHTTPRequestHandler):
     def do_GET(self):
         STATE["hits"] += 1
-        body = json.dumps({"tag_name": STATE["tag"], "body": "## Mock release\n- something new", "html_url": "https://example.invalid/r",
-                           "published_at": "2026-10-02T00:00:00Z", "assets": []}).encode()
+        one = {"tag_name": STATE["tag"], "body": "## Mock release\n- something new", "html_url": "https://example.invalid/r",
+               "published_at": "2026-10-02T00:00:00Z", "assets": []}
+        # /releases (plural, used for "what's new across several skipped versions") returns a list; /releases/latest returns one object
+        path = self.path.split("?", 1)[0].rstrip("/")
+        body = json.dumps([one] if path.endswith("/releases") else one).encode()
         self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers(); self.wfile.write(body)
 
     def log_message(self, *a):
@@ -42,6 +46,29 @@ class Mock(BaseHTTPRequestHandler):
 
 mock = HTTPServer(("127.0.0.1", MOCK), Mock)
 threading.Thread(target=mock.serve_forever, daemon=True).start()
+
+# _notes_since: several versions newer than the running one -> all their notes combined, not just the latest's
+NOTES_PORT = 8783
+RELEASES = [{"tag_name": "v3.0.0", "body": "three"}, {"tag_name": "v2.0.0", "body": "two"}, {"tag_name": "v1.0.0", "body": "one"}]
+
+
+class NotesMock(BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = json.dumps(RELEASES).encode()
+        self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers(); self.wfile.write(body)
+
+    def log_message(self, *a):
+        pass
+
+
+notes_srv = HTTPServer(("127.0.0.1", NOTES_PORT), NotesMock)
+threading.Thread(target=notes_srv.serve_forever, daemon=True).start()
+os.environ["PHOTAG_UPDATE_API"] = f"http://127.0.0.1:{NOTES_PORT}"
+from app import updater as _updater
+notes = _updater._notes_since("0.5.0")
+check("_notes_since combines notes of every skipped version, not just the latest", "three" in notes and "two" in notes and "one" in notes, notes[:80].replace("\n", " "))
+notes_srv.shutdown()
+del os.environ["PHOTAG_UPDATE_API"]
 env = {**os.environ, "APPDATA": str(tmp / "appdata"), "LOCALAPPDATA": str(tmp / "local"), "USERPROFILE": str(tmp / "home"),
        "PHOTAG_NO_OPEN": "1", "PYTHONIOENCODING": "utf-8", "PHOTAG_UPDATE_API": f"http://127.0.0.1:{MOCK}"}
 for d in ("appdata", "local", "home", "lib"):
