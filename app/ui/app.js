@@ -3025,15 +3025,30 @@ function photoMenuItems(){
     [t('Move to Trash'), 'Delete', trashSelected],
   ];
 }
-function openContextMenu(x, y){
-  const pop=$('#menu-pop'), items=MENU_ITEMS=photoMenuItems();
+function openContextMenu(x, y, items){
+  const pop=$('#menu-pop'); items = MENU_ITEMS = items || photoMenuItems();
   pop.innerHTML = items.map((it,j)=>it===null?'<hr>':`<div class="mi ${it[2]===collectionItems?'sub':''}" data-mi="${j}"><span>${it[0]}</span><span class="k">${it[2]===collectionItems?(RTL?'◂':'▸'):(it[1]||'')}</span></div>`).join('');
   pop.classList.remove('hidden'); MENU_OPEN=-1;
   const w=pop.offsetWidth, h=pop.offsetHeight;
   pop.style.left=Math.max(0, Math.min(x, innerWidth-w-4))+'px'; pop.style.right='auto';
   pop.style.top=Math.max(0, Math.min(y, innerHeight-h-4))+'px';
 }
+function albumMenuItems(a){
+  return [
+    ...(a.is_trip ? [[t('Open in triplan'), '', triplanOpen]] : []),
+    [a.is_trip ? t('Remove Trip status') : t('Mark as Trip'), '', ()=>toggleTrip(a.id)],
+    null,
+    [t('Best moments slideshow'), '', ()=>albumBestMoments(a.id, a.name)],
+    null,
+    [t('Delete Collection'), '', async ()=>{
+      if(!await confirmBox(`${t("Delete the collection “{0}”?", [esc(a.name)])}`, t('The photos themselves will stay in the catalog.'), t('Delete'))) return;
+      await send('DELETE', '/api/album/'+a.id); if(S.src.kind==='album' && S.src.id===a.id) setSource(srcFromKey('all')); loadSide();
+    }],
+  ];
+}
 document.addEventListener('contextmenu', e=>{
+  const ar = e.target.closest('[data-src^="album:"]');
+  if(ar){ e.preventDefault(); const a=S.albums.find(x=>'album:'+x.id===ar.dataset.src); if(a) openContextMenu(e.clientX, e.clientY, albumMenuItems(a)); return; }
   const c = e.target.closest('.cell, .fc');
   if(!c || !c.dataset.id){ if(!e.target.closest('input,textarea')) e.preventDefault(); return; }
   e.preventDefault();
