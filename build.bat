@@ -17,6 +17,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo === Generating version_info.txt ===
+%PYEXE% tools\make_version_info.py
+if errorlevel 1 (
+  echo Could not generate version_info.txt.
+  exit /b 1
+)
+
 echo === Building photag.exe (PyInstaller) ===
 %PYEXE% -m PyInstaller photag.spec
 if errorlevel 1 (

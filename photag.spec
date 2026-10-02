@@ -23,6 +23,6 @@ a = Analysis(["photag.py"], pathex=[], binaries=binaries, datas=datas,
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="photag",
           console=False, disable_windowed_traceback=False, upx=False,      # UPX makes antivirus false positives more likely
-         
+          version="version_info.txt",    # run tools/make_version_info.py first (keeps Explorer's "Details" tab right)
           icon="app/ui/icon.ico")
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="photag")

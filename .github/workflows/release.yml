@@ -25,6 +25,7 @@ jobs:
           v=$(python -c "from app.version import __version__ as v; print(v)")
           [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != version v$v"; exit 1; }
           echo "VERSION=$v" >> "$GITHUB_ENV"
+      - run: python tools/make_version_info.py
       - run: python -m PyInstaller --noconfirm photag.spec
       - run: python -m PyInstaller --noconfirm photag_backup.spec
       - run: choco install innosetup --no-progress -y

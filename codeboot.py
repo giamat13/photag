@@ -22,7 +22,7 @@ import shutil
 import sys
 from pathlib import Path
 
-RUNTIME = 1                 # see the rules above; also written into every code zip's manifest.json
+RUNTIME = 2                 # see the rules above; also written into every code zip's manifest.json
 MAX_BOOTS = 3
 
 _active: Path | None = None

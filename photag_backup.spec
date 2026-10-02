@@ -4,4 +4,4 @@ a = Analysis(["photag_backup.py"], pathex=[], binaries=[], datas=[], hiddenimpor
                        "cv2", "skimage", "sklearn", "tkinter", "imageio", "imageio_ffmpeg", "matplotlib", "pillow_heif", "piexif"])
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="photag-backup",
-          console=False, disable_windowed_traceback=False, upx=False, icon="app/ui/icon.ico")
+          console=False, disable_windowed_traceback=False, upx=False, version="version_info.txt", icon="app/ui/icon.ico")

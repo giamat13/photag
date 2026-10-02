@@ -115,7 +115,8 @@ try:
             ok = True; why = f"{why}: {e}"
         check(f"refused: {name}", ok and (install / "code" / "manifest.json").read_text() == before and not (install / "code.new").exists(), why)
 
-    refused("a code update made for another runtime", make_zip(d / "photag-code-9.2.0-rt2.zip", "9.2.0", runtime=2), "rt2")
+    other_rt = codeboot.RUNTIME + 1
+    refused("a code update made for another runtime", make_zip(d / f"photag-code-9.2.0-rt{other_rt}.zip", "9.2.0", runtime=other_rt), f"rt{other_rt}")
     refused("a zip with an executable inside", make_zip(d / f"photag-code-9.2.1-rt{codeboot.RUNTIME}.zip", "9.2.1", extra={"app/evil.exe": b"MZ"}), "exe")
     refused("a zip with a file outside app/", make_zip(d / f"photag-code-9.2.2-rt{codeboot.RUNTIME}.zip", "9.2.2", extra={"other.txt": b"x"}), "outside")
     refused("a zip that tries to leave the folder", make_zip(d / f"photag-code-9.2.3-rt{codeboot.RUNTIME}.zip", "9.2.3", extra={"app/../../x.py": b"x=1"}), "..")
