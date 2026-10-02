@@ -2604,7 +2604,7 @@ function shortcuts(){
 function openExport(){
   const ids=targets().length ? targets() : [];
   if(!ids.length) return toast(t('Select photos to export'));
-  const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90, zip:false});
+  const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90, zip:false, xmp:false});
   modal(`<h3>${t("Export {0} Files", [num(ids.length)])}</h3><div class="mb">
     <label class="check" style="padding:0 0 4px"><input type="checkbox" id="ex-zip" ${last.zip?'checked':''}> ${t('Export as a single ZIP file')}</label>
     <label class="fld"><span id="ex-dest-lbl">${t("Export To")}</span><div class="frow"><input type="text" id="ex-dest" dir="ltr" value="${esc(last.dest)}" placeholder="C:\\Users\\...\\Pictures\\Export"><button id="ex-pick">${t("Choose...")}</button></div></label>
@@ -2614,6 +2614,7 @@ function openExport(){
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="jpeg" ${last.mode==='jpeg'?'checked':''}> ${t(" JPEG, resized")}</label></div>
     <div class="frow" id="ex-jpeg"><span>${t("Long Edge")}</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>${t("Pixels · Quality")}</span>
       <input type="range" id="ex-q" min="40" max="100" value="${last.q}" style="width:120px"><output id="ex-qv">${last.q}</output></div>
+    <label class="check" style="padding:4px 0 0"><input type="checkbox" id="ex-xmp" ${last.xmp?'checked':''}> ${t('Include an XMP sidecar (rating, label, keywords, people, caption)')}</label>
     <p>${t("Videos are always copied as they are. Duplicate file names get a number.")}</p>
   </div><div class="mf"><button onclick="closeModal()">${t("Cancel")}</button><button class="primary" id="ex-go">${t("Export")}</button></div>`);
   $('#ex-q').oninput=e=>$('#ex-qv').textContent=e.target.value;
@@ -2627,11 +2628,11 @@ function openExport(){
     if(r.path) $('#ex-dest').value=r.path;
   };
   $('#ex-go').onclick=async()=>{
-    const dest=$('#ex-dest').value.trim(), mode=$('input[name=ex-mode]:checked').value, edge=+$('#ex-edge').value||null, q=+$('#ex-q').value, zip=$('#ex-zip').checked;
+    const dest=$('#ex-dest').value.trim(), mode=$('input[name=ex-mode]:checked').value, edge=+$('#ex-edge').value||null, q=+$('#ex-q').value, zip=$('#ex-zip').checked, xmp=$('#ex-xmp').checked;
     if(!dest) return toast(t('Choose a destination folder'));
-    pref.set('export', {dest, mode, edge:edge||2048, q, zip});
+    pref.set('export', {dest, mode, edge:edge||2048, q, zip, xmp});
     closeModal();
-    runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip});
+    runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip, xmp});
   };
 }
 

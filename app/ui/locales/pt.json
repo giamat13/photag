@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "São necessárias pelo menos 2 fotos datadas e geolocalizadas para sobrevoar",
  "Export as a single ZIP file": "Exportar como um único ficheiro ZIP",
  "Export To (ZIP file)": "Exportar para (ficheiro ZIP)",
- "Export as ZIP": "Exportar como ZIP"
+ "Export as ZIP": "Exportar como ZIP",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "Incluir um ficheiro XMP associado (classificação, etiqueta, palavras-chave, pessoas, legenda)"
 }

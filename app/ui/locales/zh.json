@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "需要至少 2 张带日期和地理位置的照片才能飞越",
  "Export as a single ZIP file": "导出为单个 ZIP 文件",
  "Export To (ZIP file)": "导出到（ZIP 文件）",
- "Export as ZIP": "导出为 ZIP"
+ "Export as ZIP": "导出为 ZIP",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "包含 XMP 附属文件（评分、标签、关键词、人物、说明）"
 }

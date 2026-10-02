@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "Нужно хотя бы 2 фото с датой и геометкой для облёта",
  "Export as a single ZIP file": "Экспортировать в один ZIP-файл",
  "Export To (ZIP file)": "Экспортировать в (ZIP-файл)",
- "Export as ZIP": "Экспортировать как ZIP"
+ "Export as ZIP": "Экспортировать как ZIP",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "Включить сопроводительный файл XMP (рейтинг, метка, ключевые слова, люди, подпись)"
 }

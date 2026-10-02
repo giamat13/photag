@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "צריך לפחות 2 תמונות עם תאריך ומיקום כדי לטוס",
  "Export as a single ZIP file": "ייצוא כקובץ ZIP אחד",
  "Export To (ZIP file)": "ייצוא אל (קובץ ZIP)",
- "Export as ZIP": "ייצוא כ-ZIP"
+ "Export as ZIP": "ייצוא כ-ZIP",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "כלול קובץ XMP נלווה (דירוג, תווית, מילות מפתח, אנשים, כיתוב)"
 }

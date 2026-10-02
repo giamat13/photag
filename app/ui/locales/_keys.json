@@ -464,6 +464,7 @@
  "Import will keep albums, dates, locations, favorites, people tags and memories. Photos already in the catalog will not be duplicated.",
  "Import...",
  "Imported",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)",
  "Include the selected photos ({0})",
  "Include videos (copied as they are, not compressed)",
  "Includes photos and videos",

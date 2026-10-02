@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "Uçuş için tarihli ve konumlu en az 2 fotoğraf gerekir",
  "Export as a single ZIP file": "Tek bir ZIP dosyası olarak dışa aktar",
  "Export To (ZIP file)": "Dışa aktarılacak yer (ZIP dosyası)",
- "Export as ZIP": "ZIP olarak dışa aktar"
+ "Export as ZIP": "ZIP olarak dışa aktar",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP yan dosyası ekle (derecelendirme, etiket, anahtar kelimeler, kişiler, altyazı)"
 }

@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "フライスルーには日付と位置情報付きの写真が2枚以上必要です",
  "Export as a single ZIP file": "1つのZIPファイルとしてエクスポート",
  "Export To (ZIP file)": "エクスポート先（ZIPファイル）",
- "Export as ZIP": "ZIPとしてエクスポート"
+ "Export as ZIP": "ZIPとしてエクスポート",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMPサイドカーを含める（評価、ラベル、キーワード、人物、キャプション）"
 }

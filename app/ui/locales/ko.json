@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "비행하려면 날짜와 위치가 있는 사진이 최소 2장 필요합니다",
  "Export as a single ZIP file": "하나의 ZIP 파일로 내보내기",
  "Export To (ZIP file)": "내보내기 위치 (ZIP 파일)",
- "Export as ZIP": "ZIP으로 내보내기"
+ "Export as ZIP": "ZIP으로 내보내기",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP 사이드카 포함 (평점, 레이블, 키워드, 사람, 캡션)"
 }

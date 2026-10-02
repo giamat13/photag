@@ -1085,5 +1085,6 @@
  "Need at least 2 dated, geotagged photos to fly through": "उड़ान भरने के लिए कम से कम 2 दिनांकित, जियोटैग की गई तस्वीरें चाहिए",
  "Export as a single ZIP file": "एकल ZIP फ़ाइल के रूप में निर्यात करें",
  "Export To (ZIP file)": "इसमें निर्यात करें (ZIP फ़ाइल)",
- "Export as ZIP": "ZIP के रूप में निर्यात करें"
+ "Export as ZIP": "ZIP के रूप में निर्यात करें",
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP साइडकार शामिल करें (रेटिंग, लेबल, कीवर्ड, लोग, कैप्शन)"
 }

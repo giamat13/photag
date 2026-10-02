@@ -1503,13 +1503,14 @@ class ExportIn(BaseModel):
     long_edge: int | None = None
     quality: int = 100
     zip: bool = False
+    xmp: bool = False
 
 @app.post("/api/export")
 def start_export(body: ExportIn):
     if not body.ids or not body.dest.strip():
         raise err(400, "Missing items or destination folder")
     _start("export", importer.run_export, body.ids, body.dest.strip(), body.originals,
-           body.long_edge, max(10, min(100, body.quality)), body.zip)
+           body.long_edge, max(10, min(100, body.quality)), body.zip, body.xmp)
     return {"ok": True}
 
 

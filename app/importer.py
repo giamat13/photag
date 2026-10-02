@@ -800,8 +800,45 @@ def _unique_name(name: str, used: set) -> str:
     return cand
 
 
+def _xmp_escape(s: str) -> str:
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def _xmp_sidecar(rating: int, label: str | None, tags: list[str], people: list[str], description: str | None) -> str:
+    """A standard XMP packet carrying the metadata a plain file copy can't: star rating, color label,
+    keywords (and people, as keywords) and caption -- readable by Lightroom, Bridge, digiKam and most
+    other photo software. Everything embedded in the file itself (EXIF date/GPS/camera) isn't repeated."""
+    attrs = ""
+    if rating:
+        attrs += f' xmp:Rating="{int(rating)}"'
+    if label:
+        attrs += f' xmp:Label="{_xmp_escape(label.capitalize())}"'
+    subjects = [_xmp_escape(x) for x in (*tags, *people) if x]
+    subject_block = ("<dc:subject><rdf:Bag>" + "".join(f"<rdf:li>{s}</rdf:li>" for s in subjects) + "</rdf:Bag></dc:subject>") if subjects else ""
+    desc_block = (f'<dc:description><rdf:Alt><rdf:li xml:lang="x-default">{_xmp_escape(description)}</rdf:li></rdf:Alt></dc:description>') if description else ""
+    return ('<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>\n'
+            '<x:xmpmeta xmlns:x="adobe:ns:meta/">\n'
+            ' <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n'
+            f'  <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xmp="http://ns.adobe.com/xap/1.0/"{attrs}>\n'
+            f'   {subject_block}{desc_block}\n'
+            '  </rdf:Description>\n'
+            ' </rdf:RDF>\n'
+            '</x:xmpmeta>\n'
+            '<?xpacket end="w"?>\n')
+
+
+def _photo_xmp_fields(con, pid: int) -> dict:
+    r = con.execute("SELECT rating, label, description FROM photos WHERE id=?", (pid,)).fetchone()
+    tags = [x["name"] for x in con.execute(
+        "SELECT t.name FROM tags t JOIN photo_tags pt ON pt.tag_id=t.id WHERE pt.photo_id=?", (pid,))]
+    people = [x["name"] for x in con.execute(
+        "SELECT DISTINCT pe.name FROM people pe WHERE pe.id IN ("
+        "SELECT person_id FROM photo_people WHERE photo_id=? UNION SELECT person_id FROM faces WHERE photo_id=?)", (pid, pid))]
+    return {"rating": r["rating"] or 0, "label": r["label"], "tags": tags, "people": people, "description": r["description"]}
+
+
 def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
-               quality: int, as_zip: bool, progress: Progress):
+               quality: int, as_zip: bool, xmp_sidecar: bool, progress: Progress):
     """Copy (or re-encode as JPEG) the chosen photos into `dest` -- a folder, or (as_zip) a single ZIP file."""
     con = db.connect()
     progress.state = "exporting"; progress.total = len(ids); progress.done = 0
@@ -828,6 +865,7 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
                 continue
             name = _safe_component(r["filename"])
             as_is = r["is_video"] or originals or (not long_edge and quality >= 100)
+            xmp_text = _xmp_sidecar(**_photo_xmp_fields(con, pid)) if xmp_sidecar else None
             if as_zip:
                 arcname = _unique_name(name if as_is else Path(name).stem + ".jpg", used_names)
                 if as_is:
@@ -837,11 +875,18 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
                     images.export_resized(src, tmp, long_edge, quality)
                     zf.write(tmp, arcname)
                     tmp.unlink(missing_ok=True)
-            elif as_is:
-                import shutil
-                shutil.copy2(src, _unique_dest(out_dir / name))
+                if xmp_text:
+                    zf.writestr(arcname + ".xmp", xmp_text)
             else:
-                images.export_resized(src, _unique_dest(out_dir / (Path(name).stem + ".jpg")), long_edge, quality)
+                if as_is:
+                    import shutil
+                    out = _unique_dest(out_dir / name)
+                    shutil.copy2(src, out)
+                else:
+                    out = _unique_dest(out_dir / (Path(name).stem + ".jpg"))
+                    images.export_resized(src, out, long_edge, quality)
+                if xmp_text:
+                    out.with_suffix(out.suffix + ".xmp").write_text(xmp_text, "utf-8")
         progress.state = "done"
         progress.say("{n} items exported to {folder}", n=progress.done, folder=str(dest))
     except Exception as e:
