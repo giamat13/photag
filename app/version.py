@@ -3,5 +3,5 @@
 build.bat reads it for the installer (installer.iss /DMyAppVersion), and the update check compares it with the
 tag of the latest GitHub release (tag "v1.2.3" or "1.2.3"). Bump it before every release.
 """
-__version__ = "1.6.2"
+__version__ = "1.7.0"
 REPO = "giamat13/photag"
