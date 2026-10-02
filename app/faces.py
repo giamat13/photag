@@ -4,7 +4,7 @@ from the Google Takeout people tags (majority vote)."""
 import time
 import numpy as np
 
-from . import db, images
+from . import cloud, db, images
 from .config import PATHS, FACE_MODEL, FACE_CLUSTER_THRESHOLD
 
 _APP = None
@@ -28,6 +28,8 @@ def _to_bgr(path):
 
 def detect_photo(con, photo_row):
     p = PATHS.media / photo_row["rel_path"]
+    if cloud.is_online_only(p):
+        return 0                                   # only in the cloud (OneDrive): not downloaded for this; stays pending
     if not p.exists() or photo_row["is_video"]:
         con.execute("UPDATE photos SET faces_done=1 WHERE id=?", (photo_row["id"],))
         return 0

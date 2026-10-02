@@ -13,7 +13,7 @@ import os
 import time
 from pathlib import Path
 
-from . import db, images
+from . import cloud, db, images
 from .config import PATHS
 
 ENABLED_KEY, FOLDER_KEY = "ref_enabled", "ref_folder"
@@ -110,7 +110,7 @@ def _register(con, path: str, size: int, mtime_ns: int, sha: str) -> int:
 def scan(con, root: str, progress=None) -> dict:
     """Bring the catalog in line with the folder: new image files are added, files that were moved inside the folder keep
     their ratings and keywords, files that are gone are removed from the catalog. Nothing in the folder is written."""
-    stats = {"added": 0, "moved": 0, "changed": 0, "removed": 0, "duplicates": 0, "failed": 0, "skipped_removals": 0, "seen": 0}
+    stats = {"added": 0, "moved": 0, "changed": 0, "removed": 0, "duplicates": 0, "failed": 0, "skipped_removals": 0, "seen": 0, "cloud": 0}
     if progress:
         progress.state = "scanning"; progress.say("Looking at the photo folder…")
     disk = {_key(p): (p, s, m) for p, s, m in walk(root)}
@@ -144,6 +144,9 @@ def scan(con, root: str, progress=None) -> dict:
         p, s, m = disk[k]
         pid = known[k][3]
         tick()
+        if cloud.is_online_only(p):                      # in the cloud only: reading it would download it; looked at when it is on this computer
+            stats["cloud"] += 1
+            continue
         try:
             sha = images.sha256_file(Path(p))
             old = con.execute("SELECT sha256 FROM photos WHERE id=?", (pid,)).fetchone()
@@ -164,6 +167,9 @@ def scan(con, root: str, progress=None) -> dict:
     for k in new:
         p, s, m = disk[k]
         tick()
+        if cloud.is_online_only(p):
+            stats["cloud"] += 1                          # not added yet (and not forgotten): the next scan looks again
+            continue
         try:
             sha = images.sha256_file(Path(p))
             row = con.execute("SELECT id, rel_path FROM photos WHERE sha256=?", (sha,)).fetchone()

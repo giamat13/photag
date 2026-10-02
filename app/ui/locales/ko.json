@@ -1028,5 +1028,13 @@
  "{0} of {1} photos have not been analysed yet. The analysis measures sharpness, exposure and more on this computer (nothing leaves it) and takes a few minutes for a big library.": "사진 {1}장 중 {0}장이 아직 분석되지 않았습니다. 분석은 이 컴퓨터에서 선명도, 노출 등을 측정하며(아무것도 밖으로 나가지 않음) 큰 라이브러리는 몇 분 걸립니다.",
  "{0} photos match now": "현재 {0}장 일치",
  "{0} photos to review": "검토할 사진 {0}장",
- "{0} smart collections created from Google Photos people": "Google 포토 인물에서 스마트 컬렉션 {0}개를 만들었습니다"
+ "{0} smart collections created from Google Photos people": "Google 포토 인물에서 스마트 컬렉션 {0}개를 만들었습니다",
+ "If you use «Free up space» in OneDrive, photag never downloads those files by itself for scans or analysis; a photo is downloaded only when you open it.": "OneDrive에서 '공간 확보'를 사용하는 경우, photag는 스캔이나 분석을 위해 해당 파일을 스스로 다운로드하지 않습니다. 사진은 열 때만 다운로드됩니다.",
+ "Search is ready: {n} photos indexed; {w} files only in the cloud (OneDrive) were skipped": "검색 준비 완료: 사진 {n}장 색인됨, 클라우드(OneDrive)에만 있는 파일 {w}개는 건너뜀",
+ "The library is inside OneDrive": "라이브러리가 OneDrive 안에 있습니다",
+ "This folder is inside OneDrive: every backup is uploaded to the cloud and counts against your OneDrive space. A folder on another disk is safer and faster.": "이 폴더는 OneDrive 안에 있습니다. 모든 백업이 클라우드에 업로드되고 OneDrive 공간을 차지합니다. 다른 디스크의 폴더가 더 안전하고 빠릅니다.",
+ "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag는 카탈로그(데이터베이스)와 썸네일을 라이브러리 폴더에 보관합니다. OneDrive는 이 파일들이 변경되는 동안 동기화하므로 동기화 충돌이 생기거나 카탈로그가 손상될 수 있습니다. 라이브러리를 OneDrive 밖(예: C:\\Photag)에 두거나 photag를 열어 둔 동안 OneDrive 동기화를 일시 중지하는 것이 더 안전합니다. 바꾸기 전까지 사진은 제자리에 남습니다.",
+ "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "파일 {0}개가 클라우드(OneDrive)에만 있으며 이 컴퓨터에 오면 추가됩니다",
+ "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "파일 {0}개가 클라우드(OneDrive)에만 있고 아직 이 컴퓨터에 없습니다. 가져오면 먼저 다운로드하며 시간이 걸릴 수 있습니다. 미리 보기는 불러오지 않습니다.",
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "파일 {n}개가 클라우드(OneDrive)에만 있어 다운로드하지 않았습니다"
 }

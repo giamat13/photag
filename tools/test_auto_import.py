@@ -76,7 +76,7 @@ os.environ["PHOTAG_AUTOIMPORT_SETTLE"] = "0"
 r = importer.run_auto_import(str(watch0), importer.Progress())
 check("...but is imported on a later pass", r["added"] == 1, r)
 r = importer.run_auto_import(str(watch0), importer.Progress())
-check("a pass over an unchanged folder imports nothing and does not re-read files", r == {"added": 0, "duplicates": 0, "failed": 0}, r)
+check("a pass over an unchanged folder imports nothing and does not re-read files", r == {"added": 0, "duplicates": 0, "failed": 0, "cloud": 0}, r)
 (watch0 / "empty.jpg").write_bytes(b"")                    # a file that has just been created and is still empty
 r = importer.run_auto_import(str(watch0), importer.Progress())
 check("an empty file (a copy that has not started) is left alone", r["added"] == 0 and r["failed"] == 0, r)

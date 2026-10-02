@@ -1028,5 +1028,13 @@
  "{0} of {1} photos have not been analysed yet. The analysis measures sharpness, exposure and more on this computer (nothing leaves it) and takes a few minutes for a big library.": "{1} 枚中 {0} 枚の写真がまだ分析されていません。分析はこのコンピューター上でシャープネスや露出などを測定し（外部には何も出ません）、大きなライブラリでは数分かかります。",
  "{0} photos match now": "現在 {0} 枚が一致",
  "{0} photos to review": "確認する写真 {0} 枚",
- "{0} smart collections created from Google Photos people": "Google フォトの人物から {0} 個のスマートコレクションを作成しました"
+ "{0} smart collections created from Google Photos people": "Google フォトの人物から {0} 個のスマートコレクションを作成しました",
+ "If you use «Free up space» in OneDrive, photag never downloads those files by itself for scans or analysis; a photo is downloaded only when you open it.": "OneDrive で「空き領域を増やす」を使っている場合、photag はスキャンや分析のためにそれらのファイルを自分でダウンロードすることはありません。写真は開いたときにだけダウンロードされます。",
+ "Search is ready: {n} photos indexed; {w} files only in the cloud (OneDrive) were skipped": "検索の準備ができました: {n} 枚をインデックス済み。クラウド（OneDrive）にのみあるファイル {w} 個はスキップしました",
+ "The library is inside OneDrive": "ライブラリは OneDrive の中にあります",
+ "This folder is inside OneDrive: every backup is uploaded to the cloud and counts against your OneDrive space. A folder on another disk is safer and faster.": "このフォルダーは OneDrive の中にあります。バックアップはすべてクラウドにアップロードされ、OneDrive の容量を使います。別のディスクのフォルダーのほうが安全で高速です。",
+ "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag はカタログ（データベース）とサムネイルをライブラリフォルダーに保存します。OneDrive はこれらのファイルが変更されている最中に同期するため、同期の競合やカタログの破損を招くおそれがあります。ライブラリは OneDrive の外（たとえば C:\\Photag）に置くか、photag を開いている間は OneDrive の同期を一時停止するほうが安全です。変更するまで、写真は元の場所に残ります。",
+ "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} 個のファイルはクラウド（OneDrive）にのみあり、このコンピューターに届いたら追加されます",
+ "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} 個のファイルはクラウド（OneDrive）にのみあり、まだこのコンピューターにありません。インポートすると最初にダウンロードされ、時間がかかることがあります。プレビューは読み込まれません。",
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} 個のファイルはクラウド（OneDrive）にのみあり、ダウンロードしませんでした"
 }

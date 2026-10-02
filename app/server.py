@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -272,6 +272,7 @@ def status():
         "target_library": str(config.TARGET_LIBRARY),
         "move_notice": config.move_notice(),
         "last_import": int(db.get_setting(con, "last_import", 0) or 0),
+        "library_in_onedrive": cloud.in_onedrive(PATHS.root),
     }
 
 
@@ -330,7 +331,7 @@ def set_library(body: LibraryIn):
     config.set_library_root(body.path)
     PATHS.refresh()
     db.init_db()
-    return {"library_root": str(PATHS.root)}
+    return {"library_root": str(PATHS.root), "library_in_onedrive": cloud.in_onedrive(PATHS.root)}
 
 
 class ImportIn(BaseModel):
@@ -427,6 +428,7 @@ def backup_info():
             "next": backup.next_due(), "media_bytes": con.execute("SELECT COALESCE(SUM(bytes),0) FROM photos").fetchone()[0],
             "mirror": (not ferr) and any(m.get("media_ok") for m in snaps),
             "health": backup.health(),
+            "folder_in_onedrive": cloud.in_onedrive(folder),
             "mirror_bytes": 0 if ferr else backup.media_bytes(),
             "free_bytes": 0 if ferr else shutil.disk_usage(folder).free}
 
@@ -1368,8 +1370,8 @@ def scan_folder(path: str, recursive: int = 1):
 @app.get("/api/local-thumb")
 def local_thumb(path: str):
     p = Path(path)
-    if p.suffix.lower() not in images.IMAGE_EXT or not p.is_file():
-        return Response(status_code=204)
+    if p.suffix.lower() not in images.IMAGE_EXT or not p.is_file() or cloud.is_online_only(p):
+        return Response(status_code=204)          # a cloud-only file is not downloaded just to draw a preview
     data = images.small_preview(p)
     return Response(data, media_type="image/jpeg") if data else Response(status_code=204)
 

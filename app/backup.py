@@ -38,7 +38,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from . import config, db, images
+from . import cloud, config, db, images
 from .config import PATHS
 from .version import __version__
 
@@ -293,7 +293,7 @@ def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
                 tmp.unlink(missing_ok=True)               # a photo we cannot re-encode (damaged, animated...): copy it
         if did == "copied":
             shutil.copy2(src, tmp)
-        os.replace(tmp, out)
+        cloud.replace(tmp, out)
         os.utime(out, (st.st_atime, st.st_mtime))         # same time stamp as the source: later backups can tell it is up to date
         return item, did
 
@@ -563,8 +563,8 @@ def _create_snapshot(reason: str = "manual", progress=None, force_media: bool = 
             if z.testzip() is not None:
                 raise RuntimeError("zip verification failed")
         if mpart is not None:
-            os.replace(mpart, d / mdir)                       # the photo set appears only when complete
-        os.replace(part, final)                               # appears only when complete and verified
+            cloud.replace(mpart, d / mdir)                    # the photo set appears only when complete
+        cloud.replace(part, final)                               # appears only when complete and verified
     finally:
         shutil.rmtree(work, ignore_errors=True)
         for p in d.glob("*.part"):
@@ -660,7 +660,7 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
                 if not out.exists() or (overwrite_changed and not _same(src, out.stat())):
                     out.parent.mkdir(parents=True, exist_ok=True)
                     tmp = out.with_name(out.name + ".part")
-                    shutil.copy2(src, tmp); os.replace(tmp, out); copied += 1
+                    shutil.copy2(src, tmp); cloud.replace(tmp, out); copied += 1
                 if progress and i % 20 == 0:
                     progress.done = i + 1
                     progress.say("Restoring photo files… {done} of {total}", done=i + 1, total=len(files))

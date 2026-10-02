@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageOps
 
-from . import db, images
+from . import cloud, db, images
 from .config import PATHS
 
 ANALYSIS_VERSION = 1          # bump when the measurements change: every photo is analysed again
@@ -249,15 +249,20 @@ def run_analysis(eyes: bool, progress):
     def work(r):
         if cancelled():
             return r, None
+        if cloud.is_online_only(PATHS.media / r["rel_path"]):
+            return r, "cloud"                       # in the cloud only (OneDrive): not downloaded for this; done when it is on this computer
         try:
             return r, analyze_file(PATHS.media / r["rel_path"], r["filename"] or "", r["width"] or 0, r["height"] or 0)
         except Exception:
             return r, False
 
-    ok = fails = 0
+    ok = fails = waiting = 0
     with cf.ThreadPoolExecutor(3) as ex:
         for r, m in ex.map(work, todo):
             if m is None:
+                continue
+            if m == "cloud":
+                waiting += 1; progress.done = ok + fails + waiting
                 continue
             if m is False:
                 fails += 1          # unreadable: leave it without analysis (retried next time)
@@ -270,6 +275,8 @@ def run_analysis(eyes: bool, progress):
     msgs = [("Analysed {n} photos", {"n": ok})]
     if fails:
         msgs.append(("{n} failed", {"n": fails}))
+    if waiting:
+        msgs.append(("{n} files are only in the cloud (OneDrive) and were not downloaded", {"n": waiting}))
     if cancelled():
         progress.state = "done"; return progress.say_parts(("Analysis was stopped", {}), *msgs)
     if eyes:

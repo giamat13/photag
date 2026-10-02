@@ -14,7 +14,7 @@ import time
 import zipfile
 from pathlib import Path
 
-from . import db, images
+from . import cloud, db, images
 from .config import PATHS, TRASH_RETENTION_DAYS
 
 ROOT_PREFIX = "Takeout/Google Photos/"
@@ -404,7 +404,7 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
         sub = PATHS.media / (str(year) if year else "unknown")
         sub.mkdir(parents=True, exist_ok=True)
         dest = _unique_dest(sub / _safe_component(base))
-        tmp.replace(dest)
+        cloud.replace(tmp, dest)                       # a library inside OneDrive: the file may be locked for a moment
         rel = str(dest.relative_to(PATHS.media))
         is_vid = 1 if images.is_video(dest) else 0
         w, h_ = images.dimensions(dest)
@@ -446,7 +446,7 @@ def scan_folder(folder: str, recursive: bool = True, cap: int = 20000) -> list[d
         if p.suffix.lower() in MEDIA_EXT and p.is_file() and not p.name.startswith("."):
             st = p.stat()
             out.append({"path": str(p), "name": p.name, "bytes": st.st_size,
-                        "mtime": int(st.st_mtime), "is_video": images.is_video(p)})
+                        "mtime": int(st.st_mtime), "is_video": images.is_video(p), "online": cloud.is_online_only(p)})
     out.sort(key=lambda f: -f["mtime"])
     return out
 
@@ -537,8 +537,12 @@ def run_auto_import(folder: str, progress: Progress) -> dict:
         todo = [(p, size, mtime) for p, size, mtime in _auto_walk(folder)
                 if seen.get(p) != (size, mtime) and size > 0 and now - mtime >= settle]
         progress.state = "importing"; progress.total = len(todo); progress.done = 0
+        waiting = 0
         for p, size, mtime in todo:
             progress.done += 1
+            if cloud.is_online_only(p):                    # still only in the cloud: not read (that would download it), not marked as seen
+                waiting += 1
+                continue
             try:
                 _, new = _ingest_file(con, Path(p))
                 added += new; dupes += not new
@@ -550,7 +554,7 @@ def run_auto_import(folder: str, progress: Progress) -> dict:
                 con.commit()
         con.commit()
         progress.state = "done"
-        progress.result = {"added": added, "duplicates": dupes, "failed": failed}
+        progress.result = {"added": added, "duplicates": dupes, "failed": failed, "cloud": waiting}
         return progress.result
     finally:
         con.close()

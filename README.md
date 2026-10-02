@@ -82,6 +82,7 @@ The interface is available in 17 languages (English by default). A Hebrew versio
   strong compression (JPEG quality 60) and HD size (1280 px on the long side) by default, adjustable; videos are copied as they are (or left out). The library
   is never touched, a file that would not get smaller is copied as is, later backups re-use unchanged copies, and restoring from such a backup only fills in
   missing files (never replaces one). Safety backups made before a restore, update or compression always hold the originals.
+- **Works with OneDrive** — folders stored in OneDrive (photos-in-my-folder, automatic import, import from a folder): files that are only in the cloud ("Free up space") are never read by a scan, analysis or preview, so photag cannot silently download a whole library; they are not forgotten either (a photo whose file went online-only stays in the catalog, a new one is added once it is on the computer). Files that OneDrive briefly locks are retried instead of failing. photag warns when the catalog itself lives inside OneDrive (a synced database can get conflicts or be damaged) and says when the backup folder is inside OneDrive.
 - **Face recognition** — InsightFace `buffalo_l` (ONNX Runtime) → cosine distance → SciPy average-linkage clustering at a threshold of
   **0.38**. Cluster names are seeded from Google's people tags (majority vote); the rest can be named by hand.
 - **Simple photo editing** — rotate, crop, brightness / contrast / saturation, black and white. The original is always kept and restorable.

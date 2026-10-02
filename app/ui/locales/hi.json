@@ -1028,5 +1028,13 @@
  "{0} of {1} photos have not been analysed yet. The analysis measures sharpness, exposure and more on this computer (nothing leaves it) and takes a few minutes for a big library.": "{1} में से {0} फ़ोटो का अभी विश्लेषण नहीं हुआ। विश्लेषण इसी कंप्यूटर पर तीखापन, एक्सपोज़र आदि मापता है (कुछ भी बाहर नहीं जाता) और बड़ी लाइब्रेरी में कुछ मिनट लेता है।",
  "{0} photos match now": "अभी {0} फ़ोटो मेल खाती हैं",
  "{0} photos to review": "समीक्षा के लिए {0} फ़ोटो",
- "{0} smart collections created from Google Photos people": "Google फ़ोटो के लोगों से {0} स्मार्ट संग्रह बनाए गए"
+ "{0} smart collections created from Google Photos people": "Google फ़ोटो के लोगों से {0} स्मार्ट संग्रह बनाए गए",
+ "If you use «Free up space» in OneDrive, photag never downloads those files by itself for scans or analysis; a photo is downloaded only when you open it.": "यदि आप OneDrive में «जगह खाली करें» का उपयोग करते हैं, तो photag स्कैन या विश्लेषण के लिए उन फ़ाइलों को अपने आप कभी डाउनलोड नहीं करता; फ़ोटो तभी डाउनलोड होती है जब आप उसे खोलते हैं।",
+ "Search is ready: {n} photos indexed; {w} files only in the cloud (OneDrive) were skipped": "खोज तैयार है: {n} फ़ोटो अनुक्रमित; केवल क्लाउड (OneDrive) में मौजूद {w} फ़ाइलें छोड़ दी गईं",
+ "The library is inside OneDrive": "लाइब्रेरी OneDrive के अंदर है",
+ "This folder is inside OneDrive: every backup is uploaded to the cloud and counts against your OneDrive space. A folder on another disk is safer and faster.": "यह फ़ोल्डर OneDrive के अंदर है: हर बैकअप क्लाउड पर अपलोड होता है और आपके OneDrive की जगह घेरता है। किसी दूसरी डिस्क पर फ़ोल्डर अधिक सुरक्षित और तेज़ है।",
+ "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag कैटलॉग (एक डेटाबेस) और थंबनेल लाइब्रेरी फ़ोल्डर में रखता है। OneDrive इन फ़ाइलों को बदलते समय सिंक करता है, जिससे सिंक टकराव और यहाँ तक कि कैटलॉग खराब हो सकता है। लाइब्रेरी को OneDrive के बाहर रखना (उदाहरण के लिए C:\\Photag), या photag खुला होने पर OneDrive सिंक रोक देना अधिक सुरक्षित है। आपके बदलने तक आपकी फ़ोटो अपनी जगह रहती हैं।",
+ "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} फ़ाइलें केवल क्लाउड (OneDrive) में हैं और इस कंप्यूटर पर आने पर जोड़ी जाएँगी",
+ "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} फ़ाइलें केवल क्लाउड (OneDrive) में हैं, अभी इस कंप्यूटर पर नहीं। आयात उन्हें पहले डाउनलोड करता है, जिसमें समय लग सकता है। उनके पूर्वावलोकन लोड नहीं होते।",
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} फ़ाइलें केवल क्लाउड (OneDrive) में हैं और डाउनलोड नहीं की गईं"
 }

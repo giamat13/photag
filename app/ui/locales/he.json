@@ -1028,5 +1028,13 @@
  "{0} of {1} photos have not been analysed yet. The analysis measures sharpness, exposure and more on this computer (nothing leaves it) and takes a few minutes for a big library.": "{0} מתוך {1} תמונות עדיין לא נותחו. הניתוח מודד חדות, חשיפה ועוד על המחשב הזה (שום דבר לא יוצא ממנו) ולוקח כמה דקות בספרייה גדולה.",
  "{0} photos match now": "{0} תמונות מתאימות כרגע",
  "{0} photos to review": "{0} תמונות לסקירה",
- "{0} smart collections created from Google Photos people": "נוצרו {0} אוספים חכמים מאנשי גוגל פוטוז"
+ "{0} smart collections created from Google Photos people": "נוצרו {0} אוספים חכמים מאנשי גוגל פוטוז",
+ "If you use «Free up space» in OneDrive, photag never downloads those files by itself for scans or analysis; a photo is downloaded only when you open it.": "אם אתם משתמשים ב״פינוי מקום״ של OneDrive, photag לעולם לא מורידה את הקבצים האלה בעצמה לצורך סריקות או ניתוח; תמונה מורדת רק כשפותחים אותה.",
+ "Search is ready: {n} photos indexed; {w} files only in the cloud (OneDrive) were skipped": "החיפוש מוכן: {n} תמונות מאונדקסות; {w} קבצים שנמצאים רק בענן (OneDrive) דולגו",
+ "The library is inside OneDrive": "הספרייה נמצאת בתוך OneDrive",
+ "This folder is inside OneDrive: every backup is uploaded to the cloud and counts against your OneDrive space. A folder on another disk is safer and faster.": "התיקייה הזו נמצאת בתוך OneDrive: כל גיבוי מועלה לענן ותופס מקום ב‑OneDrive שלכם. תיקייה בדיסק אחר בטוחה ומהירה יותר.",
+ "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag שומרת את הקטלוג (מסד נתונים) ואת התמונות הממוזערות בתיקיית הספרייה. OneDrive מסנכרן את הקבצים האלה בזמן שהם משתנים, מה שעלול ליצור התנגשויות סנכרון ואפילו קטלוג פגום. בטוח יותר לשמור את הספרייה מחוץ ל‑OneDrive (למשל C:\\Photag), או להשהות את הסנכרון של OneDrive בזמן ש‑photag פתוחה. התמונות שלכם נשארות במקומן עד שתשנו זאת.",
+ "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} קבצים נמצאים רק בענן (OneDrive) ויתווספו כשיהיו במחשב הזה",
+ "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} קבצים נמצאים רק בענן (OneDrive), עדיין לא במחשב הזה. ייבוא שלהם מוריד אותם קודם, וזה עלול לקחת זמן. התצוגות המקדימות שלהם לא נטענות.",
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} קבצים נמצאים רק בענן (OneDrive) ולא הורדו"
 }

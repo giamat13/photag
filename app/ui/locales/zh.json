@@ -1028,5 +1028,13 @@
  "{0} of {1} photos have not been analysed yet. The analysis measures sharpness, exposure and more on this computer (nothing leaves it) and takes a few minutes for a big library.": "{1} 张照片中有 {0} 张尚未分析。分析会在这台电脑上测量清晰度、曝光等（不会有任何内容离开电脑），大型图库需要几分钟。",
  "{0} photos match now": "当前有 {0} 张照片匹配",
  "{0} photos to review": "{0} 张照片待查看",
- "{0} smart collections created from Google Photos people": "已根据 Google 相册中的人物创建了 {0} 个智能合集"
+ "{0} smart collections created from Google Photos people": "已根据 Google 相册中的人物创建了 {0} 个智能合集",
+ "If you use «Free up space» in OneDrive, photag never downloads those files by itself for scans or analysis; a photo is downloaded only when you open it.": "如果您在 OneDrive 中使用“释放空间”，photag 绝不会为扫描或分析而自行下载这些文件；只有当您打开某张照片时才会下载它。",
+ "Search is ready: {n} photos indexed; {w} files only in the cloud (OneDrive) were skipped": "搜索已就绪：已索引 {n} 张照片；已跳过 {w} 个仅在云端（OneDrive）的文件",
+ "The library is inside OneDrive": "图库位于 OneDrive 内",
+ "This folder is inside OneDrive: every backup is uploaded to the cloud and counts against your OneDrive space. A folder on another disk is safer and faster.": "此文件夹位于 OneDrive 内：每次备份都会上传到云端，并占用您的 OneDrive 空间。放在其他磁盘上的文件夹更安全、更快。",
+ "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag 将目录（一个数据库）和缩略图保存在图库文件夹中。OneDrive 会在这些文件变化时同步它们，可能导致同步冲突，甚至使目录损坏。更安全的做法是把图库放在 OneDrive 之外（例如 C:\\Photag），或在 photag 打开期间暂停 OneDrive 同步。在您更改之前，照片会留在原处。",
+ "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} 个文件仅在云端（OneDrive），待它们出现在这台电脑上后会被添加",
+ "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} 个文件仅在云端（OneDrive），还不在这台电脑上。导入它们会先下载，可能需要一段时间。它们的预览不会加载。",
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} 个文件仅在云端（OneDrive），未下载"
 }

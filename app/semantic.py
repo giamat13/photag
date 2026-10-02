@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from . import config, db, images
+from . import cloud, config, db, images
 from .config import PATHS
 from .net import ssl_context
 
@@ -195,13 +195,16 @@ def run_index(download: bool, progress):
         todo = _todo(con)
         progress.state = "analyzing"; progress.total = len(todo); progress.done = 0
         progress.say("Indexing photos for search {done}/{total}", done=0, total=len(todo))
-        done = 0
+        done = waiting = 0
         for i in range(0, len(todo), BATCH):
             if cancelled():
                 break
             part = todo[i:i + BATCH]
             usable, vecs = [], []
             for r in part:                            # one unreadable photo must not sink the batch
+                if cloud.is_online_only(PATHS.media / r["rel_path"]):
+                    waiting += 1                  # only in the cloud (OneDrive): not downloaded for this, indexed once it is here
+                    continue
                 try:
                     vecs.append(_pixels(PATHS.media / r["rel_path"])); usable.append(r)
                 except Exception:
@@ -222,6 +225,8 @@ def run_index(download: bool, progress):
         progress.state = "done"
         if cancelled():
             progress.say("Indexing was stopped: {n} photos indexed", n=done)
+        elif waiting:
+            progress.say("Search is ready: {n} photos indexed; {w} files only in the cloud (OneDrive) were skipped", n=done - waiting, w=waiting)
         else:
             progress.say("Search is ready: {n} photos indexed", n=done)
     except InterruptedError:

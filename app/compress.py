@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import backup, config, db, ffmpeg, images, importer, refmode
+from . import backup, cloud, config, db, ffmpeg, images, importer, refmode
 from .config import PATHS
 
 HANDBRAKE_PAGE = "https://handbrake.fr/downloads2.php"      # the "Command Line Version" lives on this page
@@ -230,7 +230,7 @@ def _install(con, pid: int, new_file: Path, target_rel: str | None, kind: str, r
         final = _unique(final)
     old_size = old_path.stat().st_size
     try:
-        os.replace(new_file, final)
+        cloud.replace(new_file, final)
         if final != old_path:
             old_path.unlink(missing_ok=True)
         new_sha = images.sha256_file(final)

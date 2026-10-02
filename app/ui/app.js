@@ -1629,7 +1629,7 @@ async function catalogSettings(){
     if(n){ await reloadAll(); toast(t('{0} items deleted permanently', [num(n)])); }
   };
   $('#lib-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose catalog folder'))); if(r.path) $('#lib-path').value=r.path; };
-  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; await send('POST','/api/settings/library',{path:p}); HIST.undo.length = HIST.redo.length = 0; closeModal(); toast(t('Catalog replaced')); await reloadAll(); };
+  $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; const lr = await send('POST','/api/settings/library',{path:p}); HIST.undo.length = HIST.redo.length = 0; closeModal(); toast(t('Catalog replaced')); await reloadAll(); if(lr.library_in_onedrive) oneDriveNotice(true); };
 }
 async function preferences(){
   const [s, ai, rf0] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref')]);
@@ -1673,7 +1673,7 @@ async function preferences(){
     $('#rf-on').checked = rf.enabled; $('#rf-folder').value = rf.folder; $('#rf-scan').disabled = !rf.enabled;
     const r = rf.last_result;
     $('#rf-status').textContent = !rf.enabled ? '' : !rf.folder_ok ? t("The folder can't be reached right now. Nothing is changed in the catalog until it is back.")
-      : [t('{0} photos from this folder', [num(rf.photos)]), r ? t('Last scan: {0} new, {1} moved, {2} removed', [num(r.added), num(r.moved), num(r.removed)]) : ''].filter(Boolean).join(' · ');
+      : [t('{0} photos from this folder', [num(rf.photos)]), r ? t('Last scan: {0} new, {1} moved, {2} removed', [num(r.added), num(r.moved), num(r.removed)]) : '', r && r.cloud ? t('{0} files are only in the cloud (OneDrive) and are added once they are on this computer', [num(r.cloud)]) : ''].filter(Boolean).join(' · ');
   };
   const saveRf = async body => {
     try{ rf = await send('POST', '/api/ref', body); setTimeout(()=>pollJob('refscan', t('Photos stay in my folder')), 400); }
@@ -2059,6 +2059,7 @@ async function backupDialog(){
     $('#bk-comp').checked = s.compress_media; $('#bk-comp').disabled = !s.include_media; $('#bk-comp-box').classList.toggle('hidden', !(s.include_media && s.compress_media));
     $('#bk-q').value = String(s.compress_quality <= 65 ? 60 : s.compress_quality <= 80 ? 75 : 88); $('#bk-size').value = String(s.compress_max_side); $('#bk-vid').checked = s.include_videos;
     $('#bk-folder').value = i.folder; $('#bk-list').innerHTML = rows();
+    $('#bk-od').textContent = i.folder_in_onedrive ? t('This folder is inside OneDrive: every backup is uploaded to the cloud and counts against your OneDrive space. A folder on another disk is safer and faster.') : '';
     $('#bk-int').disabled = $('#bk-keep').disabled = !s.enabled;
   };
   modal(`<h3>${t('Backup and restore')}</h3><div class="mb bk">
@@ -2079,6 +2080,7 @@ async function backupDialog(){
     </div>
     <label class="fld"><span>${t('Backups folder (preferably on another disk)')}</span>
       <div class="bk-path"><input id="bk-folder" readonly dir="ltr"><button id="bk-pick">${t('Choose…')}</button><button id="bk-reset">${t('Default')}</button></div></label>
+    <div class="hint" id="bk-od" style="padding:0;color:var(--yellow)"></div>
     <div class="lbl-sub" style="padding:0">${t('Existing backups')}</div><div class="bk-list" id="bk-list"></div>
   </div><div class="mf"><button class="primary" id="bk-now">${t('Back up now')}</button><button id="bk-check" title="${t('Checks that the newest backup can be read, without restoring anything. This also happens automatically once a week.')}">${t('Check the backup')}</button><span class="spacer"></span><button id="bk-close">${t('Close')}</button></div>`);
   draw();
@@ -2572,7 +2574,8 @@ function renderImport(){
     <aside class="im-side">
       ${folder?`<section class="pnl"><h3><span>${t("File Handling")}</span></h3><div class="pbody">
         <label class="check"><input type="checkbox" id="im-skipdup" ${IM.skipDup?'checked':''}> ${t(" Don't import suspected duplicates")}</label>
-        <div class="hint">${t("Files that are completely identical (by content) are never saved twice.")}</div></div></section>
+        <div class="hint">${t("Files that are completely identical (by content) are never saved twice.")}</div>
+        ${IM.files.some(f=>f.online) ? `<div class="hint" style="color:var(--yellow)">${t('{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.', [num(IM.files.filter(f=>f.online).length)])}</div>` : ''}</div></section>
       <section class="pnl"><h3><span>${t("Apply During Import")}</span></h3><div class="pbody">
         <label class="fld" style="padding:4px 12px"><span>${t("Keywords")}</span><input type="text" id="im-kw" placeholder="${t("Vacation, family")}"></label>
         <label class="fld" style="padding:4px 12px"><span>${t("Add to Collection")}</span><input type="text" id="im-album" list="im-albums" placeholder="${t("None")}"></label>
@@ -3306,6 +3309,17 @@ $('#tl-main').addEventListener('dragstart', e=>{ const c=e.target.closest('.tl-c
   e.dataTransfer.setData('text/x-pm-ids', JSON.stringify([...S.sel])); e.dataTransfer.effectAllowed='copy'; });
 new ResizeObserver(debounce(()=>{ if(S.view==='timeline') renderTimeline(); }, 120)).observe($('#v-timeline'));
 
+// ---------- OneDrive: the catalog database must not live in a synced folder ----------
+function oneDriveNotice(force){
+  const st = S.status; if(!st || !st.library_in_onedrive) return;
+  if(!force && pref.get('odWarned','') === st.library_root) return;
+  pref.set('odWarned', st.library_root);
+  modal(`<h3>${t('The library is inside OneDrive')}</h3><div class="mb"><p>${t('photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.')}</p>
+    <p class="hint" style="padding:0">${t('If you use «Free up space» in OneDrive, photag never downloads those files by itself for scans or analysis; a photo is downloaded only when you open it.')}</p></div>
+    <div class="mf"><button id="od-set">${t('Catalog Settings...')}</button><span class="spacer"></span><button class="primary" id="od-ok">${t('OK')}</button></div>`);
+  $('#od-ok').onclick = closeModal; $('#od-set').onclick = ()=>{ closeModal(); catalogSettings(); };
+}
+
 // ---------- boot ----------
 (async function boot(){
   await Promise.all([loadCatalog(), loadSide()]);
@@ -3315,6 +3329,7 @@ new ResizeObserver(debounce(()=>{ if(S.view==='timeline') renderTimeline(); }, 1
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
   setTimeout(backupHealthNotice, 8000);
   setTimeout(otdNotice, 4500);
+  setTimeout(()=>oneDriveNotice(false), 1500);
   setTimeout(backgroundTick, 3000); setInterval(backgroundTick, 60000);   // quiet check on start-up; a window appears only when a newer release exists
   // an empty catalog shows the empty-state screen with an Import button; it never jumps to the Import screen by itself
   // resume the activity indicator if a job is already running (e.g. after a reload)
