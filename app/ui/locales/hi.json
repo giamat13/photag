@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{1} आइटम में {0}।",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "ट्रैश में एक और {0} पड़ा है ({1} आइटम) -- इसे वापस पाने के लिए कैटलॉग सेटिंग्स से इसे खाली करें।",
  "Nothing here yet": "अभी तक यहाँ कुछ नहीं है",
- "{0} items": "{0} आइटम"
+ "{0} items": "{0} आइटम",
+ "Connect to triplan": "triplan से कनेक्ट करें",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "यात्रा संग्रह से इसे खोलने के लिए अपने triplan खाते से साइन इन करें। आपका पासवर्ड इस कंप्यूटर पर एन्क्रिप्टेड रूप में संग्रहीत है।",
+ "Email": "ईमेल",
+ "Password": "पासवर्ड",
+ "Connect": "कनेक्ट करें",
+ "Mark as Trip": "यात्रा के रूप में चिह्नित करें",
+ "Remove Trip status": "यात्रा स्थिति हटाएं",
+ "Open in triplan": "triplan में खोलें",
+ "Could not connect to triplan: {error}": "triplan से कनेक्ट नहीं हो सका: {error}"
 }

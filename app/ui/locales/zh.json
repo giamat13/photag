@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "共 {1} 个项目，{0}。",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "回收站中还有 {0}（{1} 个项目）——从目录设置中清空以释放空间。",
  "Nothing here yet": "这里还没有内容",
- "{0} items": "{0} 个项目"
+ "{0} items": "{0} 个项目",
+ "Connect to triplan": "连接到 triplan",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "使用您的 triplan 账户登录，以便从旅行影集中打开它。您的密码会以加密形式保存在此电脑上。",
+ "Email": "电子邮件",
+ "Password": "密码",
+ "Connect": "连接",
+ "Mark as Trip": "标记为旅行",
+ "Remove Trip status": "移除旅行状态",
+ "Open in triplan": "在 triplan 中打开",
+ "Could not connect to triplan: {error}": "无法连接到 triplan：{error}"
 }

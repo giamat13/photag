@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{1} 件のアイテムで{0}。",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "さらに{0}がゴミ箱にあります（{1}件）。容量を取り戻すには、カタログ設定からゴミ箱を空にしてください。",
  "Nothing here yet": "まだ何もありません",
- "{0} items": "{0}件"
+ "{0} items": "{0}件",
+ "Connect to triplan": "triplanに接続",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "旅行コレクションから開くには、triplanアカウントでサインインしてください。パスワードはこのコンピューターに暗号化して保存されます。",
+ "Email": "メール",
+ "Password": "パスワード",
+ "Connect": "接続",
+ "Mark as Trip": "旅行としてマーク",
+ "Remove Trip status": "旅行ステータスを解除",
+ "Open in triplan": "triplanで開く",
+ "Could not connect to triplan: {error}": "triplanに接続できませんでした: {error}"
 }

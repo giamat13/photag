@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{0} verdeeld over {1} items.",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Nog eens {0} staat in de Prullenbak ({1} items) -- leeg deze via Catalogusinstellingen om de ruimte terug te krijgen.",
  "Nothing here yet": "Nog niets hier",
- "{0} items": "{0} items"
+ "{0} items": "{0} items",
+ "Connect to triplan": "Verbinden met triplan",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "Meld je aan met je triplan-account om het te openen vanuit een reiscollectie. Je wachtwoord wordt versleuteld op deze computer opgeslagen.",
+ "Email": "E-mail",
+ "Password": "Wachtwoord",
+ "Connect": "Verbinden",
+ "Mark as Trip": "Markeren als reis",
+ "Remove Trip status": "Reisstatus verwijderen",
+ "Open in triplan": "Openen in triplan",
+ "Could not connect to triplan: {error}": "Kan niet verbinden met triplan: {error}"
 }

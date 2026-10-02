@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{0} у {1} елементах.",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Ще {0} лежить у Смітнику ({1} елементів) -- спорожніть його в налаштуваннях каталогу, щоб повернути місце.",
  "Nothing here yet": "Тут поки нічого немає",
- "{0} items": "{0} елементів"
+ "{0} items": "{0} елементів",
+ "Connect to triplan": "Підключитися до triplan",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "Увійдіть у свій обліковий запис triplan, щоб відкривати його з колекції-подорожі. Ваш пароль зберігається на цьому комп'ютері в зашифрованому вигляді.",
+ "Email": "Електронна пошта",
+ "Password": "Пароль",
+ "Connect": "Підключити",
+ "Mark as Trip": "Позначити як подорож",
+ "Remove Trip status": "Зняти статус подорожі",
+ "Open in triplan": "Відкрити в triplan",
+ "Could not connect to triplan: {error}": "Не вдалося підключитися до triplan: {error}"
 }

@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{1}개 항목에서 {0}.",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "휴지통에 {0}가 더 있습니다({1}개 항목) -- 공간을 되찾으려면 카탈로그 설정에서 비우세요.",
  "Nothing here yet": "아직 아무것도 없습니다",
- "{0} items": "{0}개 항목"
+ "{0} items": "{0}개 항목",
+ "Connect to triplan": "triplan에 연결",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "여행 컬렉션에서 열려면 triplan 계정으로 로그인하세요. 비밀번호는 이 컴퓨터에 암호화되어 저장됩니다.",
+ "Email": "이메일",
+ "Password": "비밀번호",
+ "Connect": "연결",
+ "Mark as Trip": "여행으로 표시",
+ "Remove Trip status": "여행 상태 제거",
+ "Open in triplan": "triplan에서 열기",
+ "Could not connect to triplan: {error}": "triplan에 연결할 수 없습니다: {error}"
 }

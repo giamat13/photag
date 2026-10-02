@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{0} в {1} объектах.",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Ещё {0} находится в корзине ({1} объектов) -- очистите её в настройках каталога, чтобы освободить место.",
  "Nothing here yet": "Здесь пока пусто",
- "{0} items": "{0} объектов"
+ "{0} items": "{0} объектов",
+ "Connect to triplan": "Подключиться к triplan",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "Войдите в свою учётную запись triplan, чтобы открывать её из коллекции-поездки. Ваш пароль хранится на этом компьютере в зашифрованном виде.",
+ "Email": "Эл. почта",
+ "Password": "Пароль",
+ "Connect": "Подключить",
+ "Mark as Trip": "Отметить как поездку",
+ "Remove Trip status": "Снять статус поездки",
+ "Open in triplan": "Открыть в triplan",
+ "Could not connect to triplan: {error}": "Не удалось подключиться к triplan: {error}"
 }

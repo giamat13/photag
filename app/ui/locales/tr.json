@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{1} öğede toplam {0}.",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Çöp Kutusunda {0} daha var ({1} öğe) -- yeri geri almak için Katalog Ayarları'ndan boşaltın.",
  "Nothing here yet": "Henüz bir şey yok",
- "{0} items": "{0} öğe"
+ "{0} items": "{0} öğe",
+ "Connect to triplan": "triplan'a bağlan",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "Bir gezi koleksiyonundan açmak için triplan hesabınızla oturum açın. Şifreniz bu bilgisayarda şifrelenmiş olarak saklanır.",
+ "Email": "E-posta",
+ "Password": "Şifre",
+ "Connect": "Bağlan",
+ "Mark as Trip": "Gezi olarak işaretle",
+ "Remove Trip status": "Gezi durumunu kaldır",
+ "Open in triplan": "triplan'da aç",
+ "Could not connect to triplan: {error}": "triplan'a bağlanılamadı: {error}"
 }

@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -1218,6 +1218,50 @@ def album_delete(aid: int):
     con.execute("DELETE FROM albums WHERE id=?", (aid,))
     con.commit()
     return {"ok": True}
+
+
+class TripIn(BaseModel):
+    is_trip: bool
+
+
+@app.post("/api/album/{aid}/trip")
+def album_trip(aid: int, body: TripIn):
+    """photag x triplan, step 1: mark/unmark a collection as a trip (gets an "Open in triplan" button)."""
+    con = db.connect()
+    con.execute("UPDATE albums SET is_trip=? WHERE id=?", (1 if body.is_trip else 0, aid))
+    con.commit()
+    return {"ok": True}
+
+
+# ---- photag x triplan (step 1: connect + open) ------------------------------
+class TriplanConnectIn(BaseModel):
+    email: str
+    password: str
+
+
+@app.get("/api/triplan/status")
+def triplan_status():
+    return triplan.status()
+
+
+@app.post("/api/triplan/connect")
+def triplan_connect(body: TriplanConnectIn):
+    try:
+        return triplan.connect(body.email, body.password)
+    except triplan.TriplanError as e:
+        raise err(400, "Could not connect to triplan: {error}", error=str(e))
+
+
+@app.post("/api/triplan/disconnect")
+def triplan_disconnect():
+    triplan.disconnect()
+    return {"ok": True}
+
+
+@app.post("/api/triplan/open")
+def triplan_open():
+    _open_url(triplan.APP_URL)
+    return {"ok": True, "url": triplan.APP_URL}
 
 
 # ---- saved searches (Advanced Search) ------------------------------------------------

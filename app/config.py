@@ -163,6 +163,15 @@ def set_ai(data: dict) -> None:
     _write_pointer(ai=data or None)
 
 
+def get_triplan() -> dict:
+    """triplan connection: email, the encrypted password and the signed-in uid, if connected."""
+    return _read_pointer().get("triplan") or {}
+
+
+def set_triplan(data: dict) -> None:
+    _write_pointer(triplan=data or None)
+
+
 def get_update_skipped() -> str | None:
     """The release version the user chose to skip ("Skip this version")."""
     return _read_pointer().get("update_skipped") or None

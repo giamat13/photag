@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{0} בסך הכול, ב-{1} פריטים.",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "עוד {0} נמצאים באשפה ({1} פריטים) -- רוקן אותה מהגדרות הקטלוג כדי לקבל את המקום בחזרה.",
  "Nothing here yet": "עדיין אין כאן כלום",
- "{0} items": "{0} פריטים"
+ "{0} items": "{0} פריטים",
+ "Connect to triplan": "התחברות ל-triplan",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "התחבר עם חשבון triplan שלך כדי לפתוח אותו מאוסף שהוא טיול. הסיסמה שלך נשמרת מוצפנת במחשב הזה.",
+ "Email": "אימייל",
+ "Password": "סיסמה",
+ "Connect": "התחבר",
+ "Mark as Trip": "סמן כטיול",
+ "Remove Trip status": "הסר סטטוס טיול",
+ "Open in triplan": "פתח ב-triplan",
+ "Could not connect to triplan: {error}": "לא ניתן להתחבר ל-triplan: {error}"
 }

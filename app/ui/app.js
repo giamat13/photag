@@ -607,6 +607,8 @@ function renderColls(){
     return `<div class="row set" data-set="${key}"><span class="tw">${open?'▼':'◀'}</span>${I('set')}<span class="nm">${title}</span></div>` + (open ? items : '');
   };
   const coll = a => row('album:'+a.id, I('coll'), a.name, a.n,
+    (a.is_trip ? `<button class="x on" data-opentriplan="${a.id}" title="${t('Open in triplan')}">${I('external')}</button>` : '') +
+    `<button class="x ${a.is_trip?'on':''}" data-triptoggle="${a.id}" title="${a.is_trip ? t('Remove Trip status') : t('Mark as Trip')}">${I('pin')}</button>` +
     `<button class="x" data-playalbum="${a.id}" title="${t('Best moments slideshow')}">${I('play')}</button><button class="x" data-del="${a.id}" title="${t("Delete Collection")}">${I('close')}</button>`, 'ind');
   const smart = SMART.map(([k,n,f])=>row('smart:'+k, I('smart'), n, S.all.filter(f).length, '', 'ind')).join('');
   const people = S.people.map(p=>row('person:'+p.id, I('people'), p.name, (p.face_photos||0)+(p.tag_photos||0), '', 'ind')).join('');
@@ -637,6 +639,10 @@ function srcFromKey(key){
   return src;
 }
 $('#left').addEventListener('click', async e=>{
+  const ot=e.target.closest('[data-opentriplan]');
+  if(ot){ e.stopPropagation(); await triplanOpen(); return; }
+  const tt=e.target.closest('[data-triptoggle]');
+  if(tt){ e.stopPropagation(); await toggleTrip(+tt.dataset.triptoggle); return; }
   const pa=e.target.closest('[data-playalbum]');
   if(pa){ e.stopPropagation(); const a=S.albums.find(x=>x.id==pa.dataset.playalbum); if(a) albumBestMoments(a.id, a.name); return; }
   const del=e.target.closest('[data-del]');
@@ -3239,6 +3245,41 @@ function yirNotice(){
   pref.set('yirYear', String(year));
   toast(`${t('Your {0} year in review is ready', [year])} <button id="yir-go2" class="tb-btn">${t('Slideshow')}</button>`, 10000);
   $('#yir-go2').onclick = ()=>{ $('#toast').classList.add('hidden'); yirSlideshow(year); };
+}
+
+// ---------- photag x triplan (step 1: connect + open) ----------
+function triplanConnectDialog(){
+  return new Promise(res=>{
+    modal(`<h3>${t('Connect to triplan')}</h3><div class="mb">
+      <p class="hint" style="padding:0">${t('Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.')}</p>
+      <form id="tp-form">
+        <label class="fld"><span>${t('Email')}</span><input type="email" id="tp-email" autocomplete="username" required></label>
+        <label class="fld"><span>${t('Password')}</span><input type="password" id="tp-pass" autocomplete="current-password" required></label>
+        <p class="hint err" id="tp-err" style="padding:0;display:none"></p>
+      </form>
+    </div><div class="mf"><button id="tp-cancel">${t('Cancel')}</button><button class="primary" id="tp-go">${t('Connect')}</button></div>`);
+    const done = ok=>{ closeModal(); res(ok); };
+    const go = async ()=>{
+      const email = $('#tp-email').value.trim(), password = $('#tp-pass').value;
+      if(!email || !password) return;
+      $('#tp-go').disabled = true; $('#tp-err').style.display = 'none';
+      try{ await send('POST', '/api/triplan/connect', {email, password}); done(true); }
+      catch(e){ $('#tp-err').textContent = e.message; $('#tp-err').style.display = ''; $('#tp-go').disabled = false; }
+    };
+    $('#tp-form').onsubmit = e=>{ e.preventDefault(); go(); };
+    $('#tp-go').onclick = go;
+    $('#tp-cancel').onclick = ()=>done(false);
+  });
+}
+async function triplanOpen(){
+  const st = await api('/api/triplan/status');
+  if(!st.connected && !await triplanConnectDialog()) return;
+  await send('POST', '/api/triplan/open');
+}
+async function toggleTrip(albumId){
+  const a = S.albums.find(x=>x.id===albumId); if(!a) return;
+  await send('POST', `/api/album/${albumId}/trip`, {is_trip: !a.is_trip});
+  await loadSide();
 }
 
 // ---------- search by meaning (local CLIP) ----------

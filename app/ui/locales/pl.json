@@ -1065,5 +1065,14 @@
  "{0} across {1} items.": "{0} w {1} elementach.",
  "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Kolejne {0} znajduje się w Koszu ({1} elementów) -- opróżnij go w Ustawieniach katalogu, aby odzyskać miejsce.",
  "Nothing here yet": "Jeszcze nic tu nie ma",
- "{0} items": "{0} elementów"
+ "{0} items": "{0} elementów",
+ "Connect to triplan": "Połącz z triplan",
+ "Sign in with your triplan account to open it from a trip collection. Your password is stored encrypted on this computer.": "Zaloguj się na swoje konto triplan, aby otworzyć je z kolekcji podróży. Twoje hasło jest przechowywane zaszyfrowane na tym komputerze.",
+ "Email": "E-mail",
+ "Password": "Hasło",
+ "Connect": "Połącz",
+ "Mark as Trip": "Oznacz jako podróż",
+ "Remove Trip status": "Usuń status podróży",
+ "Open in triplan": "Otwórz w triplan",
+ "Could not connect to triplan: {error}": "Nie można połączyć się z triplan: {error}"
 }
