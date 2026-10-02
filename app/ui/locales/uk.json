@@ -1092,5 +1092,6 @@
  "Export as HTML Gallery": "Експортувати як галерею HTML",
  "Gallery Title": "Назва галереї",
  "Choose a destination": "Виберіть місце призначення",
- "Missing items or destination file": "Відсутні елементи або файл призначення"
+ "Missing items or destination file": "Відсутні елементи або файл призначення",
+ "Found on this computer": "Знайдено на цьому комп’ютері"
 }

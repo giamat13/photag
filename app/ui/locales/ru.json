@@ -1092,5 +1092,6 @@
  "Export as HTML Gallery": "Экспортировать как галерею HTML",
  "Gallery Title": "Название галереи",
  "Choose a destination": "Выберите место назначения",
- "Missing items or destination file": "Отсутствуют элементы или файл назначения"
+ "Missing items or destination file": "Отсутствуют элементы или файл назначения",
+ "Found on this computer": "Найдено на этом компьютере"
 }

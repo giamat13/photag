@@ -691,6 +691,31 @@ def _lr_images(lr):
     return lr.execute(q).fetchall()
 
 
+def find_lrcat_candidates(limit: int = 10) -> list[dict]:
+    """Lightroom Classic catalogs (.lrcat) in the places Lightroom itself defaults to, so the import
+    screen can offer them instead of making the user browse for a file they may not know the path of.
+    A shallow, bounded scan (not a full-disk search) -- Lightroom keeps the catalog it is using in one
+    of these folders for the overwhelming majority of installs."""
+    home = Path.home()
+    roots = [home / "Pictures" / "Lightroom", home / "My Pictures" / "Lightroom",
+             home / "Pictures", home / "Documents" / "Lightroom"]
+    seen, out = set(), []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        try:
+            for p in root.glob("*.lrcat"):
+                if p.resolve() in seen or not p.is_file():
+                    continue
+                seen.add(p.resolve())
+                st = p.stat()
+                out.append({"path": str(p), "name": p.name, "bytes": st.st_size, "mtime": int(st.st_mtime)})
+        except OSError:
+            pass
+    out.sort(key=lambda x: -x["mtime"])
+    return out[:limit]
+
+
 def lrcat_info(path: str) -> dict:
     """Counts for the import dialog, before anything is copied."""
     lr = _lr_open(path)

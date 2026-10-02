@@ -2654,7 +2654,7 @@ function openExport(){
 }
 
 // ---------- import (full-window dialog like Lightroom's) ----------
-const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all'};
+const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all'};
 function openImport(mode){
   IM.mode = mode || IM.mode;
   IM.path = IM.path || pref.get('importPath','');
@@ -2696,7 +2696,8 @@ function renderImport(){
           <label class="check"><input type="checkbox" id="im-rec" ${IM.recursive?'checked':''}> ${t(" Include subfolders")}</label>
           ${recent.length?`<div class="lbl-sub" style="padding-top:8px">${t("Recent")}</div>${recent.map(p=>`<div class="row" data-recent="${esc(p)}">${I('folder')}<span class="nm" dir="ltr" title="${esc(p)}">${esc(p)}</span></div>`).join('')}`:''}`
         : lr ? `<div class="btnrow"><button id="im-lrcat">${I('import')} ${t(" Choose Lightroom catalog...")}</button></div>
-          <div class="hint">${t("File ")}<code>.lrcat</code>${t(" from Lightroom Classic (usually in Pictures/Lightroom). Closing Lightroom before importing is recommended.")}</div>`
+          <div class="hint">${t("File ")}<code>.lrcat</code>${t(" from Lightroom Classic (usually in Pictures/Lightroom). Closing Lightroom before importing is recommended.")}</div>
+          ${(IM.lrcatCandidates||[]).length ? `<div class="lbl-sub" style="padding-top:8px">${t('Found on this computer')}</div>${IM.lrcatCandidates.map(c=>`<div class="row" data-lrpick="${esc(c.path)}">${I('import')}<span class="nm" dir="ltr" title="${esc(c.path)}">${esc(c.name)}</span></div>`).join('')}` : ''}`
         : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" Choose ZIP files...")}</button></div>
           <div class="hint">${t("Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.")}</div>`}
       </div></section>
@@ -2748,7 +2749,9 @@ async function scanImport(){
 }
 $('#import').addEventListener('click', async e=>{
   const tg=e.target;
-  const mode=tg.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport(); return; }
+  const mode=tg.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport();
+    if(IM.mode==='lrcat' && IM.lrcatCandidates===null){ IM.lrcatCandidates=[]; api('/api/lrcat-candidates').then(r=>{ IM.lrcatCandidates=r.candidates; renderImport(); }); }
+    return; }
   if(tg.closest('#im-cancel')) return closeImport();
   if(tg.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose folder to import'))); if(r.path){ IM.path=r.path; scanImport(); } return; }
   if(tg.closest('#im-zip')){
@@ -2768,6 +2771,8 @@ $('#import').addEventListener('click', async e=>{
   if(tg.closest('#im-lrcat')){ const r=await api('/api/pick-file?kind=lrcat&title='+encodeURIComponent(t('Choose Lightroom catalog'))); if(!r.path) return;
     IM.lrcat=r.path; IM.lrinfo=null; IM.lrloading=true; renderImport();
     try{ IM.lrinfo=await api('/api/lrcat-info?'+new URLSearchParams({path:r.path})); } finally { IM.lrloading=false; renderImport(); } return; }
+  const lrp=tg.closest('[data-lrpick]'); if(lrp){ IM.lrcat=lrp.dataset.lrpick; IM.lrinfo=null; IM.lrloading=true; renderImport();
+    try{ IM.lrinfo=await api('/api/lrcat-info?'+new URLSearchParams({path:IM.lrcat})); } finally { IM.lrloading=false; renderImport(); } return; }
   const rec=tg.closest('[data-recent]'); if(rec){ IM.path=rec.dataset.recent; scanImport(); return; }
   const sh=tg.closest('[data-show]'); if(sh){ IM.show=sh.dataset.show; renderImport(); return; }
   const ck=tg.closest('[data-chk]'); if(ck){ IM.on = ck.dataset.chk==='all' ? new Set(IM.files.filter(f=>IM.show==='all'||!f.dup).map(f=>f.path)) : new Set(); renderImport(); return; }

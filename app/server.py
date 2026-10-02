@@ -1469,6 +1469,12 @@ def local_thumb(path: str):
 class LrcatIn(BaseModel):
     path: str
 
+@app.get("/api/lrcat-candidates")
+def lrcat_candidates():
+    """Lightroom catalogs found in its usual default locations, for the import screen to offer
+    instead of making the user browse for a file."""
+    return {"candidates": importer.find_lrcat_candidates()}
+
 @app.get("/api/lrcat-info")
 def lrcat_info(path: str):
     if not Path(path).is_file():

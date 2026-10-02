@@ -65,7 +65,7 @@ con.commit()
 
 out_zip = tmp / "export" / "photos.zip"
 prog = _Progress()
-importer.run_export([ids[0], ids[1], id3, idv], str(out_zip), originals=False, long_edge=200, quality=80, as_zip=True, progress=prog)
+importer.run_export([ids[0], ids[1], id3, idv], str(out_zip), originals=False, long_edge=200, quality=80, as_zip=True, xmp_sidecar=False, progress=prog)
 
 check("the export finished without failing", prog.state != "error", prog.error)
 check("the ZIP file was created", out_zip.is_file())

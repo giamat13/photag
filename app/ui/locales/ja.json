@@ -1092,5 +1092,6 @@
  "Export as HTML Gallery": "HTMLギャラリーとしてエクスポート",
  "Gallery Title": "ギャラリータイトル",
  "Choose a destination": "保存先を選択",
- "Missing items or destination file": "項目または保存先ファイルがありません"
+ "Missing items or destination file": "項目または保存先ファイルがありません",
+ "Found on this computer": "このコンピューターで見つかりました"
 }
