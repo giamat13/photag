@@ -1093,5 +1093,8 @@
  "Gallery Title": "Название галереи",
  "Choose a destination": "Выберите место назначения",
  "Missing items or destination file": "Отсутствуют элементы или файл назначения",
- "Found on this computer": "Найдено на этом компьютере"
+ "Found on this computer": "Найдено на этом компьютере",
+ " Recover ratings, labels and keywords from XMP": " Восстановить рейтинги, метки и ключевые слова из XMP",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Читает сопутствующий файл XMP рядом с каждым файлом или пакет XMP, встроенный в него -- полезно для оригиналов Lightroom, для которых больше нет каталога.",
+ "{n} had metadata recovered from XMP": "Для {n} восстановлены метаданные из XMP"
 }

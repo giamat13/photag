@@ -1093,5 +1093,8 @@
  "Gallery Title": "画廊标题",
  "Choose a destination": "选择目标位置",
  "Missing items or destination file": "缺少项目或目标文件",
- "Found on this computer": "在此电脑上找到"
+ "Found on this computer": "在此电脑上找到",
+ " Recover ratings, labels and keywords from XMP": " 从 XMP 恢复评分、标签和关键字",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "读取每个文件旁的 XMP 附属文件，或文件内嵌的 XMP 数据包 -- 适用于不再拥有目录的 Lightroom 原始文件。",
+ "{n} had metadata recovered from XMP": "已从 XMP 为 {n} 恢复元数据"
 }

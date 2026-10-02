@@ -1093,5 +1093,8 @@
  "Gallery Title": "Galerijtitel",
  "Choose a destination": "Kies een bestemming",
  "Missing items or destination file": "Items of doelbestand ontbreken",
- "Found on this computer": "Gevonden op deze computer"
+ "Found on this computer": "Gevonden op deze computer",
+ " Recover ratings, labels and keywords from XMP": " Beoordelingen, labels en trefwoorden herstellen uit XMP",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Leest een XMP-sidecarbestand naast elk bestand, of een ingesloten XMP-pakket -- handig voor Lightroom-originelen waarvoor je geen catalogus meer hebt.",
+ "{n} had metadata recovered from XMP": "Metadata hersteld uit XMP voor {n}"
 }

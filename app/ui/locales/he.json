@@ -1093,5 +1093,8 @@
  "Gallery Title": "כותרת הגלריה",
  "Choose a destination": "בחר יעד",
  "Missing items or destination file": "חסרים פריטים או קובץ יעד",
- "Found on this computer": "נמצא במחשב הזה"
+ "Found on this computer": "נמצא במחשב הזה",
+ " Recover ratings, labels and keywords from XMP": " שחזור דירוגים, תוויות צבע ומילות מפתח מ-XMP",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "קורא קובץ XMP נלווה ליד כל קובץ, או חבילת XMP מוטמעת בתוכו -- שימושי לקבצי מקור של Lightroom שאין לך יותר קטלוג עבורם.",
+ "{n} had metadata recovered from XMP": "עבור {n} שוחזרו נתוני מטא מ-XMP"
 }

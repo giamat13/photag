@@ -1093,5 +1093,8 @@
  "Gallery Title": "गैलरी शीर्षक",
  "Choose a destination": "एक गंतव्य चुनें",
  "Missing items or destination file": "आइटम या गंतव्य फ़ाइल गुम है",
- "Found on this computer": "इस कंप्यूटर पर मिला"
+ "Found on this computer": "इस कंप्यूटर पर मिला",
+ " Recover ratings, labels and keywords from XMP": " XMP से रेटिंग, लेबल और कीवर्ड पुनर्प्राप्त करें",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "प्रत्येक फ़ाइल के साथ XMP साइडकार, या उसमें एम्बेडेड XMP पैकेट पढ़ता है -- उन Lightroom मूल फ़ाइलों के लिए उपयोगी जिनके लिए अब आपके पास कैटलॉग नहीं है।",
+ "{n} had metadata recovered from XMP": "{n} के लिए XMP से मेटाडेटा पुनर्प्राप्त किया गया"
 }

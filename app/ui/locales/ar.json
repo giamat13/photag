@@ -1093,5 +1093,8 @@
  "Gallery Title": "عنوان المعرض",
  "Choose a destination": "اختر وجهة",
  "Missing items or destination file": "عناصر مفقودة أو ملف الوجهة مفقود",
- "Found on this computer": "تم العثور عليه في هذا الكمبيوتر"
+ "Found on this computer": "تم العثور عليه في هذا الكمبيوتر",
+ " Recover ratings, labels and keywords from XMP": " استرجاع التقييمات والتصنيفات والكلمات المفتاحية من XMP",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "يقرأ ملف XMP مصاحب لكل ملف، أو حزمة XMP مضمّنة فيه -- مفيد لملفات Lightroom الأصلية التي لم يعد لديك فهرس لها.",
+ "{n} had metadata recovered from XMP": "تم استرجاع البيانات الوصفية من XMP لـ {n}"
 }

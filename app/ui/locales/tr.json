@@ -1093,5 +1093,8 @@
  "Gallery Title": "Galeri Başlığı",
  "Choose a destination": "Bir hedef seçin",
  "Missing items or destination file": "Öğeler veya hedef dosya eksik",
- "Found on this computer": "Bu bilgisayarda bulundu"
+ "Found on this computer": "Bu bilgisayarda bulundu",
+ " Recover ratings, labels and keywords from XMP": " XMP’den puanları, etiketleri ve anahtar kelimeleri geri yükle",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Her dosyanın yanındaki bir XMP yan dosyasını veya dosyaya gömülü bir XMP paketini okur -- artık kataloğunuz olmayan Lightroom orijinalleri için yararlıdır.",
+ "{n} had metadata recovered from XMP": "{n} öğe için XMP’den meta veri geri yüklendi"
 }

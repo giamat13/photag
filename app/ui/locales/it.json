@@ -1093,5 +1093,8 @@
  "Gallery Title": "Titolo della galleria",
  "Choose a destination": "Scegli una destinazione",
  "Missing items or destination file": "Elementi o file di destinazione mancanti",
- "Found on this computer": "Trovato su questo computer"
+ "Found on this computer": "Trovato su questo computer",
+ " Recover ratings, labels and keywords from XMP": " Recupera valutazioni, etichette e parole chiave da XMP",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Legge un file XMP accanto a ciascun file, o un pacchetto XMP incorporato -- utile per originali Lightroom di cui non hai più il catalogo.",
+ "{n} had metadata recovered from XMP": "Metadati recuperati da XMP per {n}"
 }

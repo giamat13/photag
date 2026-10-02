@@ -590,7 +590,64 @@ def mark_import_start(con):
     db.set_setting(con, "last_import", int(time.time()))
 
 
-def run_folder_import(paths: list[str], keywords: list[str], album: str | None, progress: Progress):
+_XMP_PACKET_RE = re.compile(rb"<x:xmpmeta[\s\S]*?</x:xmpmeta>")
+_XMP_ATTR_RE = re.compile(r'([\w-]+:[\w-]+)\s*=\s*"([^"]*)"')
+_XMP_RATING_EL_RE = re.compile(r"<xmp:Rating>\s*(\d+)\s*</xmp:Rating>", re.I)
+_XMP_LABEL_EL_RE = re.compile(r"<xmp:Label>\s*([^<]*?)\s*</xmp:Label>", re.I)
+_XMP_SUBJECT_RE = re.compile(r"<dc:subject>.*?</dc:subject>", re.S)
+_XMP_LI_RE = re.compile(r"<rdf:li[^>]*>([^<]*)</rdf:li>")
+_XMP_DESC_RE = re.compile(r"<dc:description>.*?</dc:description>", re.S)
+
+
+def _find_xmp_sidecar(src: Path) -> Path | None:
+    """Lightroom/Bridge/digiKam sidecar conventions: 'name.ext.xmp' (common for RAW) or 'name.xmp'."""
+    for cand in (src.with_name(src.name + ".xmp"), src.with_suffix(".xmp")):
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _read_xmp_metadata(src: Path) -> dict | None:
+    """Whatever an XMP packet (sidecar file, or embedded in the image itself) says about rating, color
+    label, keywords/people and caption -- for recovering that metadata when all that's left is the plain
+    files (no .lrcat catalog, e.g. a lapsed Lightroom subscription). Returns None if nothing is found."""
+    sidecar = _find_xmp_sidecar(src)
+    try:
+        if sidecar:
+            text = sidecar.read_text("utf-8", errors="ignore")
+        else:
+            raw = src.read_bytes()
+            m = _XMP_PACKET_RE.search(raw)
+            if not m:
+                return None
+            text = m.group(0).decode("utf-8", errors="ignore")
+    except OSError:
+        return None
+    attrs = dict(_XMP_ATTR_RE.findall(text))
+    rating = int(attrs.get("xmp:Rating") or 0)
+    if not rating:
+        m = _XMP_RATING_EL_RE.search(text)
+        rating = int(m.group(1)) if m else 0
+    label_raw = attrs.get("xmp:Label")
+    if not label_raw:
+        m = _XMP_LABEL_EL_RE.search(text)
+        label_raw = m.group(1) if m else None
+    label = LR_LABELS.get((label_raw or "").strip().lower())
+    subjects = []
+    m = _XMP_SUBJECT_RE.search(text)
+    if m:
+        subjects = [s.strip() for s in _XMP_LI_RE.findall(m.group(0)) if s.strip()]
+    description = None
+    m = _XMP_DESC_RE.search(text)
+    if m:
+        li = _XMP_LI_RE.findall(m.group(0))
+        description = li[0].strip() if li and li[0].strip() else None
+    if not (rating or label or subjects or description):
+        return None
+    return {"rating": rating, "label": label, "tags": subjects, "description": description}
+
+
+def run_folder_import(paths: list[str], keywords: list[str], album: str | None, recover_xmp: bool, progress: Progress):
     con = db.init_db()
     mark_import_start(con)
     progress.state = "importing"; progress.total = len(paths); progress.done = 0
@@ -602,7 +659,7 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
     for k in keywords:
         con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (k,))
         tag_ids.append(con.execute("SELECT id FROM tags WHERE name=?", (k,)).fetchone()["id"])
-    added = dupes = 0
+    added = dupes = recovered = 0
     total_bytes = 0
     for path in paths:
         try:
@@ -635,11 +692,24 @@ def run_folder_import(paths: list[str], keywords: list[str], album: str | None, 
             for tid in tag_ids:
                 con.execute("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'manual')",
                             (photo_id, tid))
+            if recover_xmp and new:
+                xmp = _read_xmp_metadata(src)
+                if xmp:
+                    recovered += 1
+                    fields = {k: v for k, v in xmp.items() if k != "tags" and v}
+                    if fields:
+                        con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in fields)} WHERE id=?",
+                                    (*fields.values(), photo_id))
+                    for name in xmp["tags"]:
+                        con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (name,))
+                        tid = con.execute("SELECT id FROM tags WHERE name=?", (name,)).fetchone()["id"]
+                        con.execute("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'xmp')", (photo_id, tid))
         con.commit()
         progress.state = "done"
         progress.say_parts(*([("Import cancelled", {})] if progress.cancel else []), ("{n} items imported", {"n": added}),
                            *([("{n} already in catalog", {"n": dupes})] if dupes else []),
-                           *([("{n} files could not be imported", {"n": stats.d["failed"]})] if stats.d["failed"] else []))
+                           *([("{n} files could not be imported", {"n": stats.d["failed"]})] if stats.d["failed"] else []),
+                           *([("{n} had metadata recovered from XMP", {"n": recovered})] if recover_xmp and recovered else []))
     except Exception as e:
         con.commit()
         progress.fail("Import failed: {error}", error=str(e))

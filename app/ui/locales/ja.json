@@ -1093,5 +1093,8 @@
  "Gallery Title": "ギャラリータイトル",
  "Choose a destination": "保存先を選択",
  "Missing items or destination file": "項目または保存先ファイルがありません",
- "Found on this computer": "このコンピューターで見つかりました"
+ "Found on this computer": "このコンピューターで見つかりました",
+ " Recover ratings, labels and keywords from XMP": " XMPから評価、ラベル、キーワードを復元",
+ "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "各ファイルの横にあるXMPサイドカー、またはファイルに埋め込まれたXMPパケットを読み取ります -- カタログがなくなったLightroomのオリジナルファイルに便利です。",
+ "{n} had metadata recovered from XMP": "{n} 件でXMPからメタデータを復元しました"
 }

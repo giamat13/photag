@@ -1496,13 +1496,14 @@ class ImportFolderIn(BaseModel):
     paths: list[str]
     keywords: list[str] = []
     album: str | None = None
+    recover_xmp: bool = False
 
 @app.post("/api/import-folder")
 def start_import_folder(body: ImportFolderIn):
     if not body.paths:
         raise err(400, "No files selected")
     kws = [k.strip() for k in body.keywords if k.strip()]
-    _start("import", importer.run_folder_import, body.paths, kws, (body.album or "").strip() or None)
+    _start("import", importer.run_folder_import, body.paths, kws, (body.album or "").strip() or None, body.recover_xmp)
     return {"ok": True}
 
 

@@ -2654,7 +2654,7 @@ function openExport(){
 }
 
 // ---------- import (full-window dialog like Lightroom's) ----------
-const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all'};
+const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all', recoverXmp:false};
 function openImport(mode){
   IM.mode = mode || IM.mode;
   IM.path = IM.path || pref.get('importPath','');
@@ -2724,7 +2724,9 @@ function renderImport(){
       ${folder?`<section class="pnl"><h3><span>${t("File Handling")}</span></h3><div class="pbody">
         <label class="check"><input type="checkbox" id="im-skipdup" ${IM.skipDup?'checked':''}> ${t(" Don't import suspected duplicates")}</label>
         <div class="hint">${t("Files that are completely identical (by content) are never saved twice.")}</div>
-        ${IM.files.some(f=>f.online) ? `<div class="hint" style="color:var(--yellow)">${t('{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.', [num(IM.files.filter(f=>f.online).length)])}</div>` : ''}</div></section>
+        ${IM.files.some(f=>f.online) ? `<div class="hint" style="color:var(--yellow)">${t('{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.', [num(IM.files.filter(f=>f.online).length)])}</div>` : ''}
+        <label class="check"><input type="checkbox" id="im-xmp" ${IM.recoverXmp?'checked':''}> ${t(" Recover ratings, labels and keywords from XMP")}</label>
+        <div class="hint">${t("Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.")}</div></div></section>
       <section class="pnl"><h3><span>${t("Apply During Import")}</span></h3><div class="pbody">
         <label class="fld" style="padding:4px 12px"><span>${t("Keywords")}</span><input type="text" id="im-kw" placeholder="${t("Vacation, family")}"></label>
         <label class="fld" style="padding:4px 12px"><span>${t("Add to Collection")}</span><input type="text" id="im-album" list="im-albums" placeholder="${t("None")}"></label>
@@ -2784,13 +2786,14 @@ $('#import').addEventListener('click', async e=>{
     if(IM.mode==='zip'){ await send('POST','/api/import',{zip_paths:IM.zips.map(z=>z.path)}); closeImport(); pollJob('import',t('Import from Google')); return; }
     if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import',t('Import from Lightroom')); return; }
     const paths=IM.files.filter(f=>IM.on.has(f.path)).map(f=>f.path);
-    await send('POST','/api/import-folder',{paths, keywords:($('#im-kw').value||'').split(','), album:$('#im-album').value||null});
+    await send('POST','/api/import-folder',{paths, keywords:($('#im-kw').value||'').split(','), album:$('#im-album').value||null, recover_xmp:IM.recoverXmp});
     closeImport(); IM.files=[]; pollJob('import',t('Import'));
   }
 });
 $('#import').addEventListener('change', e=>{
   if(e.target.id==='im-rec'){ IM.recursive=e.target.checked; scanImport(); }
   if(e.target.id==='im-skipdup'){ IM.skipDup=e.target.checked; IM.files.forEach(f=>{ if(f.dup){ IM.skipDup?IM.on.delete(f.path):IM.on.add(f.path); } }); renderImport(); }
+  if(e.target.id==='im-xmp'){ IM.recoverXmp=e.target.checked; }
 });
 
 // ---------- background jobs (activity indicator in the identity plate) ----------
