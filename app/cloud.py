@@ -54,7 +54,10 @@ def in_onedrive(path) -> bool:
     except OSError:
         p = _norm(path)
     for r in onedrive_roots():
-        n = _norm(r)
+        try:
+            n = _norm(Path(r).resolve())          # the same spelling as `p` (8.3 short names, links)
+        except OSError:
+            n = _norm(r)
         if p == n or p.startswith(n.rstrip("\\/") + os.sep):
             return True
     return any(_ONEDRIVE_NAME.match(part) for part in Path(p).parts[1:])
