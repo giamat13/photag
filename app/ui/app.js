@@ -606,7 +606,8 @@ function renderColls(){
     const open=OPEN_SETS.has(key);
     return `<div class="row set" data-set="${key}"><span class="tw">${open?'▼':'◀'}</span>${I('set')}<span class="nm">${title}</span></div>` + (open ? items : '');
   };
-  const coll = a => row('album:'+a.id, I('coll'), a.name, a.n, `<button class="x" data-del="${a.id}" title="${t("Delete Collection")}">${I('close')}</button>`, 'ind');
+  const coll = a => row('album:'+a.id, I('coll'), a.name, a.n,
+    `<button class="x" data-playalbum="${a.id}" title="${t('Best moments slideshow')}">${I('play')}</button><button class="x" data-del="${a.id}" title="${t("Delete Collection")}">${I('close')}</button>`, 'ind');
   const smart = SMART.map(([k,n,f])=>row('smart:'+k, I('smart'), n, S.all.filter(f).length, '', 'ind')).join('');
   const people = S.people.map(p=>row('person:'+p.id, I('people'), p.name, (p.face_photos||0)+(p.tag_photos||0), '', 'ind')).join('');
   const searchRow = x=>row('search:'+x.id, I('smart'), x.name, x.ids.length,
@@ -636,6 +637,8 @@ function srcFromKey(key){
   return src;
 }
 $('#left').addEventListener('click', async e=>{
+  const pa=e.target.closest('[data-playalbum]');
+  if(pa){ e.stopPropagation(); const a=S.albums.find(x=>x.id==pa.dataset.playalbum); if(a) albumBestMoments(a.id, a.name); return; }
   const del=e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); const a=S.albums.find(x=>x.id==del.dataset.del);
     if(!await confirmBox(`${t("Delete the collection “{0}”?", [esc(a.name)])}`, t('The photos themselves will stay in the catalog.'), t('Delete'))) return;
@@ -1574,7 +1577,8 @@ function ssStart(over){
   list = list.filter(p=>!p.is_video); if(!list.length) return toast(t('No photos to show'));
   SS.otd = Array.isArray(over) && over.otd;
   SS.yir = Array.isArray(over) && over.yir;
-  SS.list=list; SS.i=(SS.otd||SS.yir) ? 0 : Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
+  SS.album = Array.isArray(over) ? over.album : null;
+  SS.list=list; SS.i=(SS.otd||SS.yir||SS.album) ? 0 : Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
   if(S.view==='loupe') closeLoupeMedia();   // a video in the Loupe must not keep playing behind the slideshow
   $('#slideshow').classList.remove('hidden'); ssShow(); ssTimer();
   document.documentElement.requestFullscreen?.().catch(()=>{});
@@ -1584,7 +1588,8 @@ function ssShow(){
   img.onload=()=>{ img.classList.add('on'); old.classList.remove('on'); };
   img.src=mediaUrl(p.id); SS.cur=nxt;
   const ssLabel = SS.otd && p.taken_at ? `${new Date(p.taken_at*1000).getFullYear()} · `
-    : SS.yir && p.taken_at ? `${new Date(p.taken_at*1000).toLocaleDateString(I18N.locale,{month:'long'})} · ` : '';
+    : SS.yir && p.taken_at ? `${new Date(p.taken_at*1000).toLocaleDateString(I18N.locale,{month:'long'})} · `
+    : SS.album ? `${SS.album} · ` : '';
   $('#ss-count').textContent = ssLabel + `${num(SS.i+1)} / ${num(SS.list.length)}`;
   const pre=SS.list[(SS.i+1)%SS.list.length]; if(pre) new Image().src=mediaUrl(pre.id);
 }
@@ -3192,6 +3197,13 @@ function yearReviewDialog(){
   </div><div class="mf"><button id="yir-close">${t('Close')}</button><span class="spacer"></span><button class="primary" id="yir-go">${t('Play')}</button></div>`);
   $('#yir-close').onclick = closeModal;
   $('#yir-go').onclick = ()=>{ const y=+$('#yir-y').value; closeModal(); yirSlideshow(y); };
+}
+// ---------- Collection ("album") best moments ----------
+async function albumBestMoments(id, name){
+  const rows = (await api('/api/photos?'+new URLSearchParams({album:id, limit:10000000}))).map(r=>S.byId.get(r.id) || r);
+  const list = rows.filter(p=>!p.is_video).sort((a,b)=>(b.score||0)-(a.score||0)).slice(0, 40).sort((a,b)=>a.taken_at-b.taken_at);
+  if(!list.length){ toast(t('No photos in this collection yet')); return; }
+  list.album = name; ssStart(list);
 }
 function yirNotice(){
   const now = new Date(); if(now.getMonth()>0) return;   // offered only in January, for the year that just ended
