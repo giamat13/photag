@@ -102,6 +102,7 @@ def _start_trash_purge():
     threading.Thread(target=_auto_import_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
+        updater.auto_enable_beta_if_prerelease()
     except Exception:
         pass
     threading.Thread(target=_trash_purge_loop, daemon=True).start()

@@ -63,6 +63,19 @@ def is_newer(latest: str, current: str = __version__) -> bool:
     return parse_version(latest) > parse_version(current)
 
 
+def running_is_prerelease() -> bool:
+    """Whether the version currently running (app/version.py) is itself a pre-release build."""
+    return parse_version(__version__)[3] == 0
+
+
+def auto_enable_beta_if_prerelease():
+    """Run at every start-up: once you're running a pre-release, tester mode turns itself on so later
+    update checks keep offering pre-releases too -- otherwise, updating to one would silently drop you
+    back to stable-only checks right afterwards, without ever having asked for that."""
+    if running_is_prerelease() and not config.get_beta_channel():
+        config.set_beta_channel(True)
+
+
 def _get(url: str, timeout: float = 10):
     req = urllib.request.Request(url, headers={"User-Agent": f"photag/{__version__}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req, timeout=timeout, context=ssl_context()) as r:

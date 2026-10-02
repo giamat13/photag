@@ -73,6 +73,31 @@ check("with tester mode, the releases list was queried, not /latest", any("relea
 config.set_beta_channel(False)
 check("tester mode can be turned back off", config.get_beta_channel() is False)
 
+# running_is_prerelease() / auto_enable_beta_if_prerelease(): once the running build is itself a
+# pre-release, tester mode should turn on by itself so later checks keep offering pre-releases.
+check("a plain version like '1.7.2' is not a pre-release", updater.parse_version("1.7.2")[3] == 1)
+check("running_is_prerelease() agrees for the real running version (a plain release)", updater.running_is_prerelease() is False)
+check("parse_version() marks a '-beta'-suffixed version as a pre-release", updater.parse_version("1.8.0-beta.1")[3] == 0)
+
+_orig_version = updater.__version__
+updater.__version__ = "1.8.0-beta.1"
+try:
+    check("running_is_prerelease() is True for a pre-release build", updater.running_is_prerelease() is True)
+    updater.auto_enable_beta_if_prerelease()
+    check("auto_enable_beta_if_prerelease() turns tester mode on", config.get_beta_channel() is True)
+    config.set_beta_channel(False)
+    updater.auto_enable_beta_if_prerelease()
+    check("...and keeps doing so every start, not just once", config.get_beta_channel() is True)
+finally:
+    updater.__version__ = _orig_version
+    config.set_beta_channel(False)
+
+updater.__version__ = "1.7.2"
+config.set_beta_channel(False)
+updater.auto_enable_beta_if_prerelease()
+check("a plain release build never turns tester mode on by itself", config.get_beta_channel() is False)
+updater.__version__ = _orig_version
+
 mock.shutdown()
 n_fail = res.count(False)
 print(f"\n{len(res) - n_fail}/{len(res)} passed")
