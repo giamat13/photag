@@ -1,15 +1,40 @@
 """Paths & settings. Library location is stored in a tiny pointer file in
 %APPDATA%\\photag so the app always knows (and can tell you) where your
-photos live, independent of where the EXE runs from."""
+photos live, independent of where the EXE runs from.
+
+Portable mode (tools/make_portable.py): a ZIP of the program folder with no installer, meant to run from a USB stick or
+any folder, possibly on a different PC each time. A file named "portable.txt" next to photag.exe switches both the
+settings pointer and the default library into a "data" folder beside the EXE, so nothing is written to this PC's
+%APPDATA% or user profile and the whole thing stays self-contained on the drive it runs from."""
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 APP_NAME = "photag"
 OLD_APP_NAME = "PhotoManager"  # the app's name before the rename; its folders keep working
 
+
+def portable_dir() -> Path | None:
+    """The folder next to the EXE, if this is a portable build (a 'portable.txt' marker sits there); else None."""
+    env = os.environ.get("PHOTAG_PORTABLE_DIR")           # tests
+    if env:
+        return Path(env)
+    if not getattr(sys, "frozen", False):
+        return None
+    base = Path(sys.executable).parent
+    return base if (base / "portable.txt").is_file() else None
+
+
+PORTABLE = portable_dir()
+
+
 def _appdata_dir() -> Path:
+    if PORTABLE:
+        d = PORTABLE / "data"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
     base = Path(os.environ.get("APPDATA") or os.path.expanduser("~"))
     d = base / APP_NAME
     old = base / OLD_APP_NAME
@@ -34,7 +59,10 @@ def _same_dir(a: Path, b: Path) -> bool:
 
 def _default_library() -> Path:
     """New installs use ~/Photag. An existing PhotoManager library keeps being used (nothing is lost or hidden)
-    until the user agrees to move it, see request_legacy_move()."""
+    until the user agrees to move it, see request_legacy_move(). A portable build defaults to a folder beside the EXE
+    instead, so the library travels with the program on its drive."""
+    if PORTABLE:
+        return PORTABLE / "data" / "library"
     if (LEGACY_LIBRARY / "catalog.db").exists() and not (TARGET_LIBRARY / "catalog.db").exists():
         return LEGACY_LIBRARY
     return TARGET_LIBRARY
@@ -63,11 +91,18 @@ def _write_pointer(**updates) -> None:
 
 def get_library_root() -> Path:
     p = _read_pointer().get("library_root")
-    return Path(p) if p else _default_library()
+    if not p:
+        return _default_library()
+    if PORTABLE and p.startswith("portable:"):
+        return PORTABLE / p[len("portable:"):]            # relative to wherever the exe runs from now, not where it was saved
+    return Path(p)
 
 
 def legacy_library_in_use() -> str | None:
-    """The old ~/PhotoManager folder, when that is the library in use and a move to ~/Photag is possible."""
+    """The old ~/PhotoManager folder, when that is the library in use and a move to ~/Photag is possible.
+    Not offered in portable mode: that rename is about this PC's user profile, which a portable build does not use."""
+    if PORTABLE:
+        return None
     if (LEGACY_LIBRARY / "catalog.db").exists() and _same_dir(get_library_root(), LEGACY_LIBRARY) and not (TARGET_LIBRARY / "catalog.db").exists():
         return str(LEGACY_LIBRARY)
     return None
@@ -181,6 +216,13 @@ def set_handbrake_path(path: str | None) -> None:
 def set_library_root(path: str | os.PathLike) -> Path:
     root = Path(path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
+    if PORTABLE:
+        try:
+            rel = root.relative_to(PORTABLE)
+            _write_pointer(library_root="portable:" + str(rel))   # stays correct if the whole portable folder is moved
+            return root
+        except ValueError:
+            pass                                                  # a path outside the portable folder: the user's deliberate choice, kept as-is
     _write_pointer(library_root=str(root))
     return root
 

@@ -474,6 +474,8 @@ def launch(path: str) -> dict:
         return {"mode": "dry-run", "path": str(p)}
     if not dry and not getattr(sys, "frozen", False):
         return {"mode": "page"}                      # running from source: nothing to replace
+    if not dry and config.PORTABLE:
+        return {"mode": "page"}                      # portable build: no installed location for photagSetup.exe to update in place
     m = re.search(r"photagSetup-(.+)\.exe$", p.name, re.I)
     journal = prepare_rollback(p, m.group(1) if m else "")
     if dry:

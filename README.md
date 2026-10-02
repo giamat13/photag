@@ -97,8 +97,22 @@ photag is not code-signed yet (a signing certificate costs money; we are applyin
 **Smart App Control** (when it is on) blocks unsigned programs it does not know, with no "run anyway" button. SmartScreen only warns
 ("More info" → "Run anyway"). If the installer is blocked:
 1. Right-click `photagSetup.exe` → Properties → tick **Unblock** if shown, OK, and run it again. Or run it from File Explorer instead of a terminal.
-2. Otherwise run photag from source (see below), or turn Smart App Control off in *Windows Security → App & browser control → Smart App Control*
+2. Try the **portable version** instead (see below) — same program, no installer.
+3. Otherwise run photag from source (see below), or turn Smart App Control off in *Windows Security → App & browser control → Smart App Control*
    (this cannot be turned on again without reinstalling Windows, so only do it if you accept that).
+Smart App Control can still block the portable EXE itself the first time it runs on a given PC; there is no installer-vs-portable difference
+there, only signing fixes that for good.
+
+## Portable version
+No installation, no admin rights, nothing written to this PC: download `photag-<version>-portable.zip` from the
+[releases page](https://github.com/giamat13/photag/releases), extract it anywhere (a USB stick, a folder, a synced drive) and run `photag.exe`
+from there. Everything photag needs — catalog, settings, backups, your photo library by default — lives in a `data` folder right next to
+`photag.exe`; move or copy the whole extracted folder (photag must be closed first) and it keeps working, on any PC.
+- Auto-update installs a new `photagSetup.exe` are not offered in portable mode (there is no installed location to replace); a **code update**
+  (see Updates below) still applies normally, since it only touches files inside the portable folder.
+- The background backup task (Scheduled Task + sign-in entry) is not registered in portable mode — there is no stable path to point it at on a
+  drive that may be plugged into a different PC next time. Back up from inside the app, or enable it after installing normally instead.
+- Delete `portable.txt` (next to `photag.exe`) to make a copy of photag behave like a normal per-PC install again.
 
 ## Updates
 photag checks GitHub for a newer version at start-up and once a day (switch it off in Preferences) and offers the update in a window. Most

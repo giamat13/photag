@@ -55,6 +55,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo === Done: installer_output\photagSetup.exe ===
+echo === Building the portable ZIP (no installer) ===
+%PYEXE% tools\make_portable.py
+if errorlevel 1 (
+  echo Portable ZIP build failed.
+  exit /b 1
+)
+
+echo === Done: installer_output\photagSetup.exe and dist\photag-%VER%-portable.zip ===
 start "" "installer_output\photagSetup.exe"
 endlocal

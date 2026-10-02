@@ -34,6 +34,8 @@ jobs:
         run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=%VERSION% installer.iss'
       - name: "Build the code update (a small zip of the app code - updates run without an installer, so Smart App Control cannot block them)"
         run: python tools/make_code_zip.py
+      - name: "Build the portable ZIP (no installer - runs from a USB stick or any folder)"
+        run: python tools/make_portable.py
       - name: Publish the release (the release body is the "what is new" text inside the app)
         shell: bash
         env:
@@ -41,4 +43,4 @@ jobs:
         run: |
           notes=docs/release-notes-v${VERSION}.md
           [ -f "$notes" ] || notes=docs/release-notes-v1.0.0.md
-          gh release create "${GITHUB_REF_NAME}" installer_output/photagSetup.exe dist/photag-code-*.zip --title "photag ${VERSION}" --notes-file "$notes"
+          gh release create "${GITHUB_REF_NAME}" installer_output/photagSetup.exe dist/photag-code-*.zip dist/photag-*-portable.zip --title "photag ${VERSION}" --notes-file "$notes"

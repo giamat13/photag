@@ -35,6 +35,9 @@ def exe() -> str | None:
 
 
 def supported() -> bool:
+    from . import config
+    if config.PORTABLE:
+        return False           # a USB stick / moved folder has no stable path to register a scheduled task against
     return sys.platform == "win32" and bool(exe())
 
 
