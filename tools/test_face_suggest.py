@@ -34,8 +34,10 @@ def unit(v):
     return v / np.linalg.norm(v)
 
 
+_sha_n = [0]
 def add_photo(con, path):
-    con.execute("INSERT INTO photos(rel_path,sha256,is_video,faces_done) VALUES(?,?,0,1)", (path, path))
+    _sha_n[0] += 1
+    con.execute("INSERT INTO photos(rel_path,sha256,is_video,faces_done) VALUES(?,?,0,1)", (path, f"sha{_sha_n[0]}"))
     return con.execute("SELECT last_insert_rowid() id").fetchone()["id"]
 
 
@@ -45,7 +47,7 @@ def add_face(con, photo_id, emb, person_id=None, cluster_id=None):
 
 
 config.PATHS.root.mkdir(parents=True, exist_ok=True)
-con = db.connect()
+con = db.init_db()
 
 con.execute("INSERT INTO people(id,name,source) VALUES(1,'Danny','manual')")
 p1 = add_photo(con, "a.jpg"); p2 = add_photo(con, "b.jpg"); p3 = add_photo(con, "c.jpg"); p4 = add_photo(con, "d.jpg")
