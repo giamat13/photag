@@ -41,7 +41,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from . import cloud, config, db, images
+from . import cloud, config, db
 from .config import PATHS
 from .version import __version__
 
@@ -241,8 +241,9 @@ def _same(a: Path, st) -> bool:
 def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
     """Build a complete copy of the photo files in dst (a new folder): hard-link what the previous set already has,
     copy the rest. With `reduce` ({quality, max_side, include_videos}) photos are re-encoded smaller instead of copied."""
-    from . import compress
     reduced = reduce is not None
+    if reduced:
+        from . import compress        # pulls in PIL (via app.images) -- only needed for reduced/re-encoded backups
     prev = _previous_media_dir(reduced)
     dst.mkdir(parents=True, exist_ok=True)
     pidx = {}
@@ -254,6 +255,7 @@ def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
     q, ms = (reduce["quality"], reduce["max_side"]) if reduced else (0, 0)
     files = [p for p in PATHS.media.rglob("*") if p.is_file() and ".compress_tmp" not in p.parts]
     if reduced and not reduce.get("include_videos", True):
+        from . import images             # PIL -- only needed for reduced (re-encoded) backups, see photag_backup.spec
         files = [p for p in files if p.suffix.lower() not in images.VIDEO_EXT]
     plan, need, est = [], 0, 0           # plan item: (src, out, old file to link or None, "encode" | "copy", stat)
     for src in files:
