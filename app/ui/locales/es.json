@@ -1076,5 +1076,8 @@
  "Open in triplan": "Abrir en triplan",
  "Could not connect to triplan: {error}": "No se pudo conectar con triplan: {error}",
  "Stack Bursts": "Apilar ráfagas",
- "{0} photos in this burst — click to see them all": "{0} fotos en esta ráfaga — haz clic para verlas todas"
+ "{0} photos in this burst — click to see them all": "{0} fotos en esta ráfaga — haz clic para verlas todas",
+ "Face Timeline": "Línea de tiempo facial",
+ "No dated photos of {0} yet": "Aún no hay fotos con fecha de {0}",
+ "One photo per year -- the best-scored shot of {0} that year.": "Una foto por año -- la mejor foto de {0} ese año."
 }

@@ -1076,5 +1076,8 @@
  "Open in triplan": "פתח ב-triplan",
  "Could not connect to triplan: {error}": "לא ניתן להתחבר ל-triplan: {error}",
  "Stack Bursts": "קבץ רצפי צילום",
- "{0} photos in this burst — click to see them all": "{0} תמונות ברצף הזה — לחץ כדי לראות את כולן"
+ "{0} photos in this burst — click to see them all": "{0} תמונות ברצף הזה — לחץ כדי לראות את כולן",
+ "Face Timeline": "ציר זמן של פנים",
+ "No dated photos of {0} yet": "אין עדיין תמונות עם תאריך של {0}",
+ "One photo per year -- the best-scored shot of {0} that year.": "תמונה אחת לכל שנה -- התמונה עם הציון הכי גבוה של {0} באותה שנה."
 }

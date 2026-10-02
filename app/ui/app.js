@@ -1089,7 +1089,7 @@ async function renderPeople(){
   S.people=people;
   const face = src => src ? `<img loading="lazy" src="${src}" alt="">` : I('people');
   el.innerHTML = `<h2>${t("Named People")} <span>${num(people.length)}</span></h2>
-    <div class="pgrid">${people.map(p=>`<div class="pc" data-person="${p.id}"><div class="face">${face(p.cover_face?'/face/'+p.cover_face:p.cover_photo?thumbUrl(p.cover_photo):'')}</div>
+    <div class="pgrid">${people.map(p=>`<div class="pc" data-person="${p.id}"><button class="tlbtn" data-timeline="${p.id}" title="${t('Face Timeline')}">${I('timeline')}</button><div class="face">${face(p.cover_face?'/face/'+p.cover_face:p.cover_photo?thumbUrl(p.cover_photo):'')}</div>
       <div class="nm" title="${t("Double-click to rename")}">${esc(p.name)}</div><div class="ct">${num((p.face_photos||0)+(p.tag_photos||0))}</div></div>`).join('') || ("<div class=\"hint\">"+t("There are no named people yet.")+"</div>")}</div>
     <h2>${t("Unnamed People")} <span>${num(clusters.length)}</span></h2>
     ${clusters.length ? `<div class="pgrid">${clusters.map(c=>`<div class="pc" data-cluster="${c.id}"><div class="face">${face(c.cover_face?'/face/'+c.cover_face:'')}</div>
@@ -1105,6 +1105,8 @@ $('#v-people').addEventListener('click', async e=>{
     toast(`${t("Named “{0}”", [esc(acc.dataset.name)])}`); await loadSide(); renderPeople(); return; }
   const dis=e.target.closest('[data-dismiss-cluster]');
   if(dis){ DISMISSED_SUGGESTIONS.add(+dis.dataset.dismissCluster); renderPeople(); return; }
+  const tl=e.target.closest('[data-timeline]');
+  if(tl){ const p=S.people.find(x=>x.id==tl.dataset.timeline); if(p) faceTimeline(p.id, p.name); return; }
   const face=e.target.closest('.face'); if(!face) return;
   const pc=face.closest('.pc');
   if(pc.dataset.person){ const p=S.people.find(x=>x.id==pc.dataset.person); setSource({kind:'person', id:p.id, name:p.name}); setView('grid'); }
@@ -3252,6 +3254,28 @@ async function albumBestMoments(id, name){
   const list = rows.filter(p=>!p.is_video).sort((a,b)=>(b.score||0)-(a.score||0)).slice(0, 40).sort((a,b)=>a.taken_at-b.taken_at);
   if(!list.length){ toast(t('No photos in this collection yet')); return; }
   list.album = name; ssStart(list);
+}
+
+// ---------- Face Timeline ----------
+async function faceTimeline(personId, personName){
+  const rows = (await api('/api/photos?'+new URLSearchParams({person:personId, limit:10000000}))).map(r=>S.byId.get(r.id) || r);
+  const byYear = new Map();
+  for(const p of rows){
+    if(p.is_video || !p.taken_at) continue;
+    const y = new Date(p.taken_at*1000).getFullYear();
+    const cur = byYear.get(y);
+    if(!cur || (p.score||0) > (cur.score||0)) byYear.set(y, p);
+  }
+  const years = [...byYear.keys()].sort((a,b)=>a-b);
+  if(!years.length){ toast(t('No dated photos of {0} yet', [personName])); return; }
+  const card = y => { const p = byYear.get(y);
+    return `<div class="rk" data-id="${p.id}"><div class="rk-n">${y}</div><img src="${thumbUrl(p.id)}" alt="">
+      ${p.score!=null ? `<div class="rk-s"><b class="scv ${scoreCls(p.score)}">${p.score}</b> / 100</div>` : ''}</div>`; };
+  modal(`<h3>${t('Face Timeline')} · ${esc(personName)}</h3><div class="mb">
+    <div class="rk-row">${years.map(card).join('')}</div>
+    <div class="hint" style="padding:0">${t('One photo per year -- the best-scored shot of {0} that year.', [esc(personName)])}</div>
+  </div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
+  $('.rk-row').onclick = e=>{ const c=e.target.closest('.rk'); if(c) previewPhoto(+c.dataset.id); };
 }
 function yirNotice(){
   const now = new Date(); if(now.getMonth()>0) return;   // offered only in January, for the year that just ended

@@ -1076,5 +1076,8 @@
  "Open in triplan": "triplan'da aç",
  "Could not connect to triplan: {error}": "triplan'a bağlanılamadı: {error}",
  "Stack Bursts": "Seri çekimleri yığ",
- "{0} photos in this burst — click to see them all": "Bu seri çekimde {0} fotoğraf — hepsini görmek için tıklayın"
+ "{0} photos in this burst — click to see them all": "Bu seri çekimde {0} fotoğraf — hepsini görmek için tıklayın",
+ "Face Timeline": "Yüz Zaman Çizelgesi",
+ "No dated photos of {0} yet": "{0} için henüz tarihli fotoğraf yok",
+ "One photo per year -- the best-scored shot of {0} that year.": "Yıl başına bir fotoğraf -- o yılki {0} için en yüksek puanlı kare."
 }

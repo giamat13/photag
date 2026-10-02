@@ -1076,5 +1076,8 @@
  "Open in triplan": "فتح في triplan",
  "Could not connect to triplan: {error}": "تعذّر الاتصال بـ triplan: {error}",
  "Stack Bursts": "تكديس اللقطات المتتابعة",
- "{0} photos in this burst — click to see them all": "{0} صورة في هذا التتابع — انقر لرؤيتها جميعًا"
+ "{0} photos in this burst — click to see them all": "{0} صورة في هذا التتابع — انقر لرؤيتها جميعًا",
+ "Face Timeline": "الجدول الزمني للوجه",
+ "No dated photos of {0} yet": "لا توجد صور مؤرخة لـ{0} بعد",
+ "One photo per year -- the best-scored shot of {0} that year.": "صورة واحدة لكل سنة -- أفضل لقطة لـ{0} في تلك السنة."
 }

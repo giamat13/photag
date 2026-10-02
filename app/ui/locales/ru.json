@@ -1076,5 +1076,8 @@
  "Open in triplan": "Открыть в triplan",
  "Could not connect to triplan: {error}": "Не удалось подключиться к triplan: {error}",
  "Stack Bursts": "Стопка серийных снимков",
- "{0} photos in this burst — click to see them all": "{0} фото в этой серии — нажмите, чтобы увидеть все"
+ "{0} photos in this burst — click to see them all": "{0} фото в этой серии — нажмите, чтобы увидеть все",
+ "Face Timeline": "Хронология лица",
+ "No dated photos of {0} yet": "Пока нет датированных фотографий {0}",
+ "One photo per year -- the best-scored shot of {0} that year.": "Одно фото в год -- лучший по оценке снимок {0} за тот год."
 }

@@ -322,8 +322,12 @@ body.mod-library .dev-only,body.mod-develop .lib-only{display:none!important}
 .v-people h2{font-size:14px;font-weight:400;color:var(--st2);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
 .v-people h2 span{color:var(--st3);font-size:12px}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
-.pc{background:var(--cell);border:1px solid #2c2c2c;padding:10px 10px 8px;text-align:center}
+.pc{position:relative;background:var(--cell);border:1px solid #2c2c2c;padding:10px 10px 8px;text-align:center}
 .pc:hover{background:var(--cell-hover)}
+.pc .tlbtn{visibility:hidden;position:absolute;top:4px;inset-inline-end:4px;width:20px;height:20px;padding:0;border:0;background:rgba(0,0,0,.55);color:var(--st1)}
+.pc:hover .tlbtn{visibility:visible}
+.pc .tlbtn:hover{background:rgba(0,0,0,.8)}
+.pc .tlbtn .ic{width:13px;height:13px}
 .pc .face{width:92px;height:92px;margin:0 auto;border-radius:2px;overflow:hidden;background:#2a2a2a;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pc .face img{width:100%;height:100%;object-fit:cover}
 .pc .face .ic{width:36px;height:36px;color:#555}
