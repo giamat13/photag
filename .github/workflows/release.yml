@@ -32,7 +32,7 @@ jobs:
       - name: Build the installer
         shell: cmd
         run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=%VERSION% installer.iss'
-      - name: Build the code update (a small zip of the app code: updates run without an installer, so Smart App Control cannot block them)
+      - name: "Build the code update (a small zip of the app code - updates run without an installer, so Smart App Control cannot block them)"
         run: python tools/make_code_zip.py
       - name: Publish the release (the release body is the "what is new" text inside the app)
         shell: bash
