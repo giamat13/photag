@@ -134,6 +134,25 @@ try:
     check("a code zip for another version or without a digest is ignored",
           updater._pick_code_asset(rel_assets, "9.4.0") is None and updater._pick_code_asset([{**rel_assets[1], "digest": None}], "9.3.0") is None)
     check("can_install is true with only a code zip", updater.can_install({"asset": None, "code_asset": ca}))
+
+    # restarting after an update: the command line must reach cmd.exe with its quotes intact
+    exe_with_space = r"C:\Program Files\photag\photag.exe"
+    cmd = updater.restart_command(exe_with_space)
+    check("the restart command keeps the quotes around the program (no backslash-escaped quotes)", '\\"' not in cmd and f'start "" "{exe_with_space}"' in cmd, cmd)
+    check("...and is one string, so Python does not re-quote it", isinstance(cmd, str) and cmd.startswith("cmd.exe /d /s /c "))
+    if sys.platform == "win32":
+        import subprocess
+        import time
+        d = tmp / "restart test dir"
+        d.mkdir()
+        marker = d / "started.txt"
+        (d / "fake photag.cmd").write_text(f'@echo started> "{marker}"\r\n')
+        subprocess.Popen(updater.restart_command(str(d / "fake photag.cmd"), wait_pings=1), close_fds=True)
+        for _ in range(60):
+            if marker.exists():
+                break
+            time.sleep(0.25)
+        check("on Windows the program (a path with spaces) really is started again", marker.exists())
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
     for f in (ROOT / "dist").glob("photag-code-*.zip"):

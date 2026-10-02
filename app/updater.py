@@ -418,6 +418,14 @@ class BlockedError(UpdateError):
     """The downloaded installer exists but Windows refused to run it (the app keeps running, nothing was changed)."""
 
 
+def restart_command(exe: str, wait_pings: int = 4) -> str:
+    """The command line (one string, handed to Windows as it is) that starts `exe` again a few seconds later.
+    It must not go through Python's list quoting: that escapes the quotes around the program with a backslash, which cmd.exe
+    does not understand, so `start` was given a lone backslash as the program to open ("Windows cannot find '\\\\'") and
+    photag did not restart after an update."""
+    return f'cmd.exe /d /s /c "ping -n {wait_pings} 127.0.0.1 >nul & start "" "{exe}""'
+
+
 def apply_code(zip_path: Path) -> dict:
     """Install a downloaded code update: check it, put it in <install folder>\\code (the old code stays as code.prev),
     then restart the app. Nothing executable is written, so there is nothing for Smart App Control to block."""
@@ -467,9 +475,8 @@ def apply_code(zip_path: Path) -> dict:
     _write_json(state_dir() / "just_updated.json", {"from": __version__, "to": version})      # the "what's new" window after the restart
     if os.environ.get("PHOTAG_UPDATE_DRY_RUN"):
         return {"mode": "code-dry-run", "version": version, "code": str(code)}
-    exe = str(_exe_path())
     # start the same (already allowed) photag.exe again a moment after this process has gone
-    subprocess.Popen(["cmd.exe", "/c", f'ping -n 4 127.0.0.1 >nul & start "" "{exe}"'], close_fds=True,
+    subprocess.Popen(restart_command(str(_exe_path())), close_fds=True,
                      creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
                      | getattr(subprocess, "CREATE_NO_WINDOW", 0))
     threading.Timer(1.0, lambda: os._exit(0)).start()
