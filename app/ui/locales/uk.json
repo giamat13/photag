@@ -1074,5 +1074,7 @@
  "Mark as Trip": "Позначити як подорож",
  "Remove Trip status": "Зняти статус подорожі",
  "Open in triplan": "Відкрити в triplan",
- "Could not connect to triplan: {error}": "Не вдалося підключитися до triplan: {error}"
+ "Could not connect to triplan: {error}": "Не вдалося підключитися до triplan: {error}",
+ "Stack Bursts": "Групувати серії знімків",
+ "{0} photos in this burst — click to see them all": "{0} фото в цій серії — натисніть, щоб побачити всі"
 }

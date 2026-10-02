@@ -702,6 +702,8 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 
 /* quality score badge, ranking, duplicate / cleanup review, timeline, rail */
 .cell .badges em.scb,.rv-t em.scb{font-style:normal;font-size:10px;font-weight:700;line-height:14px;height:14px;padding:0 4px;border-radius:2px;color:#111;background:#9aa;pointer-events:none}
+.cell .badges em.stb{pointer-events:auto;cursor:pointer;background:#cba34a}
+.cell .badges em.stb:hover{background:#ddb65a}
 .scb.hi,.scv.hi,.rk-bar i.hi{background:#5db35b}
 .scb.mid,.scv.mid,.rk-bar i.mid{background:#e0c33f}
 .scb.lo,.scv.lo,.rk-bar i.lo{background:#d44d4d}

@@ -1074,5 +1074,7 @@
  "Mark as Trip": "여행으로 표시",
  "Remove Trip status": "여행 상태 제거",
  "Open in triplan": "triplan에서 열기",
- "Could not connect to triplan: {error}": "triplan에 연결할 수 없습니다: {error}"
+ "Could not connect to triplan: {error}": "triplan에 연결할 수 없습니다: {error}",
+ "Stack Bursts": "연속 촬영 스택",
+ "{0} photos in this burst — click to see them all": "이 연속 촬영에 사진 {0}장 — 클릭하면 모두 보기"
 }

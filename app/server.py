@@ -1385,6 +1385,12 @@ def analysis_cleanup():
     return {**analysis.cleanup_report(con), **analysis.pending_counts(con)}
 
 
+@app.get("/api/analysis/bursts")
+def analysis_bursts():
+    """Rapid-fire sequences (burst/continuous-shooting mode), for the grid's optional stacking."""
+    return {"bursts": analysis.find_bursts(db.connect())}
+
+
 # ---- search by meaning (local CLIP) -------------------------------------------
 @app.get("/api/semantic/status")
 def semantic_status():

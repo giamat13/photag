@@ -1074,5 +1074,7 @@
  "Mark as Trip": "Oznacz jako podróż",
  "Remove Trip status": "Usuń status podróży",
  "Open in triplan": "Otwórz w triplan",
- "Could not connect to triplan: {error}": "Nie można połączyć się z triplan: {error}"
+ "Could not connect to triplan: {error}": "Nie można połączyć się z triplan: {error}",
+ "Stack Bursts": "Grupuj serie zdjęć",
+ "{0} photos in this burst — click to see them all": "{0} zdjęć w tej serii — kliknij, aby zobaczyć wszystkie"
 }

@@ -1074,5 +1074,7 @@
  "Mark as Trip": "Markeren als reis",
  "Remove Trip status": "Reisstatus verwijderen",
  "Open in triplan": "Openen in triplan",
- "Could not connect to triplan: {error}": "Kan niet verbinden met triplan: {error}"
+ "Could not connect to triplan: {error}": "Kan niet verbinden met triplan: {error}",
+ "Stack Bursts": "Reeksen stapelen",
+ "{0} photos in this burst — click to see them all": "{0} foto's in deze reeks — klik om ze allemaal te zien"
 }

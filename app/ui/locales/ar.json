@@ -1074,5 +1074,7 @@
  "Mark as Trip": "وضع علامة كرحلة",
  "Remove Trip status": "إزالة حالة الرحلة",
  "Open in triplan": "فتح في triplan",
- "Could not connect to triplan: {error}": "تعذّر الاتصال بـ triplan: {error}"
+ "Could not connect to triplan: {error}": "تعذّر الاتصال بـ triplan: {error}",
+ "Stack Bursts": "تكديس اللقطات المتتابعة",
+ "{0} photos in this burst — click to see them all": "{0} صورة في هذا التتابع — انقر لرؤيتها جميعًا"
 }

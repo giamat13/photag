@@ -47,6 +47,7 @@ const S = {
   F:{on:true, q:'', qf:'any', flags:new Set(), rop:'>=', rating:0, labels:new Set(), kinds:new Set(),
      meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set()}},
   cell:pref.get('cellStyle','compact'), cellsz:pref.get('cellsz',180), loupeInfo:true, lights:0,
+  stackBursts:pref.get('stackBursts', false), bursts:null,
   status:null, albums:[], folders:{root:'', folders:[]}, tags:[], people:[], searches:[],
   recentKw:pref.get('recentKw',[]),
 };
@@ -175,6 +176,7 @@ function applyFilter({keepScroll=true}={}){
     if(S.F.q && S.F.qf==='name'){ const q=S.F.q.toLowerCase(); rows = rows.filter(p=>p.filename.toLowerCase().includes(q)); }
     rows = rows.filter(p=>passAttr(p) && passMeta(p));
   }
+  if(S.stackBursts && S.bursts) rows = rows.filter(p=>{ const b=S.bursts.get(p.id); return !b || b.best===p.id; });
   if(!SORTS[S.sort] || !sortKeys().includes(S.sort)) S.sort='capture';      // e.g. 'Date in Trash' after leaving the trash
   const cmp = SORTS[S.sort][1];
   rows = rows.slice().sort(S.asc ? cmp : (a,b)=>cmp(b,a));
@@ -392,7 +394,9 @@ function fillCell(c, p, i){
   const r=p.rating||0;
   const stars = [1,2,3,4,5].map(n=>`<b data-r="${n}" class="${n<=r?'':'off'}">${n<=r?'★':'•'}</b>`).join('');
   const bx = (G.cw - c._w)/2, by = S.cell==='xp' ? G.cw*.22 + (G.cw*.58 - c._h)/2 : G.cw*.15 + (G.cw*.65 - c._h)/2;
-  const badges = [p.has_kw && I('kw'), p.edited && I('dev'), p.score!=null && `<em class="scb ${p.score>=70?'hi':p.score>=40?'mid':'lo'}" title="${t('Quality score: {0}', [p.score])}">${p.score}</em>`].filter(Boolean);
+  const stack = S.stackBursts && S.bursts && S.bursts.get(p.id);
+  const badges = [p.has_kw && I('kw'), p.edited && I('dev'), p.score!=null && `<em class="scb ${p.score>=70?'hi':p.score>=40?'mid':'lo'}" title="${t('Quality score: {0}', [p.score])}">${p.score}</em>`,
+    stack && stack.n>1 && `<em class="scb stb" data-a="stack" title="${t('{0} photos in this burst — click to see them all', [stack.n])}">${stack.n}×</em>`].filter(Boolean);
   c.querySelector('.ov').innerHTML =
     `<button class="flag ${p.flag===1?'pick':p.flag===-1?'rej':''}" data-a="flag" title="${t("Flag (P / X / U)")}">${I(p.flag===-1?'reject':'flag')}</button>
      <button class="qc ${p.quick?'on':''}" data-a="qc" title="${t("Quick Collection (B)")}">${I('dot')}</button>
@@ -426,6 +430,7 @@ $('#grid-inner').addEventListener('mousedown', e=>{
     else if(a==='qc') toggleQuick();
     else if(a==='rotl') rotateSel(-90);
     else if(a==='rotr') rotateSel(90);
+    else if(a==='stack'){ const b=S.bursts && S.bursts.get(id); if(b){ S.sel=new Set(b.members); S.act=id; onSelChange(); setView('survey'); } }
     else if(star){ const n=+star.dataset.r, p=S.byId.get(id); setAttr({rating: p.rating===n?0:n}, targets()); }
     return;
   }
@@ -1628,6 +1633,17 @@ function togglePanel(k, force){
 $$('[data-toggle]').forEach(b=>b.onclick=()=>togglePanel(b.dataset.toggle));
 (()=>{ const hid=pref.get('hidden',{}); Object.entries(hid).forEach(([k,v])=>v&&togglePanel(k,true)); })();
 function cycleLights(){ S.lights=(S.lights+1)%3; document.body.classList.toggle('lights-dim', S.lights===1); document.body.classList.toggle('lights-off', S.lights===2); }
+async function toggleStackBursts(){
+  S.stackBursts = !S.stackBursts;
+  pref.set('stackBursts', S.stackBursts);
+  if(S.stackBursts && !S.bursts){
+    const r = await api('/api/analysis/bursts');
+    const m = new Map();
+    for(const b of r.bursts) for(const id of b.members) m.set(id, {best:b.best, n:b.members.length, members:b.members});
+    S.bursts = m;
+  }
+  applyFilter();
+}
 function toggleTheme(){
   const light = document.documentElement.dataset.theme !== 'light';
   if(light) document.documentElement.dataset.theme='light'; else delete document.documentElement.dataset.theme;
@@ -2833,6 +2849,7 @@ const MENUS = [
     [t('Slideshow'), 'Ctrl+Enter', ssStart],
     sep,
     [t('Cycle Grid Cell Style'), 'J', cycleCellStyle],
+    [t('Stack Bursts'), '', toggleStackBursts, null, ()=>S.stackBursts],
     [t('Loupe Info'), 'I', ()=>{ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }, null, ()=>S.loupeInfo],
     sep,
     [t('Hide/Show Side Panels'), 'Tab', toggleSides],

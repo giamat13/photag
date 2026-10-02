@@ -27,6 +27,9 @@ DUP_DIST = 4                  # hash bits that may differ for "the same picture"
 SIM_DIST = 12                 # ... for "a similar shot", when time or place agree
 TIME_WINDOW = 600             # seconds: shots this close in time belong to one series
 PLACE_M = 150                 # metres: shots this close belong to one place
+BURST_WINDOW = 2              # seconds: a camera's burst/continuous-shooting cadence
+BURST_SIM_DIST = 10           # hash bits that may differ between one burst photo and the next
+BURST_MIN = 3                 # a run shorter than this isn't worth collapsing into a stack
 EAR_CLOSED = 0.2              # eye height / width below this = closed
 LEFT_EYE = [35, 41, 40, 42, 39, 37, 33, 36]       # InsightFace 2d106 landmark indices
 RIGHT_EYE = [89, 95, 94, 96, 93, 91, 87, 90]
@@ -403,6 +406,38 @@ def find_groups(con, dup_dist: int = DUP_DIST, sim_dist: int = SIM_DIST, window:
                     "photos": [{"id": rows[i]["id"], "score": rows[i]["score"], "bytes": rows[i]["bytes"] or 0, "w": rows[i]["width"], "h": rows[i]["height"],
                                 "eyes_closed": rows[i]["eyes_closed"], "taken_at": rows[i]["taken_at"], "filename": rows[i]["filename"]} for i in ms]})
     out.sort(key=lambda g: (g["kind"] != "copy", -len(g["photos"]), -(g["taken_at"] or 0)))
+    return out
+
+
+def find_bursts(con) -> list[dict]:
+    """Rapid-fire sequences (a camera's burst/continuous-shooting mode): runs of BURST_MIN+ photos taken
+    back to back, each within BURST_WINDOW seconds and BURST_SIM_DIST hash bits of the one before it --
+    so a slow pan across a scene still chains together even though the first and last frame differ a lot.
+    Each stack names its best photo (same ranking as find_groups), for the grid to collapse into one tile."""
+    rows = con.execute(
+        "SELECT p.id, p.taken_at, p.bytes, p.width, p.height, a.phash, a.score, a.eyes_closed "
+        "FROM photos p JOIN photo_analysis a ON a.photo_id=p.id "
+        "WHERE p.trashed=0 AND p.is_video=0 AND a.phash IS NOT NULL AND p.taken_at IS NOT NULL "
+        "ORDER BY p.taken_at, p.id").fetchall()
+    out: list[dict] = []
+    chain: list = []
+
+    def flush():
+        if len(chain) >= BURST_MIN:
+            best = max(chain, key=lambda r: (r["score"] or 0, 0 if r["eyes_closed"] else 1,
+                                             (r["width"] or 0) * (r["height"] or 0), r["bytes"] or 0))
+            out.append({"best": best["id"], "members": [r["id"] for r in chain]})
+
+    for r in rows:
+        if chain:
+            prev = chain[-1]
+            same_run = (r["taken_at"] - prev["taken_at"] <= BURST_WINDOW
+                        and hamming(r["phash"] & 0xFFFFFFFFFFFFFFFF, prev["phash"] & 0xFFFFFFFFFFFFFFFF) <= BURST_SIM_DIST)
+            if not same_run:
+                flush()
+                chain = []
+        chain.append(r)
+    flush()
     return out
 
 

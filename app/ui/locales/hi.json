@@ -1074,5 +1074,7 @@
  "Mark as Trip": "यात्रा के रूप में चिह्नित करें",
  "Remove Trip status": "यात्रा स्थिति हटाएं",
  "Open in triplan": "triplan में खोलें",
- "Could not connect to triplan: {error}": "triplan से कनेक्ट नहीं हो सका: {error}"
+ "Could not connect to triplan: {error}": "triplan से कनेक्ट नहीं हो सका: {error}",
+ "Stack Bursts": "बर्स्ट स्टैक करें",
+ "{0} photos in this burst — click to see them all": "इस बर्स्ट में {0} तस्वीरें — सभी देखने के लिए क्लिक करें"
 }
