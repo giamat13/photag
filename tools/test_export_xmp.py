@@ -55,6 +55,9 @@ con.execute("INSERT INTO photo_tags(photo_id,tag_id,source) VALUES(?,?,'manual')
 con.execute("INSERT INTO people(name,source) VALUES('Danny','manual')")
 peid = con.execute("SELECT id FROM people WHERE name='Danny'").fetchone()["id"]
 con.execute("INSERT INTO photo_people(photo_id,person_id,source) VALUES(?,?,'manual')", (pid, peid))
+con.execute("INSERT INTO albums(name,kind) VALUES('Summer Trip','album')")
+aid = con.execute("SELECT id FROM albums WHERE name='Summer Trip'").fetchone()["id"]
+con.execute("INSERT INTO photo_albums(photo_id,album_id) VALUES(?,?)", (pid, aid))
 # a second photo with no metadata at all: must not get a sidecar
 p2 = PATHS.media / "2024" / "b.jpg"
 Image.new("RGB", (100, 80), (10, 10, 10)).save(p2, "JPEG")
@@ -75,6 +78,7 @@ check("the color label is capitalized, standard style", 'xmp:Label="Red"' in tex
 check("the keyword is listed", "<rdf:li>Beach</rdf:li>" in text, text)
 check("the tagged person is listed as a keyword too", "<rdf:li>Danny</rdf:li>" in text, text)
 check("the caption is in dc:description", "A day at the beach" in text, text)
+check("the album is included as a hierarchical keyword", "<rdf:li>Album/Summer Trip</rdf:li>" in text, text)
 check("a photo with no rating/label/keywords/people/caption still writes a sidecar (empty is fine)", (out_dir / "b.jpg.xmp").is_file())
 empty_text = (out_dir / "b.jpg.xmp").read_text("utf-8")
 check("...but that sidecar has no rating/label/keywords attributes", "xmp:Rating" not in empty_text and "<rdf:li>" not in empty_text, empty_text)

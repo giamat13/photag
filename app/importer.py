@@ -1131,16 +1131,20 @@ def _xmp_escape(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
-def _xmp_sidecar(rating: int, label: str | None, tags: list[str], people: list[str], description: str | None) -> str:
+def _xmp_sidecar(rating: int, label: str | None, tags: list[str], people: list[str], description: str | None,
+                  albums: list[str] = ()) -> str:
     """A standard XMP packet carrying the metadata a plain file copy can't: star rating, color label,
     keywords (and people, as keywords) and caption -- readable by Lightroom, Bridge, digiKam and most
-    other photo software. Everything embedded in the file itself (EXIF date/GPS/camera) isn't repeated."""
+    other photo software. Everything embedded in the file itself (EXIF date/GPS/camera) isn't repeated.
+    Collections/albums are included as "Album/<name>" keywords, Lightroom's own hierarchical-keyword
+    convention -- there's no single XMP field for that every tool agrees on, but every tool reads
+    dc:subject."""
     attrs = ""
     if rating:
         attrs += f' xmp:Rating="{int(rating)}"'
     if label:
         attrs += f' xmp:Label="{_xmp_escape(label.capitalize())}"'
-    subjects = [_xmp_escape(x) for x in (*tags, *people) if x]
+    subjects = [_xmp_escape(x) for x in (*tags, *people, *(f"Album/{a}" for a in albums)) if x]
     subject_block = ("<dc:subject><rdf:Bag>" + "".join(f"<rdf:li>{s}</rdf:li>" for s in subjects) + "</rdf:Bag></dc:subject>") if subjects else ""
     desc_block = (f'<dc:description><rdf:Alt><rdf:li xml:lang="x-default">{_xmp_escape(description)}</rdf:li></rdf:Alt></dc:description>') if description else ""
     return ('<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>\n'
@@ -1161,7 +1165,9 @@ def _photo_xmp_fields(con, pid: int) -> dict:
     people = [x["name"] for x in con.execute(
         "SELECT DISTINCT pe.name FROM people pe WHERE pe.id IN ("
         "SELECT person_id FROM photo_people WHERE photo_id=? UNION SELECT person_id FROM faces WHERE photo_id=?)", (pid, pid))]
-    return {"rating": r["rating"] or 0, "label": r["label"], "tags": tags, "people": people, "description": r["description"]}
+    albums = [x["name"] for x in con.execute(
+        "SELECT a.name FROM albums a JOIN photo_albums pa ON pa.album_id=a.id WHERE pa.photo_id=? AND a.kind='album'", (pid,))]
+    return {"rating": r["rating"] or 0, "label": r["label"], "tags": tags, "people": people, "description": r["description"], "albums": albums}
 
 
 def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
