@@ -41,6 +41,7 @@ from .version import REPO, __version__
 API = os.environ.get("PHOTAG_UPDATE_API", "https://api.github.com").rstrip("/")     # tests point this at a mock
 ALLOWED_DOWNLOAD = os.environ.get("PHOTAG_UPDATE_ALLOW_PREFIX") or f"https://github.com/{REPO}/releases/download/"
 ASSET_RE = re.compile(r"^photagSetup.*\.exe$", re.I)
+CODE_RE = re.compile(r"^photag-code-(\d+\.\d+\.\d+)-rt(\d+)\.zip$")      # a code update (see codeboot.py): no installer to run
 CACHE_SECONDS = 6 * 3600
 _cache: dict = {"at": 0, "data": None}
 
@@ -80,10 +81,23 @@ def _pick_asset(assets: list[dict]) -> dict | None:
             "sha256_url": sidecar.get("browser_download_url") if sidecar else None}
 
 
+def _pick_code_asset(assets: list[dict], latest: str) -> dict | None:
+    """The code-only update of this release, when it is made for the exe that is running (same RUNTIME)."""
+    import codeboot
+    for a in assets:
+        m = CODE_RE.match(a.get("name", ""))
+        if not m or m.group(1) != latest or int(m.group(2)) != codeboot.RUNTIME:
+            continue
+        digest = (a.get("digest") or "").removeprefix("sha256:")
+        if re.fullmatch(r"[0-9a-f]{64}", digest):
+            return {"name": a["name"], "url": a.get("browser_download_url", ""), "size": a.get("size"), "sha256": digest, "sha256_url": None}
+    return None
+
+
 def check(force: bool = False) -> dict:
     """Latest release info + whether it is newer. Never raises: a failed check is just {"available": False, "error"}."""
     out = {"current": __version__, "available": False, "latest": None, "notes": "", "page": f"https://github.com/{REPO}/releases",
-           "asset": None, "published": None, "skipped": False, "error": None}
+           "asset": None, "code_asset": None, "published": None, "skipped": False, "error": None}
     now = time.time()
     if not force and _cache["data"] and now - _cache["at"] < CACHE_SECONDS:
         rel = _cache["data"]
@@ -100,6 +114,7 @@ def check(force: bool = False) -> dict:
     tag = rel.get("tag_name") or ""
     out.update(latest=tag.lstrip("vV"), notes=rel.get("body") or "", page=rel.get("html_url") or out["page"],
                asset=_pick_asset(rel.get("assets") or []), published=rel.get("published_at"))
+    out["code_asset"] = _pick_code_asset(rel.get("assets") or [], out["latest"])
     out["available"] = bool(tag) and is_newer(tag)
     out["skipped"] = out["available"] and config.get_update_skipped() == out["latest"]
     return out
@@ -119,8 +134,19 @@ def _expected_sha(asset: dict) -> str | None:
 
 
 def can_install(info: dict) -> bool:
-    a = info.get("asset")
-    return bool(a and a["url"].startswith(ALLOWED_DOWNLOAD) and (a["sha256"] or a["sha256_url"]))
+    return any(a and a["url"].startswith(ALLOWED_DOWNLOAD) and (a["sha256"] or a["sha256_url"])
+               for a in (info.get("code_asset"), info.get("asset")))
+
+
+def code_update_possible() -> bool:
+    """A code update replaces files in <install folder>\\code: only when that folder can be written."""
+    base = _exe_path().parent
+    try:
+        probe = base / ".write-test"
+        probe.write_text("x"); probe.unlink()
+        return True
+    except OSError:
+        return False
 
 
 def state_dir() -> Path:
@@ -145,13 +171,18 @@ def run_download(progress):
             return progress.fail("No update available")
         if not can_install(info):
             return progress.fail("The installer can't be verified automatically. Download it from the release page")
-        a = info["asset"]
+        # a code update (a small zip, nothing executable) is preferred: it cannot be blocked by Smart App Control
+        ca = info.get("code_asset")
+        use_code = bool(ca and ca["url"].startswith(ALLOWED_DOWNLOAD) and ca["sha256"] and code_update_possible())
+        a = ca if use_code else info["asset"]
+        if not a or not a["url"].startswith(ALLOWED_DOWNLOAD):
+            return progress.fail("The installer can't be verified automatically. Download it from the release page")
         want = _expected_sha(a)
         if not want:
             return progress.fail("The installer can't be verified automatically. Download it from the release page")
-        dest = download_dir() / f"photagSetup-{info['latest']}.exe"
+        dest = download_dir() / (a["name"] if use_code else f"photagSetup-{info['latest']}.exe")
         part = dest.with_suffix(".part")
-        for old in download_dir().glob("photagSetup-*"):          # leftovers of earlier updates
+        for old in list(download_dir().glob("photagSetup-*")) + list(download_dir().glob("photag-code-*")):          # leftovers of earlier updates
             if old != part:
                 old.unlink(missing_ok=True)
         progress.state = "downloading"; progress.total = a.get("size") or 0; progress.done = 0
@@ -172,7 +203,7 @@ def run_download(progress):
             part.unlink(missing_ok=True)
             return progress.fail("The downloaded file does not match its signature (SHA-256). It was deleted and not installed")
         os.replace(part, dest)
-        progress.result = {"path": str(dest), "version": info["latest"], "sha256": want, "bytes": size}
+        progress.result = {"path": str(dest), "version": info["latest"], "sha256": want, "bytes": size, "kind": "code" if use_code else "installer"}
         progress.state = "done"; progress.say("Update downloaded and verified")
     except Exception as e:
         progress.fail("Download failed: {error}", error=str(e)[:200])
@@ -372,11 +403,72 @@ class BlockedError(UpdateError):
     """The downloaded installer exists but Windows refused to run it (the app keeps running, nothing was changed)."""
 
 
+def apply_code(zip_path: Path) -> dict:
+    """Install a downloaded code update: check it, put it in <install folder>\\code (the old code stays as code.prev),
+    then restart the app. Nothing executable is written, so there is nothing for Smart App Control to block."""
+    import codeboot
+    import zipfile
+    m = CODE_RE.match(zip_path.name)
+    if not m or int(m.group(2)) != codeboot.RUNTIME:
+        raise UpdateError("code update is not for this program")
+    version = m.group(1)
+    base = _exe_path().parent
+    new, code, prev = base / "code.new", base / "code", base / "code.prev"
+    shutil.rmtree(new, ignore_errors=True)
+    try:
+        with zipfile.ZipFile(zip_path) as z:
+            if z.testzip() is not None:
+                raise UpdateError("zip is damaged")
+            names = z.namelist()
+            for n in names:                                  # only manifest.json and app/..., nothing that escapes the folder
+                if n.startswith("/") or ".." in Path(n).parts or not (n == "manifest.json" or n.startswith("app/")):
+                    raise UpdateError(f"unexpected file in the update: {n}")
+                if n.lower().endswith((".exe", ".dll", ".pyd", ".sys", ".bat", ".cmd", ".ps1", ".msi", ".scr")):
+                    raise UpdateError(f"an executable file in a code update: {n}")
+            man = json.loads(z.read("manifest.json"))
+            if man.get("version") != version or man.get("runtime") != codeboot.RUNTIME:
+                raise UpdateError("manifest does not match")
+            z.extractall(new)
+        for f in new.rglob("*.py"):                          # a syntax error is found here, not after the restart
+            compile(f.read_text("utf-8"), str(f), "exec")
+        if not (new / "app" / "version.py").is_file():
+            raise UpdateError("incomplete code update")
+        (new / ".boots").write_text("0")
+        shutil.rmtree(prev, ignore_errors=True)
+        if code.exists():
+            os.replace(code, prev)
+        try:
+            os.replace(new, code)
+        except OSError:
+            if prev.exists() and not code.exists():
+                os.replace(prev, code)                       # put everything back as it was
+            raise
+    except UpdateError:
+        shutil.rmtree(new, ignore_errors=True)
+        raise
+    except Exception as e:
+        shutil.rmtree(new, ignore_errors=True)
+        raise UpdateError(str(e))
+    _write_json(state_dir() / "just_updated.json", {"from": __version__, "to": version})      # the "what's new" window after the restart
+    if os.environ.get("PHOTAG_UPDATE_DRY_RUN"):
+        return {"mode": "code-dry-run", "version": version, "code": str(code)}
+    exe = str(_exe_path())
+    # start the same (already allowed) photag.exe again a moment after this process has gone
+    subprocess.Popen(["cmd.exe", "/c", f'ping -n 4 127.0.0.1 >nul & start "" "{exe}"'], close_fds=True,
+                     creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                     | getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    threading.Timer(1.0, lambda: os._exit(0)).start()
+    return {"mode": "installing", "version": version}
+
+
 def launch(path: str) -> dict:
-    """Run the downloaded installer and quit so it can replace the files -- after making an interrupted install harmless."""
+    """Run the downloaded installer and quit so it can replace the files -- after making an interrupted install harmless.
+    A downloaded code update (zip) is applied instead, without any installer."""
     p = Path(path)
     if not p.is_file() or p.parent != download_dir():
         raise UpdateError("not a downloaded update")
+    if CODE_RE.match(p.name):
+        return apply_code(p)
     dry = bool(os.environ.get("PHOTAG_UPDATE_DRY_RUN"))
     if dry and not os.environ.get("PHOTAG_UPDATE_FAKE_EXE"):
         return {"mode": "dry-run", "path": str(p)}

@@ -8,6 +8,9 @@ import sys
 
 os.environ["PHOTAG_BACKGROUND"] = "1"      # before app.config is imported (see _apply_pending_move)
 
+import codeboot                       # a newer copy of the `app` package next to the exe (code update) wins over the built-in one
+codeboot.activate(count=False)
+
 from app import backup_cli
 
 _rc = backup_cli.main(sys.argv[1:] or ["--backup"])

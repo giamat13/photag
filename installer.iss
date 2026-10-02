@@ -42,6 +42,11 @@ Source: "THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 [InstallDelete]
 ; an update replaces the program's own files completely (no stale libraries from older versions); data lives elsewhere
 Type: filesandordirs; Name: "{app}\_internal"
+; a full installer carries the newest code itself: code updates (code, code.prev ...) from earlier versions must not override it
+Type: filesandordirs; Name: "{app}\code"
+Type: filesandordirs; Name: "{app}\code.prev"
+Type: filesandordirs; Name: "{app}\code.new"
+Type: filesandordirs; Name: "{app}\code.bad"
 
 [Icons]
 Name: "{autoprograms}\photag"; Filename: "{app}\photag.exe"

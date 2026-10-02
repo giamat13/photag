@@ -7,3 +7,4 @@ dist/
 installer_output/
 tools/sandbox/results/
 tools/sandbox/photag.wsb
+tools/sandbox/codeupdate/

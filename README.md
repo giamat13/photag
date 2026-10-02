@@ -100,6 +100,13 @@ photag is not code-signed yet (a signing certificate costs money; we are applyin
 2. Otherwise run photag from source (see below), or turn Smart App Control off in *Windows Security → App & browser control → Smart App Control*
    (this cannot be turned on again without reinstalling Windows, so only do it if you accept that).
 
+## Updates
+photag checks GitHub for a newer version at start-up and once a day (switch it off in Preferences) and offers the update in a window. Most
+updates are a small **code update** (~1 MB): only photag's own Python code and web pages are replaced, never an executable, so Smart App
+Control and similar protections have nothing new to block; the previous code is kept and put back automatically if the new code cannot start.
+An update that changes the libraries inside photag comes as a normal installer instead (`codeboot.py` explains the rules; `RUNTIME` there is
+bumped for such releases). Every download is verified with the SHA-256 that GitHub publishes for the file.
+
 ## Run from source
 ```bat
 pip install -r requirements.txt

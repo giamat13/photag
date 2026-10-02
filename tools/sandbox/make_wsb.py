@@ -10,6 +10,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 (HERE / "results").mkdir(exist_ok=True)
+# a tiny "code update" used by run-test.ps1 section 4b: the real exe must prefer it, and must recover from a broken one
+import json as _json
+import shutil as _shutil
+sys_path_root = str(ROOT)
+import sys as _sys
+_sys.path.insert(0, sys_path_root)
+import codeboot as _codeboot
+cu = HERE / "codeupdate"
+_shutil.rmtree(cu, ignore_errors=True)
+for kind in ("good", "broken"):
+    (cu / kind / "app").mkdir(parents=True)
+    (cu / kind / "manifest.json").write_text(_json.dumps({"version": "9.9.9", "runtime": _codeboot.RUNTIME}), "utf-8")
+    (cu / kind / "app" / "__init__.py").write_text("", "utf-8")
+    (cu / kind / "app" / "version.py").write_text('__version__ = "9.9.9"\nREPO = "giamat13/photag"\n', "utf-8")
+(cu / "broken" / "app" / "server.py").write_text("def (:  # not valid python\n", "utf-8")
+
 for old in (HERE / "results").iterdir():
     if old.is_file():
         old.unlink()

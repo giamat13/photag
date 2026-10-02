@@ -424,8 +424,10 @@ def update_install(body: InstallIn):
     except updater.BlockedError:
         subprocess.Popen(["explorer", "/select,", str(body.path)])      # show the file: Explorer may be allowed to run it
         raise err(400, "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README")
-    except updater.UpdateError:
-        raise err(400, "Update file not found. Download it again")
+    except updater.UpdateError as e:
+        if str(e) == "not a downloaded update":
+            raise err(400, "Update file not found. Download it again")
+        raise err(400, "The update could not be applied: {error}", error=str(e)[:200])
 
 
 # ---- video compression (HandBrake) -------------------------------------------

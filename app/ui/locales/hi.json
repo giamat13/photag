@@ -871,5 +871,6 @@
  "{0} new photos imported automatically": "{0} नई फ़ोटो अपने-आप इंपोर्ट हुईं",
  "{0} photos were imported automatically since the app started": "ऐप शुरू होने के बाद से {0} फ़ोटो अपने-आप इंपोर्ट हुईं",
  "{n} photo files of the backup {name} cannot be read": "बैकअप {name} की {n} फ़ोटो फ़ाइलें पढ़ी नहीं जा सकतीं",
- "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows ने अपडेट इंस्टॉलर को ब्लॉक कर दिया (Smart App Control)। डाउनलोड किए गए अपडेट वाला फ़ोल्डर खोल दिया गया है: वहाँ फ़ाइल पर डबल-क्लिक करें, या README देखें"
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows ने अपडेट इंस्टॉलर को ब्लॉक कर दिया (Smart App Control)। डाउनलोड किए गए अपडेट वाला फ़ोल्डर खोल दिया गया है: वहाँ फ़ाइल पर डबल-क्लिक करें, या README देखें",
+ "The update could not be applied: {error}": "अपडेट लागू नहीं किया जा सका: {error}"
 }

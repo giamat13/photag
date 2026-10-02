@@ -871,5 +871,6 @@
  "{0} new photos imported automatically": "{0} nieuwe foto's automatisch geïmporteerd",
  "{0} photos were imported automatically since the app started": "Sinds het starten van de app zijn {0} foto's automatisch geïmporteerd",
  "{n} photo files of the backup {name} cannot be read": "{n} fotobestanden van de back-up {name} kunnen niet worden gelezen",
- "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows heeft het installatieprogramma van de update geblokkeerd (Smart App Control). De map met de gedownloade update is geopend: dubbelklik daar op het bestand, of lees de README"
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows heeft het installatieprogramma van de update geblokkeerd (Smart App Control). De map met de gedownloade update is geopend: dubbelklik daar op het bestand, of lees de README",
+ "The update could not be applied: {error}": "De update kon niet worden toegepast: {error}"
 }

@@ -113,6 +113,31 @@ if ($up) {
   Check 'no photag-backup.exe left running' ((Get-Process 'photag-backup' -ErrorAction SilentlyContinue) -eq $null)
 }
 
+# ---- 4b. code update inside the real packaged exe: a newer `app` package next to photag.exe wins, a broken one is rolled back
+function StopApp { Get-Process photag -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 3 }
+function WaitApi($sec = 60) { $t = Get-Date; while (((Get-Date) - $t).TotalSeconds -lt $sec) { try { return (Invoke-RestMethod 'http://127.0.0.1:8756/api/status' -TimeoutSec 3) } catch { Start-Sleep -Seconds 1 } }; return $null }
+if ($up) {
+  StopApp
+  $builtin = $s.version
+  $code = Join-Path $dir 'code'
+  Remove-Item $code -Recurse -Force -ErrorAction SilentlyContinue
+  Copy-Item (Join-Path $test 'codeupdate\good') $code -Recurse
+  Start-Process (Join-Path $dir 'photag.exe') | Out-Null
+  $s2 = WaitApi
+  Check 'code update: the downloaded code is used by the packaged exe' ($s2 -ne $null -and $s2.version -eq '9.9.9') ("{0} (built in: {1})" -f $(if ($s2) { $s2.version } else { 'no answer' }), $builtin)
+  Check 'code update: a good start was confirmed (counter back to 0)' ((Get-Content (Join-Path $code '.boots') -ErrorAction SilentlyContinue) -eq '0') (Get-Content (Join-Path $code '.boots') -ErrorAction SilentlyContinue)
+  StopApp
+  Remove-Item $code -Recurse -Force -ErrorAction SilentlyContinue
+  Copy-Item (Join-Path $test 'codeupdate\broken') $code -Recurse
+  Start-Process (Join-Path $dir 'photag.exe') | Out-Null
+  $s3 = WaitApi 90
+  Check 'code update: code that cannot be loaded is rolled back and the built-in version starts' ($s3 -ne $null -and $s3.version -eq $builtin) ("{0}" -f $(if ($s3) { $s3.version } else { 'no answer' }))
+  Check 'code update: the broken code was put aside (code.bad)' (Test-Path (Join-Path $dir 'code.bad'))
+  if (Test-Path (Join-Path $env:APPDATA 'photag\startup.log')) { Say ("startup.log (last lines): " + ((Get-Content (Join-Path $env:APPDATA 'photag\startup.log') -Tail 4) -join ' | ')) }
+  StopApp
+  Remove-Item (Join-Path $dir 'code'), (Join-Path $dir 'code.bad') -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 # ---- 5. close the app, uninstall, check what stays
 Get-Process photag -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Seconds 2

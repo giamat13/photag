@@ -33,6 +33,9 @@ def _ensure_std_streams():
 
 _ensure_std_streams()
 
+import codeboot                      # code updates: a newer copy of the `app` package next to the exe wins over the built-in one
+_CODE = codeboot.activate(count="--backup" not in sys.argv)
+
 if "--backup" in sys.argv:       # headless: used by the Windows scheduled task, never opens a window
     os.environ["PHOTAG_BACKGROUND"] = "1"      # a background run never moves the library folder
     from app import backup_cli
@@ -69,11 +72,18 @@ def _fatal(title: str, detail: str):
     sys.exit(1)
 
 
-_log(f"photag starting (frozen={getattr(sys, 'frozen', False)}, python {sys.version.split()[0]}, pid {os.getpid()})")
+_log(f"photag starting (frozen={getattr(sys, 'frozen', False)}, python {sys.version.split()[0]}, pid {os.getpid()}, code={_CODE})")
 try:
     import uvicorn
     from app.server import app
 except Exception as e:
+    if codeboot.active() and not os.environ.get("PHOTAG_CODE_RETRIED"):
+        # the downloaded code does not load: drop it and start again with the previous / built-in code
+        _log(f"downloaded code failed to load ({type(e).__name__}: {e}); rolling back: {codeboot.rollback()}")
+        import subprocess
+        subprocess.Popen([sys.executable] + sys.argv[1:], env={**os.environ, "PHOTAG_CODE_RETRIED": "1"},
+                         creationflags=getattr(subprocess, "DETACHED_PROCESS", 0), close_fds=True)
+        sys.exit(0)
     _fatal("photag could not load its components", f"{type(e).__name__}: {e}")
 _log("components loaded")
 
@@ -146,6 +156,7 @@ def _wait_up(timeout=15):
         try:
             with socket.create_connection((HOST, PORT), timeout=1):
                 _log("server is listening")
+                codeboot.confirm()               # a good start: the downloaded code (if any) is kept
                 return True
         except OSError:
             time.sleep(0.2)
@@ -173,6 +184,7 @@ def main():
         if os.environ.get("PHOTAG_NO_WINDOW"):
             return
     elif os.environ.get("PHOTAG_NO_WINDOW"):     # server only, no window (tests of the packaged EXE)
+        threading.Thread(target=_wait_up, daemon=True).start()
         _serve()
         return
     else:

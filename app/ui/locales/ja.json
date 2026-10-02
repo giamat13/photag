@@ -871,5 +871,6 @@
  "{0} new photos imported automatically": "新しい写真 {0} 枚を自動で取り込みました",
  "{0} photos were imported automatically since the app started": "アプリの起動後に {0} 枚の写真を自動で取り込みました",
  "{n} photo files of the backup {name} cannot be read": "バックアップ {name} の写真ファイル {n} 個を読み取れません",
- "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows が更新プログラムのインストーラーをブロックしました（Smart App Control）。ダウンロードした更新のあるフォルダーを開きました。そこでファイルをダブルクリックするか、README を参照してください"
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows が更新プログラムのインストーラーをブロックしました（Smart App Control）。ダウンロードした更新のあるフォルダーを開きました。そこでファイルをダブルクリックするか、README を参照してください",
+ "The update could not be applied: {error}": "更新を適用できませんでした: {error}"
 }

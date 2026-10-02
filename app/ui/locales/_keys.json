@@ -726,6 +726,7 @@
  "The selected photos have no location",
  "The selection has no files that can be compressed (JPG, PNG, WebP, TIFF, BMP and videos)",
  "The task is already running",
+ "The update could not be applied: {error}",
  "The update has finished. Your photos and data are unchanged.",
  "The update is installed over the existing version. Your photos and data are not touched, and if it is interrupted midway (for example, the computer shuts down) the previous version is restored automatically.",
  "The update to version {0} didn't finish (for example, the computer shut down midway, or the installer was closed).",

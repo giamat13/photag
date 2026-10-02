@@ -2361,7 +2361,7 @@ function updateDialog(info){
       while(!['done', 'error'].includes(p.state));
       if(p.state === 'error') throw new Error(p.error_key ? t(p.error_key, p.vars) : p.error);
       const r = await send('POST', '/api/update/install', {path:p.result.path});
-      if(r.mode === 'dry-run') msg(t('(Test) The file was downloaded and verified but not launched'), 'ok');
+      if(r.mode === 'dry-run' || r.mode === 'code-dry-run') msg(t('(Test) The file was downloaded and verified but not launched'), 'ok');
       else if(r.mode === 'page'){ await send('POST', '/api/update/open-page'); msg(t('An update can\'t be installed automatically when running from source code. The release page was opened.')); busy(false); }
       else msg(t('Installing and restarting…'), 'ok');
     }catch(e){ msg(e.message, 'err'); busy(false); $('#up-prog').classList.add('hidden'); }

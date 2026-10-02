@@ -871,5 +871,6 @@
  "{0} new photos imported automatically": "새 사진 {0}장을 자동으로 가져왔습니다",
  "{0} photos were imported automatically since the app started": "앱 시작 이후 사진 {0}장을 자동으로 가져왔습니다",
  "{n} photo files of the backup {name} cannot be read": "백업 {name}의 사진 파일 {n}개를 읽을 수 없습니다",
- "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows가 업데이트 설치 프로그램을 차단했습니다(Smart App Control). 다운로드한 업데이트가 있는 폴더를 열었습니다. 거기서 파일을 두 번 클릭하거나 README를 참조하세요"
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows가 업데이트 설치 프로그램을 차단했습니다(Smart App Control). 다운로드한 업데이트가 있는 폴더를 열었습니다. 거기서 파일을 두 번 클릭하거나 README를 참조하세요",
+ "The update could not be applied: {error}": "업데이트를 적용하지 못했습니다: {error}"
 }

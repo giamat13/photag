@@ -871,5 +871,6 @@
  "{0} new photos imported automatically": "Автоматично імпортовано нових фотографій: {0}",
  "{0} photos were imported automatically since the app started": "Відколи запущено застосунок, автоматично імпортовано фотографій: {0}",
  "{n} photo files of the backup {name} cannot be read": "Не вдається прочитати файлів фотографій резервної копії {name}: {n}",
- "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows заблокувала інсталятор оновлення (Smart App Control). Відкрито теку зі завантаженим оновленням: двічі клацніть файл там або прочитайте README"
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows заблокувала інсталятор оновлення (Smart App Control). Відкрито теку зі завантаженим оновленням: двічі клацніть файл там або прочитайте README",
+ "The update could not be applied: {error}": "Не вдалося застосувати оновлення: {error}"
 }

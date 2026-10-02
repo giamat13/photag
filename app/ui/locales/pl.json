@@ -871,5 +871,6 @@
  "{0} new photos imported automatically": "Automatycznie zaimportowano {0} nowych zdjęć",
  "{0} photos were imported automatically since the app started": "Od uruchomienia aplikacji automatycznie zaimportowano {0} zdjęć",
  "{n} photo files of the backup {name} cannot be read": "Nie można odczytać {n} plików zdjęć kopii zapasowej {name}",
- "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "System Windows zablokował instalator aktualizacji (Smart App Control). Otwarto folder z pobraną aktualizacją: kliknij tam dwukrotnie plik lub zajrzyj do README"
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "System Windows zablokował instalator aktualizacji (Smart App Control). Otwarto folder z pobraną aktualizacją: kliknij tam dwukrotnie plik lub zajrzyj do README",
+ "The update could not be applied: {error}": "Nie udało się zastosować aktualizacji: {error}"
 }
