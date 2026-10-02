@@ -1122,5 +1122,12 @@
  "Export ZIP": "निर्यात ZIP",
  "Import from Instagram/Facebook": "Instagram/Facebook से आयात करें",
  "Reading the export…": "निर्यात पढ़ा जा रहा है…",
- "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Instagram या Facebook से अपना डेटा मांगें (खाता केंद्र → आपकी जानकारी और अनुमतियां → अपनी जानकारी डाउनलोड करें), JSON प्रारूप चुनते हुए। ZIP को सीधे पढ़ा जाता है, उसे निकाले बिना।"
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Instagram या Facebook से अपना डेटा मांगें (खाता केंद्र → आपकी जानकारी और अनुमतियां → अपनी जानकारी डाउनलोड करें), JSON प्रारूप चुनते हुए। ZIP को सीधे पढ़ा जाता है, उसे निकाले बिना।",
+ "Choose triplan trip...": "triplan यात्रा चुनें...",
+ "Could not read your trips from triplan: {error}": "आपकी triplan यात्राएं नहीं पढ़ी जा सकीं: {error}",
+ "No trips found in your triplan account.": "आपके triplan खाते में कोई यात्रा नहीं मिली।",
+ "Unlink from triplan": "triplan से लिंक हटाएं",
+ "Untitled trip": "अनाम यात्रा",
+ "Which triplan trip is this?": "यह कौन सी triplan यात्रा है?",
+ "{0} days": "{0} दिन"
 }

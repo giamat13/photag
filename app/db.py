@@ -151,6 +151,10 @@ def init_db():
         con.execute("ALTER TABLE albums ADD COLUMN is_trip INTEGER DEFAULT 0")   # photag x triplan, step 1
     except sqlite3.OperationalError:
         pass
+    try:
+        con.execute("ALTER TABLE albums ADD COLUMN triplan_trip_id TEXT")   # photag x triplan, step 2: which trip
+    except sqlite3.OperationalError:
+        pass
     # Automatic tagging was removed twice (Ollama, then CLIP): drop what the keyword versions created.
     # Only tags of those sources go; manual, Lightroom and Google keywords are untouched.
     # (search by meaning, app/semantic.py, keeps its embeddings in photo_clip and makes no keywords.)

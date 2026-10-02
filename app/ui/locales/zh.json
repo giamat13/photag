@@ -1122,5 +1122,12 @@
  "Export ZIP": "导出 ZIP",
  "Import from Instagram/Facebook": "从 Instagram/Facebook 导入",
  "Reading the export…": "正在读取导出内容…",
- "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "向 Instagram 或 Facebook 请求你的数据（账户管理中心 → 你的信息和权限 → 下载你的信息），选择 JSON 格式。ZIP 会被直接读取，无需解压。"
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "向 Instagram 或 Facebook 请求你的数据（账户管理中心 → 你的信息和权限 → 下载你的信息），选择 JSON 格式。ZIP 会被直接读取，无需解压。",
+ "Choose triplan trip...": "选择 triplan 行程...",
+ "Could not read your trips from triplan: {error}": "无法从 triplan 读取您的行程：{error}",
+ "No trips found in your triplan account.": "在您的 triplan 账户中未找到任何行程。",
+ "Unlink from triplan": "取消与 triplan 的关联",
+ "Untitled trip": "未命名行程",
+ "Which triplan trip is this?": "这是哪个 triplan 行程？",
+ "{0} days": "{0} 天"
 }

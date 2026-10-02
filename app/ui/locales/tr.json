@@ -1122,5 +1122,12 @@
  "Export ZIP": "Dışa aktarma ZIP",
  "Import from Instagram/Facebook": "Instagram/Facebook'tan içe aktar",
  "Reading the export…": "Dışa aktarma okunuyor…",
- "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Instagram veya Facebook'tan verilerinizi isteyin (Hesap Merkezi → Bilgileriniz ve izinleriniz → Bilgilerinizi indirin), JSON biçimini seçerek. ZIP, çıkarılmadan doğrudan okunur."
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Instagram veya Facebook'tan verilerinizi isteyin (Hesap Merkezi → Bilgileriniz ve izinleriniz → Bilgilerinizi indirin), JSON biçimini seçerek. ZIP, çıkarılmadan doğrudan okunur.",
+ "Choose triplan trip...": "triplan seyahati seçin...",
+ "Could not read your trips from triplan: {error}": "triplan'dan seyahatleriniz okunamadı: {error}",
+ "No trips found in your triplan account.": "triplan hesabınızda seyahat bulunamadı.",
+ "Unlink from triplan": "triplan bağlantısını kaldır",
+ "Untitled trip": "Başlıksız seyahat",
+ "Which triplan trip is this?": "Bu hangi triplan seyahati?",
+ "{0} days": "{0} gün"
 }

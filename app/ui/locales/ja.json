@@ -1122,5 +1122,12 @@
  "Export ZIP": "エクスポートZIP",
  "Import from Instagram/Facebook": "Instagram/Facebookからインポート",
  "Reading the export…": "エクスポートを読み込んでいます…",
- "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "InstagramまたはFacebookでデータをリクエストしてください（アカウントセンター → あなたの情報とアクセス許可 → 情報をダウンロード）、JSON形式を選択します。ZIPは展開せずに直接読み込まれます。"
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "InstagramまたはFacebookでデータをリクエストしてください（アカウントセンター → あなたの情報とアクセス許可 → 情報をダウンロード）、JSON形式を選択します。ZIPは展開せずに直接読み込まれます。",
+ "Choose triplan trip...": "triplanの旅行を選択...",
+ "Could not read your trips from triplan: {error}": "triplanから旅行を読み込めませんでした: {error}",
+ "No trips found in your triplan account.": "triplanアカウントに旅行が見つかりません。",
+ "Unlink from triplan": "triplanとのリンクを解除",
+ "Untitled trip": "無題の旅行",
+ "Which triplan trip is this?": "これはどのtriplanの旅行ですか？",
+ "{0} days": "{0}日間"
 }

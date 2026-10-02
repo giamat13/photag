@@ -1122,5 +1122,12 @@
  "Export ZIP": "ZIP של ייצוא",
  "Import from Instagram/Facebook": "ייבוא מ-Instagram/Facebook",
  "Reading the export…": "קורא את הייצוא…",
- "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "בקש את הנתונים שלך מ-Instagram או Facebook (מרכז החשבונות ← המידע וההרשאות שלך ← הורדת המידע שלך), ובחר בפורמט JSON. קובץ ה-ZIP נקרא ישירות, בלי לחלץ אותו."
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "בקש את הנתונים שלך מ-Instagram או Facebook (מרכז החשבונות ← המידע וההרשאות שלך ← הורדת המידע שלך), ובחר בפורמט JSON. קובץ ה-ZIP נקרא ישירות, בלי לחלץ אותו.",
+ "Choose triplan trip...": "בחר טיול ב-triplan...",
+ "Could not read your trips from triplan: {error}": "לא ניתן היה לקרוא את הטיולים שלך מ-triplan: {error}",
+ "No trips found in your triplan account.": "לא נמצאו טיולים בחשבון ה-triplan שלך.",
+ "Unlink from triplan": "בטל קישור מ-triplan",
+ "Untitled trip": "טיול ללא שם",
+ "Which triplan trip is this?": "איזה טיול ב-triplan זה?",
+ "{0} days": "{0} ימים"
 }

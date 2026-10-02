@@ -1249,14 +1249,18 @@ class TripIn(BaseModel):
 
 @app.post("/api/album/{aid}/trip")
 def album_trip(aid: int, body: TripIn):
-    """photag x triplan, step 1: mark/unmark a collection as a trip (gets an "Open in triplan" button)."""
+    """Mark/unmark a collection as a trip (gets an "Open in triplan" button). Unmarking also forgets
+    which triplan trip it was linked to -- re-marking it starts the link fresh."""
     con = db.connect()
-    con.execute("UPDATE albums SET is_trip=? WHERE id=?", (1 if body.is_trip else 0, aid))
+    if body.is_trip:
+        con.execute("UPDATE albums SET is_trip=1 WHERE id=?", (aid,))
+    else:
+        con.execute("UPDATE albums SET is_trip=0, triplan_trip_id=NULL WHERE id=?", (aid,))
     con.commit()
     return {"ok": True}
 
 
-# ---- photag x triplan (step 1: connect + open) ------------------------------
+# ---- photag x triplan (connect, pick a trip, open it directly) -------------
 class TriplanConnectIn(BaseModel):
     email: str
     password: str
@@ -1281,10 +1285,39 @@ def triplan_disconnect():
     return {"ok": True}
 
 
+@app.get("/api/triplan/trips")
+def triplan_trips():
+    try:
+        return triplan.list_trips()
+    except triplan.TriplanError as e:
+        raise err(400, "Could not read your trips from triplan: {error}", error=str(e))
+
+
+class TriplanTripIn(BaseModel):
+    trip_id: str | None = None
+
+@app.post("/api/album/{aid}/triplan-trip")
+def album_triplan_trip(aid: int, body: TriplanTripIn):
+    """Links (or unlinks) this collection to a specific triplan trip, so "Open in triplan" goes
+    straight to it instead of triplan's home page."""
+    con = db.connect()
+    con.execute("UPDATE albums SET triplan_trip_id=? WHERE id=?", (body.trip_id, aid))
+    con.commit()
+    return {"ok": True}
+
+
+class TriplanOpenIn(BaseModel):
+    album_id: int | None = None
+
 @app.post("/api/triplan/open")
-def triplan_open():
-    _open_url(triplan.APP_URL)
-    return {"ok": True, "url": triplan.APP_URL}
+def triplan_open(body: TriplanOpenIn = TriplanOpenIn()):
+    trip_id = None
+    if body.album_id is not None:
+        row = db.connect().execute("SELECT triplan_trip_id FROM albums WHERE id=?", (body.album_id,)).fetchone()
+        trip_id = row["triplan_trip_id"] if row else None
+    url = triplan.trip_url(trip_id)
+    _open_url(url)
+    return {"ok": True, "url": url}
 
 
 # ---- saved searches (Advanced Search) ------------------------------------------------

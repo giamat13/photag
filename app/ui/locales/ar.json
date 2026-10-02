@@ -1122,5 +1122,12 @@
  "Export ZIP": "تصدير ZIP",
  "Import from Instagram/Facebook": "استيراد من Instagram/Facebook",
  "Reading the export…": "جارٍ قراءة التصدير…",
- "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "اطلب بياناتك من Instagram أو Facebook (مركز الحسابات ← معلوماتك وأذوناتك ← تنزيل معلوماتك)، واختر تنسيق JSON. تتم قراءة ملف ZIP مباشرة، دون استخراجه."
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "اطلب بياناتك من Instagram أو Facebook (مركز الحسابات ← معلوماتك وأذوناتك ← تنزيل معلوماتك)، واختر تنسيق JSON. تتم قراءة ملف ZIP مباشرة، دون استخراجه.",
+ "Choose triplan trip...": "اختر رحلة triplan...",
+ "Could not read your trips from triplan: {error}": "تعذر قراءة رحلاتك من triplan: {error}",
+ "No trips found in your triplan account.": "لم يتم العثور على رحلات في حساب triplan الخاص بك.",
+ "Unlink from triplan": "إلغاء الربط مع triplan",
+ "Untitled trip": "رحلة بلا عنوان",
+ "Which triplan trip is this?": "ما هي رحلة triplan هذه؟",
+ "{0} days": "{0} أيام"
 }

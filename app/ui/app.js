@@ -645,7 +645,7 @@ function srcFromKey(key){
 }
 $('#left').addEventListener('click', async e=>{
   const ot=e.target.closest('[data-opentriplan]');
-  if(ot){ e.stopPropagation(); await triplanOpen(); return; }
+  if(ot){ e.stopPropagation(); await triplanOpen(+ot.dataset.opentriplan); return; }
   const tt=e.target.closest('[data-triptoggle]');
   if(tt){ e.stopPropagation(); await toggleTrip(+tt.dataset.triptoggle); return; }
   const pa=e.target.closest('[data-playalbum]');
@@ -3035,7 +3035,8 @@ function openContextMenu(x, y, items){
 }
 function albumMenuItems(a){
   return [
-    ...(a.is_trip ? [[t('Open in triplan'), '', triplanOpen]] : []),
+    ...(a.is_trip ? [[t('Open in triplan'), '', ()=>triplanOpen(a.id)],
+                      [t('Choose triplan trip...'), '', ()=>triplanPickTrip(a.id)]] : []),
     [a.is_trip ? t('Remove Trip status') : t('Mark as Trip'), '', ()=>toggleTrip(a.id)],
     null,
     [t('Best moments slideshow'), '', ()=>albumBestMoments(a.id, a.name)],
@@ -3431,15 +3432,39 @@ function triplanConnectDialog(){
     $('#tp-cancel').onclick = ()=>done(false);
   });
 }
-async function triplanOpen(){
+async function triplanOpen(albumId){
   const st = await api('/api/triplan/status');
   if(!st.connected && !await triplanConnectDialog()) return;
-  await send('POST', '/api/triplan/open');
+  await send('POST', '/api/triplan/open', albumId ? {album_id: albumId} : {});
+}
+async function triplanPickTrip(albumId){
+  const st = await api('/api/triplan/status');
+  if(!st.connected && !await triplanConnectDialog()) return;
+  let trips;
+  try{ trips = await api('/api/triplan/trips'); }
+  catch(e){ toast(e.message); return; }
+  const a = S.albums.find(x=>x.id===albumId);
+  await new Promise(res=>{
+    modal(`<h3>${t('Which triplan trip is this?')}</h3><div class="mb">
+      ${trips.length ? `<div class="im-grid" style="max-height:40vh">${trips.map(tr=>
+        `<div class="row" data-trip="${esc(tr.id)}"><span class="nm">${esc(tr.name||t('Untitled trip'))}</span>`+
+        `<span class="n">${esc(tr.start_date||'')}${tr.start_date&&tr.days?' · ':''}${tr.days?t('{0} days',[tr.days]):''}</span></div>`).join('')}</div>`
+        : `<p class="hint" style="padding:0">${t('No trips found in your triplan account.')}</p>`}
+      ${a && a.triplan_trip_id ? `<div class="row" data-trip="" style="margin-top:8px"><span class="nm">${t('Unlink from triplan')}</span></div>` : ''}
+    </div><div class="mf"><button id="tp-pick-cancel">${t('Cancel')}</button></div>`);
+    $('#tp-pick-cancel').onclick = ()=>{ closeModal(); res(); };
+    $('#modal').querySelectorAll('[data-trip]').forEach(row=>row.onclick = async ()=>{
+      await send('POST', `/api/album/${albumId}/triplan-trip`, {trip_id: row.dataset.trip || null});
+      closeModal(); await loadSide(); res();
+    });
+  });
 }
 async function toggleTrip(albumId){
   const a = S.albums.find(x=>x.id===albumId); if(!a) return;
-  await send('POST', `/api/album/${albumId}/trip`, {is_trip: !a.is_trip});
+  const turningOn = !a.is_trip;
+  await send('POST', `/api/album/${albumId}/trip`, {is_trip: turningOn});
   await loadSide();
+  if(turningOn) await triplanPickTrip(albumId);
 }
 
 // ---------- search by meaning (local CLIP) ----------

@@ -56,7 +56,8 @@ _real_urlopen = urllib.request.urlopen
 
 urllib.request.urlopen = _ok
 r = triplan.sign_in("me@example.com", "right-password")
-check("sign_in() on success returns uid and email", r == {"uid": "uid123", "email": "me@example.com"}, r)
+check("sign_in() on success returns uid, email and an id token",
+      r == {"uid": "uid123", "email": "me@example.com", "id_token": "tok"}, r)
 
 urllib.request.urlopen = _bad_password
 try:
@@ -82,6 +83,41 @@ stored = config.get_triplan()
 check("the password is never stored in the clear", "right-password" not in json.dumps(stored), stored)
 check("the uid is stored", stored.get("uid") == "uid123", stored)
 
+# list_trips(): re-authenticates with the stored (encrypted) password, then runs a Firestore
+# structured query over /trips filtering on members.<uid> -- mock both calls.
+_FS_RESPONSE = [
+    {"document": {"name": "projects/x/databases/(default)/documents/trips/abc123", "fields": {
+        "name": {"stringValue": "Rome"}, "startDate": {"stringValue": "2025-06-01"},
+        "days": {"arrayValue": {"values": [{"mapValue": {"fields": {}}}, {"mapValue": {"fields": {}}}]}},
+        "members": {"mapValue": {"fields": {"uid123": {"stringValue": "owner"}}}},
+    }}},
+    {"document": {"name": "projects/x/databases/(default)/documents/trips/def456", "fields": {
+        "name": {"stringValue": "Untitled"},
+    }}},
+]
+_calls = []
+
+
+def _list_trips_mock(req, timeout=None):
+    _calls.append(req.full_url)
+    if "identitytoolkit" in req.full_url:
+        return _ok(req, timeout)
+    body = json.loads(req.data)
+    assert body["structuredQuery"]["where"]["fieldFilter"]["field"]["fieldPath"] == "members.uid123"
+    return _FakeResp(json.dumps(_FS_RESPONSE).encode())
+
+
+urllib.request.urlopen = _list_trips_mock
+trips = triplan.list_trips()
+check("list_trips() queries Firestore filtered on the signed-in user's uid",
+      len(_calls) == 2 and "runQuery" in _calls[1], _calls)
+check("list_trips() returns both trips with id/name/start_date/days",
+      trips == [{"id": "abc123", "name": "Rome", "start_date": "2025-06-01", "days": 2},
+                {"id": "def456", "name": "Untitled", "start_date": "", "days": 0}], trips)
+
+check("trip_url() with a trip id opens that specific trip", triplan.trip_url("abc123") == triplan.APP_URL + "?trip=abc123")
+check("trip_url() with no trip id falls back to the app's home page", triplan.trip_url(None) == triplan.APP_URL)
+
 triplan.disconnect()
 check("disconnect() clears the connection", triplan.status() == {"connected": False, "email": None})
 
@@ -93,6 +129,9 @@ check("a new album defaults to is_trip=0", con.execute("SELECT is_trip FROM albu
 con.execute("UPDATE albums SET is_trip=1 WHERE id=?", (aid,))
 con.commit()
 check("is_trip can be set", con.execute("SELECT is_trip FROM albums WHERE id=?", (aid,)).fetchone()["is_trip"] == 1)
+con.execute("UPDATE albums SET triplan_trip_id='abc123' WHERE id=?", (aid,))
+con.commit()
+check("triplan_trip_id can be set", con.execute("SELECT triplan_trip_id FROM albums WHERE id=?", (aid,)).fetchone()["triplan_trip_id"] == "abc123")
 
 n_fail = res.count(False)
 print(f"\n{len(res) - n_fail}/{len(res)} passed")

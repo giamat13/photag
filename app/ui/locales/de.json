@@ -1122,5 +1122,12 @@
  "Export ZIP": "Export-ZIP",
  "Import from Instagram/Facebook": "Import aus Instagram/Facebook",
  "Reading the export…": "Export wird gelesen…",
- "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Fordern Sie Ihre Daten bei Instagram oder Facebook an (Konten-Center → Ihre Informationen und Berechtigungen → Deine Informationen herunterladen) im JSON-Format. Die ZIP-Datei wird direkt gelesen, ohne sie zu entpacken."
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Fordern Sie Ihre Daten bei Instagram oder Facebook an (Konten-Center → Ihre Informationen und Berechtigungen → Deine Informationen herunterladen) im JSON-Format. Die ZIP-Datei wird direkt gelesen, ohne sie zu entpacken.",
+ "Choose triplan trip...": "triplan-Reise wählen...",
+ "Could not read your trips from triplan: {error}": "Ihre Reisen von triplan konnten nicht gelesen werden: {error}",
+ "No trips found in your triplan account.": "Keine Reisen in Ihrem triplan-Konto gefunden.",
+ "Unlink from triplan": "Verknüpfung mit triplan aufheben",
+ "Untitled trip": "Reise ohne Titel",
+ "Which triplan trip is this?": "Welche triplan-Reise ist das?",
+ "{0} days": "{0} Tage"
 }
