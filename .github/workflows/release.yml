@@ -3,6 +3,7 @@ name: release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:        # run it by hand on main: the tag vX.Y.Z (from app/version.py) is created by the release itself
 
 permissions:
   contents: write
@@ -23,8 +24,11 @@ jobs:
         shell: bash
         run: |
           v=$(python -c "from app.version import __version__ as v; print(v)")
-          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != version v$v"; exit 1; }
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != version v$v"; exit 1; }
+          fi
           echo "VERSION=$v" >> "$GITHUB_ENV"
+          echo "TAG=v$v" >> "$GITHUB_ENV"
       - run: python tools/make_version_info.py
       - run: python -m PyInstaller --noconfirm photag.spec
       - run: python -m PyInstaller --noconfirm photag_backup.spec
@@ -43,4 +47,4 @@ jobs:
         run: |
           notes=docs/release-notes-v${VERSION}.md
           [ -f "$notes" ] || notes=docs/release-notes-v1.0.0.md
-          gh release create "${GITHUB_REF_NAME}" installer_output/photagSetup.exe dist/photag-code-*.zip dist/photag-*-portable.zip --title "photag ${VERSION}" --notes-file "$notes"
+          gh release create "${TAG}" --target "${GITHUB_SHA}" installer_output/photagSetup.exe dist/photag-code-*.zip dist/photag-*-portable.zip --title "photag ${VERSION}" --notes-file "$notes"
