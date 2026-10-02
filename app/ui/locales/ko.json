@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "연도별 한 장 -- 해당 연도 {0}의 최고 점수 사진.",
  "Flythrough": "플라이스루",
  "Fly through these photos on the map, oldest to newest": "지도에서 이 사진들을 오래된 순서로 비행",
- "Need at least 2 dated, geotagged photos to fly through": "비행하려면 날짜와 위치가 있는 사진이 최소 2장 필요합니다"
+ "Need at least 2 dated, geotagged photos to fly through": "비행하려면 날짜와 위치가 있는 사진이 최소 2장 필요합니다",
+ "Export as a single ZIP file": "하나의 ZIP 파일로 내보내기",
+ "Export To (ZIP file)": "내보내기 위치 (ZIP 파일)",
+ "Export as ZIP": "ZIP으로 내보내기"
 }

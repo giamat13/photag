@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "Une photo par année -- le meilleur cliché de {0} cette année-là.",
  "Flythrough": "Survol",
  "Fly through these photos on the map, oldest to newest": "Survoler ces photos sur la carte, de la plus ancienne à la plus récente",
- "Need at least 2 dated, geotagged photos to fly through": "Il faut au moins 2 photos datées et géolocalisées pour le survol"
+ "Need at least 2 dated, geotagged photos to fly through": "Il faut au moins 2 photos datées et géolocalisées pour le survol",
+ "Export as a single ZIP file": "Exporter sous forme d'un seul fichier ZIP",
+ "Export To (ZIP file)": "Exporter vers (fichier ZIP)",
+ "Export as ZIP": "Exporter en ZIP"
 }

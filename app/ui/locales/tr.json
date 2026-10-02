@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "Yıl başına bir fotoğraf -- o yılki {0} için en yüksek puanlı kare.",
  "Flythrough": "Uçuş",
  "Fly through these photos on the map, oldest to newest": "Haritadaki bu fotoğrafların üzerinden en eskiden en yeniye uçun",
- "Need at least 2 dated, geotagged photos to fly through": "Uçuş için tarihli ve konumlu en az 2 fotoğraf gerekir"
+ "Need at least 2 dated, geotagged photos to fly through": "Uçuş için tarihli ve konumlu en az 2 fotoğraf gerekir",
+ "Export as a single ZIP file": "Tek bir ZIP dosyası olarak dışa aktar",
+ "Export To (ZIP file)": "Dışa aktarılacak yer (ZIP dosyası)",
+ "Export as ZIP": "ZIP olarak dışa aktar"
 }

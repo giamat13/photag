@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "صورة واحدة لكل سنة -- أفضل لقطة لـ{0} في تلك السنة.",
  "Flythrough": "تحليق",
  "Fly through these photos on the map, oldest to newest": "حلّق عبر هذه الصور على الخريطة، من الأقدم إلى الأحدث",
- "Need at least 2 dated, geotagged photos to fly through": "يلزم صورتان مؤرختان على الأقل بموقع جغرافي للتحليق"
+ "Need at least 2 dated, geotagged photos to fly through": "يلزم صورتان مؤرختان على الأقل بموقع جغرافي للتحليق",
+ "Export as a single ZIP file": "تصدير كملف ZIP واحد",
+ "Export To (ZIP file)": "التصدير إلى (ملف ZIP)",
+ "Export as ZIP": "تصدير كـ ZIP"
 }

@@ -9,6 +9,7 @@ album folders is stored once but belongs to every album.
 import json
 import os
 import re
+import tempfile
 import threading
 import time
 import zipfile
@@ -788,13 +789,32 @@ def run_lrcat_import(path: str, progress: Progress):
         progress.fail("Import from Lightroom failed: {error}", error=str(e))
 
 
+def _unique_name(name: str, used: set) -> str:
+    """Like _unique_dest, but for names inside a ZIP (no filesystem to check against)."""
+    stem, suf = Path(name).stem, Path(name).suffix
+    cand, n = name, 1
+    while cand in used:
+        n += 1
+        cand = f"{stem} ({n}){suf}"
+    used.add(cand)
+    return cand
+
+
 def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
-               quality: int, progress: Progress):
-    """Copy (or re-encode as JPEG) the chosen photos into `dest`."""
+               quality: int, as_zip: bool, progress: Progress):
+    """Copy (or re-encode as JPEG) the chosen photos into `dest` -- a folder, or (as_zip) a single ZIP file."""
     con = db.connect()
-    out_dir = Path(dest)
-    out_dir.mkdir(parents=True, exist_ok=True)
     progress.state = "exporting"; progress.total = len(ids); progress.done = 0
+    out_dir = None
+    zf = used_names = tmp_dir = None
+    if as_zip:
+        Path(dest).parent.mkdir(parents=True, exist_ok=True)
+        zf = zipfile.ZipFile(dest, "w", zipfile.ZIP_STORED)
+        used_names = set()
+        tmp_dir = Path(tempfile.mkdtemp(prefix="photag_zipexport_"))
+    else:
+        out_dir = Path(dest)
+        out_dir.mkdir(parents=True, exist_ok=True)
     try:
         for pid in ids:
             progress.done += 1
@@ -807,14 +827,31 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
             if not src.exists():
                 continue
             name = _safe_component(r["filename"])
-            if r["is_video"] or originals or (not long_edge and quality >= 100):
+            as_is = r["is_video"] or originals or (not long_edge and quality >= 100)
+            if as_zip:
+                arcname = _unique_name(name if as_is else Path(name).stem + ".jpg", used_names)
+                if as_is:
+                    zf.write(src, arcname)
+                else:
+                    tmp = tmp_dir / arcname
+                    images.export_resized(src, tmp, long_edge, quality)
+                    zf.write(tmp, arcname)
+                    tmp.unlink(missing_ok=True)
+            elif as_is:
                 import shutil
                 shutil.copy2(src, _unique_dest(out_dir / name))
             else:
                 images.export_resized(src, _unique_dest(out_dir / (Path(name).stem + ".jpg")), long_edge, quality)
-        progress.state = "done"; progress.say("{n} items exported to {folder}", n=progress.done, folder=str(out_dir))
+        progress.state = "done"
+        progress.say("{n} items exported to {folder}", n=progress.done, folder=str(dest))
     except Exception as e:
         progress.fail("Export failed: {error}", error=str(e))
+    finally:
+        if zf:
+            zf.close()
+        if tmp_dir:
+            import shutil
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":  # ponytail self-check for the fiddly matcher

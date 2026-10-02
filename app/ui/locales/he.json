@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "תמונה אחת לכל שנה -- התמונה עם הציון הכי גבוה של {0} באותה שנה.",
  "Flythrough": "טיסה מעל",
  "Fly through these photos on the map, oldest to newest": "טוס מעל התמונות האלה על המפה, מהישנה לחדשה",
- "Need at least 2 dated, geotagged photos to fly through": "צריך לפחות 2 תמונות עם תאריך ומיקום כדי לטוס"
+ "Need at least 2 dated, geotagged photos to fly through": "צריך לפחות 2 תמונות עם תאריך ומיקום כדי לטוס",
+ "Export as a single ZIP file": "ייצוא כקובץ ZIP אחד",
+ "Export To (ZIP file)": "ייצוא אל (קובץ ZIP)",
+ "Export as ZIP": "ייצוא כ-ZIP"
 }

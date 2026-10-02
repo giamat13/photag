@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "年に1枚 -- その年の{0}の最高評価の写真。",
  "Flythrough": "フライスルー",
  "Fly through these photos on the map, oldest to newest": "地図上でこれらの写真を古い順に飛行表示",
- "Need at least 2 dated, geotagged photos to fly through": "フライスルーには日付と位置情報付きの写真が2枚以上必要です"
+ "Need at least 2 dated, geotagged photos to fly through": "フライスルーには日付と位置情報付きの写真が2枚以上必要です",
+ "Export as a single ZIP file": "1つのZIPファイルとしてエクスポート",
+ "Export To (ZIP file)": "エクスポート先（ZIPファイル）",
+ "Export as ZIP": "ZIPとしてエクスポート"
 }

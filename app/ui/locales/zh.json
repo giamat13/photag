@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "每年一张 -- 当年{0}评分最高的照片。",
  "Flythrough": "飞越",
  "Fly through these photos on the map, oldest to newest": "在地图上飞越这些照片，从最早到最新",
- "Need at least 2 dated, geotagged photos to fly through": "需要至少 2 张带日期和地理位置的照片才能飞越"
+ "Need at least 2 dated, geotagged photos to fly through": "需要至少 2 张带日期和地理位置的照片才能飞越",
+ "Export as a single ZIP file": "导出为单个 ZIP 文件",
+ "Export To (ZIP file)": "导出到（ZIP 文件）",
+ "Export as ZIP": "导出为 ZIP"
 }

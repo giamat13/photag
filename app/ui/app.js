@@ -2604,9 +2604,10 @@ function shortcuts(){
 function openExport(){
   const ids=targets().length ? targets() : [];
   if(!ids.length) return toast(t('Select photos to export'));
-  const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90});
+  const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90, zip:false});
   modal(`<h3>${t("Export {0} Files", [num(ids.length)])}</h3><div class="mb">
-    <label class="fld"><span>${t("Export To")}</span><div class="frow"><input type="text" id="ex-dest" dir="ltr" value="${esc(last.dest)}" placeholder="C:\\Users\\...\\Pictures\\Export"><button id="ex-pick">${t("Choose...")}</button></div></label>
+    <label class="check" style="padding:0 0 4px"><input type="checkbox" id="ex-zip" ${last.zip?'checked':''}> ${t('Export as a single ZIP file')}</label>
+    <label class="fld"><span id="ex-dest-lbl">${t("Export To")}</span><div class="frow"><input type="text" id="ex-dest" dir="ltr" value="${esc(last.dest)}" placeholder="C:\\Users\\...\\Pictures\\Export"><button id="ex-pick">${t("Choose...")}</button></div></label>
     <div class="fld"><span>${t("File Settings")}</span>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="current" ${last.mode==='current'?'checked':''}> ${t(" The file as it is in the catalog (including edits)")}</label>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="original" ${last.mode==='original'?'checked':''}> ${t(" The original, without edits")}</label>
@@ -2616,13 +2617,21 @@ function openExport(){
     <p>${t("Videos are always copied as they are. Duplicate file names get a number.")}</p>
   </div><div class="mf"><button onclick="closeModal()">${t("Cancel")}</button><button class="primary" id="ex-go">${t("Export")}</button></div>`);
   $('#ex-q').oninput=e=>$('#ex-qv').textContent=e.target.value;
-  $('#ex-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose export folder'))); if(r.path) $('#ex-dest').value=r.path; };
+  const syncZip = ()=>{ const z=$('#ex-zip').checked; $('#ex-dest-lbl').textContent = z ? t('Export To (ZIP file)') : t('Export To');
+    if(z && $('#ex-dest').value && !$('#ex-dest').value.toLowerCase().endsWith('.zip')) $('#ex-dest').value += '.zip'; };
+  $('#ex-zip').onchange = syncZip; syncZip();
+  $('#ex-pick').onclick=async()=>{
+    const z=$('#ex-zip').checked;
+    const r = z ? await api('/api/pick-file?kind=savezip&title='+encodeURIComponent(t('Export as ZIP')))
+                : await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose export folder')));
+    if(r.path) $('#ex-dest').value=r.path;
+  };
   $('#ex-go').onclick=async()=>{
-    const dest=$('#ex-dest').value.trim(), mode=$('input[name=ex-mode]:checked').value, edge=+$('#ex-edge').value||null, q=+$('#ex-q').value;
+    const dest=$('#ex-dest').value.trim(), mode=$('input[name=ex-mode]:checked').value, edge=+$('#ex-edge').value||null, q=+$('#ex-q').value, zip=$('#ex-zip').checked;
     if(!dest) return toast(t('Choose a destination folder'));
-    pref.set('export', {dest, mode, edge:edge||2048, q});
+    pref.set('export', {dest, mode, edge:edge||2048, q, zip});
     closeModal();
-    runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100});
+    runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip});
   };
 }
 

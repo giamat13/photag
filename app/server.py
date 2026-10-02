@@ -288,6 +288,10 @@ def pick_file(kind: str = "zip", title: str = ""):
     try:
         if kind == "folder":
             path = filedialog.askdirectory(title=title or "Select folder", parent=root)
+        elif kind == "savezip":
+            path = filedialog.asksaveasfilename(
+                title=title or "Export as ZIP", parent=root, defaultextension=".zip",
+                filetypes=[("ZIP file", "*.zip")])
         elif kind == "exe":
             path = filedialog.askopenfilename(
                 title=title or "Select HandBrakeCLI.exe", parent=root,
@@ -1498,13 +1502,14 @@ class ExportIn(BaseModel):
     originals: bool = False
     long_edge: int | None = None
     quality: int = 100
+    zip: bool = False
 
 @app.post("/api/export")
 def start_export(body: ExportIn):
     if not body.ids or not body.dest.strip():
         raise err(400, "Missing items or destination folder")
     _start("export", importer.run_export, body.ids, body.dest.strip(), body.originals,
-           body.long_edge, max(10, min(100, body.quality)))
+           body.long_edge, max(10, min(100, body.quality)), body.zip)
     return {"ok": True}
 
 

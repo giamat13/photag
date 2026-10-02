@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "Eén foto per jaar -- de best scorende foto van {0} dat jaar.",
  "Flythrough": "Overvlucht",
  "Fly through these photos on the map, oldest to newest": "Vlieg over deze foto's op de kaart, van oud naar nieuw",
- "Need at least 2 dated, geotagged photos to fly through": "Minstens 2 gedateerde foto's met locatie nodig om over te vliegen"
+ "Need at least 2 dated, geotagged photos to fly through": "Minstens 2 gedateerde foto's met locatie nodig om over te vliegen",
+ "Export as a single ZIP file": "Exporteren als één ZIP-bestand",
+ "Export To (ZIP file)": "Exporteren naar (ZIP-bestand)",
+ "Export as ZIP": "Exporteren als ZIP"
 }

@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "प्रति वर्ष एक तस्वीर -- उस वर्ष {0} की सर्वश्रेष्ठ स्कोर वाली तस्वीर।",
  "Flythrough": "फ़्लाईथ्रू",
  "Fly through these photos on the map, oldest to newest": "मानचित्र पर इन तस्वीरों के ऊपर से उड़ें, सबसे पुरानी से सबसे नई तक",
- "Need at least 2 dated, geotagged photos to fly through": "उड़ान भरने के लिए कम से कम 2 दिनांकित, जियोटैग की गई तस्वीरें चाहिए"
+ "Need at least 2 dated, geotagged photos to fly through": "उड़ान भरने के लिए कम से कम 2 दिनांकित, जियोटैग की गई तस्वीरें चाहिए",
+ "Export as a single ZIP file": "एकल ZIP फ़ाइल के रूप में निर्यात करें",
+ "Export To (ZIP file)": "इसमें निर्यात करें (ZIP फ़ाइल)",
+ "Export as ZIP": "ZIP के रूप में निर्यात करें"
 }

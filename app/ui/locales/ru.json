@@ -1082,5 +1082,8 @@
  "One photo per year -- the best-scored shot of {0} that year.": "Одно фото в год -- лучший по оценке снимок {0} за тот год.",
  "Flythrough": "Облёт",
  "Fly through these photos on the map, oldest to newest": "Облёт этих фотографий на карте, от самых старых к новым",
- "Need at least 2 dated, geotagged photos to fly through": "Нужно хотя бы 2 фото с датой и геометкой для облёта"
+ "Need at least 2 dated, geotagged photos to fly through": "Нужно хотя бы 2 фото с датой и геометкой для облёта",
+ "Export as a single ZIP file": "Экспортировать в один ZIP-файл",
+ "Export To (ZIP file)": "Экспортировать в (ZIP-файл)",
+ "Export as ZIP": "Экспортировать как ZIP"
 }
