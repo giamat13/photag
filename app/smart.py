@@ -2,11 +2,13 @@
 such as "everyone called X + 2024 + 4 stars and up" fills itself as photos are imported or rated.
 
 A rule set is the JSON `criteria` of a saved search (table saved_searches). The older Advanced Search keys (from, to, kind,
-exts, minMB, maxMB, place) keep working; the smart keys are:
+exts, minMB, maxMB, place, cameras, lenses, minFocal, maxFocal) keep working; the smart keys are:
   people [ids] + peopleAll   photos of these people (detected faces or Google people tags); any of them, or all
   tags [names] + tagsAll     keywords (any / all), case-insensitive
   years [n, ...]             capture year
   minRating, favorite, flag ('pick'|'reject'), labels [..], minScore, hasPlace, text
+camera/lens come from EXIF (app/images.py exif_info): cameras/lenses match the model text exactly (case-insensitive),
+minFocal/maxFocal compare the real focal length in mm.
 """
 import json
 import math
@@ -37,6 +39,16 @@ def query_ids(con, c: dict) -> list[int]:
     """Ids (newest first) of the photos that satisfy every rule. An empty rule set matches nothing (never 'everything')."""
     where, args = ["p.trashed=0"], []
     ruled = False
+    cameras = [str(x).strip() for x in (c.get("cameras") or []) if str(x).strip()]
+    if cameras:
+        where.append(f"p.camera_model COLLATE NOCASE IN ({','.join('?' * len(cameras))})"); args += cameras; ruled = True
+    lenses = [str(x).strip() for x in (c.get("lenses") or []) if str(x).strip()]
+    if lenses:
+        where.append(f"p.lens COLLATE NOCASE IN ({','.join('?' * len(lenses))})"); args += lenses; ruled = True
+    if c.get("minFocal"):
+        where.append("p.focal_length>=?"); args.append(float(c["minFocal"])); ruled = True
+    if c.get("maxFocal"):
+        where.append("p.focal_length<=?"); args.append(float(c["maxFocal"])); ruled = True
     if c.get("from") and _ts(c["from"], False) is not None:
         where.append("p.taken_at>=?"); args.append(_ts(c["from"], False)); ruled = True
     if c.get("to") and _ts(c["to"], True) is not None:

@@ -1036,5 +1036,12 @@
  "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "يحتفظ photag بالفهرس (قاعدة بيانات) والصور المصغّرة في مجلد المكتبة. يزامن OneDrive هذه الملفات أثناء تغيّرها، مما قد يسبب تعارضات مزامنة وحتى فهرساً تالفاً. من الأكثر أماناً إبقاء المكتبة خارج OneDrive (مثلاً C:\\Photag) أو إيقاف مزامنة OneDrive مؤقتاً أثناء تشغيل photag. تبقى صورك في مكانها حتى تغيّر ذلك.",
  "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} ملفاً موجوداً في السحابة فقط (OneDrive) وستُضاف عندما تصبح على هذا الكمبيوتر",
  "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} ملفاً موجوداً في السحابة فقط (OneDrive) وليس على هذا الكمبيوتر بعد. استيرادها ينزّلها أولاً وقد يستغرق ذلك وقتاً. لا تُحمَّل معاينتها.",
- "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} ملفاً موجوداً في السحابة فقط (OneDrive) ولم يتم تنزيله"
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} ملفاً موجوداً في السحابة فقط (OneDrive) ولم يتم تنزيله",
+ "Camera": "الكاميرا",
+ "Focal Length": "البعد البؤري",
+ "Focal length (mm)": "البعد البؤري (مم)",
+ "Lens": "العدسة",
+ "at least": "على الأقل",
+ "at most": "على الأكثر",
+ "equiv.": "مكافئ"
 }

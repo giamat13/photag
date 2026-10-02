@@ -131,12 +131,32 @@ def dimensions(path: Path):
         return (None, None)
 
 
+def _clean_str(v) -> str | None:
+    if isinstance(v, bytes):
+        v = v.decode("utf-8", "replace")
+    v = str(v).strip(" \x00") if v is not None else None
+    return v or None
+
+
+def _rational(v) -> float | None:
+    """A Pillow EXIF rational (a plain number, or something with .numerator/.denominator) as a float."""
+    try:
+        if hasattr(v, "numerator"):
+            return float(v.numerator) / float(v.denominator or 1)
+        return float(v)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
 def exif_info(path: Path):
-    """(taken_at unix seconds | None, lat | None, lng | None) from a photo's EXIF.
-    The capture time is treated as UTC, the same way Takeout timestamps are shown."""
+    """(taken_at unix seconds | None, lat | None, lng | None, camera dict) from a photo's EXIF.
+    The capture time is treated as UTC, the same way Takeout timestamps are shown.
+    `camera` (used for advanced search / smart collections) has make, model, lens, focal_length (real mm, rounded to
+    1 decimal), focal_length_35mm (int, the 35mm-equivalent some cameras/phones write) -- any of them can be None."""
     taken = lat = lng = None
+    cam = {"make": None, "model": None, "lens": None, "focal_length": None, "focal_length_35mm": None}
     if is_video(path):
-        return taken, lat, lng
+        return taken, lat, lng, cam
     try:
         import calendar, datetime
         with Image.open(path) as im:
@@ -155,9 +175,16 @@ def exif_info(path: Path):
                 lng = dms(gps[4]) * (-1 if gps.get(3) in ("W", b"W") else 1)
                 if lat == 0 and lng == 0:
                     lat = lng = None
+            cam["make"] = _clean_str(ex.get(271))                          # Make
+            cam["model"] = _clean_str(ex.get(272))                         # Model
+            cam["lens"] = _clean_str(sub.get(42036)) or _clean_str(sub.get(42035))  # LensModel / LensMake+Model fallback
+            fl = _rational(sub.get(37386))                                 # FocalLength (mm)
+            cam["focal_length"] = round(fl, 1) if fl else None
+            fl35 = sub.get(41989)                                          # FocalLengthIn35mmFilm
+            cam["focal_length_35mm"] = int(fl35) if fl35 else None
     except Exception:
         pass
-    return taken, lat, lng
+    return taken, lat, lng, cam
 
 
 def small_preview(path: Path, size=256) -> bytes | None:

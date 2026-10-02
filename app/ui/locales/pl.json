@@ -1036,5 +1036,12 @@
  "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag przechowuje katalog (bazę danych) i miniatury w folderze biblioteki. OneDrive synchronizuje te pliki, gdy się zmieniają, co może powodować konflikty synchronizacji, a nawet uszkodzenie katalogu. Bezpieczniej trzymać bibliotekę poza OneDrive (na przykład C:\\Photag) lub wstrzymać synchronizację OneDrive, gdy photag jest otwarta. Twoje zdjęcia zostają tam, gdzie są, dopóki tego nie zmienisz.",
  "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "Pliki tylko w chmurze (OneDrive): {0} — zostaną dodane, gdy znajdą się na tym komputerze",
  "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "Pliki tylko w chmurze (OneDrive), jeszcze nie na tym komputerze: {0}. Import najpierw je pobiera, co może potrwać. Ich podglądy nie są ładowane.",
- "{n} files are only in the cloud (OneDrive) and were not downloaded": "Pliki tylko w chmurze (OneDrive) nie zostały pobrane: {n}"
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "Pliki tylko w chmurze (OneDrive) nie zostały pobrane: {n}",
+ "Camera": "Aparat",
+ "Focal Length": "Ogniskowa",
+ "Focal length (mm)": "Ogniskowa (mm)",
+ "Lens": "Obiektyw",
+ "at least": "co najmniej",
+ "at most": "co najwyżej",
+ "equiv.": "odpow."
 }

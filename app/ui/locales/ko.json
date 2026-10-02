@@ -1036,5 +1036,12 @@
  "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag는 카탈로그(데이터베이스)와 썸네일을 라이브러리 폴더에 보관합니다. OneDrive는 이 파일들이 변경되는 동안 동기화하므로 동기화 충돌이 생기거나 카탈로그가 손상될 수 있습니다. 라이브러리를 OneDrive 밖(예: C:\\Photag)에 두거나 photag를 열어 둔 동안 OneDrive 동기화를 일시 중지하는 것이 더 안전합니다. 바꾸기 전까지 사진은 제자리에 남습니다.",
  "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "파일 {0}개가 클라우드(OneDrive)에만 있으며 이 컴퓨터에 오면 추가됩니다",
  "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "파일 {0}개가 클라우드(OneDrive)에만 있고 아직 이 컴퓨터에 없습니다. 가져오면 먼저 다운로드하며 시간이 걸릴 수 있습니다. 미리 보기는 불러오지 않습니다.",
- "{n} files are only in the cloud (OneDrive) and were not downloaded": "파일 {n}개가 클라우드(OneDrive)에만 있어 다운로드하지 않았습니다"
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "파일 {n}개가 클라우드(OneDrive)에만 있어 다운로드하지 않았습니다",
+ "Camera": "카메라",
+ "Focal Length": "초점 거리",
+ "Focal length (mm)": "초점 거리(mm)",
+ "Lens": "렌즈",
+ "at least": "최소",
+ "at most": "최대",
+ "equiv.": "환산"
 }

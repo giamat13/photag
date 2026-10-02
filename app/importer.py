@@ -408,14 +408,17 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
         rel = str(dest.relative_to(PATHS.media))
         is_vid = 1 if images.is_video(dest) else 0
         w, h_ = images.dimensions(dest)
+        _, _, _, cam = images.exif_info(dest)
         photo_id = con.execute(
             "INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,"
-            "taken_at,created_at,lat,lng,altitude,description,favorited,trashed,gphotos_url,imported_at) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "taken_at,created_at,lat,lng,altitude,description,favorited,trashed,gphotos_url,imported_at,"
+            "camera_make,camera_model,lens,focal_length,focal_length_35mm) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (sha, base, rel, ext.lstrip("."), is_vid, w, h_, dest.stat().st_size,
              taken, created or int(time.time()), lat, lng, geo.get("altitude"),
              meta.get("description") or None, 1 if meta.get("favorited") else 0,
-             1 if meta.get("trashed") else 0, meta.get("url"), int(time.time()))).lastrowid
+             1 if meta.get("trashed") else 0, meta.get("url"), int(time.time()),
+             cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"])).lastrowid
         images.make_thumb(dest, sha)
         size = dest.stat().st_size
 
@@ -459,7 +462,7 @@ def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, b
     row = con.execute("SELECT id FROM photos WHERE sha256=?", (sha,)).fetchone()
     if row:
         return row["id"], False
-    e_taken, e_lat, e_lng = images.exif_info(src)
+    e_taken, e_lat, e_lng, cam = images.exif_info(src)
     taken = taken or e_taken or int(src.stat().st_mtime)
     if lat is None or lng is None:
         lat, lng = e_lat, e_lng
@@ -470,10 +473,12 @@ def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, b
     w, h = images.dimensions(dest)
     photo_id = con.execute(
         "INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,"
-        "taken_at,created_at,lat,lng,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "taken_at,created_at,lat,lng,imported_at,camera_make,camera_model,lens,focal_length,focal_length_35mm) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (sha, src.name, str(dest.relative_to(PATHS.media)), src.suffix.lower().lstrip("."),
          1 if images.is_video(dest) else 0, w, h, dest.stat().st_size,
-         taken, int(time.time()), lat, lng, int(time.time()))).lastrowid
+         taken, int(time.time()), lat, lng, int(time.time()),
+         cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"])).lastrowid
     images.make_thumb(dest, sha)
     return photo_id, True
 

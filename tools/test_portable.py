@@ -77,10 +77,17 @@ try:
     shutil.copytree(p / "portable", moved)
     env = {**os.environ, "USERPROFILE": str(p), "HOME": str(p), "APPDATA": str(p / "AppData"), "LOCALAPPDATA": str(p / "Local"),
            "PHOTAG_PORTABLE_DIR": str(moved), "PYTHONIOENCODING": "utf-8"}
-    r = subprocess.run([sys.executable, "-c", f"import sys; sys.path.insert(0, r'{ROOT}')\nfrom app import config\nprint(config.get_library_root())"],
+    # compared with os.path.samefile (not a string match): the CI runner's own TEMP folder can be reported under a short
+    # (8.3) name in one place and the long name in another, which is a quirk of that machine, not of photag
+    code = (f"from pathlib import Path\n"
+            f"got = Path(config.get_library_root())\n"
+            f"want = Path(r'{moved}') / 'data' / 'library'\n"
+            f"import os\n"
+            f"print(os.path.samefile(got, want) and (got / 'x.txt').is_file())")
+    r = subprocess.run([sys.executable, "-c", f"import sys; sys.path.insert(0, r'{ROOT}')\nfrom app import config\n{code}"],
                        env=env, capture_output=True, text=True, cwd=str(ROOT))
     check("after moving the whole folder elsewhere, the library is still found (paths are relative to the exe, not baked in)",
-          r.stdout.strip() == str(moved / "data" / "library") and (Path(r.stdout.strip()) / "x.txt").is_file(), r.stdout.strip())
+          r.stdout.strip() == "True", r.stdout.strip() or r.stderr[-300:])
 
     # the "move legacy PhotoManager library" flow is a per-PC concept and must not be offered in portable mode
     p = profile()

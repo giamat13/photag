@@ -1036,5 +1036,12 @@
  "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag 将目录（一个数据库）和缩略图保存在图库文件夹中。OneDrive 会在这些文件变化时同步它们，可能导致同步冲突，甚至使目录损坏。更安全的做法是把图库放在 OneDrive 之外（例如 C:\\Photag），或在 photag 打开期间暂停 OneDrive 同步。在您更改之前，照片会留在原处。",
  "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} 个文件仅在云端（OneDrive），待它们出现在这台电脑上后会被添加",
  "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} 个文件仅在云端（OneDrive），还不在这台电脑上。导入它们会先下载，可能需要一段时间。它们的预览不会加载。",
- "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} 个文件仅在云端（OneDrive），未下载"
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} 个文件仅在云端（OneDrive），未下载",
+ "Camera": "相机",
+ "Focal Length": "焦距",
+ "Focal length (mm)": "焦距（毫米）",
+ "Lens": "镜头",
+ "at least": "至少",
+ "at most": "最多",
+ "equiv.": "等效"
 }

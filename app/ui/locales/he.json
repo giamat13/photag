@@ -1036,5 +1036,12 @@
  "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag שומרת את הקטלוג (מסד נתונים) ואת התמונות הממוזערות בתיקיית הספרייה. OneDrive מסנכרן את הקבצים האלה בזמן שהם משתנים, מה שעלול ליצור התנגשויות סנכרון ואפילו קטלוג פגום. בטוח יותר לשמור את הספרייה מחוץ ל‑OneDrive (למשל C:\\Photag), או להשהות את הסנכרון של OneDrive בזמן ש‑photag פתוחה. התמונות שלכם נשארות במקומן עד שתשנו זאת.",
  "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} קבצים נמצאים רק בענן (OneDrive) ויתווספו כשיהיו במחשב הזה",
  "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} קבצים נמצאים רק בענן (OneDrive), עדיין לא במחשב הזה. ייבוא שלהם מוריד אותם קודם, וזה עלול לקחת זמן. התצוגות המקדימות שלהם לא נטענות.",
- "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} קבצים נמצאים רק בענן (OneDrive) ולא הורדו"
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} קבצים נמצאים רק בענן (OneDrive) ולא הורדו",
+ "Camera": "מצלמה",
+ "Focal Length": "אורך מוקד",
+ "Focal length (mm)": "אורך מוקד (מ״מ)",
+ "Lens": "עדשה",
+ "at least": "לפחות",
+ "at most": "לכל היותר",
+ "equiv.": "שווה ערך"
 }

@@ -778,6 +778,7 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
         args += [f"%{q}%"] * 4
     sql = (f"SELECT p.id,p.filename,p.is_video,p.taken_at,p.favorited,p.rating,p.width,p.height,"
            f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.trashed_at,p.rel_path,p.lat,p.lng,"
+           f"p.camera_make,p.camera_model,p.lens,p.focal_length,p.focal_length_35mm,"
            f"EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=p.id) has_kw, "
            f"(SELECT a.score FROM photo_analysis a WHERE a.photo_id=p.id) score "
            f"FROM photos p{joins} WHERE {' AND '.join(where)} "

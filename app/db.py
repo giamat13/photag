@@ -139,11 +139,14 @@ def init_db():
                 "flag INTEGER DEFAULT 0",    # Lightroom pick flag: 1 pick, -1 reject, 0 none
                 "label TEXT",                # color label: red|yellow|green|blue|purple
                 "quick INTEGER DEFAULT 0",   # member of the Quick Collection
-                "edit_ops TEXT"):            # JSON of the last applied develop settings
+                "edit_ops TEXT",             # JSON of the last applied develop settings
+                "camera_make TEXT", "camera_model TEXT", "lens TEXT",  # from EXIF, for advanced search / smart collections
+                "focal_length REAL", "focal_length_35mm INTEGER"):
         try:
             con.execute(f"ALTER TABLE photos ADD COLUMN {col}")
         except sqlite3.OperationalError:
             pass  # ponytail: column already exists on upgraded DBs
+    con.execute("CREATE INDEX IF NOT EXISTS ix_photos_camera ON photos(camera_model)")
     # Automatic tagging was removed twice (Ollama, then CLIP): drop what the keyword versions created.
     # Only tags of those sources go; manual, Lightroom and Google keywords are untouched.
     # (search by meaning, app/semantic.py, keeps its embeddings in photo_clip and makes no keywords.)

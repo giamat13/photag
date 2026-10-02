@@ -690,12 +690,14 @@ $$('.pnl>h3').forEach(h=>h.addEventListener('click', e=>{
 // ---------- advanced search: dates, place on the map, file type and size; searches can be saved ----------
 let SEARCH_TMP = null;
 const SEARCH_RADII = [0.5, 1, 2, 5, 10, 25, 50, 100, 500];
-function searchEmpty(c){ return !c || !(c.from || c.to || (c.kind && c.kind!=='all') || (c.exts && c.exts.length) || c.minMB || c.maxMB || c.place); }
+function searchEmpty(c){ return !c || !(c.from || c.to || (c.kind && c.kind!=='all') || (c.exts && c.exts.length) || c.minMB || c.maxMB || c.place || (c.cameras && c.cameras.length) || (c.lenses && c.lenses.length) || c.minFocal || c.maxFocal); }
 function searchPass(c){
   if(searchEmpty(c)) return ()=>true;
   const from = c.from ? new Date(c.from+'T00:00:00').getTime()/1000 : null, to = c.to ? new Date(c.to+'T23:59:59').getTime()/1000 : null;
   const min = c.minMB ? c.minMB*1048576 : 0, max = c.maxMB ? c.maxMB*1048576 : 0, exts = new Set((c.exts||[]).map(x=>x.toUpperCase()));
   const pl = c.place, R = Math.PI/180;
+  const cams = new Set((c.cameras||[]).map(x=>x.toLowerCase())), lenses = new Set((c.lenses||[]).map(x=>x.toLowerCase()));
+  const minF = c.minFocal ? +c.minFocal : 0, maxF = c.maxFocal ? +c.maxFocal : 0;
   return p=>{
     if(from!=null && !(p.taken_at && p.taken_at>=from)) return false;
     if(to!=null && !(p.taken_at && p.taken_at<=to)) return false;
@@ -704,6 +706,10 @@ function searchPass(c){
     if(exts.size && !exts.has(ext(p))) return false;
     if(min && (p.bytes||0)<min) return false;
     if(max && (p.bytes||0)>max) return false;
+    if(cams.size && !cams.has((p.camera_model||'').toLowerCase())) return false;
+    if(lenses.size && !lenses.has((p.lens||'').toLowerCase())) return false;
+    if(minF && !(p.focal_length && p.focal_length>=minF)) return false;
+    if(maxF && !(p.focal_length && p.focal_length<=maxF)) return false;
     if(pl){
       if(p.lat==null || p.lng==null) return false;
       const a = Math.sin((p.lat-pl.lat)*R/2)**2 + Math.cos(pl.lat*R)*Math.cos(p.lat*R)*Math.sin((p.lng-pl.lng)*R/2)**2;
@@ -714,8 +720,10 @@ function searchPass(c){
 }
 function advancedSearch(){
   const cur = S.src.kind==='search' ? S.src.crit : SEARCH_TMP;
-  const c = {from:'', to:'', kind:'all', exts:[], minMB:'', maxMB:'', place:null, ...(cur||{})};
+  const c = {from:'', to:'', kind:'all', exts:[], minMB:'', maxMB:'', place:null, cameras:[], lenses:[], minFocal:'', maxFocal:'', ...(cur||{})};
   const exts = [...new Set(S.all.map(ext))].filter(Boolean).sort();
+  const cameras = [...new Set(S.all.map(p=>p.camera_model).filter(Boolean))].sort();
+  const lenses = [...new Set(S.all.map(p=>p.lens).filter(Boolean))].sort();
   let map = null, marker = null, circle = null;
   const km = () => +$('#as-km').value;
   const draw = () => {
@@ -732,6 +740,12 @@ function advancedSearch(){
       <div class="fld"><span>${t('File Type')}</span><div class="chips" id="as-exts">${exts.map(x=>`<button type="button" class="tg ${c.exts.includes(x)?'on':''}" data-x="${esc(x)}">${esc(x)}</button>`).join('')}</div></div></div>
     <div class="two"><label class="fld"><span>${t('File Size')} · ${t('at least (MB)')}</span><input type="number" id="as-min" min="0" step="any" dir="ltr" value="${esc(c.minMB)}"></label>
       <label class="fld"><span>${t('at most (MB)')}</span><input type="number" id="as-max" min="0" step="any" dir="ltr" value="${esc(c.maxMB)}"></label></div>
+    ${cameras.length || lenses.length ? `<div class="two">
+      ${cameras.length ? `<div class="fld"><span>${t('Camera')}</span><div class="chips" id="as-cams">${cameras.map(x=>`<button type="button" class="tg ${c.cameras.includes(x)?'on':''}" data-x="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>` : '<div></div>'}
+      ${lenses.length ? `<div class="fld"><span>${t('Lens')}</span><div class="chips" id="as-lenses">${lenses.map(x=>`<button type="button" class="tg ${c.lenses.includes(x)?'on':''}" data-x="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>` : '<div></div>'}
+    </div>` : ''}
+    <div class="two"><label class="fld"><span>${t('Focal length (mm)')} · ${t('at least')}</span><input type="number" id="as-fmin" min="0" step="any" dir="ltr" value="${esc(c.minFocal)}"></label>
+      <label class="fld"><span>${t('at most')}</span><input type="number" id="as-fmax" min="0" step="any" dir="ltr" value="${esc(c.maxFocal)}"></label></div>
     <div class="fld"><span>${t('Near a place on the map')}</span>
       <div id="as-map" class="as-map" dir="ltr"></div>
       <div class="frow"><span class="hint" id="as-place-note" style="padding:0;flex:1"></span>
@@ -740,8 +754,11 @@ function advancedSearch(){
   </div><div class="mf"><button id="as-clear">${t('Clear Filter')}</button><span class="spacer"></span><button id="as-save">${t('Save')}…</button><button class="primary" id="as-go">${t('Search')}</button></div>`);
   $('#as-kind').value = c.kind; $('#as-km').value = String(c.place ? c.place.km : 5);
   const read = () => ({from:$('#as-from').value, to:$('#as-to').value, kind:$('#as-kind').value,
-    exts:$$('#as-exts .on').map(b=>b.dataset.x), minMB:+$('#as-min').value||'', maxMB:+$('#as-max').value||'', place:c.place ? {...c.place, km:km()} : null});
+    exts:$$('#as-exts .on').map(b=>b.dataset.x), minMB:+$('#as-min').value||'', maxMB:+$('#as-max').value||'', place:c.place ? {...c.place, km:km()} : null,
+    cameras:$$('#as-cams .on').map(b=>b.dataset.x), lenses:$$('#as-lenses .on').map(b=>b.dataset.x),
+    minFocal:+$('#as-fmin').value||'', maxFocal:+$('#as-fmax').value||''});
   $('#as-exts').onclick = e=>{ const b=e.target.closest('[data-x]'); if(b) b.classList.toggle('on'); };
+  $('.modal-box').addEventListener('click', e=>{ const b=e.target.closest('#as-cams [data-x],#as-lenses [data-x]'); if(b) b.classList.toggle('on'); });
   $('#as-km').onchange = ()=>{ if(c.place){ c.place.km = km(); draw(); } };
   $('#as-noplace').onclick = ()=>{ c.place = null; draw(); };
   $('#as-here').onclick = ()=>{ const p = actPhoto(); if(!p || p.lat==null){ toast(t('The selected photos have no location'), 2200); return; }
@@ -1322,6 +1339,9 @@ function renderMeta(ids, d){
     <div class="kv"><span>${t("File Size")}</span>${multi?MIX:fsize(d.bytes)}</div>
     ${multi?'':`<div class="kv"><span>${t("Quality score")}</span><span>${(S.byId.get(d.id)||{}).score!=null ? `<b class="scv ${(S.byId.get(d.id).score)>=70?'hi':S.byId.get(d.id).score>=40?'mid':'lo'}">${S.byId.get(d.id).score}</b> / 100` : `<a data-analyse>${t('Not analysed yet')}</a>`}</span></div>`}
     <div class="kv"><span>${t("Kind")}</span>${multi&&!sel.every(p=>ext(p)===ext(sel[0]))?MIX:esc(ext(d))}${d.edited&&!multi?t(' · edited'):''}</div>
+    ${!multi && (d.camera_model || d.lens || d.focal_length) ? `<div class="kv"><span>${t("Camera")}</span><span>${esc([d.camera_make, d.camera_model].filter(Boolean).join(' ')) || '—'}</span></div>
+    ${d.lens ? `<div class="kv"><span>${t("Lens")}</span><span>${esc(d.lens)}</span></div>` : ''}
+    ${d.focal_length ? `<div class="kv"><span>${t("Focal Length")}</span><span dir="ltr">${ltr(d.focal_length+' mm')}${d.focal_length_35mm?' '+ltr('('+d.focal_length_35mm+' mm '+t('equiv.')+')'):''}</span></div>` : ''}` : ''}
     <div class="meta-sub">${t("Location")}</div>
     ${multi?`<div class="kv"><span>GPS</span>${MIX}</div><div class="btnrow"><button id="m-showmap">${I('pin')} ${t('Show the selected photos on the map')}</button></div>`:`
     <div class="kv"><span>${t("Latitude")}</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>

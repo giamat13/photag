@@ -1036,5 +1036,12 @@
  "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag зберігає каталог (базу даних) і мініатюри в теці бібліотеки. OneDrive синхронізує ці файли, поки вони змінюються, що може призвести до конфліктів синхронізації й навіть пошкодження каталогу. Безпечніше тримати бібліотеку поза OneDrive (наприклад, C:\\Photag) або призупиняти синхронізацію OneDrive, поки відкрита photag. Ваші фото залишаються на місці, доки ви цього не зміните.",
  "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "Файлів лише в хмарі (OneDrive): {0} — їх буде додано, коли вони з'являться на цьому комп'ютері",
  "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "Файлів лише в хмарі (OneDrive), ще не на цьому комп'ютері: {0}. Під час імпорту їх спершу завантажують, це може зайняти час. Їхні попередні перегляди не завантажуються.",
- "{n} files are only in the cloud (OneDrive) and were not downloaded": "Файлів лише в хмарі (OneDrive), не завантажено: {n}"
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "Файлів лише в хмарі (OneDrive), не завантажено: {n}",
+ "Camera": "Камера",
+ "Focal Length": "Фокусна відстань",
+ "Focal length (mm)": "Фокусна відстань (мм)",
+ "Lens": "Об'єктив",
+ "at least": "не менше",
+ "at most": "не більше",
+ "equiv.": "екв."
 }

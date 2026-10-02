@@ -1036,5 +1036,12 @@
  "photag keeps its catalog (a database) and thumbnails in the library folder. OneDrive syncs those files while they change, which can cause sync conflicts and even a damaged catalog. It is safer to keep the library outside OneDrive (for example C:\\Photag), or to pause OneDrive sync while photag is open. Your photos stay where they are until you change it.": "photag कैटलॉग (एक डेटाबेस) और थंबनेल लाइब्रेरी फ़ोल्डर में रखता है। OneDrive इन फ़ाइलों को बदलते समय सिंक करता है, जिससे सिंक टकराव और यहाँ तक कि कैटलॉग खराब हो सकता है। लाइब्रेरी को OneDrive के बाहर रखना (उदाहरण के लिए C:\\Photag), या photag खुला होने पर OneDrive सिंक रोक देना अधिक सुरक्षित है। आपके बदलने तक आपकी फ़ोटो अपनी जगह रहती हैं।",
  "{0} files are only in the cloud (OneDrive) and are added once they are on this computer": "{0} फ़ाइलें केवल क्लाउड (OneDrive) में हैं और इस कंप्यूटर पर आने पर जोड़ी जाएँगी",
  "{0} files are only in the cloud (OneDrive), not on this computer yet. Importing them downloads them first, which can take a while. Their previews are not loaded.": "{0} फ़ाइलें केवल क्लाउड (OneDrive) में हैं, अभी इस कंप्यूटर पर नहीं। आयात उन्हें पहले डाउनलोड करता है, जिसमें समय लग सकता है। उनके पूर्वावलोकन लोड नहीं होते।",
- "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} फ़ाइलें केवल क्लाउड (OneDrive) में हैं और डाउनलोड नहीं की गईं"
+ "{n} files are only in the cloud (OneDrive) and were not downloaded": "{n} फ़ाइलें केवल क्लाउड (OneDrive) में हैं और डाउनलोड नहीं की गईं",
+ "Camera": "कैमरा",
+ "Focal Length": "फ़ोकल लंबाई",
+ "Focal length (mm)": "फ़ोकल लंबाई (mm)",
+ "Lens": "लेंस",
+ "at least": "कम से कम",
+ "at most": "अधिकतम",
+ "equiv.": "समतुल्य"
 }
