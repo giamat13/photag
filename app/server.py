@@ -2,6 +2,7 @@
 image editing, and background jobs (import / faces)."""
 import os
 import shutil
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -420,6 +421,9 @@ def update_install(body: InstallIn):
         pass
     try:
         return updater.launch(body.path)
+    except updater.BlockedError:
+        subprocess.Popen(["explorer", "/select,", str(body.path)])      # show the file: Explorer may be allowed to run it
+        raise err(400, "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README")
     except updater.UpdateError:
         raise err(400, "Update file not found. Download it again")
 

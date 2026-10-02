@@ -798,6 +798,7 @@
  "What's new in this version...",
  "What's new in version {0}",
  "When run from source, backup only runs while the app is open.",
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README",
  "Write the description, date and location into the JPG file (Ctrl+S)",
  "Writing to file is supported for JPG only",
  "Yellow",

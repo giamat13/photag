@@ -365,6 +365,13 @@ def ack_notice():
         (d / n).unlink(missing_ok=True)
 
 
+BLOCKED_WINERRORS = (4551, 1260, 4556)       # "an Application Control policy has blocked this file" and its relatives
+
+
+class BlockedError(UpdateError):
+    """The downloaded installer exists but Windows refused to run it (the app keeps running, nothing was changed)."""
+
+
 def launch(path: str) -> dict:
     """Run the downloaded installer and quit so it can replace the files -- after making an interrupted install harmless."""
     p = Path(path)
@@ -390,6 +397,8 @@ def launch(path: str) -> dict:
             subprocess.Popen(args, creationflags=flags, close_fds=True)
     except Exception as e:
         _clear_pending(d)                            # nothing started: nothing to roll back
+        if getattr(e, "winerror", None) in BLOCKED_WINERRORS:
+            raise BlockedError(str(e))               # Windows (Smart App Control / AppLocker) refused to run the unsigned installer
         raise UpdateError(str(e))
     threading.Timer(1.0, lambda: os._exit(0)).start()
     return {"mode": "installing"}

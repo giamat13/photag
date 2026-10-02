@@ -870,5 +870,6 @@
  "{0} km around the chosen place": "{0} km alrededor del lugar elegido",
  "{0} new photos imported automatically": "Se importaron automáticamente {0} fotos nuevas",
  "{0} photos were imported automatically since the app started": "Desde que se inició la aplicación se importaron automáticamente {0} fotos",
- "{n} photo files of the backup {name} cannot be read": "No se pueden leer {n} archivos de fotos de la copia {name}"
+ "{n} photo files of the backup {name} cannot be read": "No se pueden leer {n} archivos de fotos de la copia {name}",
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows bloqueó el instalador de la actualización (Smart App Control). Se abrió la carpeta con la actualización descargada: haz doble clic en el archivo allí, o consulta el README"
 }

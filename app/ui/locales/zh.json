@@ -870,5 +870,6 @@
  "{0} km around the chosen place": "所选地点周围 {0} 公里",
  "{0} new photos imported automatically": "已自动导入 {0} 张新照片",
  "{0} photos were imported automatically since the app started": "自应用启动以来已自动导入 {0} 张照片",
- "{n} photo files of the backup {name} cannot be read": "备份 {name} 中有 {n} 个照片文件无法读取"
+ "{n} photo files of the backup {name} cannot be read": "备份 {name} 中有 {n} 个照片文件无法读取",
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows 阻止了更新安装程序（Smart App Control）。已打开下载的更新所在的文件夹：请在那里双击该文件，或参阅 README"
 }

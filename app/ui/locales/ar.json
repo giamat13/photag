@@ -870,5 +870,6 @@
  "{0} km around the chosen place": "{0} كم حول المكان المختار",
  "{0} new photos imported automatically": "تم استيراد {0} صورة جديدة تلقائيًا",
  "{0} photos were imported automatically since the app started": "تم استيراد {0} صورة تلقائيًا منذ بدء التطبيق",
- "{n} photo files of the backup {name} cannot be read": "تعذّرت قراءة {n} من ملفات الصور في النسخة الاحتياطية {name}"
+ "{n} photo files of the backup {name} cannot be read": "تعذّرت قراءة {n} من ملفات الصور في النسخة الاحتياطية {name}",
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "منع Windows مثبّت التحديث (Smart App Control). تم فتح المجلد الذي يحتوي على التحديث الذي تم تنزيله: انقر نقرًا مزدوجًا على الملف هناك، أو راجع ملف README"
 }

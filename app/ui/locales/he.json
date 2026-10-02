@@ -870,5 +870,6 @@
  "{0} km around the chosen place": "{0} ק\"מ סביב המקום שנבחר",
  "{0} new photos imported automatically": "{0} תמונות חדשות יובאו אוטומטית",
  "{0} photos were imported automatically since the app started": "{0} תמונות יובאו אוטומטית מאז שהאפליקציה הופעלה",
- "{n} photo files of the backup {name} cannot be read": "לא ניתן לקרוא {n} קובצי תמונות של הגיבוי {name}"
+ "{n} photo files of the backup {name} cannot be read": "לא ניתן לקרוא {n} קובצי תמונות של הגיבוי {name}",
+ "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README": "Windows חסם את מתקין העדכון (Smart App Control). נפתחה התיקייה עם העדכון שהורד: לחץ פעמיים על הקובץ שם, או ראה את ה-README"
 }
