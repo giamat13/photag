@@ -1113,5 +1113,14 @@
  "digiKam — {done}/{total}": "digiKam — {done}/{total}",
  "{0} files referenced by the database were not found on disk and will not be imported.": "数据库引用的 {0} 个文件在磁盘上未找到，将不会被导入。",
  "{0} photos · {1} tags · {2} albums · {3}": "{0} 张照片 · {1} 个标签 · {2} 个相册 · {3}",
- "{n} items imported from digiKam": "已从 digiKam 导入 {n} 个项目"
+ "{n} items imported from digiKam": "已从 digiKam 导入 {n} 个项目",
+ " Choose export ZIP files...": " 选择导出 ZIP 文件...",
+ "Choose Instagram/Facebook export ZIP files": "选择 Instagram/Facebook 导出 ZIP 文件",
+ "Choose an export ZIP file": "选择一个导出 ZIP 文件",
+ "Choose the export ZIP file(s) from Instagram or Facebook.": "选择来自 Instagram 或 Facebook 的导出 ZIP 文件。",
+ "Every photo and video in the export is imported, with its caption and date when the export includes them.": "导出中的每张照片和视频都会被导入，若导出包含说明和日期，也会一并导入。",
+ "Export ZIP": "导出 ZIP",
+ "Import from Instagram/Facebook": "从 Instagram/Facebook 导入",
+ "Reading the export…": "正在读取导出内容…",
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "向 Instagram 或 Facebook 请求你的数据（账户管理中心 → 你的信息和权限 → 下载你的信息），选择 JSON 格式。ZIP 会被直接读取，无需解压。"
 }

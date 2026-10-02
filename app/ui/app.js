@@ -2654,7 +2654,7 @@ function openExport(){
 }
 
 // ---------- import (full-window dialog like Lightroom's) ----------
-const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, dkpath:'', dkinfo:null, recursive:true, files:[], on:new Set(), skipDup:true, show:'all', recoverXmp:false};
+const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, dkpath:'', dkinfo:null, socialZips:[], recursive:true, files:[], on:new Set(), skipDup:true, show:'all', recoverXmp:false};
 function openImport(mode){
   IM.mode = mode || IM.mode;
   IM.path = IM.path || pref.get('importPath','');
@@ -2674,18 +2674,19 @@ function zipGaps(zips){
   return [...gaps].sort((a, b) => a - b);
 }
 function renderImport(){
-  const el=$('#import'), folder=IM.mode==='folder', lr=IM.mode==='lrcat', dk=IM.mode==='digikam', li=IM.lrinfo, di=IM.dkinfo;
+  const el=$('#import'), folder=IM.mode==='folder', lr=IM.mode==='lrcat', dk=IM.mode==='digikam', sm=IM.mode==='social', li=IM.lrinfo, di=IM.dkinfo;
   const shown = IM.files.filter(f=>IM.show==='all' || !f.dup);
   const chosen = IM.files.filter(f=>IM.on.has(f.path));
   const bytes = chosen.reduce((a,f)=>a+f.bytes,0);
   const recent = pref.get('importRecent', []);
-  const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : dk ? (di && di.images-di.missing>0) : IM.zips.length;
+  const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : dk ? (di && di.images-di.missing>0) : sm ? IM.socialZips.length : IM.zips.length;
   const zipTotal = IM.zips.reduce((a, z) => a + z.bytes, 0);
+  const socialTotal = IM.socialZips.reduce((a, z) => a + z.bytes, 0);
   el.innerHTML = `
   <div class="im-top">
-    <div class="blk"><span>${t("Source")}</span><b>${esc(folder ? (IM.path||t('Choose a folder')) : lr ? (IM.lrcat||t('Choose a Lightroom catalog')) : dk ? (IM.dkpath||t('Choose a digiKam database')) : (IM.zips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.zips.length), fsize(zipTotal)]) : IM.zips.length ? IM.zips[0].name : t('Choose a ZIP file')))}</b></div>
+    <div class="blk"><span>${t("Source")}</span><b>${esc(folder ? (IM.path||t('Choose a folder')) : lr ? (IM.lrcat||t('Choose a Lightroom catalog')) : dk ? (IM.dkpath||t('Choose a digiKam database')) : sm ? (IM.socialZips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.socialZips.length), fsize(socialTotal)]) : IM.socialZips.length ? IM.socialZips[0].name : t('Choose an export ZIP file')) : (IM.zips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.zips.length), fsize(zipTotal)]) : IM.zips.length ? IM.zips[0].name : t('Choose a ZIP file')))}</b></div>
     <span class="im-arrow">←</span>
-    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("Copy")}<small>${t("From Folder / Memory Card")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("Catalog .lrcat")}</small></a><a data-im="digikam" class="${dk?'on':''}">digiKam<small>${t("Database digikam4.db")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("ZIP file from Google Photos")}</small></a></nav>
+    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("Copy")}<small>${t("From Folder / Memory Card")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("Catalog .lrcat")}</small></a><a data-im="digikam" class="${dk?'on':''}">digiKam<small>${t("Database digikam4.db")}</small></a><a data-im="social" class="${sm?'on':''}">Instagram / Facebook<small>${t("Export ZIP")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("ZIP file from Google Photos")}</small></a></nav>
     <span class="im-arrow">←</span>
     <div class="blk"><span>${t("Destination")}</span><b>${esc(S.status?.media_path||'')}</b></div>
   </div>
@@ -2700,6 +2701,8 @@ function renderImport(){
           ${(IM.lrcatCandidates||[]).length ? `<div class="lbl-sub" style="padding-top:8px">${t('Found on this computer')}</div>${IM.lrcatCandidates.map(c=>`<div class="row" data-lrpick="${esc(c.path)}">${I('import')}<span class="nm" dir="ltr" title="${esc(c.path)}">${esc(c.name)}</span></div>`).join('')}` : ''}`
         : dk ? `<div class="btnrow"><button id="im-dkdb">${I('import')} ${t(" Choose digiKam database...")}</button></div>
           <div class="hint">${t("File ")}<code>digikam4.db</code>${t(" from digiKam's database folder. Closing digiKam before importing is recommended.")}</div>`
+        : sm ? `<div class="btnrow"><button id="im-social-zip">${I('import')} ${t(" Choose export ZIP files...")}</button></div>
+          <div class="hint">${t("Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.")}</div>`
         : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" Choose ZIP files...")}</button></div>
           <div class="hint">${t("Download your library from takeout.google.com (Google Photos). The files are read directly, without extracting them. A large export comes as several ZIP files (…-001.zip, …-002.zip): choose them all, or just one, and the other parts in the same folder are added automatically.")}</div>`}
       </div></section>
@@ -2718,6 +2721,10 @@ function renderImport(){
       : dk ? `<div class="im-grid"><div class="im-empty">${IM.dkloading?t('Reading the database…'):!di?t('Choose a digiKam database from the “Source” panel.')
           : `<b dir="ltr">${esc(IM.dkpath)}</b><br>${t("{0} photos · {1} tags · {2} albums · {3}", [num(di.images), num(di.tags), num(di.albums), fsize(di.bytes)])}
              ${di.missing?`<br><span style="color:var(--yellow)">${t("{0} files referenced by the database were not found on disk and will not be imported.", [num(di.missing)])}</span>`:''}`}</div></div>`
+      : sm ? `<div class="im-grid"><div class="im-empty">${IM.socialZips.length ? `${IM.socialZips.map((z,i)=>`<div class="zrow" dir="ltr"><b>${esc(z.name)}</b> · ${fsize(z.bytes)}<button class="zrm" data-szrm="${i}" title="${t('Remove this file from the import')}">✕</button></div>`).join('')}
+          <div><a data-sclear>${t('Remove all')}</a></div>
+          <br><br>${t("Every photo and video in the export is imported, with its caption and date when the export includes them.")}`
+          : t('Choose the export ZIP file(s) from Instagram or Facebook.')}</div></div>`
       : `<div class="im-grid"><div class="im-empty">${IM.zips.length ? `${IM.zips.map((z,i)=>`<div class="zrow" dir="ltr"><b>${esc(z.name)}</b> · ${fsize(z.bytes)}<button class="zrm" data-zrm="${i}" title="${t('Remove this file from the import')}">✕</button></div>`).join('')}
           <div><a class="zclear" data-zclear>${t('Remove all')}</a></div>
           ${IM.zipFound ? `<br>${t('{0} more parts from the same folder were added.', [num(IM.zipFound)])}` : ''}
@@ -2785,6 +2792,16 @@ $('#import').addEventListener('click', async e=>{
   if(tg.closest('#im-dkdb')){ const r=await api('/api/pick-file?kind=digikam&title='+encodeURIComponent(t('Choose digiKam database'))); if(!r.path) return;
     IM.dkpath=r.path; IM.dkinfo=null; IM.dkloading=true; renderImport();
     try{ IM.dkinfo=await api('/api/digikam-info?'+new URLSearchParams({path:r.path})); } finally { IM.dkloading=false; renderImport(); } return; }
+  if(tg.closest('#im-social-zip')){
+    const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('Choose Instagram/Facebook export ZIP files')));
+    if(!(r.files||[]).length) return;
+    const picked = new Map(IM.socialZips.map(z => [zkey(z.path), z]));
+    r.files.forEach(f => picked.set(zkey(f.path), f));
+    IM.socialZips = [...picked.values()].sort((a,b)=>a.name.localeCompare(b.name));
+    renderImport(); return; }
+  const szrm = tg.closest('[data-szrm]');
+  if(szrm){ IM.socialZips.splice(+szrm.dataset.szrm, 1); renderImport(); return; }
+  if(tg.closest('[data-sclear]')){ IM.socialZips = []; renderImport(); return; }
   const rec=tg.closest('[data-recent]'); if(rec){ IM.path=rec.dataset.recent; scanImport(); return; }
   const sh=tg.closest('[data-show]'); if(sh){ IM.show=sh.dataset.show; renderImport(); return; }
   const ck=tg.closest('[data-chk]'); if(ck){ IM.on = ck.dataset.chk==='all' ? new Set(IM.files.filter(f=>IM.show==='all'||!f.dup).map(f=>f.path)) : new Set(); renderImport(); return; }
@@ -2796,6 +2813,7 @@ $('#import').addEventListener('click', async e=>{
     if(IM.mode==='zip'){ await send('POST','/api/import',{zip_paths:IM.zips.map(z=>z.path)}); closeImport(); pollJob('import',t('Import from Google')); return; }
     if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import',t('Import from Lightroom')); return; }
     if(IM.mode==='digikam'){ await send('POST','/api/import-digikam',{path:IM.dkpath}); closeImport(); pollJob('import',t('Import from digiKam')); return; }
+    if(IM.mode==='social'){ await send('POST','/api/import-social',{zip_paths:IM.socialZips.map(z=>z.path)}); closeImport(); pollJob('import',t('Import from Instagram/Facebook')); return; }
     const paths=IM.files.filter(f=>IM.on.has(f.path)).map(f=>f.path);
     await send('POST','/api/import-folder',{paths, keywords:($('#im-kw').value||'').split(','), album:$('#im-album').value||null, recover_xmp:IM.recoverXmp});
     closeImport(); IM.files=[]; pollJob('import',t('Import'));

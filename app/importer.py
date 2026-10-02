@@ -484,6 +484,128 @@ def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, b
     return photo_id, True
 
 
+# ---------- import an Instagram or Facebook "Download Your Information" export (ZIP) ----------
+# Both exports vary by version and locale, but every media reference in their JSON is a dict with a
+# "uri" pointing at the file, usually alongside "creation_timestamp" and/or "title"/caption -- so
+# instead of hard-coding either platform's top-level layout, every .json in the export is walked
+# looking for that shape. Caption text in these exports is UTF-8 mis-decoded as Latin-1 (a long-
+# standing, documented quirk of Meta's export tool); _social_text() undoes it.
+def _social_text(s):
+    if not isinstance(s, str):
+        return s
+    try:
+        return s.encode("latin1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return s
+
+
+def _social_json_index(zf) -> dict:
+    """{uri: (caption, creation_timestamp)} for every media reference found in the export's JSON files."""
+    index = {}
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            if isinstance(obj.get("uri"), str):
+                title = obj.get("title") or obj.get("caption") or obj.get("description")
+                index[obj["uri"]] = (_social_text(title) if title else None, obj.get("creation_timestamp"))
+            for v in obj.values():
+                walk(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                walk(v)
+
+    for n in zf.namelist():
+        if n.lower().endswith(".json"):
+            try:
+                walk(json.loads(zf.read(n).decode("utf-8", "replace")))
+            except Exception:
+                pass
+    return index
+
+
+def _ingest_zip_media(con, zf, entry: str, caption, taken) -> tuple[str, int]:
+    """Stream one media entry out of the ZIP into the library, like _ingest_file but for a zip member."""
+    import hashlib
+    name = Path(entry).name
+    tmp = PATHS.media / f".tmp_{int(time.time()*1000)}_{_safe_component(name)}"
+    try:
+        with zf.open(entry) as src, open(tmp, "wb") as dst:
+            h = hashlib.sha256()
+            while chunk := src.read(1 << 20):
+                h.update(chunk); dst.write(chunk)
+        sha = h.hexdigest()
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        return "failed", 0
+    row = con.execute("SELECT id FROM photos WHERE sha256=?", (sha,)).fetchone()
+    if row:
+        size = tmp.stat().st_size
+        tmp.unlink(missing_ok=True)
+        return "duplicate", size
+    e_taken, e_lat, e_lng, cam = images.exif_info(tmp)
+    taken = taken or e_taken or int(time.time())
+    sub = PATHS.media / str(time.gmtime(taken).tm_year)
+    sub.mkdir(parents=True, exist_ok=True)
+    dest = _unique_dest(sub / _safe_component(name))
+    cloud.replace(tmp, dest)
+    w, h_ = images.dimensions(dest)
+    con.execute(
+        "INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,"
+        "taken_at,created_at,lat,lng,description,imported_at,camera_make,camera_model,lens,focal_length,focal_length_35mm) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (sha, name, str(dest.relative_to(PATHS.media)), dest.suffix.lower().lstrip("."),
+         1 if images.is_video(dest) else 0, w, h_, dest.stat().st_size,
+         taken, int(time.time()), e_lat, e_lng, caption, int(time.time()),
+         cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"]))
+    images.make_thumb(dest, sha)
+    return "added", dest.stat().st_size
+
+
+def run_social_import(zip_paths, progress: Progress):
+    """Import a 'Download Your Information' export from Instagram or Facebook: every photo and video
+    in the ZIP, with caption and date recovered from the export's own JSON where available."""
+    zip_paths = [zip_paths] if isinstance(zip_paths, (str, Path)) else list(zip_paths)
+    con = db.init_db()
+    mark_import_start(con)
+    progress.state = "scanning"; progress.say("Reading the export…")
+    try:
+        entries_by_zip = []
+        total_bytes = 0
+        for zp in zip_paths:
+            zf = zipfile.ZipFile(zp)
+            entries = [n for n in zf.namelist() if not n.endswith("/") and Path(n).suffix.lower() in MEDIA_EXT]
+            entries_by_zip.append((zf, entries))
+            total_bytes += sum(zf.getinfo(n).file_size for n in entries)
+        progress.total = sum(len(e) for _, e in entries_by_zip)
+        progress.state = "importing"; progress.done = 0
+        stats = ImportStats(progress, "social", total_bytes)
+        try:
+            for zf, entries in entries_by_zip:
+                index = _social_json_index(zf)
+                for n in entries:
+                    if progress.cancel:
+                        break
+                    progress.done += 1
+                    if progress.done % 25 == 0:
+                        progress.say("{done}/{total}", done=progress.done, total=progress.total)
+                        con.commit()
+                    caption, taken = next(((c, t) for uri, (c, t) in index.items()
+                                           if uri.endswith(n) or n.endswith(uri)), (None, None))
+                    status, nbytes = _ingest_zip_media(con, zf, n, caption, taken)
+                    stats.item(status, Path(n).name, nbytes)
+        finally:
+            for zf, _ in entries_by_zip:
+                zf.close()
+        con.commit()
+        progress.state = "done"
+        progress.say_parts(*([("Import cancelled", {})] if progress.cancel else []),
+                           ("{n} items imported", {"n": progress.extra.get("added", 0)}),
+                           *([("{n} already in catalog", {"n": progress.extra.get("duplicates", 0)})] if progress.extra.get("duplicates") else []))
+    except Exception as e:
+        con.commit()
+        progress.fail("Import failed: {error}", error=str(e))
+
+
 # ---------- automatic import: new photos in a chosen folder (e.g. where the phone syncs) come in by themselves ----------
 AUTO = {"seq": 0, "running": False, "last_run": None, "last_added": 0, "total_added": 0, "error": None}   # for the UI (/api/background)
 _AUTO_LOCK = threading.Lock()

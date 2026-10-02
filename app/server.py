@@ -368,6 +368,17 @@ def start_import(body: ImportIn):
     return {"ok": True}
 
 
+class SocialImportIn(BaseModel):
+    zip_paths: list[str]
+
+@app.post("/api/import-social")
+def start_import_social(body: SocialImportIn):
+    if not body.zip_paths or not all(Path(p).is_file() for p in body.zip_paths):
+        raise err(404, "The ZIP file was not found")
+    _start("import", importer.run_social_import, body.zip_paths)
+    return {"ok": True}
+
+
 @app.post("/api/import/cancel")
 def cancel_import():
     p = JOBS.get("import")

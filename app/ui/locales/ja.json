@@ -1113,5 +1113,14 @@
  "digiKam — {done}/{total}": "digiKam — {done}/{total}",
  "{0} files referenced by the database were not found on disk and will not be imported.": "{0} 件のファイルはデータベースに参照されていますがディスク上に見つからず、インポートされません。",
  "{0} photos · {1} tags · {2} albums · {3}": "{0} 枚の写真 · {1} 個のタグ · {2} 個のアルバム · {3}",
- "{n} items imported from digiKam": "digiKamから {n} 件のアイテムをインポートしました"
+ "{n} items imported from digiKam": "digiKamから {n} 件のアイテムをインポートしました",
+ " Choose export ZIP files...": " エクスポートZIPファイルを選択...",
+ "Choose Instagram/Facebook export ZIP files": "Instagram/FacebookエクスポートZIPファイルを選択",
+ "Choose an export ZIP file": "エクスポートZIPファイルを選択",
+ "Choose the export ZIP file(s) from Instagram or Facebook.": "InstagramまたはFacebookからエクスポートしたZIPファイルを選択してください。",
+ "Every photo and video in the export is imported, with its caption and date when the export includes them.": "エクスポート内のすべての写真と動画がインポートされ、エクスポートにキャプションと日付が含まれる場合はそれらも反映されます。",
+ "Export ZIP": "エクスポートZIP",
+ "Import from Instagram/Facebook": "Instagram/Facebookからインポート",
+ "Reading the export…": "エクスポートを読み込んでいます…",
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "InstagramまたはFacebookでデータをリクエストしてください（アカウントセンター → あなたの情報とアクセス許可 → 情報をダウンロード）、JSON形式を選択します。ZIPは展開せずに直接読み込まれます。"
 }

@@ -1113,5 +1113,14 @@
  "digiKam — {done}/{total}": "digiKam — {done}/{total}",
  "{0} files referenced by the database were not found on disk and will not be imported.": "{0} файлів, на які посилається база даних, не знайдено на диску, їх не буде імпортовано.",
  "{0} photos · {1} tags · {2} albums · {3}": "{0} фото · {1} тегів · {2} альбомів · {3}",
- "{n} items imported from digiKam": "Імпортовано {n} елементів з digiKam"
+ "{n} items imported from digiKam": "Імпортовано {n} елементів з digiKam",
+ " Choose export ZIP files...": " Виберіть ZIP-файли експорту...",
+ "Choose Instagram/Facebook export ZIP files": "Виберіть ZIP-файли експорту Instagram/Facebook",
+ "Choose an export ZIP file": "Виберіть ZIP-файл експорту",
+ "Choose the export ZIP file(s) from Instagram or Facebook.": "Виберіть ZIP-файл(и) експорту з Instagram або Facebook.",
+ "Every photo and video in the export is imported, with its caption and date when the export includes them.": "Кожне фото та відео з експорту імпортується разом із підписом і датою, якщо експорт їх містить.",
+ "Export ZIP": "ZIP експорту",
+ "Import from Instagram/Facebook": "Імпорт з Instagram/Facebook",
+ "Reading the export…": "Читання експорту…",
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Запросіть свої дані в Instagram або Facebook (Центр облікових записів → Ваша інформація та дозволи → Завантажити вашу інформацію), вибравши формат JSON. ZIP зчитується напряму, без розпакування."
 }

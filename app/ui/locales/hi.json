@@ -1113,5 +1113,14 @@
  "digiKam — {done}/{total}": "digiKam — {done}/{total}",
  "{0} files referenced by the database were not found on disk and will not be imported.": "{0} फ़ाइलें जिनका डेटाबेस में संदर्भ है, डिस्क पर नहीं मिलीं और आयात नहीं की जाएंगी।",
  "{0} photos · {1} tags · {2} albums · {3}": "{0} फ़ोटो · {1} टैग · {2} एल्बम · {3}",
- "{n} items imported from digiKam": "digiKam से {n} आइटम आयात किए गए"
+ "{n} items imported from digiKam": "digiKam से {n} आइटम आयात किए गए",
+ " Choose export ZIP files...": " निर्यात ZIP फ़ाइलें चुनें...",
+ "Choose Instagram/Facebook export ZIP files": "Instagram/Facebook निर्यात ZIP फ़ाइलें चुनें",
+ "Choose an export ZIP file": "एक निर्यात ZIP फ़ाइल चुनें",
+ "Choose the export ZIP file(s) from Instagram or Facebook.": "Instagram या Facebook से निर्यात ZIP फ़ाइल(ें) चुनें।",
+ "Every photo and video in the export is imported, with its caption and date when the export includes them.": "निर्यात में मौजूद हर फ़ोटो और वीडियो आयात किया जाता है, जिसमें कैप्शन और तारीख शामिल है जब निर्यात में ये हों।",
+ "Export ZIP": "निर्यात ZIP",
+ "Import from Instagram/Facebook": "Instagram/Facebook से आयात करें",
+ "Reading the export…": "निर्यात पढ़ा जा रहा है…",
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Instagram या Facebook से अपना डेटा मांगें (खाता केंद्र → आपकी जानकारी और अनुमतियां → अपनी जानकारी डाउनलोड करें), JSON प्रारूप चुनते हुए। ZIP को सीधे पढ़ा जाता है, उसे निकाले बिना।"
 }

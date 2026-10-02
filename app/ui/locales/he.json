@@ -1113,5 +1113,14 @@
  "digiKam — {done}/{total}": "digiKam — {done}/{total}",
  "{0} files referenced by the database were not found on disk and will not be imported.": "{0} קבצים שמסד הנתונים מפנה אליהם לא נמצאו בדיסק ולא יובאו.",
  "{0} photos · {1} tags · {2} albums · {3}": "{0} תמונות · {1} תגיות · {2} אלבומים · {3}",
- "{n} items imported from digiKam": "{n} פריטים יובאו מ-digiKam"
+ "{n} items imported from digiKam": "{n} פריטים יובאו מ-digiKam",
+ " Choose export ZIP files...": " בחר קובצי ZIP לייצוא...",
+ "Choose Instagram/Facebook export ZIP files": "בחר קובצי ZIP של ייצוא מ-Instagram/Facebook",
+ "Choose an export ZIP file": "בחר קובץ ZIP של ייצוא",
+ "Choose the export ZIP file(s) from Instagram or Facebook.": "בחר את קובץ/קובצי ה-ZIP של הייצוא מ-Instagram או Facebook.",
+ "Every photo and video in the export is imported, with its caption and date when the export includes them.": "כל תמונה וסרטון בייצוא מיובאים, עם הכיתוב והתאריך כשהייצוא כולל אותם.",
+ "Export ZIP": "ZIP של ייצוא",
+ "Import from Instagram/Facebook": "ייבוא מ-Instagram/Facebook",
+ "Reading the export…": "קורא את הייצוא…",
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "בקש את הנתונים שלך מ-Instagram או Facebook (מרכז החשבונות ← המידע וההרשאות שלך ← הורדת המידע שלך), ובחר בפורמט JSON. קובץ ה-ZIP נקרא ישירות, בלי לחלץ אותו."
 }

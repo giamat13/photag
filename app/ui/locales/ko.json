@@ -1113,5 +1113,14 @@
  "digiKam — {done}/{total}": "digiKam — {done}/{total}",
  "{0} files referenced by the database were not found on disk and will not be imported.": "{0}개의 파일이 데이터베이스에서 참조되지만 디스크에서 찾을 수 없어 가져오지 않습니다.",
  "{0} photos · {1} tags · {2} albums · {3}": "사진 {0}개 · 태그 {1}개 · 앨범 {2}개 · {3}",
- "{n} items imported from digiKam": "digiKam에서 {n}개 항목을 가져왔습니다"
+ "{n} items imported from digiKam": "digiKam에서 {n}개 항목을 가져왔습니다",
+ " Choose export ZIP files...": " 내보내기 ZIP 파일 선택...",
+ "Choose Instagram/Facebook export ZIP files": "Instagram/Facebook 내보내기 ZIP 파일 선택",
+ "Choose an export ZIP file": "내보내기 ZIP 파일 선택",
+ "Choose the export ZIP file(s) from Instagram or Facebook.": "Instagram 또는 Facebook의 내보내기 ZIP 파일을 선택하세요.",
+ "Every photo and video in the export is imported, with its caption and date when the export includes them.": "내보내기에 포함된 모든 사진과 동영상이 가져와지며, 내보내기에 캡션과 날짜가 포함된 경우 함께 반영됩니다.",
+ "Export ZIP": "내보내기 ZIP",
+ "Import from Instagram/Facebook": "Instagram/Facebook에서 가져오기",
+ "Reading the export…": "내보내기를 읽는 중…",
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Instagram 또는 Facebook에서 데이터를 요청하세요(계정 센터 → 내 정보 및 권한 → 내 정보 다운로드), JSON 형식을 선택합니다. ZIP은 압축을 풀지 않고 직접 읽습니다."
 }

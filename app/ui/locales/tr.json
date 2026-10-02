@@ -1113,5 +1113,14 @@
  "digiKam — {done}/{total}": "digiKam — {done}/{total}",
  "{0} files referenced by the database were not found on disk and will not be imported.": "{0} dosya veritabanında referans gösteriliyor ancak diskte bulunamadı ve içe aktarılmayacak.",
  "{0} photos · {1} tags · {2} albums · {3}": "{0} fotoğraf · {1} etiket · {2} albüm · {3}",
- "{n} items imported from digiKam": "digiKam'dan {n} öğe içe aktarıldı"
+ "{n} items imported from digiKam": "digiKam'dan {n} öğe içe aktarıldı",
+ " Choose export ZIP files...": " Dışa aktarma ZIP dosyalarını seçin...",
+ "Choose Instagram/Facebook export ZIP files": "Instagram/Facebook dışa aktarma ZIP dosyalarını seçin",
+ "Choose an export ZIP file": "Bir dışa aktarma ZIP dosyası seçin",
+ "Choose the export ZIP file(s) from Instagram or Facebook.": "Instagram veya Facebook'tan dışa aktarma ZIP dosyasını/dosyalarını seçin.",
+ "Every photo and video in the export is imported, with its caption and date when the export includes them.": "Dışa aktarımdaki her fotoğraf ve video, dışa aktarım başlık ve tarih içeriyorsa bunlarla birlikte içe aktarılır.",
+ "Export ZIP": "Dışa aktarma ZIP",
+ "Import from Instagram/Facebook": "Instagram/Facebook'tan içe aktar",
+ "Reading the export…": "Dışa aktarma okunuyor…",
+ "Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.": "Instagram veya Facebook'tan verilerinizi isteyin (Hesap Merkezi → Bilgileriniz ve izinleriniz → Bilgilerinizi indirin), JSON biçimini seçerek. ZIP, çıkarılmadan doğrudan okunur."
 }
