@@ -420,6 +420,7 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
              meta.get("description") or None, 1 if meta.get("favorited") else 0,
              1 if meta.get("trashed") else 0, meta.get("url"), int(time.time()),
              cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"])).lastrowid
+        images.store_exif(con, photo_id, dest)
         images.make_thumb(dest, sha)
         size = dest.stat().st_size
 
@@ -480,6 +481,7 @@ def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, b
          1 if images.is_video(dest) else 0, w, h, dest.stat().st_size,
          taken, int(time.time()), lat, lng, int(time.time()),
          cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"])).lastrowid
+    images.store_exif(con, photo_id, dest)
     images.make_thumb(dest, sha)
     return photo_id, True
 
@@ -549,14 +551,15 @@ def _ingest_zip_media(con, zf, entry: str, caption, taken) -> tuple[str, int]:
     dest = _unique_dest(sub / _safe_component(name))
     cloud.replace(tmp, dest)
     w, h_ = images.dimensions(dest)
-    con.execute(
+    photo_id = con.execute(
         "INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,"
         "taken_at,created_at,lat,lng,description,imported_at,camera_make,camera_model,lens,focal_length,focal_length_35mm) "
         "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (sha, name, str(dest.relative_to(PATHS.media)), dest.suffix.lower().lstrip("."),
          1 if images.is_video(dest) else 0, w, h_, dest.stat().st_size,
          taken, int(time.time()), e_lat, e_lng, caption, int(time.time()),
-         cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"]))
+         cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"])).lastrowid
+    images.store_exif(con, photo_id, dest)
     images.make_thumb(dest, sha)
     return "added", dest.stat().st_size
 

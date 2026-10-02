@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -94,11 +94,31 @@ def _ref_loop():
         time.sleep(float(os.environ.get("PHOTAG_REF_TICK", 300)))
 
 
+def _exif_loop():
+    """Photos that were imported before the full EXIF was kept in the catalog: fill it in a few at a time, in the
+    background, never while another task runs. New photos get theirs at import."""
+    time.sleep(float(os.environ.get("PHOTAG_EXIF_DELAY", 60)))
+    after = 0
+    while True:
+        try:
+            if not _other_job_running():
+                _, last = exifindex.backfill_batch(db.connect(), after, 50)
+                if last == after:                       # nothing left beyond the cursor: look again from the start later
+                    after = 0
+                    time.sleep(float(os.environ.get("PHOTAG_EXIF_IDLE", 900)))
+                    continue
+                after = last
+        except Exception:
+            pass
+        time.sleep(float(os.environ.get("PHOTAG_EXIF_TICK", 1)))
+
+
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
     threading.Thread(target=_backup_loop, daemon=True).start()
     threading.Thread(target=_ref_loop, daemon=True).start()
+    threading.Thread(target=_exif_loop, daemon=True).start()
     threading.Thread(target=_auto_import_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
@@ -1124,6 +1144,15 @@ def rotate_image(pid: int, body: RotateIn):
         ops["crop"] = [1 - y2, x1, 1 - y1, x2] if d > 0 else [y1, 1 - x2, y2, 1 - x1]
     _render(con, r, ops)
     return photo(pid)
+
+
+@app.get("/api/photo/{pid}/exif")
+def photo_exif(pid: int):
+    """Every EXIF tag of the photo's original file, from the catalog (read from the file and stored on first ask)."""
+    ex = exifindex.get(db.connect(), pid)
+    if ex is None:
+        raise err(404, "Photo not found or its file is not available right now")
+    return {"exif": ex}
 
 
 @app.post("/api/photo/{pid}/revert")

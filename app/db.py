@@ -140,6 +140,7 @@ def init_db():
                 "label TEXT",                # color label: red|yellow|green|blue|purple
                 "quick INTEGER DEFAULT 0",   # member of the Quick Collection
                 "edit_ops TEXT",             # JSON of the last applied develop settings
+                "exif_json TEXT",            # every EXIF tag of the ORIGINAL file; NULL = not read yet, '{}' = nothing there
                 "camera_make TEXT", "camera_model TEXT", "lens TEXT",  # from EXIF, for advanced search / smart collections
                 "focal_length REAL", "focal_length_35mm INTEGER"):
         try:

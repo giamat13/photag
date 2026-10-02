@@ -187,6 +187,74 @@ def exif_info(path: Path):
     return taken, lat, lng, cam
 
 
+_EXIF_BLOB_MAX = 64          # bytes longer than this (MakerNote, thumbnails, ICC...) are noted by size, not stored
+
+
+def _exif_value(v, depth=0):
+    """One EXIF value as something json.dumps accepts and a person can read."""
+    if isinstance(v, bytes):
+        if len(v) > _EXIF_BLOB_MAX:
+            return f"<{len(v)} bytes>"
+        txt = v.decode("ascii", "ignore").strip("\x00 ")
+        return txt if txt and txt.isprintable() else v.hex()
+    if isinstance(v, (tuple, list)):
+        return [_exif_value(x, depth + 1) for x in v][:64] if depth < 3 else str(v)
+    if isinstance(v, dict):
+        return {str(k): _exif_value(x, depth + 1) for k, x in v.items()} if depth < 3 else str(v)
+    if isinstance(v, (int, str, bool)) or v is None:
+        return v
+    try:
+        f = float(v)                         # PIL's IFDRational / Fraction
+        if f != f or f in (float("inf"), float("-inf")):      # 1/0 in a damaged file: NaN/Infinity are not valid JSON
+            return str(v)
+        return int(f) if f == int(f) and abs(f) < 1e15 else round(f, 6)
+    except (TypeError, ValueError, ZeroDivisionError, OverflowError):
+        return str(v)
+
+
+def exif_full(path: Path) -> dict:
+    """EVERY EXIF tag of a photo as {"Image": {...}, "Exif": {...}, "GPS": {...}} with readable tag names
+    (unknown tags as "0xNNNN"). {} for videos, files without EXIF and files that cannot be read -- never raises."""
+    from PIL import ExifTags
+    if is_video(path):
+        return {}
+    out: dict = {}
+    try:
+        with Image.open(path) as im:
+            ex = im.getexif()
+            groups = (("Image", None, None), ("Exif", 0x8769, None), ("GPS", 0x8825, ExifTags.GPSTAGS), ("Interop", 0xA005, None))
+            for name, pointer, names in groups:
+                try:
+                    ifd = ex if pointer is None else ex.get_ifd(pointer)        # a group the file doesn't have raises KeyError
+                except Exception:
+                    continue
+                d = {}
+                for tag, val in dict(ifd).items():
+                    if name == "Image" and tag in (0x8769, 0x8825, 0xA005):      # the pointers to the other groups
+                        continue
+                    label = (names or ExifTags.TAGS).get(tag) or f"0x{tag:04X}"
+                    d[label] = _exif_value(val)
+                if d:
+                    out[name] = d
+    except Exception:
+        return {}
+    return out
+
+
+def exif_json_text(path: Path) -> str:
+    """exif_full() as the text stored in photos.exif_json. "{}" means "looked, nothing there" (NULL = not looked yet)."""
+    import json
+    return json.dumps(exif_full(path), ensure_ascii=False, separators=(",", ":"))
+
+
+def store_exif(con, photo_id: int, path: Path):
+    """Reads the EXIF of `path` into photos.exif_json for that photo (a failure leaves it NULL, to be retried)."""
+    try:
+        con.execute("UPDATE photos SET exif_json=? WHERE id=?", (exif_json_text(path), photo_id))
+    except Exception:
+        pass
+
+
 def small_preview(path: Path, size=256) -> bytes | None:
     """Quick JPEG preview of a file that isn't in the library yet (import dialog)."""
     import io
