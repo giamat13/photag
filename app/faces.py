@@ -5,7 +5,7 @@ import time
 import numpy as np
 
 from . import cloud, db, images
-from .config import PATHS, FACE_MODEL, FACE_CLUSTER_THRESHOLD
+from .config import PATHS, FACE_MODEL, FACE_CLUSTER_THRESHOLD, FACE_SUGGEST_THRESHOLD
 
 _APP = None
 
@@ -89,6 +89,49 @@ def name_clusters(con):
                         "ORDER BY det_score DESC LIMIT 1), source='cluster' WHERE id=?",
                         (c["cluster_id"], chosen))
     con.commit()
+
+
+def suggest_names(con):
+    """For every unnamed cluster, the closest already-named person's centroid embedding, if
+    close enough -- so the UI can offer "is this <name>?" instead of a blank box to type into.
+    {cluster_id: (person_id, name, distance)}, one entry only for clusters worth suggesting."""
+    named = con.execute(
+        "SELECT f.person_id, f.embedding, pe.name FROM faces f JOIN people pe ON pe.id=f.person_id "
+        "WHERE f.person_id IS NOT NULL AND f.embedding IS NOT NULL").fetchall()
+    if not named:
+        return {}
+    by_person = {}
+    for r in named:
+        by_person.setdefault(r["person_id"], [r["name"], []])[1].append(np.frombuffer(r["embedding"], dtype=np.float32))
+    centroids = {}
+    for pid, (name, vecs) in by_person.items():
+        c = np.mean(vecs, axis=0)
+        n = np.linalg.norm(c)
+        if n:
+            centroids[pid] = (name, c / n)
+    if not centroids:
+        return {}
+    unnamed = con.execute(
+        "SELECT cluster_id, embedding FROM faces WHERE cluster_id IS NOT NULL AND person_id IS NULL "
+        "AND embedding IS NOT NULL").fetchall()
+    by_cluster = {}
+    for r in unnamed:
+        by_cluster.setdefault(r["cluster_id"], []).append(np.frombuffer(r["embedding"], dtype=np.float32))
+    out = {}
+    for cid, vecs in by_cluster.items():
+        c = np.mean(vecs, axis=0)
+        n = np.linalg.norm(c)
+        if not n:
+            continue
+        c /= n
+        best_pid, best_name, best_dist = None, None, 9e9
+        for pid, (name, pc) in centroids.items():
+            d = 1.0 - float(np.dot(c, pc))
+            if d < best_dist:
+                best_pid, best_name, best_dist = pid, name, d
+        if best_pid is not None and best_dist <= FACE_SUGGEST_THRESHOLD:
+            out[cid] = (best_pid, best_name, best_dist)
+    return out
 
 
 def run_faces(progress):

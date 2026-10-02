@@ -1071,6 +1071,7 @@ $('#v-survey').addEventListener('click', e=>{ const c=e.target.closest('.sv'); i
   if(e.target.closest('[data-x]')){ S.sel.delete(id); if(S.act===id) S.act=[...S.sel][0]??null; onSelChange(); return; }
   S.act=id; onSelChange(); });
 
+const DISMISSED_SUGGESTIONS = new Set();   // cluster ids: "not this person", for this session only
 async function renderPeople(){
   const el=$('#v-people'); el.innerHTML=("<div class=\"hint\">"+t("Loading…")+"</div>");
   const [people, clusters] = await Promise.all([api('/api/people'), api('/api/clusters')]);
@@ -1081,10 +1082,18 @@ async function renderPeople(){
       <div class="nm" title="${t("Double-click to rename")}">${esc(p.name)}</div><div class="ct">${num((p.face_photos||0)+(p.tag_photos||0))}</div></div>`).join('') || ("<div class=\"hint\">"+t("There are no named people yet.")+"</div>")}</div>
     <h2>${t("Unnamed People")} <span>${num(clusters.length)}</span></h2>
     ${clusters.length ? `<div class="pgrid">${clusters.map(c=>`<div class="pc" data-cluster="${c.id}"><div class="face">${face(c.cover_face?'/face/'+c.cover_face:'')}</div>
-      <input placeholder="?" data-name-cluster="${c.id}" title="${t("Type a name and press Enter")}"><div class="ct">${num(c.n)}</div></div>`).join('')}</div>`
+      ${c.suggested_name && !DISMISSED_SUGGESTIONS.has(c.id)
+        ? `<div class="sugg"><button class="tb-btn" data-accept-cluster="${c.id}" data-name="${esc(c.suggested_name)}">${t('Is this {0}?', [esc(c.suggested_name)])}</button><button class="x" data-dismiss-cluster="${c.id}" title="${t('Not this person')}">${I('close')}</button></div>`
+        : `<input placeholder="?" data-name-cluster="${c.id}" title="${t("Type a name and press Enter")}">`}
+      <div class="ct">${num(c.n)}</div></div>`).join('')}</div>`
       : `<div class="hint">${S.status?.counts.faces ? t('All face groups have been named.') : t('Face detection has not been run yet. Library → Face Detection.')}</div>`}`;
 }
-$('#v-people').addEventListener('click', e=>{
+$('#v-people').addEventListener('click', async e=>{
+  const acc=e.target.closest('[data-accept-cluster]');
+  if(acc){ await send('POST', `/api/cluster/${acc.dataset.acceptCluster}/name`, {name:acc.dataset.name});
+    toast(`${t("Named “{0}”", [esc(acc.dataset.name)])}`); await loadSide(); renderPeople(); return; }
+  const dis=e.target.closest('[data-dismiss-cluster]');
+  if(dis){ DISMISSED_SUGGESTIONS.add(+dis.dataset.dismissCluster); renderPeople(); return; }
   const face=e.target.closest('.face'); if(!face) return;
   const pc=face.closest('.pc');
   if(pc.dataset.person){ const p=S.people.find(x=>x.id==pc.dataset.person); setSource({kind:'person', id:p.id, name:p.name}); setView('grid'); }

@@ -1445,12 +1445,21 @@ def rename_person(pid: int, body: RenameIn):
 
 @app.get("/api/clusters")
 def clusters():
-    """Face groups nobody has named yet (Lightroom's "Unnamed People")."""
-    return [dict(r) for r in db.connect().execute(
+    """Face groups nobody has named yet (Lightroom's "Unnamed People"), each with a suggested
+    name when the group is close to an already-named person -- "is this <name>?" instead of a
+    blank box to type into."""
+    con = db.connect()
+    rows = [dict(r) for r in con.execute(
         "SELECT f.cluster_id id, COUNT(DISTINCT f.photo_id) n, "
         "(SELECT f2.id FROM faces f2 WHERE f2.cluster_id=f.cluster_id ORDER BY f2.det_score DESC LIMIT 1) cover_face "
         "FROM faces f WHERE f.cluster_id IS NOT NULL AND f.person_id IS NULL "
         "GROUP BY f.cluster_id HAVING n>=2 ORDER BY n DESC LIMIT 300").fetchall()]
+    suggestions = faces.suggest_names(con)
+    for r in rows:
+        s = suggestions.get(r["id"])
+        if s:
+            r["suggested_person_id"], r["suggested_name"], _ = s
+    return rows
 
 
 @app.post("/api/cluster/{cid}/name")

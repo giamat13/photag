@@ -329,6 +329,11 @@ body.mod-library .dev-only,body.mod-develop .lib-only{display:none!important}
 .pc .nm{margin-top:7px;color:var(--st1);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:text}
 .pc .ct{color:var(--st3);font-size:11px}
 .pc input{width:100%;margin-top:7px;text-align:center;height:22px}
+.pc .sugg{display:flex;gap:4px;margin-top:7px;align-items:center}
+.pc .sugg button{flex:1;min-width:0;height:22px;padding:0 4px;font-size:11px;background:#2a2a2a;border-color:#1d1d1d;color:var(--st1);overflow:hidden;text-overflow:ellipsis}
+.pc .sugg button:hover{background:#3a3a3a}
+.pc .sugg .x{visibility:visible;flex:none;color:var(--st3)}
+.pc .sugg .x:hover{color:var(--st1)}
 
 /* develop canvas + crop overlay */
 .v-develop{overflow:hidden;background:var(--center)}

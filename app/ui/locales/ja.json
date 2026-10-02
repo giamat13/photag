@@ -1054,5 +1054,7 @@
  "Play": "再生",
  "Your {0} year in review is ready": "{0}年の振り返りの準備ができました",
  "Best moments slideshow": "ベストモーメントのスライドショー",
- "No photos in this collection yet": "このコレクションにはまだ写真がありません"
+ "No photos in this collection yet": "このコレクションにはまだ写真がありません",
+ "Is this {0}?": "これは{0}さんですか？",
+ "Not this person": "この人ではない"
 }

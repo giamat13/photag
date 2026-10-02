@@ -246,6 +246,11 @@ PATHS = Paths()
 
 # Face clustering: cosine distance, scipy average-linkage, cut at this height.
 FACE_CLUSTER_THRESHOLD = 0.38
+# A little looser than FACE_CLUSTER_THRESHOLD: for suggesting "is this <name>?" on an unnamed
+# group that is close to -- but not quite tight enough to have merged with -- an already-named
+# person (different lighting/angle/session). Wrong suggestions are one click away from being
+# ignored, so a slightly loose threshold trades a few misses for far fewer missed suggestions.
+FACE_SUGGEST_THRESHOLD = 0.46
 FACE_MODEL = "buffalo_l"
 # Photos sit in the trash this many days before being deleted for good.
 TRASH_RETENTION_DAYS = 60
