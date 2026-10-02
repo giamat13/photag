@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "「ソース」パネルから Lightroom Classic のカタログを選択してください。",
  "Choose a folder": "フォルダーを選択してください",
  "Choose a folder or memory card from the “Source” panel.": "「ソース」パネルからフォルダーまたはメモリーカードを選択してください。",
- "Choose a destination folder": "保存先フォルダーを選択してください",
  "Select a single photo": "写真を 1 枚選択してください",
  "Choose photos or videos to compress": "圧縮する写真または動画を選択してください",
  "Select photos to tag them.": "キーワードを付ける写真を選択してください。",
@@ -1083,8 +1082,15 @@
  "Flythrough": "フライスルー",
  "Fly through these photos on the map, oldest to newest": "地図上でこれらの写真を古い順に飛行表示",
  "Need at least 2 dated, geotagged photos to fly through": "フライスルーには日付と位置情報付きの写真が2枚以上必要です",
- "Export as a single ZIP file": "1つのZIPファイルとしてエクスポート",
  "Export To (ZIP file)": "エクスポート先（ZIPファイル）",
  "Export as ZIP": "ZIPとしてエクスポート",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMPサイドカーを含める（評価、ラベル、キーワード、人物、キャプション）"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMPサイドカーを含める（評価、ラベル、キーワード、人物、キャプション）",
+ "Export As": "エクスポート形式",
+ "ZIP File": "ZIPファイル",
+ "HTML Gallery": "HTMLギャラリー",
+ "Export To (HTML file)": "エクスポート先（HTMLファイル）",
+ "Export as HTML Gallery": "HTMLギャラリーとしてエクスポート",
+ "Gallery Title": "ギャラリータイトル",
+ "Choose a destination": "保存先を選択",
+ "Missing items or destination file": "項目または保存先ファイルがありません"
 }

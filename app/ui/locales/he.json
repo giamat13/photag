@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "בחרו קטלוג Lightroom Classic מהלוח „מקור\".",
  "Choose a folder": "בחרו תיקייה",
  "Choose a folder or memory card from the “Source” panel.": "בחרו תיקייה או כרטיס זיכרון מהלוח „מקור\".",
- "Choose a destination folder": "בחרו תיקיית יעד",
  "Select a single photo": "בחרו תמונה אחת",
  "Choose photos or videos to compress": "בחרו תמונות או סרטונים כדי לדחוס",
  "Select photos to tag them.": "בחרו תמונות כדי לתייג אותן.",
@@ -1083,8 +1082,15 @@
  "Flythrough": "טיסה מעל",
  "Fly through these photos on the map, oldest to newest": "טוס מעל התמונות האלה על המפה, מהישנה לחדשה",
  "Need at least 2 dated, geotagged photos to fly through": "צריך לפחות 2 תמונות עם תאריך ומיקום כדי לטוס",
- "Export as a single ZIP file": "ייצוא כקובץ ZIP אחד",
  "Export To (ZIP file)": "ייצוא אל (קובץ ZIP)",
  "Export as ZIP": "ייצוא כ-ZIP",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "כלול קובץ XMP נלווה (דירוג, תווית, מילות מפתח, אנשים, כיתוב)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "כלול קובץ XMP נלווה (דירוג, תווית, מילות מפתח, אנשים, כיתוב)",
+ "Export As": "ייצוא כ",
+ "ZIP File": "קובץ ZIP",
+ "HTML Gallery": "גלריית HTML",
+ "Export To (HTML file)": "ייצוא אל (קובץ HTML)",
+ "Export as HTML Gallery": "ייצוא כגלריית HTML",
+ "Gallery Title": "כותרת הגלריה",
+ "Choose a destination": "בחר יעד",
+ "Missing items or destination file": "חסרים פריטים או קובץ יעד"
 }

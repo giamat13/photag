@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "Wybierz katalog Lightroom Classic w panelu „Źródło”.",
  "Choose a folder": "Wybierz folder",
  "Choose a folder or memory card from the “Source” panel.": "Wybierz folder lub kartę pamięci w panelu „Źródło”.",
- "Choose a destination folder": "Wybierz folder docelowy",
  "Select a single photo": "Zaznacz jedno zdjęcie",
  "Choose photos or videos to compress": "Wybierz zdjęcia lub filmy do kompresji",
  "Select photos to tag them.": "Zaznacz zdjęcia, aby je otagować.",
@@ -1083,8 +1082,15 @@
  "Flythrough": "Przelot",
  "Fly through these photos on the map, oldest to newest": "Przeleć nad tymi zdjęciami na mapie, od najstarszego do najnowszego",
  "Need at least 2 dated, geotagged photos to fly through": "Potrzebne są co najmniej 2 zdjęcia z datą i lokalizacją, aby przelecieć",
- "Export as a single ZIP file": "Eksportuj jako pojedynczy plik ZIP",
  "Export To (ZIP file)": "Eksportuj do (plik ZIP)",
  "Export as ZIP": "Eksportuj jako ZIP",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "Dołącz plik towarzyszący XMP (ocena, etykieta, słowa kluczowe, osoby, podpis)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "Dołącz plik towarzyszący XMP (ocena, etykieta, słowa kluczowe, osoby, podpis)",
+ "Export As": "Eksportuj jako",
+ "ZIP File": "Plik ZIP",
+ "HTML Gallery": "Galeria HTML",
+ "Export To (HTML file)": "Eksportuj do (plik HTML)",
+ "Export as HTML Gallery": "Eksportuj jako galerię HTML",
+ "Gallery Title": "Tytuł galerii",
+ "Choose a destination": "Wybierz miejsce docelowe",
+ "Missing items or destination file": "Brak elementów lub pliku docelowego"
 }

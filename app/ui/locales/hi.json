@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "\"स्रोत\" पैनल से Lightroom Classic कैटलॉग चुनें।",
  "Choose a folder": "फ़ोल्डर चुनें",
  "Choose a folder or memory card from the “Source” panel.": "\"स्रोत\" पैनल से फ़ोल्डर या मेमोरी कार्ड चुनें।",
- "Choose a destination folder": "गंतव्य फ़ोल्डर चुनें",
  "Select a single photo": "एक फ़ोटो चुनें",
  "Choose photos or videos to compress": "कंप्रेस करने के लिए फ़ोटो या वीडियो चुनें",
  "Select photos to tag them.": "टैग करने के लिए फ़ोटो चुनें।",
@@ -1083,8 +1082,15 @@
  "Flythrough": "फ़्लाईथ्रू",
  "Fly through these photos on the map, oldest to newest": "मानचित्र पर इन तस्वीरों के ऊपर से उड़ें, सबसे पुरानी से सबसे नई तक",
  "Need at least 2 dated, geotagged photos to fly through": "उड़ान भरने के लिए कम से कम 2 दिनांकित, जियोटैग की गई तस्वीरें चाहिए",
- "Export as a single ZIP file": "एकल ZIP फ़ाइल के रूप में निर्यात करें",
  "Export To (ZIP file)": "इसमें निर्यात करें (ZIP फ़ाइल)",
  "Export as ZIP": "ZIP के रूप में निर्यात करें",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP साइडकार शामिल करें (रेटिंग, लेबल, कीवर्ड, लोग, कैप्शन)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP साइडकार शामिल करें (रेटिंग, लेबल, कीवर्ड, लोग, कैप्शन)",
+ "Export As": "इस रूप में निर्यात करें",
+ "ZIP File": "ZIP फ़ाइल",
+ "HTML Gallery": "HTML गैलरी",
+ "Export To (HTML file)": "इसमें निर्यात करें (HTML फ़ाइल)",
+ "Export as HTML Gallery": "HTML गैलरी के रूप में निर्यात करें",
+ "Gallery Title": "गैलरी शीर्षक",
+ "Choose a destination": "एक गंतव्य चुनें",
+ "Missing items or destination file": "आइटम या गंतव्य फ़ाइल गुम है"
 }

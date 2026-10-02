@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "Kies een Lightroom Classic-catalogus in het paneel ‘Bron’.",
  "Choose a folder": "Kies een map",
  "Choose a folder or memory card from the “Source” panel.": "Kies een map of geheugenkaart in het paneel ‘Bron’.",
- "Choose a destination folder": "Kies een doelmap",
  "Select a single photo": "Selecteer één foto",
  "Choose photos or videos to compress": "Kies foto's of video's om te comprimeren",
  "Select photos to tag them.": "Selecteer foto's om er trefwoorden aan toe te voegen.",
@@ -1083,8 +1082,15 @@
  "Flythrough": "Overvlucht",
  "Fly through these photos on the map, oldest to newest": "Vlieg over deze foto's op de kaart, van oud naar nieuw",
  "Need at least 2 dated, geotagged photos to fly through": "Minstens 2 gedateerde foto's met locatie nodig om over te vliegen",
- "Export as a single ZIP file": "Exporteren als één ZIP-bestand",
  "Export To (ZIP file)": "Exporteren naar (ZIP-bestand)",
  "Export as ZIP": "Exporteren als ZIP",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP-bijbestand toevoegen (beoordeling, label, trefwoorden, personen, bijschrift)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP-bijbestand toevoegen (beoordeling, label, trefwoorden, personen, bijschrift)",
+ "Export As": "Exporteren als",
+ "ZIP File": "ZIP-bestand",
+ "HTML Gallery": "HTML-galerij",
+ "Export To (HTML file)": "Exporteren naar (HTML-bestand)",
+ "Export as HTML Gallery": "Exporteren als HTML-galerij",
+ "Gallery Title": "Galerijtitel",
+ "Choose a destination": "Kies een bestemming",
+ "Missing items or destination file": "Items of doelbestand ontbreken"
 }

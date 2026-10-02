@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "Виберіть каталог Lightroom Classic на панелі «Джерело».",
  "Choose a folder": "Виберіть папку",
  "Choose a folder or memory card from the “Source” panel.": "Виберіть папку або карту пам'яті на панелі «Джерело».",
- "Choose a destination folder": "Виберіть папку призначення",
  "Select a single photo": "Виберіть одне фото",
  "Choose photos or videos to compress": "Виберіть фото або відео для стискання",
  "Select photos to tag them.": "Виберіть фото, щоб додати до них ключові слова.",
@@ -1083,8 +1082,15 @@
  "Flythrough": "Обліт",
  "Fly through these photos on the map, oldest to newest": "Обліт цих фотографій на мапі, від найстаріших до найновіших",
  "Need at least 2 dated, geotagged photos to fly through": "Потрібно принаймні 2 фото з датою та геоміткою для облету",
- "Export as a single ZIP file": "Експортувати як один ZIP-файл",
  "Export To (ZIP file)": "Експортувати до (ZIP-файл)",
  "Export as ZIP": "Експортувати як ZIP",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "Додати супровідний файл XMP (рейтинг, мітка, ключові слова, люди, підпис)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "Додати супровідний файл XMP (рейтинг, мітка, ключові слова, люди, підпис)",
+ "Export As": "Експортувати як",
+ "ZIP File": "ZIP-файл",
+ "HTML Gallery": "Галерея HTML",
+ "Export To (HTML file)": "Експортувати до (HTML-файл)",
+ "Export as HTML Gallery": "Експортувати як галерею HTML",
+ "Gallery Title": "Назва галереї",
+ "Choose a destination": "Виберіть місце призначення",
+ "Missing items or destination file": "Відсутні елементи або файл призначення"
 }

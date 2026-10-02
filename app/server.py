@@ -292,6 +292,10 @@ def pick_file(kind: str = "zip", title: str = ""):
             path = filedialog.asksaveasfilename(
                 title=title or "Export as ZIP", parent=root, defaultextension=".zip",
                 filetypes=[("ZIP file", "*.zip")])
+        elif kind == "savehtml":
+            path = filedialog.asksaveasfilename(
+                title=title or "Export as HTML Gallery", parent=root, defaultextension=".html",
+                filetypes=[("HTML file", "*.html")])
         elif kind == "exe":
             path = filedialog.askopenfilename(
                 title=title or "Select HandBrakeCLI.exe", parent=root,
@@ -1511,6 +1515,22 @@ def start_export(body: ExportIn):
         raise err(400, "Missing items or destination folder")
     _start("export", importer.run_export, body.ids, body.dest.strip(), body.originals,
            body.long_edge, max(10, min(100, body.quality)), body.zip, body.xmp)
+    return {"ok": True}
+
+
+class ExportHtmlIn(BaseModel):
+    ids: list[int]
+    dest: str
+    long_edge: int | None = 1600
+    quality: int = 85
+    title: str = "Photos"
+
+@app.post("/api/export-html")
+def start_export_html(body: ExportHtmlIn):
+    if not body.ids or not body.dest.strip():
+        raise err(400, "Missing items or destination file")
+    _start("export", importer.run_export_html, body.ids, body.dest.strip(),
+           body.long_edge, max(10, min(100, body.quality)), body.title.strip())
     return {"ok": True}
 
 

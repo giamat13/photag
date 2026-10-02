@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "“Kaynak” panelinden bir Lightroom Classic kataloğu seçin.",
  "Choose a folder": "Bir klasör seçin",
  "Choose a folder or memory card from the “Source” panel.": "“Kaynak” panelinden bir klasör veya bellek kartı seçin.",
- "Choose a destination folder": "Bir hedef klasör seçin",
  "Select a single photo": "Tek bir fotoğraf seçin",
  "Choose photos or videos to compress": "Sıkıştırmak için fotoğraf veya video seçin",
  "Select photos to tag them.": "Etiketlemek için fotoğrafları seçin.",
@@ -1083,8 +1082,15 @@
  "Flythrough": "Uçuş",
  "Fly through these photos on the map, oldest to newest": "Haritadaki bu fotoğrafların üzerinden en eskiden en yeniye uçun",
  "Need at least 2 dated, geotagged photos to fly through": "Uçuş için tarihli ve konumlu en az 2 fotoğraf gerekir",
- "Export as a single ZIP file": "Tek bir ZIP dosyası olarak dışa aktar",
  "Export To (ZIP file)": "Dışa aktarılacak yer (ZIP dosyası)",
  "Export as ZIP": "ZIP olarak dışa aktar",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP yan dosyası ekle (derecelendirme, etiket, anahtar kelimeler, kişiler, altyazı)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "XMP yan dosyası ekle (derecelendirme, etiket, anahtar kelimeler, kişiler, altyazı)",
+ "Export As": "Dışa Aktar",
+ "ZIP File": "ZIP Dosyası",
+ "HTML Gallery": "HTML Galerisi",
+ "Export To (HTML file)": "Dışa aktarılacak yer (HTML dosyası)",
+ "Export as HTML Gallery": "HTML Galerisi olarak dışa aktar",
+ "Gallery Title": "Galeri Başlığı",
+ "Choose a destination": "Bir hedef seçin",
+ "Missing items or destination file": "Öğeler veya hedef dosya eksik"
 }

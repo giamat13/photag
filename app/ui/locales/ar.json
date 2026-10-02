@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "اختر كتالوج Lightroom Classic من لوحة \"المصدر\".",
  "Choose a folder": "اختر مجلدًا",
  "Choose a folder or memory card from the “Source” panel.": "اختر مجلدًا أو بطاقة ذاكرة من لوحة \"المصدر\".",
- "Choose a destination folder": "اختر مجلد الوجهة",
  "Select a single photo": "حدد صورة واحدة",
  "Choose photos or videos to compress": "اختر صورًا أو مقاطع فيديو لضغطها",
  "Select photos to tag them.": "حدد صورًا لوسمها.",
@@ -1083,8 +1082,15 @@
  "Flythrough": "تحليق",
  "Fly through these photos on the map, oldest to newest": "حلّق عبر هذه الصور على الخريطة، من الأقدم إلى الأحدث",
  "Need at least 2 dated, geotagged photos to fly through": "يلزم صورتان مؤرختان على الأقل بموقع جغرافي للتحليق",
- "Export as a single ZIP file": "تصدير كملف ZIP واحد",
  "Export To (ZIP file)": "التصدير إلى (ملف ZIP)",
  "Export as ZIP": "تصدير كـ ZIP",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "تضمين ملف XMP مرافق (التقييم، التصنيف، الكلمات المفتاحية، الأشخاص، التعليق)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "تضمين ملف XMP مرافق (التقييم، التصنيف، الكلمات المفتاحية، الأشخاص، التعليق)",
+ "Export As": "تصدير كـ",
+ "ZIP File": "ملف ZIP",
+ "HTML Gallery": "معرض HTML",
+ "Export To (HTML file)": "التصدير إلى (ملف HTML)",
+ "Export as HTML Gallery": "تصدير كمعرض HTML",
+ "Gallery Title": "عنوان المعرض",
+ "Choose a destination": "اختر وجهة",
+ "Missing items or destination file": "عناصر مفقودة أو ملف الوجهة مفقود"
 }

@@ -899,6 +899,98 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+_GALLERY_TEMPLATE = """<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<style>
+ :root{{color-scheme:dark}}
+ *{{box-sizing:border-box}}
+ body{{margin:0;background:#161616;color:#ddd;font:14px/1.4 -apple-system,Segoe UI,Arial,sans-serif;padding:24px 16px 60px}}
+ h1{{font-weight:500;font-size:18px;color:#eee;margin:0 0 16px}}
+ .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}}
+ .cell{{position:relative;background:#222;border-radius:4px;overflow:hidden;cursor:pointer;aspect-ratio:1}}
+ .cell img{{width:100%;height:100%;object-fit:cover;display:block}}
+ .cell .vid{{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#2a2a2a;color:#888;font-size:12px;text-align:center;padding:8px}}
+ .cell .cap{{position:absolute;left:0;right:0;bottom:0;padding:4px 6px;font-size:11px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.75));opacity:0;transition:opacity .15s}}
+ .cell:hover .cap{{opacity:1}}
+ #lb{{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;padding:20px}}
+ #lb.on{{display:flex}}
+ #lb img{{max-width:100%;max-height:85vh;object-fit:contain}}
+ #lb .cap{{color:#ccc;margin-top:10px;font-size:13px}}
+ #lb .x{{position:absolute;top:16px;right:20px;color:#ccc;font-size:28px;cursor:pointer;background:none;border:0}}
+ #lb .nav{{position:fixed;top:50%;transform:translateY(-50%);background:none;border:0;color:#ccc;font-size:36px;cursor:pointer;padding:10px 16px}}
+ #lb .prev{{left:6px}} #lb .next{{right:6px}}
+</style></head>
+<body>
+<h1>{title} &middot; {count} items</h1>
+<div class="grid" id="grid"></div>
+<div id="lb"><button class="x" onclick="lbClose()">&times;</button><button class="nav prev" onclick="lbStep(-1)">&#8249;</button>
+  <img id="lb-img"><div class="cap" id="lb-cap"></div><button class="nav next" onclick="lbStep(1)">&#8250;</button></div>
+<script>
+const ITEMS = {items_json};
+const grid = document.getElementById('grid');
+ITEMS.forEach((it, i) => {{
+  const c = document.createElement('div'); c.className = 'cell';
+  if (it.v) {{ c.innerHTML = '<div class="vid">' + it.n.replace(/[<>&]/g, m => ({{'<':'&lt;','>':'&gt;','&':'&amp;'}}[m])) + '</div>'; }}
+  else {{ c.innerHTML = '<img loading="lazy" src="data:image/jpeg;base64,' + it.b + '"><div class="cap">' + it.n.replace(/[<>&]/g, m => ({{'<':'&lt;','>':'&gt;','&':'&amp;'}}[m])) + '</div>';
+    c.onclick = () => lbOpen(i); }}
+  grid.appendChild(c);
+}});
+let lbI = 0;
+function lbOpen(i) {{ lbI = i; const it = ITEMS[i]; if (it.v) return;
+  document.getElementById('lb-img').src = 'data:image/jpeg;base64,' + it.b;
+  document.getElementById('lb-cap').textContent = it.n + (it.d ? ' · ' + it.d : '');
+  document.getElementById('lb').classList.add('on'); }}
+function lbClose() {{ document.getElementById('lb').classList.remove('on'); }}
+function lbStep(d) {{ let i = lbI; do {{ i = (i + d + ITEMS.length) % ITEMS.length; }} while (ITEMS[i].v && i !== lbI); lbOpen(i); }}
+document.addEventListener('keydown', e => {{ if (!document.getElementById('lb').classList.contains('on')) return;
+  if (e.key === 'Escape') lbClose(); else if (e.key === 'ArrowLeft') lbStep(-1); else if (e.key === 'ArrowRight') lbStep(1); }});
+</script>
+</body></html>
+"""
+
+
+def run_export_html(ids: list[int], dest: str, long_edge: int | None, quality: int, title: str, progress: Progress):
+    """A single self-contained HTML file: a responsive gallery with a click-to-enlarge lightbox, photos
+    embedded as base64 JPEGs (resized) so the page works offline with nothing else to send along.
+    Videos are listed by name only (browsers can't usefully inline arbitrary video formats here)."""
+    import base64
+    import io
+    import json
+    from PIL import Image
+    con = db.connect()
+    progress.state = "exporting"; progress.total = len(ids); progress.done = 0
+    items = []
+    try:
+        for pid in ids:
+            progress.done += 1
+            progress.say("{done}/{total}", done=progress.done, total=progress.total)
+            r = con.execute("SELECT filename, rel_path, is_video, taken_at FROM photos WHERE id=?", (pid,)).fetchone()
+            if not r:
+                continue
+            src = PATHS.media / r["rel_path"]
+            if not src.exists():
+                continue
+            if r["is_video"]:
+                items.append({"v": True, "n": r["filename"]})
+                continue
+            im = images.open_image(src)
+            if long_edge:
+                im.thumbnail((long_edge, long_edge), Image.LANCZOS)
+            buf = io.BytesIO()
+            im.save(buf, "JPEG", quality=quality)
+            d = time.strftime("%Y-%m-%d", time.gmtime(r["taken_at"])) if r["taken_at"] else ""
+            items.append({"v": False, "n": r["filename"], "d": d, "b": base64.b64encode(buf.getvalue()).decode()})
+        html = _GALLERY_TEMPLATE.format(title=_xmp_escape(title) or "Photos", count=len(items), items_json=json.dumps(items))
+        out = Path(dest)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(html, "utf-8")
+        progress.state = "done"
+        progress.say("{n} items exported to {folder}", n=progress.done, folder=str(dest))
+    except Exception as e:
+        progress.fail("Export failed: {error}", error=str(e))
+
+
 if __name__ == "__main__":  # ponytail self-check for the fiddly matcher
     assert match_sidecars(["IMG_1.jpg"], ["IMG_1.jpg.supplemental-metadata.json"]) == {"IMG_1.jpg": "IMG_1.jpg.supplemental-metadata.json"}
     # truncated sidecar

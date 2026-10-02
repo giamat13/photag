@@ -156,7 +156,6 @@
  "Choose a Lightroom Classic catalog from the “Source” panel.": "Выберите каталог Lightroom Classic на панели «Источник».",
  "Choose a folder": "Выберите папку",
  "Choose a folder or memory card from the “Source” panel.": "Выберите папку или карту памяти на панели «Источник».",
- "Choose a destination folder": "Выберите папку назначения",
  "Select a single photo": "Выберите одно фото",
  "Choose photos or videos to compress": "Выберите фото или видео для сжатия",
  "Select photos to tag them.": "Выберите фото, чтобы присвоить им ключевые слова.",
@@ -1083,8 +1082,15 @@
  "Flythrough": "Облёт",
  "Fly through these photos on the map, oldest to newest": "Облёт этих фотографий на карте, от самых старых к новым",
  "Need at least 2 dated, geotagged photos to fly through": "Нужно хотя бы 2 фото с датой и геометкой для облёта",
- "Export as a single ZIP file": "Экспортировать в один ZIP-файл",
  "Export To (ZIP file)": "Экспортировать в (ZIP-файл)",
  "Export as ZIP": "Экспортировать как ZIP",
- "Include an XMP sidecar (rating, label, keywords, people, caption)": "Включить сопроводительный файл XMP (рейтинг, метка, ключевые слова, люди, подпись)"
+ "Include an XMP sidecar (rating, label, keywords, people, caption)": "Включить сопроводительный файл XMP (рейтинг, метка, ключевые слова, люди, подпись)",
+ "Export As": "Экспортировать как",
+ "ZIP File": "ZIP-файл",
+ "HTML Gallery": "Галерея HTML",
+ "Export To (HTML file)": "Экспортировать в (HTML-файл)",
+ "Export as HTML Gallery": "Экспортировать как галерею HTML",
+ "Gallery Title": "Название галереи",
+ "Choose a destination": "Выберите место назначения",
+ "Missing items or destination file": "Отсутствуют элементы или файл назначения"
 }
