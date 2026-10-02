@@ -1131,9 +1131,17 @@ def _render_legacy(con, r, ops: dict):
     _refresh_file(con, r, src, edited=1, orig_backup=orig, edit_ops=json.dumps(ops))
 
 
+_LOOK_LOCK = threading.RLock()
+
+
 def _set_look(con, r, ops: dict | None):
     """Non-destructive edit: the library file stays the untouched original; only the settings are stored, and the look
     is rendered into the cache (render.py). The render comes first, so a photo that cannot be rendered stays as it was."""
+    with _LOOK_LOCK:        # render + settings + thumbnail as one step, so concurrent edits never leave a mixed state
+        _set_look_locked(con, r, ops)
+
+
+def _set_look_locked(con, r, ops):
     import json
     src = PATHS.media / r["rel_path"]
     if not ops or _is_neutral(ops):
