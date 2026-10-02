@@ -1573,7 +1573,8 @@ function ssStart(over){
   let list = Array.isArray(over) ? over : S.sel.size>1 ? S.list.filter(p=>S.sel.has(p.id)) : S.list;
   list = list.filter(p=>!p.is_video); if(!list.length) return toast(t('No photos to show'));
   SS.otd = Array.isArray(over) && over.otd;
-  SS.list=list; SS.i=SS.otd ? 0 : Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
+  SS.yir = Array.isArray(over) && over.yir;
+  SS.list=list; SS.i=(SS.otd||SS.yir) ? 0 : Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
   if(S.view==='loupe') closeLoupeMedia();   // a video in the Loupe must not keep playing behind the slideshow
   $('#slideshow').classList.remove('hidden'); ssShow(); ssTimer();
   document.documentElement.requestFullscreen?.().catch(()=>{});
@@ -1582,7 +1583,9 @@ function ssShow(){
   const p=SS.list[SS.i], nxt=SS.cur==='a'?'b':'a', img=$('#ss-'+nxt), old=$('#ss-'+SS.cur);
   img.onload=()=>{ img.classList.add('on'); old.classList.remove('on'); };
   img.src=mediaUrl(p.id); SS.cur=nxt;
-  $('#ss-count').textContent = (SS.otd && p.taken_at ? `${new Date(p.taken_at*1000).getFullYear()} · ` : '') + `${num(SS.i+1)} / ${num(SS.list.length)}`;
+  const ssLabel = SS.otd && p.taken_at ? `${new Date(p.taken_at*1000).getFullYear()} · `
+    : SS.yir && p.taken_at ? `${new Date(p.taken_at*1000).toLocaleDateString(I18N.locale,{month:'long'})} · ` : '';
+  $('#ss-count').textContent = ssLabel + `${num(SS.i+1)} / ${num(SS.list.length)}`;
   const pre=SS.list[(SS.i+1)%SS.list.length]; if(pre) new Image().src=mediaUrl(pre.id);
 }
 function ssTimer(){ clearInterval(SS.t); if(SS.playing) SS.t=setInterval(()=>ssStep(1,true), 4000);
@@ -2740,6 +2743,7 @@ const MENUS = [
     [t('Search by Meaning...'), 'Ctrl+Shift+M', semanticDialog],
     [t('On This Day'), '', ()=>setSource(srcFromKey('otd'))],
     [t('On This Day: Slideshow'), '', otdSlideshow],
+    [t('Year in Review...'), '', yearReviewDialog],
     [t('New Smart Collection...'), '', ()=>smartDialog()],
     sep,
     [t('Analyse Photo Quality'), '', analyseLibrary],
@@ -3166,6 +3170,40 @@ function otdNotice(){
   $('#otd-show').onclick = ()=>{ $('#toast').classList.add('hidden'); setSource(srcFromKey('otd')); };
 }
 
+// ---------- Year in Review ----------
+function yirPick(year, perMonth=10){
+  const byMonth = Array.from({length:12}, ()=>[]);
+  S.all.forEach(p=>{ if(!p.is_video && p.taken_at && new Date(p.taken_at*1000).getUTCFullYear()===year) byMonth[new Date(p.taken_at*1000).getUTCMonth()].push(p); });
+  const picked = [];
+  byMonth.forEach(month=>{ month.sort((a,b)=>(b.score||0)-(a.score||0)); picked.push(...month.slice(0, perMonth)); });
+  return picked.sort((a,b)=>a.taken_at-b.taken_at);
+}
+function yirSlideshow(year){
+  const list = yirPick(year);
+  if(!list.length){ toast(t('No photos from {0}', [year])); return; }
+  list.yir = year; ssStart(list);
+}
+function yearReviewDialog(){
+  const years = [...new Set(S.all.filter(p=>!p.is_video && p.taken_at).map(p=>new Date(p.taken_at*1000).getUTCFullYear()))].sort((a,b)=>b-a);
+  if(!years.length){ toast(t('No photos with a date yet')); return; }
+  modal(`<h3>${t('Year in Review')}</h3><div class="mb">
+    <label class="fld"><span>${t('Year')}</span><select id="yir-y">${years.map(y=>`<option value="${y}">${y}</option>`).join('')}</select></label>
+    <div class="hint" style="padding:0">${t('An automatic slideshow of your best photos from the year, month by month.')}</div>
+  </div><div class="mf"><button id="yir-close">${t('Close')}</button><span class="spacer"></span><button class="primary" id="yir-go">${t('Play')}</button></div>`);
+  $('#yir-close').onclick = closeModal;
+  $('#yir-go').onclick = ()=>{ const y=+$('#yir-y').value; closeModal(); yirSlideshow(y); };
+}
+function yirNotice(){
+  const now = new Date(); if(now.getMonth()>0) return;   // offered only in January, for the year that just ended
+  const year = now.getFullYear()-1;
+  if(pref.get('yirYear','')===String(year)) return;
+  const n = yirPick(year).length;
+  if(!n) return;
+  pref.set('yirYear', String(year));
+  toast(`${t('Your {0} year in review is ready', [year])} <button id="yir-go2" class="tb-btn">${t('Slideshow')}</button>`, 10000);
+  $('#yir-go2').onclick = ()=>{ $('#toast').classList.add('hidden'); yirSlideshow(year); };
+}
+
 // ---------- search by meaning (local CLIP) ----------
 async function semanticSearch(q){
   const r = await api('/api/semantic/search?q='+encodeURIComponent(q));
@@ -3356,6 +3394,7 @@ function oneDriveNotice(force){
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
   setTimeout(backupHealthNotice, 8000);
   setTimeout(otdNotice, 4500);
+  setTimeout(yirNotice, 5000);
   setTimeout(()=>oneDriveNotice(false), 1500);
   setTimeout(backgroundTick, 3000); setInterval(backgroundTick, 60000);   // quiet check on start-up; a window appears only when a newer release exists
   // an empty catalog shows the empty-state screen with an Import button; it never jumps to the Import screen by itself

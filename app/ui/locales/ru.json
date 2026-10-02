@@ -1044,5 +1044,13 @@
  "at least": "не менее",
  "at most": "не более",
  "equiv.": "экв.",
- "Light Theme": "Светлая тема"
+ "Light Theme": "Светлая тема",
+ "Year in Review...": "Итоги года...",
+ "Year in Review": "Итоги года",
+ "Year": "Год",
+ "An automatic slideshow of your best photos from the year, month by month.": "Автоматический слайд-шоу из ваших лучших фотографий за год, месяц за месяцем.",
+ "No photos from {0}": "Нет фотографий за {0}",
+ "No photos with a date yet": "Пока нет фотографий с датой",
+ "Play": "Воспроизвести",
+ "Your {0} year in review is ready": "Ваши итоги {0} года готовы"
 }

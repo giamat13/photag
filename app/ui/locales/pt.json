@@ -1044,5 +1044,13 @@
  "at least": "pelo menos",
  "at most": "no máximo",
  "equiv.": "equiv.",
- "Light Theme": "Tema claro"
+ "Light Theme": "Tema claro",
+ "Year in Review...": "Resumo do ano...",
+ "Year in Review": "Resumo do ano",
+ "Year": "Ano",
+ "An automatic slideshow of your best photos from the year, month by month.": "Uma apresentação automática das suas melhores fotos do ano, mês a mês.",
+ "No photos from {0}": "Nenhuma foto de {0}",
+ "No photos with a date yet": "Ainda não há fotos com data",
+ "Play": "Reproduzir",
+ "Your {0} year in review is ready": "O seu resumo do ano {0} está pronto"
 }

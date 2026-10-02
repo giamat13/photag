@@ -1044,5 +1044,13 @@
  "at least": "לפחות",
  "at most": "לכל היותר",
  "equiv.": "שווה ערך",
- "Light Theme": "ערכת נושא בהירה"
+ "Light Theme": "ערכת נושא בהירה",
+ "Year in Review...": "סיכום שנה...",
+ "Year in Review": "סיכום שנה",
+ "Year": "שנה",
+ "An automatic slideshow of your best photos from the year, month by month.": "מצגת אוטומטית של התמונות הטובות ביותר שלך מהשנה, חודש אחר חודש.",
+ "No photos from {0}": "אין תמונות מ-{0}",
+ "No photos with a date yet": "אין עדיין תמונות עם תאריך",
+ "Play": "הפעל",
+ "Your {0} year in review is ready": "סיכום השנה {0} שלך מוכן"
 }

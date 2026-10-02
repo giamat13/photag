@@ -1044,5 +1044,13 @@
  "at least": "최소",
  "at most": "최대",
  "equiv.": "환산",
- "Light Theme": "밝은 테마"
+ "Light Theme": "밝은 테마",
+ "Year in Review...": "올해의 회고...",
+ "Year in Review": "올해의 회고",
+ "Year": "연도",
+ "An automatic slideshow of your best photos from the year, month by month.": "한 해 동안 가장 좋은 사진들을 월별로 보여주는 자동 슬라이드쇼입니다.",
+ "No photos from {0}": "{0}년 사진 없음",
+ "No photos with a date yet": "날짜가 있는 사진이 아직 없습니다",
+ "Play": "재생",
+ "Your {0} year in review is ready": "{0}년 회고가 준비되었습니다"
 }

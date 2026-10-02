@@ -1044,5 +1044,13 @@
  "at least": "не менше",
  "at most": "не більше",
  "equiv.": "екв.",
- "Light Theme": "Світла тема"
+ "Light Theme": "Світла тема",
+ "Year in Review...": "Підсумки року...",
+ "Year in Review": "Підсумки року",
+ "Year": "Рік",
+ "An automatic slideshow of your best photos from the year, month by month.": "Автоматичне слайд-шоу з найкращих фотографій за рік, місяць за місяцем.",
+ "No photos from {0}": "Немає фотографій за {0}",
+ "No photos with a date yet": "Поки немає фотографій із датою",
+ "Play": "Відтворити",
+ "Your {0} year in review is ready": "Ваші підсумки {0} року готові"
 }

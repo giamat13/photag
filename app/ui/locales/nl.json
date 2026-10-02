@@ -1044,5 +1044,13 @@
  "at least": "minstens",
  "at most": "hoogstens",
  "equiv.": "equiv.",
- "Light Theme": "Licht thema"
+ "Light Theme": "Licht thema",
+ "Year in Review...": "Jaaroverzicht...",
+ "Year in Review": "Jaaroverzicht",
+ "Year": "Jaar",
+ "An automatic slideshow of your best photos from the year, month by month.": "Een automatische diavoorstelling van je beste foto's van het jaar, maand voor maand.",
+ "No photos from {0}": "Geen foto's uit {0}",
+ "No photos with a date yet": "Nog geen foto's met een datum",
+ "Play": "Afspelen",
+ "Your {0} year in review is ready": "Je jaaroverzicht {0} is klaar"
 }

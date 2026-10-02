@@ -1044,5 +1044,13 @@
  "at least": "mindestens",
  "at most": "höchstens",
  "equiv.": "entspr.",
- "Light Theme": "Helles Design"
+ "Light Theme": "Helles Design",
+ "Year in Review...": "Jahresrückblick...",
+ "Year in Review": "Jahresrückblick",
+ "Year": "Jahr",
+ "An automatic slideshow of your best photos from the year, month by month.": "Eine automatische Diashow Ihrer besten Fotos des Jahres, Monat für Monat.",
+ "No photos from {0}": "Keine Fotos aus {0}",
+ "No photos with a date yet": "Noch keine Fotos mit einem Datum",
+ "Play": "Abspielen",
+ "Your {0} year in review is ready": "Ihr Jahresrückblick {0} ist fertig"
 }

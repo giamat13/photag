@@ -1044,5 +1044,13 @@
  "at least": "على الأقل",
  "at most": "على الأكثر",
  "equiv.": "مكافئ",
- "Light Theme": "السمة الفاتحة"
+ "Light Theme": "السمة الفاتحة",
+ "Year in Review...": "ملخص السنة...",
+ "Year in Review": "ملخص السنة",
+ "Year": "السنة",
+ "An automatic slideshow of your best photos from the year, month by month.": "عرض شرائح تلقائي لأفضل صورك من هذا العام، شهرًا بعد شهر.",
+ "No photos from {0}": "لا توجد صور من {0}",
+ "No photos with a date yet": "لا توجد صور لها تاريخ بعد",
+ "Play": "تشغيل",
+ "Your {0} year in review is ready": "ملخص سنة {0} الخاص بك جاهز"
 }

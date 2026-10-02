@@ -1044,5 +1044,13 @@
  "at least": "कम से कम",
  "at most": "अधिकतम",
  "equiv.": "समतुल्य",
- "Light Theme": "हल्की थीम"
+ "Light Theme": "हल्की थीम",
+ "Year in Review...": "वर्ष की समीक्षा...",
+ "Year in Review": "वर्ष की समीक्षा",
+ "Year": "वर्ष",
+ "An automatic slideshow of your best photos from the year, month by month.": "वर्ष की आपकी सर्वश्रेष्ठ तस्वीरों की एक स्वचालित स्लाइडशो, महीने दर महीने।",
+ "No photos from {0}": "{0} से कोई तस्वीर नहीं",
+ "No photos with a date yet": "अभी तक किसी तस्वीर की तारीख नहीं है",
+ "Play": "चलाएं",
+ "Your {0} year in review is ready": "आपकी {0} वर्ष की समीक्षा तैयार है"
 }

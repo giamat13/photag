@@ -1044,5 +1044,13 @@
  "at least": "至少",
  "at most": "最多",
  "equiv.": "等效",
- "Light Theme": "浅色主题"
+ "Light Theme": "浅色主题",
+ "Year in Review...": "年度回顾...",
+ "Year in Review": "年度回顾",
+ "Year": "年份",
+ "An automatic slideshow of your best photos from the year, month by month.": "按月自动播放这一年中你最好的照片幻灯片。",
+ "No photos from {0}": "{0}年没有照片",
+ "No photos with a date yet": "还没有带日期的照片",
+ "Play": "播放",
+ "Your {0} year in review is ready": "你的{0}年度回顾已准备好"
 }

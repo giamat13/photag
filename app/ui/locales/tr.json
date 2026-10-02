@@ -1044,5 +1044,13 @@
  "at least": "en az",
  "at most": "en çok",
  "equiv.": "eşd.",
- "Light Theme": "Açık Tema"
+ "Light Theme": "Açık Tema",
+ "Year in Review...": "Yıl Değerlendirmesi...",
+ "Year in Review": "Yıl Değerlendirmesi",
+ "Year": "Yıl",
+ "An automatic slideshow of your best photos from the year, month by month.": "Yılın en iyi fotoğraflarınızın ay ay otomatik slayt gösterisi.",
+ "No photos from {0}": "{0} yılından fotoğraf yok",
+ "No photos with a date yet": "Henüz tarihli fotoğraf yok",
+ "Play": "Oynat",
+ "Your {0} year in review is ready": "{0} yılı değerlendirmeniz hazır"
 }

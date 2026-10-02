@@ -1044,5 +1044,13 @@
  "at least": "以上",
  "at most": "以下",
  "equiv.": "相当",
- "Light Theme": "ライトテーマ"
+ "Light Theme": "ライトテーマ",
+ "Year in Review...": "今年の振り返り...",
+ "Year in Review": "今年の振り返り",
+ "Year": "年",
+ "An automatic slideshow of your best photos from the year, month by month.": "その年のベストな写真を月ごとに自動でスライドショー表示します。",
+ "No photos from {0}": "{0}年の写真はありません",
+ "No photos with a date yet": "日付のある写真がまだありません",
+ "Play": "再生",
+ "Your {0} year in review is ready": "{0}年の振り返りの準備ができました"
 }
