@@ -2068,7 +2068,7 @@ async function backupDialog(){
     <div id="bk-health"></div>
     <label class="chkrow"><input type="checkbox" id="bk-on"> ${t('Automatic backup of the catalog and settings')}</label>
     <div class="two"><label class="fld"><span>${t('Frequency')}</span><select id="bk-int">${INTERVALS.map(([h, l]) => `<option value="${h}">${l}</option>`).join('')}</select></label>
-      <label class="fld"><span>${t('How many backups to keep')}</span><input type="number" id="bk-keep" min="3" max="200" dir="ltr"></label></div>
+      <label class="fld"><span>${t('How many backups to keep')}</span><input type="number" id="bk-keep" min="1" max="200" dir="ltr"></label></div>
     <label class="chkrow"><input type="checkbox" id="bk-media"> ${t('Also back up photo and video files')}</label>
     <div class="hint" style="padding:0">${t('The catalog includes tags, albums, ratings, people and edits. The media files total about {0}: the first backup copies all of them, and later ones copy only new files.', [fmtBytes(i.media_bytes)])}</div>
     <label class="chkrow"><input type="checkbox" id="bk-comp"> ${t('Back up reduced, compressed copies of the photos instead of the originals (much smaller; for big libraries)')}</label>

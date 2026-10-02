@@ -114,5 +114,12 @@ check("the backup verifies (file count ignores the index)", not backup.verify_sn
 backup.delete_snapshot(s1["name"])
 check("deleting a reduced backup removes its folder", not (bk / s1["media_dir"]).exists())
 
+check("the number of backups to keep can be as low as 1 (and no higher than 200)", backup.set_settings({"keep": 0})["keep"] == 1 and backup.set_settings({"keep": 1})["keep"] == 1 and backup.set_settings({"keep": 999})["keep"] == 200)
+backup.set_settings({"keep": 1})
+a1 = backup.create_snapshot("manual")
+a2 = backup.create_snapshot("manual")
+regular = [m["name"] for m in backup.list_snapshots() if m["reason"] == "manual"]
+check("with 1 kept, only the newest regular backup remains (and it is complete)", regular == [a2["name"]] and (bk / a2["media_dir"]).is_dir() and not (bk / a1["media_dir"]).exists(), regular)
+
 print(f"\n{sum(res)}/{len(res)} passed")
 sys.exit(0 if all(res) else 1)

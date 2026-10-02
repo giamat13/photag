@@ -48,7 +48,7 @@ INDEX = ".photag-index.json"      # inside a reduced media set: for each file, w
 REASONS = ("auto", "manual", "before-restore", "before-update", "before-compress")
 NAME_RE = re.compile(r"^photag-\d{8}-\d{6}-(auto|manual|before-restore|before-update|before-compress)(-\d+)?\.zip$")
 MIRROR = "media-mirror"
-KEEP_MIN, KEEP_MAX = 3, 200
+KEEP_MIN, KEEP_MAX = 1, 200
 MAX_SAFETY = 3                   # backups made automatically before a restore / update / compression: this many of each kind are kept
 
 
