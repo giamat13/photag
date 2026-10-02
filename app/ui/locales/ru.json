@@ -1130,5 +1130,7 @@
  "Untitled trip": "Поездка без названия",
  "Which triplan trip is this?": "Какая это поездка triplan?",
  "{0} days": "{0} дней",
- "Tester mode: also offer pre-release versions": "Режим тестировщика: предлагать и предварительные версии"
+ "Tester mode: also offer pre-release versions": "Режим тестировщика: предлагать и предварительные версии",
+ "Photo not found or its file is not available right now": "Фото не найдено или его файл сейчас недоступен",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "Оригинал этого фото уже есть в каталоге как другое фото. Сначала удалите ту копию, затем повторите попытку."
 }

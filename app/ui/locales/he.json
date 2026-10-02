@@ -1130,5 +1130,7 @@
  "Untitled trip": "טיול ללא שם",
  "Which triplan trip is this?": "איזה טיול ב-triplan זה?",
  "{0} days": "{0} ימים",
- "Tester mode: also offer pre-release versions": "מצב בוחן: הציעו גם גרסאות טרום-שחרור"
+ "Tester mode: also offer pre-release versions": "מצב בוחן: הציעו גם גרסאות טרום-שחרור",
+ "Photo not found or its file is not available right now": "התמונה לא נמצאה או שהקובץ שלה לא זמין כרגע",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "המקור של התמונה הזו כבר קיים בקטלוג כתמונה אחרת. מחקו קודם את ההעתק ההוא ונסו שוב."
 }

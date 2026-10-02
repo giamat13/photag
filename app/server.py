@@ -2,6 +2,7 @@
 image editing, and background jobs (import / faces)."""
 import json
 import os
+import sys
 import shutil
 import subprocess
 import threading
@@ -13,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -113,12 +114,32 @@ def _exif_loop():
         time.sleep(float(os.environ.get("PHOTAG_EXIF_TICK", 1)))
 
 
+def _edit_migrate_loop():
+    """Photos edited by an older version keep a pristine copy next to a re-saved working file. In the background, a few at a
+    time and never while another task runs, put the original back in the library and keep only the settings (render.py)."""
+    time.sleep(float(os.environ.get("PHOTAG_MIGRATE_DELAY", 90)))
+    skip: set = set()
+    while True:
+        try:
+            if not _other_job_running():
+                ok, bad = render.migrate_batch(db.connect(), skip, 20)
+                if ok + bad:
+                    print(f"edited photos moved to the new model: {ok} migrated, {bad} refused {dict(render.REFUSED)}", file=sys.stderr, flush=True)
+                if ok + bad == 0:
+                    time.sleep(float(os.environ.get("PHOTAG_MIGRATE_IDLE", 900)))
+                    continue
+        except Exception as e:
+            print(f"edit migration batch failed: {e!r}", file=sys.stderr, flush=True)    # visible in the log, not silently retried forever
+        time.sleep(float(os.environ.get("PHOTAG_MIGRATE_TICK", 1)))
+
+
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
     threading.Thread(target=_backup_loop, daemon=True).start()
     threading.Thread(target=_ref_loop, daemon=True).start()
     threading.Thread(target=_exif_loop, daemon=True).start()
+    threading.Thread(target=_edit_migrate_loop, daemon=True).start()
     threading.Thread(target=_auto_import_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
@@ -904,12 +925,12 @@ def photo(pid: int):
 @app.get("/thumb/{pid}")
 def thumb(pid: int):
     con = db.connect()
-    r = con.execute("SELECT sha256, rel_path FROM photos WHERE id=?", (pid,)).fetchone()
+    r = con.execute("SELECT id, sha256, rel_path, orig_backup, edited, edit_ops FROM photos WHERE id=?", (pid,)).fetchone()
     if not r:
         raise HTTPException(404)
     tp = images.thumb_path(r["sha256"])
     if not tp.exists():
-        images.make_thumb(PATHS.media / r["rel_path"], r["sha256"])
+        images.make_thumb(render.current_path(r), r["sha256"])
     if tp.exists():
         return FileResponse(tp, media_type="image/jpeg")
     return Response(status_code=204)  # no thumb (e.g. video w/o ffmpeg)
@@ -942,10 +963,10 @@ def face_thumb(fid: int):
 @app.get("/media/{pid}")
 def media(pid: int):
     con = db.connect()
-    r = con.execute("SELECT rel_path FROM photos WHERE id=?", (pid,)).fetchone()
+    r = con.execute("SELECT id, sha256, rel_path, orig_backup, edited, edit_ops FROM photos WHERE id=?", (pid,)).fetchone()
     if not r:
         raise HTTPException(404)
-    p = PATHS.media / r["rel_path"]
+    p = render.current_path(r)                  # an edited photo is shown from its render; the library file stays the original
     if not p.exists():
         raise HTTPException(404)
     if images.is_raw(p):
@@ -1074,10 +1095,7 @@ class EditIn(BaseModel):
     grayscale: bool | None = None
 
 
-def _is_neutral(ops: dict) -> bool:
-    return (not ops.get("rotate") and not ops.get("grayscale")
-            and ops.get("crop") in (None, [0, 0, 1, 1])
-            and all(ops.get(k) in (None, 1, 1.0) for k in ("brightness", "contrast", "saturation")))
+_is_neutral = render.is_neutral
 
 
 def _refresh_file(con, r, src: Path, **extra):
@@ -1090,22 +1108,53 @@ def _refresh_file(con, r, src: Path, **extra):
     images.make_thumb(src, new_sha)
 
 
-def _render(con, r, ops: dict):
+def _legacy_clash(con, r):
+    """Restoring the pristine copy of a legacy photo gives the library file the original's sha256 again -- which must not
+    already belong to another photo (e.g. the same file was imported again after the edit)."""
+    sha = images.sha256_file(PATHS.media / r["orig_backup"])
+    if con.execute("SELECT 1 FROM photos WHERE sha256=? AND id<>?", (sha, r["id"])).fetchall():
+        raise err(409, "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.")
+
+
+def _render_legacy(con, r, ops: dict):
+    """A photo edited by an older version whose pristine copy could not be moved to the new model (see render.migrate_one):
+    edited the old way, exactly as before."""
     import json, shutil
     src = PATHS.media / r["rel_path"]
     orig = r["orig_backup"]
-    if not orig:  # keep the untouched original once
-        bdir = PATHS.media / ".originals"; bdir.mkdir(exist_ok=True)
-        bpath = bdir / f"{r['id']}_{r['filename']}"
-        if not bpath.exists():
-            shutil.copy2(src, bpath)
-        orig = str(bpath.relative_to(PATHS.media))
     if _is_neutral(ops):  # everything back at zero -> just restore the original
+        _legacy_clash(con, r)
         shutil.copy2(PATHS.media / orig, src)
         _refresh_file(con, r, src, edited=0, orig_backup=orig, edit_ops=None)
         return
     images.apply_edit(PATHS.media / orig, ops, src)
     _refresh_file(con, r, src, edited=1, orig_backup=orig, edit_ops=json.dumps(ops))
+
+
+def _set_look(con, r, ops: dict | None):
+    """Non-destructive edit: the library file stays the untouched original; only the settings are stored, and the look
+    is rendered into the cache (render.py). The render comes first, so a photo that cannot be rendered stays as it was."""
+    import json
+    src = PATHS.media / r["rel_path"]
+    if not ops or _is_neutral(ops):
+        render.drop_renders(r["id"])
+        w, h = images.dimensions(src)
+        cols, look = {"edited": 0, "edit_ops": None, "width": w, "height": h}, src
+    else:
+        look, w, h = render.make_render(r, ops)
+        cols = {"edited": 1, "edit_ops": json.dumps(ops), "width": w, "height": h}
+    con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in cols)} WHERE id=?", (*cols.values(), r["id"]))
+    con.commit()
+    images.thumb_path(r["sha256"]).unlink(missing_ok=True)
+    images.make_thumb(look, r["sha256"])
+
+
+def _render(con, r, ops: dict):
+    if r["orig_backup"] and not render.migrate_one(con, r):
+        return _render_legacy(con, r, ops)
+    if r["orig_backup"]:                                  # just migrated: look at the row as it is now
+        r = con.execute("SELECT * FROM photos WHERE id=?", (r["id"],)).fetchone()
+    _set_look(con, r, ops)
 
 
 def _editable(con, pid):
@@ -1160,11 +1209,16 @@ def revert_image(pid: int):
     import shutil
     con = db.connect()
     r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
-    if not r or not r["orig_backup"]:
+    if not r or not (r["orig_backup"] or r["edited"]):
         raise err(400, "No original version")
-    src = PATHS.media / r["rel_path"]
-    shutil.copy2(PATHS.media / r["orig_backup"], src)
-    _refresh_file(con, r, src, edited=0, edit_ops=None)
+    if r["orig_backup"] and not render.migrate_one(con, r):
+        _legacy_clash(con, r)
+        src = PATHS.media / r["rel_path"]
+        shutil.copy2(PATHS.media / r["orig_backup"], src)
+        _refresh_file(con, r, src, edited=0, edit_ops=None)
+        return {"ok": True}
+    r = con.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
+    _set_look(con, r, None)
     return {"ok": True}
 
 

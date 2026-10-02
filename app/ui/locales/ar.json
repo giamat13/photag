@@ -1130,5 +1130,7 @@
  "Untitled trip": "رحلة بلا عنوان",
  "Which triplan trip is this?": "ما هي رحلة triplan هذه؟",
  "{0} days": "{0} أيام",
- "Tester mode: also offer pre-release versions": "وضع المختبِر: اعرض إصدارات تجريبية أيضًا"
+ "Tester mode: also offer pre-release versions": "وضع المختبِر: اعرض إصدارات تجريبية أيضًا",
+ "Photo not found or its file is not available right now": "الصورة غير موجودة أو ملفها غير متاح الآن",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "النسخة الأصلية لهذه الصورة موجودة بالفعل في الفهرس كصورة أخرى. احذف تلك النسخة أولاً ثم حاول مجددًا."
 }

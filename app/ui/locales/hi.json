@@ -1130,5 +1130,7 @@
  "Untitled trip": "अनाम यात्रा",
  "Which triplan trip is this?": "यह कौन सी triplan यात्रा है?",
  "{0} days": "{0} दिन",
- "Tester mode: also offer pre-release versions": "परीक्षक मोड: पूर्व-रिलीज़ संस्करण भी प्रस्तुत करें"
+ "Tester mode: also offer pre-release versions": "परीक्षक मोड: पूर्व-रिलीज़ संस्करण भी प्रस्तुत करें",
+ "Photo not found or its file is not available right now": "फ़ोटो नहीं मिली या उसकी फ़ाइल अभी उपलब्ध नहीं है",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "इस फ़ोटो का मूल पहले से कैटलॉग में किसी अन्य फ़ोटो के रूप में मौजूद है। पहले उस प्रति को हटाएं, फिर दोबारा कोशिश करें।"
 }

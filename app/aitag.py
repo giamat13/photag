@@ -19,7 +19,7 @@ import time
 import urllib.error
 import urllib.request
 
-from . import config, db, images, keystore
+from . import config, db, images, keystore, render
 from .net import ssl_context
 from .config import PATHS
 
@@ -336,7 +336,7 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
             where += f" AND id IN ({','.join('?' * len(ids))})"; args += ids
         if only_untagged:
             where += " AND NOT EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=photos.id)"
-        todo = con.execute(f"SELECT id, sha256, rel_path FROM photos WHERE {where} ORDER BY taken_at DESC", args).fetchall()
+        todo = con.execute(f"SELECT id, sha256, rel_path, orig_backup, edited, edit_ops FROM photos WHERE {where} ORDER BY taken_at DESC", args).fetchall()
         if not todo:
             progress.state = "done"; return progress.say("No photos to tag")
         progress.state = "tagging"; progress.total = len(todo); progress.done = 0
@@ -348,7 +348,7 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                 return None
             tp = images.thumb_path(row["sha256"])
             if not tp.exists():
-                images.make_thumb(PATHS.media / row["rel_path"], row["sha256"])
+                images.make_thumb(render.current_path(row), row["sha256"])
             if not tp.exists():
                 raise AIError(0, "no thumbnail")
             return _tag_with_retry((provider, cfg["base_url"], key, model, tp.read_bytes(), cfg["language"]), cancelled)

@@ -1130,5 +1130,7 @@
  "Untitled trip": "제목 없는 여행",
  "Which triplan trip is this?": "이것은 어떤 triplan 여행인가요?",
  "{0} days": "{0}일",
- "Tester mode: also offer pre-release versions": "테스터 모드: 사전 출시 버전도 제공"
+ "Tester mode: also offer pre-release versions": "테스터 모드: 사전 출시 버전도 제공",
+ "Photo not found or its file is not available right now": "사진을 찾을 수 없거나 파일을 지금 사용할 수 없습니다",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "이 사진의 원본이 이미 다른 사진으로 카탈로그에 있습니다. 먼저 그 사본을 삭제한 다음 다시 시도하세요."
 }

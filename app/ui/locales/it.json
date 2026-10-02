@@ -1130,5 +1130,7 @@
  "Untitled trip": "Viaggio senza titolo",
  "Which triplan trip is this?": "Quale viaggio triplan è questo?",
  "{0} days": "{0} giorni",
- "Tester mode: also offer pre-release versions": "Modalità tester: offri anche le versioni pre-release"
+ "Tester mode: also offer pre-release versions": "Modalità tester: offri anche le versioni pre-release",
+ "Photo not found or its file is not available right now": "Foto non trovata o il suo file non è al momento disponibile",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "L’originale di questa foto è già nel catalogo come un’altra foto. Elimina prima quella copia e riprova."
 }

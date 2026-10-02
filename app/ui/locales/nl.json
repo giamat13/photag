@@ -1130,5 +1130,7 @@
  "Untitled trip": "Naamloze reis",
  "Which triplan trip is this?": "Welke triplan-reis is dit?",
  "{0} days": "{0} dagen",
- "Tester mode: also offer pre-release versions": "Testermodus: ook pre-releaseversies aanbieden"
+ "Tester mode: also offer pre-release versions": "Testermodus: ook pre-releaseversies aanbieden",
+ "Photo not found or its file is not available right now": "Foto niet gevonden of het bestand is nu niet beschikbaar",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "Het origineel van deze foto staat al als andere foto in de catalogus. Verwijder eerst die kopie en probeer het opnieuw."
 }

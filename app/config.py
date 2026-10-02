@@ -254,8 +254,9 @@ class Paths:
         self.root = get_library_root()
         self.media = self.root / "media"
         self.thumbs = self.root / "thumbs"
+        self.renders = self.root / "renders"          # how edited photos look (derived, rebuilt on demand, never backed up)
         self.db = self.root / "catalog.db"
-        for d in (self.root, self.media, self.thumbs):
+        for d in (self.root, self.media, self.thumbs, self.renders):
             d.mkdir(parents=True, exist_ok=True)
         return self
 

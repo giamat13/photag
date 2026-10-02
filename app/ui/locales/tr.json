@@ -1130,5 +1130,7 @@
  "Untitled trip": "Başlıksız seyahat",
  "Which triplan trip is this?": "Bu hangi triplan seyahati?",
  "{0} days": "{0} gün",
- "Tester mode: also offer pre-release versions": "Test modu: ön sürümleri de sun"
+ "Tester mode: also offer pre-release versions": "Test modu: ön sürümleri de sun",
+ "Photo not found or its file is not available right now": "Fotoğraf bulunamadı veya dosyası şu anda kullanılamıyor",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "Bu fotoğrafın aslı zaten katalogda başka bir fotoğraf olarak var. Önce o kopyayı silin, sonra tekrar deneyin."
 }

@@ -1130,5 +1130,7 @@
  "Untitled trip": "未命名行程",
  "Which triplan trip is this?": "这是哪个 triplan 行程？",
  "{0} days": "{0} 天",
- "Tester mode: also offer pre-release versions": "测试者模式：也提供预发布版本"
+ "Tester mode: also offer pre-release versions": "测试者模式：也提供预发布版本",
+ "Photo not found or its file is not available right now": "找不到照片，或其文件当前不可用",
+ "The original of this photo is already in the catalog as another photo. Delete that copy first, then try again.": "这张照片的原件已作为另一张照片存在于目录中。请先删除那份副本，然后重试。"
 }

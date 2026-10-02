@@ -15,7 +15,7 @@ import time
 import zipfile
 from pathlib import Path
 
-from . import cloud, db, images
+from . import cloud, db, images, render
 from .config import PATHS, TRASH_RETENTION_DAYS
 
 ROOT_PREFIX = "Takeout/Google Photos/"
@@ -42,6 +42,7 @@ def delete_forever(con, rows) -> int:
                 p.unlink(missing_ok=True)
         if r["orig_backup"]:
             (PATHS.media / r["orig_backup"]).unlink(missing_ok=True)
+        render.drop_renders(r["id"])
         for b in con.execute("SELECT backup_rel FROM video_backups WHERE photo_id=?", (r["id"],)).fetchall():
             (PATHS.media / b["backup_rel"]).unlink(missing_ok=True)
         pid = r["id"]
@@ -1192,11 +1193,14 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
         for pid in ids:
             progress.done += 1
             progress.say("{done}/{total}", done=progress.done, total=progress.total)
-            r = con.execute("SELECT filename, rel_path, orig_backup, is_video FROM photos WHERE id=?",
+            r = con.execute("SELECT id, sha256, filename, rel_path, orig_backup, is_video, edited, edit_ops FROM photos WHERE id=?",
                             (pid,)).fetchone()
             if not r:
                 continue
-            src = PATHS.media / (r["orig_backup"] if originals and r["orig_backup"] else r["rel_path"])
+            if originals:                                    # the untouched original: the library file, or the old model's pristine copy
+                src = PATHS.media / (r["orig_backup"] or r["rel_path"])
+            else:                                            # the photo as it looks: an edited one is exported from its render
+                src = render.current_path(r)
             if not src.exists():
                 continue
             name = _safe_component(r["filename"])
