@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "מצגת הרגעים הטובים ביותר",
  "No photos in this collection yet": "אין עדיין תמונות באוסף הזה",
  "Is this {0}?": "זה {0}?",
- "Not this person": "לא האדם הזה"
+ "Not this person": "לא האדם הזה",
+ "Storage...": "אחסון...",
+ "Storage": "אחסון",
+ "By folder": "לפי תיקייה",
+ "By year": "לפי שנה",
+ "By file type": "לפי סוג קובץ",
+ "{0} across {1} items.": "{0} בסך הכול, ב-{1} פריטים.",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "עוד {0} נמצאים באשפה ({1} פריטים) -- רוקן אותה מהגדרות הקטלוג כדי לקבל את המקום בחזרה.",
+ "Nothing here yet": "עדיין אין כאן כלום",
+ "{0} items": "{0} פריטים"
 }

@@ -1673,6 +1673,21 @@ async function catalogSettings(){
   $('#lib-pick').onclick=async()=>{ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose catalog folder'))); if(r.path) $('#lib-path').value=r.path; };
   $('#lib-set').onclick=async()=>{ const p=$('#lib-path').value.trim(); if(!p) return; const lr = await send('POST','/api/settings/library',{path:p}); HIST.undo.length = HIST.redo.length = 0; closeModal(); toast(t('Catalog replaced')); await reloadAll(); if(lr.library_in_onedrive) oneDriveNotice(true); };
 }
+async function storageBreakdown(){
+  modal(`<h3>${t('Storage')}</h3><div class="mb"><div class="hint">${t('Loading…')}</div></div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
+  const d = await api('/api/storage/breakdown');
+  const bar = (rows, total) => rows.map(r=>{
+    const pct = total ? Math.max(1, Math.round(r.bytes / total * 100)) : 0;
+    return `<div class="sb-row"><span class="sb-nm">${esc(r.name)}</span><div class="sb-bar"><i style="width:${pct}%"></i></div><span class="sb-sz">${fsize(r.bytes)}</span><span class="sb-n">${t('{0} items', [num(r.n)])}</span></div>`;
+  }).join('') || `<div class="hint">${t('Nothing here yet')}</div>`;
+  modal(`<h3>${t('Storage')}</h3><div class="mb sb">
+    <p class="hint" style="padding:0">${t('{0} across {1} items.', [fsize(d.total_bytes), num(d.total_n)])}
+      ${d.trash_n ? ' ' + t('Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.', [fsize(d.trash_bytes), num(d.trash_n)]) : ''}</p>
+    <div class="lbl-sub" style="padding:0">${t('By folder')}</div>${bar(d.by_folder, d.total_bytes)}
+    <div class="lbl-sub" style="padding:0">${t('By year')}</div>${bar(d.by_year, d.total_bytes)}
+    <div class="lbl-sub" style="padding:0">${t('By file type')}</div>${bar(d.by_type, d.total_bytes)}
+  </div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
+}
 async function preferences(){
   const [s, ai, rf0] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref')]);
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
@@ -2730,6 +2745,7 @@ const MENUS = [
     sep,
     [t('Backup and restore...'), '', backupDialog],
     [t('Catalog Settings...'), 'Ctrl+Alt+,', catalogSettings],
+    [t('Storage...'), '', storageBreakdown],
     [t('Preferences...'), 'Ctrl+,', preferences],
   ]],
   [t('Edit'), [

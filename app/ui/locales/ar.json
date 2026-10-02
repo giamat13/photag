@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "عرض شرائح لأفضل اللحظات",
  "No photos in this collection yet": "لا توجد صور في هذه المجموعة بعد",
  "Is this {0}?": "هل هذا {0}؟",
- "Not this person": "ليس هذا الشخص"
+ "Not this person": "ليس هذا الشخص",
+ "Storage...": "التخزين...",
+ "Storage": "التخزين",
+ "By folder": "حسب المجلد",
+ "By year": "حسب السنة",
+ "By file type": "حسب نوع الملف",
+ "{0} across {1} items.": "{0} عبر {1} عنصر.",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "هناك {0} أخرى في سلة المهملات ({1} عنصر) -- أفرغها من إعدادات الكتالوج لاستعادة المساحة.",
+ "Nothing here yet": "لا يوجد شيء هنا بعد",
+ "{0} items": "{0} عناصر"
 }

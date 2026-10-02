@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "베스트 모먼트 슬라이드쇼",
  "No photos in this collection yet": "이 컬렉션에는 아직 사진이 없습니다",
  "Is this {0}?": "이 사람이 {0}인가요?",
- "Not this person": "이 사람이 아님"
+ "Not this person": "이 사람이 아님",
+ "Storage...": "저장소...",
+ "Storage": "저장소",
+ "By folder": "폴더별",
+ "By year": "연도별",
+ "By file type": "파일 유형별",
+ "{0} across {1} items.": "{1}개 항목에서 {0}.",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "휴지통에 {0}가 더 있습니다({1}개 항목) -- 공간을 되찾으려면 카탈로그 설정에서 비우세요.",
+ "Nothing here yet": "아직 아무것도 없습니다",
+ "{0} items": "{0}개 항목"
 }

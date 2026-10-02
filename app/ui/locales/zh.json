@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "精彩瞬间幻灯片",
  "No photos in this collection yet": "此影集中还没有照片",
  "Is this {0}?": "这是{0}吗？",
- "Not this person": "不是这个人"
+ "Not this person": "不是这个人",
+ "Storage...": "存储...",
+ "Storage": "存储",
+ "By folder": "按文件夹",
+ "By year": "按年份",
+ "By file type": "按文件类型",
+ "{0} across {1} items.": "共 {1} 个项目，{0}。",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "回收站中还有 {0}（{1} 个项目）——从目录设置中清空以释放空间。",
+ "Nothing here yet": "这里还没有内容",
+ "{0} items": "{0} 个项目"
 }

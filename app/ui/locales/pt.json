@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "Apresentação dos melhores momentos",
  "No photos in this collection yet": "Ainda não há fotos nesta coleção",
  "Is this {0}?": "É {0}?",
- "Not this person": "Não é esta pessoa"
+ "Not this person": "Não é esta pessoa",
+ "Storage...": "Armazenamento...",
+ "Storage": "Armazenamento",
+ "By folder": "Por pasta",
+ "By year": "Por ano",
+ "By file type": "Por tipo de ficheiro",
+ "{0} across {1} items.": "{0} em {1} itens.",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Mais {0} está no Lixo ({1} itens) -- esvazie-o em Definições do catálogo para recuperar o espaço.",
+ "Nothing here yet": "Ainda não há nada aqui",
+ "{0} items": "{0} itens"
 }

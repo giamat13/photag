@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "सर्वश्रेष्ठ क्षणों की स्लाइडशो",
  "No photos in this collection yet": "इस संग्रह में अभी तक कोई तस्वीर नहीं है",
  "Is this {0}?": "क्या यह {0} है?",
- "Not this person": "यह व्यक्ति नहीं"
+ "Not this person": "यह व्यक्ति नहीं",
+ "Storage...": "संग्रहण...",
+ "Storage": "संग्रहण",
+ "By folder": "फ़ोल्डर के अनुसार",
+ "By year": "वर्ष के अनुसार",
+ "By file type": "फ़ाइल प्रकार के अनुसार",
+ "{0} across {1} items.": "{1} आइटम में {0}।",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "ट्रैश में एक और {0} पड़ा है ({1} आइटम) -- इसे वापस पाने के लिए कैटलॉग सेटिंग्स से इसे खाली करें।",
+ "Nothing here yet": "अभी तक यहाँ कुछ नहीं है",
+ "{0} items": "{0} आइटम"
 }

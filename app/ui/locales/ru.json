@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "Слайд-шоу лучших моментов",
  "No photos in this collection yet": "В этой коллекции пока нет фотографий",
  "Is this {0}?": "Это {0}?",
- "Not this person": "Не этот человек"
+ "Not this person": "Не этот человек",
+ "Storage...": "Хранилище...",
+ "Storage": "Хранилище",
+ "By folder": "По папке",
+ "By year": "По году",
+ "By file type": "По типу файла",
+ "{0} across {1} items.": "{0} в {1} объектах.",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Ещё {0} находится в корзине ({1} объектов) -- очистите её в настройках каталога, чтобы освободить место.",
+ "Nothing here yet": "Здесь пока пусто",
+ "{0} items": "{0} объектов"
 }

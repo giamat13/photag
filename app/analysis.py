@@ -4,7 +4,10 @@ perceptual hash that finds duplicates and near-duplicates (bursts) in a library,
 
 Scores are heuristics tuned for "which of these shots is the keeper"; they rank photos against each other much better
 than they judge a single photo in absolute terms. Thresholds are constants at the top so they are easy to retune."""
-import concurrent.futures as cf
+try:
+    import concurrent.futures as cf
+except ImportError:
+    from . import _cf_fallback as cf   # see _cf_fallback.py for why this can happen
 import math
 import re
 import time

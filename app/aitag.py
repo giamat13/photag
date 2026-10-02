@@ -7,7 +7,10 @@ photo is sent, and only when the user starts a run. Keys are stored encrypted
 (keystore.py) in config.json and never sent back to the UI.
 """
 import base64
-import concurrent.futures as cf
+try:
+    import concurrent.futures as cf
+except ImportError:
+    from . import _cf_fallback as cf   # see _cf_fallback.py for why this can happen
 import datetime
 import json
 import os

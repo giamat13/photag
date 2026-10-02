@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "Diavoorstelling van de beste momenten",
  "No photos in this collection yet": "Nog geen foto's in deze collectie",
  "Is this {0}?": "Is dit {0}?",
- "Not this person": "Niet deze persoon"
+ "Not this person": "Niet deze persoon",
+ "Storage...": "Opslag...",
+ "Storage": "Opslag",
+ "By folder": "Per map",
+ "By year": "Per jaar",
+ "By file type": "Per bestandstype",
+ "{0} across {1} items.": "{0} verdeeld over {1} items.",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Nog eens {0} staat in de Prullenbak ({1} items) -- leeg deze via Catalogusinstellingen om de ruimte terug te krijgen.",
+ "Nothing here yet": "Nog niets hier",
+ "{0} items": "{0} items"
 }

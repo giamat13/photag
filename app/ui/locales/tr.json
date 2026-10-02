@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "En iyi anlar slayt gösterisi",
  "No photos in this collection yet": "Bu koleksiyonda henüz fotoğraf yok",
  "Is this {0}?": "Bu {0} mi?",
- "Not this person": "Bu kişi değil"
+ "Not this person": "Bu kişi değil",
+ "Storage...": "Depolama...",
+ "Storage": "Depolama",
+ "By folder": "Klasöre göre",
+ "By year": "Yıla göre",
+ "By file type": "Dosya türüne göre",
+ "{0} across {1} items.": "{1} öğede toplam {0}.",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "Çöp Kutusunda {0} daha var ({1} öğe) -- yeri geri almak için Katalog Ayarları'ndan boşaltın.",
+ "Nothing here yet": "Henüz bir şey yok",
+ "{0} items": "{0} öğe"
 }

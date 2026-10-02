@@ -1056,5 +1056,14 @@
  "Best moments slideshow": "ベストモーメントのスライドショー",
  "No photos in this collection yet": "このコレクションにはまだ写真がありません",
  "Is this {0}?": "これは{0}さんですか？",
- "Not this person": "この人ではない"
+ "Not this person": "この人ではない",
+ "Storage...": "ストレージ...",
+ "Storage": "ストレージ",
+ "By folder": "フォルダ別",
+ "By year": "年別",
+ "By file type": "ファイルタイプ別",
+ "{0} across {1} items.": "{1} 件のアイテムで{0}。",
+ "Another {0} is sitting in the Trash ({1} items) -- empty it from Catalog Settings to get it back.": "さらに{0}がゴミ箱にあります（{1}件）。容量を取り戻すには、カタログ設定からゴミ箱を空にしてください。",
+ "Nothing here yet": "まだ何もありません",
+ "{0} items": "{0}件"
 }

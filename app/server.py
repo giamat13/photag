@@ -719,6 +719,37 @@ def folders():
             "folders": [{"name": k, "n": v} for k, v in sorted(counts.items(), reverse=True)]}
 
 
+@app.get("/api/storage/breakdown")
+def storage_breakdown():
+    """Where the library's disk space goes -- by folder, by year and by file type -- so you can
+    decide what to archive or delete. Trashed photos are reported separately (they still take up
+    space until the trash is emptied, see Catalog Settings)."""
+    con = db.connect()
+    by_folder, by_year, by_type = {}, {}, {}
+    total_bytes = total_n = trash_bytes = trash_n = 0
+    for r in con.execute("SELECT rel_path, bytes, taken_at, trashed FROM photos"):
+        b = r["bytes"] or 0
+        if r["trashed"]:
+            trash_bytes += b; trash_n += 1
+            continue
+        total_bytes += b; total_n += 1
+        fe = by_folder.setdefault(_folder_of(r["rel_path"]) or "(root)", [0, 0]); fe[0] += 1; fe[1] += b
+        y = str(time.gmtime(r["taken_at"]).tm_year) if r["taken_at"] else "?"
+        ye = by_year.setdefault(y, [0, 0]); ye[0] += 1; ye[1] += b
+        ext = (Path(r["rel_path"]).suffix.lstrip(".") or "?").upper()
+        te = by_type.setdefault(ext, [0, 0]); te[0] += 1; te[1] += b
+
+    def rows(d, limit=12):
+        out = sorted(({"name": k, "n": v[0], "bytes": v[1]} for k, v in d.items()), key=lambda x: -x["bytes"])
+        if len(out) <= limit:
+            return out
+        rest = out[limit - 1:]
+        return out[:limit - 1] + [{"name": "…", "n": sum(x["n"] for x in rest), "bytes": sum(x["bytes"] for x in rest)}]
+
+    return {"total_bytes": total_bytes, "total_n": total_n, "trash_bytes": trash_bytes, "trash_n": trash_n,
+            "by_folder": rows(by_folder), "by_year": rows(by_year, limit=50), "by_type": rows(by_type)}
+
+
 class MapIn(BaseModel):
     ids: list[int]
 
