@@ -1096,5 +1096,22 @@
  "Found on this computer": "נמצא במחשב הזה",
  " Recover ratings, labels and keywords from XMP": " שחזור דירוגים, תוויות צבע ומילות מפתח מ-XMP",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "קורא קובץ XMP נלווה ליד כל קובץ, או חבילת XMP מוטמעת בתוכו -- שימושי לקבצי מקור של Lightroom שאין לך יותר קטלוג עבורם.",
- "{n} had metadata recovered from XMP": "עבור {n} שוחזרו נתוני מטא מ-XMP"
+ "{n} had metadata recovered from XMP": "עבור {n} שוחזרו נתוני מטא מ-XMP",
+ " Choose digiKam database...": " בחר מסד נתונים של digiKam...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "דירוגים, כיתובים, תאריכי צילום, מיקומי GPS ותגיות (תגיות שדיגיקם מסמן כאדם הופכות לאנשים). קבצים מועתקים לספרייה -- המקור אינו משתנה.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " מתיקיית מסד הנתונים של digiKam. מומלץ לסגור את digiKam לפני הייבוא.",
+ "Cannot read the database: {error}": "לא ניתן לקרוא את מסד הנתונים: {error}",
+ "Choose a digiKam database": "בחר מסד נתונים של digiKam",
+ "Choose a digiKam database from the “Source” panel.": "בחר מסד נתונים של digiKam מהלוח \"מקור\"",
+ "Choose digiKam database": "בחר מסד נתונים של digiKam",
+ "Database digikam4.db": "מסד נתונים digikam4.db",
+ "Database not found": "מסד הנתונים לא נמצא",
+ "Import from digiKam": "ייבוא מ-digiKam",
+ "Import from digiKam failed: {error}": "הייבוא מ-digiKam נכשל: {error}",
+ "Reading the database…": "קורא את מסד הנתונים…",
+ "Reading the digiKam database…": "קורא את מסד הנתונים של digiKam…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} קבצים שמסד הנתונים מפנה אליהם לא נמצאו בדיסק ולא יובאו.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} תמונות · {1} תגיות · {2} אלבומים · {3}",
+ "{n} items imported from digiKam": "{n} פריטים יובאו מ-digiKam"
 }

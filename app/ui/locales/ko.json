@@ -1096,5 +1096,22 @@
  "Found on this computer": "이 컴퓨터에서 찾음",
  " Recover ratings, labels and keywords from XMP": " XMP에서 등급, 레이블, 키워드 복구",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "각 파일 옆의 XMP 사이드카 파일이나 파일에 내장된 XMP 패킷을 읽습니다 -- 더 이상 카탈로그가 없는 Lightroom 원본 파일에 유용합니다.",
- "{n} had metadata recovered from XMP": "{n}개 항목의 메타데이터를 XMP에서 복구했습니다"
+ "{n} had metadata recovered from XMP": "{n}개 항목의 메타데이터를 XMP에서 복구했습니다",
+ " Choose digiKam database...": " digiKam 데이터베이스 선택...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "등급, 캡션, 촬영 날짜, GPS 위치, 태그(digiKam이 인물로 표시한 태그는 인물이 됨). 파일은 라이브러리로 복사됩니다 -- 원본은 변경되지 않습니다.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " digiKam의 데이터베이스 폴더에서 가져옵니다. 가져오기 전에 digiKam을 닫는 것이 좋습니다.",
+ "Cannot read the database: {error}": "데이터베이스를 읽을 수 없습니다: {error}",
+ "Choose a digiKam database": "digiKam 데이터베이스 선택",
+ "Choose a digiKam database from the “Source” panel.": "\"소스\" 패널에서 digiKam 데이터베이스를 선택하세요",
+ "Choose digiKam database": "digiKam 데이터베이스 선택",
+ "Database digikam4.db": "데이터베이스 digikam4.db",
+ "Database not found": "데이터베이스를 찾을 수 없습니다",
+ "Import from digiKam": "digiKam에서 가져오기",
+ "Import from digiKam failed: {error}": "digiKam에서 가져오기 실패: {error}",
+ "Reading the database…": "데이터베이스를 읽는 중…",
+ "Reading the digiKam database…": "digiKam 데이터베이스를 읽는 중…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0}개의 파일이 데이터베이스에서 참조되지만 디스크에서 찾을 수 없어 가져오지 않습니다.",
+ "{0} photos · {1} tags · {2} albums · {3}": "사진 {0}개 · 태그 {1}개 · 앨범 {2}개 · {3}",
+ "{n} items imported from digiKam": "digiKam에서 {n}개 항목을 가져왔습니다"
 }

@@ -884,6 +884,116 @@ def run_lrcat_import(path: str, progress: Progress):
         progress.fail("Import from Lightroom failed: {error}", error=str(e))
 
 
+# ---------- import a digiKam database (digikam4.db) ----------
+# Same read-only-SQLite approach as Lightroom. digiKam keeps the real root path encoded in
+# AlbumRoots.identifier as "...&path=/the/actual/path" (also used, unchanged, on a Windows install).
+_DK_ROOT_PATH_RE = re.compile(r"path=([^&]*)")
+
+
+def _dk_open(path: str):
+    return _lr_open(path)
+
+
+def dkdb_info(path: str) -> dict:
+    """Counts for the import dialog, before anything is copied."""
+    dk = _dk_open(path)
+    imgs = _dk_images(dk)
+    missing = sum(1 for r in imgs if not Path(r["path"]).is_file())
+    n_tags = dk.execute("SELECT COUNT(*) FROM Tags").fetchone()[0]
+    n_albums = dk.execute("SELECT COUNT(*) FROM Albums").fetchone()[0]
+    return {"images": len(imgs), "missing": missing, "tags": n_tags, "albums": n_albums,
+            "bytes": sum(Path(r["path"]).stat().st_size for r in imgs if Path(r["path"]).is_file())}
+
+
+def _dk_images(dk):
+    roots = {}
+    for r in dk.execute("SELECT id, identifier, specificPath FROM AlbumRoots"):
+        m = _DK_ROOT_PATH_RE.search(r["identifier"] or "")
+        roots[r["id"]] = (m.group(1) if m else (r["specificPath"] or "")).rstrip("/\\")
+    albums = {r["id"]: (roots.get(r["albumRoot"], ""), (r["relativePath"] or "").strip("/\\"))
+              for r in dk.execute("SELECT id, albumRoot, relativePath FROM Albums")}
+    out = []
+    for r in dk.execute("SELECT id, album, name FROM Images WHERE status=1"):  # status 1 = visible/normal
+        root, rel = albums.get(r["album"], (None, None))
+        if root is None:
+            continue
+        path = str(Path(root) / rel / r["name"]) if rel else str(Path(root) / r["name"])
+        out.append({"id": r["id"], "path": path, "name": r["name"]})
+    return out
+
+
+def run_digikam_import(path: str, progress: Progress):
+    con = db.init_db()
+    mark_import_start(con)
+    progress.state = "scanning"; progress.say("Reading the digiKam database…")
+    try:
+        dk = _dk_open(path)
+        imgs = _dk_images(dk)
+        ratings, taken = {}, {}
+        for r in dk.execute("SELECT imageid, rating, creationDate FROM ImageInformation"):
+            ratings[r["imageid"]] = r["rating"] or 0
+            taken[r["imageid"]] = _lr_time(r["creationDate"])
+        gps = {r["imageid"]: (r["latitudeNumber"], r["longitudeNumber"]) for r in dk.execute(
+            "SELECT imageid, latitudeNumber, longitudeNumber FROM ImagePositions WHERE latitudeNumber IS NOT NULL")}
+        captions = {r["imageid"]: r["comment"] for r in dk.execute(
+            "SELECT imageid, comment FROM ImageComments WHERE type=1 AND comment IS NOT NULL AND comment<>''")}
+        person_tags = {r["tagid"] for r in dk.execute("SELECT tagid FROM TagProperties WHERE property='person'")}
+        tag_names = {r["id"]: r["name"] for r in dk.execute("SELECT id, name FROM Tags")}
+        kw = {}
+        for r in dk.execute("SELECT imageid, tagid FROM ImageTags"):
+            if r["tagid"] in tag_names:
+                kw.setdefault(r["imageid"], []).append((tag_names[r["tagid"]], r["tagid"] in person_tags))
+
+        progress.state = "importing"; progress.total = len(imgs); progress.done = 0
+        added = dupes = missing = 0
+        stats = ImportStats(progress, "digikam", sum(Path(r["path"]).stat().st_size for r in imgs if Path(r["path"]).is_file()))
+        for r in imgs:
+            if progress.cancel:
+                break
+            progress.done += 1
+            if progress.done % 10 == 0:
+                progress.say("digiKam — {done}/{total}", done=progress.done, total=progress.total)
+                con.commit()
+            src = Path(r["path"])
+            if not src.is_file():
+                missing += 1
+                stats.item("missing", src.name)
+                continue
+            lat, lng = gps.get(r["id"], (None, None))
+            try:
+                size = src.stat().st_size
+                pid, new = _ingest_file(con, src, taken=taken.get(r["id"]), lat=lat, lng=lng)
+            except Exception:
+                stats.item("failed", src.name)
+                continue
+            added += new; dupes += not new
+            stats.item("added" if new else "duplicate", src.name, size)
+            fields = {"rating": ratings.get(r["id"], 0)}
+            if r["id"] in captions:
+                fields["description"] = captions[r["id"]]
+            if not new:  # already in the catalog: add what digiKam knows, never clear what's here
+                fields = {k: v for k, v in fields.items() if v}
+            if fields:
+                con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in fields)} WHERE id=?", (*fields.values(), pid))
+            for name, is_person in kw.get(r["id"], []):
+                if is_person:
+                    con.execute("INSERT OR IGNORE INTO people(name,source) VALUES(?, 'digikam')", (name,))
+                    per = con.execute("SELECT id FROM people WHERE name=?", (name,)).fetchone()["id"]
+                    con.execute("INSERT OR IGNORE INTO photo_people(photo_id,person_id,source) VALUES(?,?, 'digikam')", (pid, per))
+                else:
+                    con.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (name,))
+                    tid = con.execute("SELECT id FROM tags WHERE name=?", (name,)).fetchone()["id"]
+                    con.execute("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'digikam')", (pid, tid))
+        con.commit()
+        progress.state = "done"
+        progress.say_parts(*([("Import cancelled", {})] if progress.cancel else []), ("{n} items imported from digiKam", {"n": added}),
+                           *([("{n} already in catalog", {"n": dupes})] if dupes else []),
+                           *([("{n} files missing from disk", {"n": missing})] if missing else []))
+    except Exception as e:
+        con.commit()
+        progress.fail("Import from digiKam failed: {error}", error=str(e))
+
+
 def _unique_name(name: str, used: set) -> str:
     """Like _unique_dest, but for names inside a ZIP (no filesystem to check against)."""
     stem, suf = Path(name).stem, Path(name).suffix

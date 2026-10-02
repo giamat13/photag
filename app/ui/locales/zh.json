@@ -1096,5 +1096,22 @@
  "Found on this computer": "在此电脑上找到",
  " Recover ratings, labels and keywords from XMP": " 从 XMP 恢复评分、标签和关键字",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "读取每个文件旁的 XMP 附属文件，或文件内嵌的 XMP 数据包 -- 适用于不再拥有目录的 Lightroom 原始文件。",
- "{n} had metadata recovered from XMP": "已从 XMP 为 {n} 恢复元数据"
+ "{n} had metadata recovered from XMP": "已从 XMP 为 {n} 恢复元数据",
+ " Choose digiKam database...": " 选择 digiKam 数据库...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "评分、说明、拍摄日期、GPS 位置和标签（digiKam 标记为人物的标签将成为\"人物\"）。文件会被复制到素材库 -- 原始文件不会被更改。",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " digiKam 的数据库文件夹。建议在导入前关闭 digiKam。",
+ "Cannot read the database: {error}": "无法读取数据库：{error}",
+ "Choose a digiKam database": "选择一个 digiKam 数据库",
+ "Choose a digiKam database from the “Source” panel.": "从\"来源\"面板选择一个 digiKam 数据库",
+ "Choose digiKam database": "选择 digiKam 数据库",
+ "Database digikam4.db": "数据库 digikam4.db",
+ "Database not found": "未找到数据库",
+ "Import from digiKam": "从 digiKam 导入",
+ "Import from digiKam failed: {error}": "从 digiKam 导入失败：{error}",
+ "Reading the database…": "正在读取数据库…",
+ "Reading the digiKam database…": "正在读取 digiKam 数据库…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "数据库引用的 {0} 个文件在磁盘上未找到，将不会被导入。",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} 张照片 · {1} 个标签 · {2} 个相册 · {3}",
+ "{n} items imported from digiKam": "已从 digiKam 导入 {n} 个项目"
 }

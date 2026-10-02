@@ -1096,5 +1096,22 @@
  "Found on this computer": "Gevonden op deze computer",
  " Recover ratings, labels and keywords from XMP": " Beoordelingen, labels en trefwoorden herstellen uit XMP",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Leest een XMP-sidecarbestand naast elk bestand, of een ingesloten XMP-pakket -- handig voor Lightroom-originelen waarvoor je geen catalogus meer hebt.",
- "{n} had metadata recovered from XMP": "Metadata hersteld uit XMP voor {n}"
+ "{n} had metadata recovered from XMP": "Metadata hersteld uit XMP voor {n}",
+ " Choose digiKam database...": " Kies digiKam-database...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "Beoordelingen, bijschriften, opnamedatums, GPS-locaties en tags (tags die digiKam als persoon markeert, worden Personen). Bestanden worden naar de bibliotheek gekopieerd -- het origineel wordt niet gewijzigd.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " uit de databasemap van digiKam. Het wordt aangeraden digiKam te sluiten vóór het importeren.",
+ "Cannot read the database: {error}": "Kan database niet lezen: {error}",
+ "Choose a digiKam database": "Kies een digiKam-database",
+ "Choose a digiKam database from the “Source” panel.": "Kies een digiKam-database in het paneel \"Bron\"",
+ "Choose digiKam database": "Kies digiKam-database",
+ "Database digikam4.db": "Database digikam4.db",
+ "Database not found": "Database niet gevonden",
+ "Import from digiKam": "Importeren uit digiKam",
+ "Import from digiKam failed: {error}": "Importeren uit digiKam mislukt: {error}",
+ "Reading the database…": "Database wordt gelezen…",
+ "Reading the digiKam database…": "digiKam-database wordt gelezen…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} bestanden waarnaar de database verwijst, zijn niet op schijf gevonden en worden niet geïmporteerd.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} foto's · {1} tags · {2} albums · {3}",
+ "{n} items imported from digiKam": "{n} items geïmporteerd uit digiKam"
 }

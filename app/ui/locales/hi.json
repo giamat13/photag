@@ -1096,5 +1096,22 @@
  "Found on this computer": "इस कंप्यूटर पर मिला",
  " Recover ratings, labels and keywords from XMP": " XMP से रेटिंग, लेबल और कीवर्ड पुनर्प्राप्त करें",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "प्रत्येक फ़ाइल के साथ XMP साइडकार, या उसमें एम्बेडेड XMP पैकेट पढ़ता है -- उन Lightroom मूल फ़ाइलों के लिए उपयोगी जिनके लिए अब आपके पास कैटलॉग नहीं है।",
- "{n} had metadata recovered from XMP": "{n} के लिए XMP से मेटाडेटा पुनर्प्राप्त किया गया"
+ "{n} had metadata recovered from XMP": "{n} के लिए XMP से मेटाडेटा पुनर्प्राप्त किया गया",
+ " Choose digiKam database...": " digiKam डेटाबेस चुनें...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "रेटिंग, कैप्शन, कैप्चर तिथियां, GPS स्थान, और टैग (जिन टैग को digiKam व्यक्ति के रूप में चिह्नित करता है वे लोग बन जाते हैं)। फ़ाइलें लाइब्रेरी में कॉपी की जाती हैं -- मूल फ़ाइल नहीं बदली जाती।",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " digiKam के डेटाबेस फ़ोल्डर से। आयात करने से पहले digiKam बंद करने की सलाह दी जाती है।",
+ "Cannot read the database: {error}": "डेटाबेस पढ़ा नहीं जा सका: {error}",
+ "Choose a digiKam database": "एक digiKam डेटाबेस चुनें",
+ "Choose a digiKam database from the “Source” panel.": "\"स्रोत\" पैनल से एक digiKam डेटाबेस चुनें",
+ "Choose digiKam database": "digiKam डेटाबेस चुनें",
+ "Database digikam4.db": "डेटाबेस digikam4.db",
+ "Database not found": "डेटाबेस नहीं मिला",
+ "Import from digiKam": "digiKam से आयात करें",
+ "Import from digiKam failed: {error}": "digiKam से आयात विफल: {error}",
+ "Reading the database…": "डेटाबेस पढ़ा जा रहा है…",
+ "Reading the digiKam database…": "digiKam डेटाबेस पढ़ा जा रहा है…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} फ़ाइलें जिनका डेटाबेस में संदर्भ है, डिस्क पर नहीं मिलीं और आयात नहीं की जाएंगी।",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} फ़ोटो · {1} टैग · {2} एल्बम · {3}",
+ "{n} items imported from digiKam": "digiKam से {n} आइटम आयात किए गए"
 }

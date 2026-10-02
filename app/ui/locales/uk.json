@@ -1096,5 +1096,22 @@
  "Found on this computer": "Знайдено на цьому комп’ютері",
  " Recover ratings, labels and keywords from XMP": " Відновити рейтинги, мітки та ключові слова з XMP",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Читає супутній файл XMP поруч із кожним файлом або пакет XMP, вбудований у нього -- корисно для оригіналів Lightroom, для яких каталогу більше немає.",
- "{n} had metadata recovered from XMP": "Для {n} відновлено метадані з XMP"
+ "{n} had metadata recovered from XMP": "Для {n} відновлено метадані з XMP",
+ " Choose digiKam database...": " Виберіть базу даних digiKam...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "Рейтинги, підписи, дати зйомки, GPS-координати та теги (теги, які digiKam позначає як особу, стають людьми). Файли копіюються до бібліотеки -- оригінал не змінюється.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " з папки бази даних digiKam. Перед імпортом рекомендується закрити digiKam.",
+ "Cannot read the database: {error}": "Не вдалося прочитати базу даних: {error}",
+ "Choose a digiKam database": "Виберіть базу даних digiKam",
+ "Choose a digiKam database from the “Source” panel.": "Виберіть базу даних digiKam на панелі «Джерело»",
+ "Choose digiKam database": "Виберіть базу даних digiKam",
+ "Database digikam4.db": "База даних digikam4.db",
+ "Database not found": "Базу даних не знайдено",
+ "Import from digiKam": "Імпорт з digiKam",
+ "Import from digiKam failed: {error}": "Не вдалося імпортувати з digiKam: {error}",
+ "Reading the database…": "Читання бази даних…",
+ "Reading the digiKam database…": "Читання бази даних digiKam…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} файлів, на які посилається база даних, не знайдено на диску, їх не буде імпортовано.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} фото · {1} тегів · {2} альбомів · {3}",
+ "{n} items imported from digiKam": "Імпортовано {n} елементів з digiKam"
 }

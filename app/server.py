@@ -304,6 +304,10 @@ def pick_file(kind: str = "zip", title: str = ""):
             path = filedialog.askopenfilename(
                 title=title or "Select Lightroom catalog", parent=root,
                 filetypes=[("Lightroom Catalog", "*.lrcat"), ("All files", "*.*")])
+        elif kind == "digikam":
+            path = filedialog.askopenfilename(
+                title=title or "Select digiKam database", parent=root,
+                filetypes=[("digiKam Database", "digikam4.db"), ("SQLite Database", "*.db"), ("All files", "*.*")])
         else:
             paths = filedialog.askopenfilenames(           # a Takeout export can be several ZIP files
                 title=title or "Select Google Takeout ZIP files",
@@ -1489,6 +1493,26 @@ def start_import_lrcat(body: LrcatIn):
     if not Path(body.path).is_file():
         raise err(404, "Catalog not found")
     _start("import", importer.run_lrcat_import, body.path)
+    return {"ok": True}
+
+
+class DigikamIn(BaseModel):
+    path: str
+
+@app.get("/api/digikam-info")
+def digikam_info(path: str):
+    if not Path(path).is_file():
+        raise err(404, "Database not found")
+    try:
+        return importer.dkdb_info(path)
+    except Exception as e:
+        raise err(400, "Cannot read the database: {error}", error=str(e))
+
+@app.post("/api/import-digikam")
+def start_import_digikam(body: DigikamIn):
+    if not Path(body.path).is_file():
+        raise err(404, "Database not found")
+    _start("import", importer.run_digikam_import, body.path)
     return {"ok": True}
 
 

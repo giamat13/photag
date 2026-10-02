@@ -1096,5 +1096,22 @@
  "Found on this computer": "Auf diesem Computer gefunden",
  " Recover ratings, labels and keywords from XMP": " Bewertungen, Farbmarkierungen und Stichwörter aus XMP wiederherstellen",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Liest eine XMP-Begleitdatei neben jeder Datei oder ein darin eingebettetes XMP-Paket -- nützlich für Lightroom-Originale, für die kein Katalog mehr vorhanden ist.",
- "{n} had metadata recovered from XMP": "Bei {n} wurden Metadaten aus XMP wiederhergestellt"
+ "{n} had metadata recovered from XMP": "Bei {n} wurden Metadaten aus XMP wiederhergestellt",
+ " Choose digiKam database...": " digiKam-Datenbank wählen...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "Bewertungen, Beschreibungen, Aufnahmedaten, GPS-Standorte und Tags (Tags, die digiKam als Person markiert, werden zu Personen). Dateien werden in die Bibliothek kopiert -- das Original bleibt unverändert.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " aus dem Datenbankordner von digiKam. Es wird empfohlen, digiKam vor dem Import zu schließen.",
+ "Cannot read the database: {error}": "Datenbank kann nicht gelesen werden: {error}",
+ "Choose a digiKam database": "digiKam-Datenbank wählen",
+ "Choose a digiKam database from the “Source” panel.": "Wählen Sie eine digiKam-Datenbank im Bereich „Quelle“",
+ "Choose digiKam database": "digiKam-Datenbank wählen",
+ "Database digikam4.db": "Datenbank digikam4.db",
+ "Database not found": "Datenbank nicht gefunden",
+ "Import from digiKam": "Import aus digiKam",
+ "Import from digiKam failed: {error}": "Import aus digiKam fehlgeschlagen: {error}",
+ "Reading the database…": "Datenbank wird gelesen…",
+ "Reading the digiKam database…": "digiKam-Datenbank wird gelesen…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} von der Datenbank referenzierte Dateien wurden nicht auf der Festplatte gefunden und werden nicht importiert.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} Fotos · {1} Tags · {2} Alben · {3}",
+ "{n} items imported from digiKam": "{n} Elemente aus digiKam importiert"
 }

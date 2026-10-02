@@ -1096,5 +1096,22 @@
  "Found on this computer": "تم العثور عليه في هذا الكمبيوتر",
  " Recover ratings, labels and keywords from XMP": " استرجاع التقييمات والتصنيفات والكلمات المفتاحية من XMP",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "يقرأ ملف XMP مصاحب لكل ملف، أو حزمة XMP مضمّنة فيه -- مفيد لملفات Lightroom الأصلية التي لم يعد لديك فهرس لها.",
- "{n} had metadata recovered from XMP": "تم استرجاع البيانات الوصفية من XMP لـ {n}"
+ "{n} had metadata recovered from XMP": "تم استرجاع البيانات الوصفية من XMP لـ {n}",
+ " Choose digiKam database...": " اختر قاعدة بيانات digiKam...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "التقييمات والتعليقات التوضيحية وتواريخ الالتقاط ومواقع GPS والوسوم (الوسوم التي يحددها digiKam كشخص تصبح أشخاصًا). يتم نسخ الملفات إلى المكتبة -- الملف الأصلي لا يتغير.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " من مجلد قاعدة بيانات digiKam. يُنصح بإغلاق digiKam قبل الاستيراد.",
+ "Cannot read the database: {error}": "تعذرت قراءة قاعدة البيانات: {error}",
+ "Choose a digiKam database": "اختر قاعدة بيانات digiKam",
+ "Choose a digiKam database from the “Source” panel.": "اختر قاعدة بيانات digiKam من لوحة \"المصدر\"",
+ "Choose digiKam database": "اختر قاعدة بيانات digiKam",
+ "Database digikam4.db": "قاعدة بيانات digikam4.db",
+ "Database not found": "قاعدة البيانات غير موجودة",
+ "Import from digiKam": "استيراد من digiKam",
+ "Import from digiKam failed: {error}": "فشل الاستيراد من digiKam: {error}",
+ "Reading the database…": "جارٍ قراءة قاعدة البيانات…",
+ "Reading the digiKam database…": "جارٍ قراءة قاعدة بيانات digiKam…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} ملفات مذكورة في قاعدة البيانات لم يتم العثور عليها على القرص ولن يتم استيرادها.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} صورة · {1} وسم · {2} ألبوم · {3}",
+ "{n} items imported from digiKam": "تم استيراد {n} عنصر من digiKam"
 }

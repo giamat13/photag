@@ -1096,5 +1096,22 @@
  "Found on this computer": "Bu bilgisayarda bulundu",
  " Recover ratings, labels and keywords from XMP": " XMP’den puanları, etiketleri ve anahtar kelimeleri geri yükle",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Her dosyanın yanındaki bir XMP yan dosyasını veya dosyaya gömülü bir XMP paketini okur -- artık kataloğunuz olmayan Lightroom orijinalleri için yararlıdır.",
- "{n} had metadata recovered from XMP": "{n} öğe için XMP’den meta veri geri yüklendi"
+ "{n} had metadata recovered from XMP": "{n} öğe için XMP’den meta veri geri yüklendi",
+ " Choose digiKam database...": " digiKam veritabanı seçin...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "Puanlar, başlıklar, çekim tarihleri, GPS konumları ve etiketler (digiKam'ın kişi olarak işaretlediği etiketler Kişiler olur). Dosyalar kitaplığa kopyalanır -- orijinal değiştirilmez.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " digiKam'ın veritabanı klasöründen. İçe aktarmadan önce digiKam'ı kapatmanız önerilir.",
+ "Cannot read the database: {error}": "Veritabanı okunamıyor: {error}",
+ "Choose a digiKam database": "Bir digiKam veritabanı seçin",
+ "Choose a digiKam database from the “Source” panel.": "\"Kaynak\" panelinden bir digiKam veritabanı seçin",
+ "Choose digiKam database": "digiKam veritabanı seçin",
+ "Database digikam4.db": "Veritabanı digikam4.db",
+ "Database not found": "Veritabanı bulunamadı",
+ "Import from digiKam": "digiKam'dan içe aktar",
+ "Import from digiKam failed: {error}": "digiKam'dan içe aktarma başarısız: {error}",
+ "Reading the database…": "Veritabanı okunuyor…",
+ "Reading the digiKam database…": "digiKam veritabanı okunuyor…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} dosya veritabanında referans gösteriliyor ancak diskte bulunamadı ve içe aktarılmayacak.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} fotoğraf · {1} etiket · {2} albüm · {3}",
+ "{n} items imported from digiKam": "digiKam'dan {n} öğe içe aktarıldı"
 }

@@ -1096,5 +1096,22 @@
  "Found on this computer": "Trovato su questo computer",
  " Recover ratings, labels and keywords from XMP": " Recupera valutazioni, etichette e parole chiave da XMP",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Legge un file XMP accanto a ciascun file, o un pacchetto XMP incorporato -- utile per originali Lightroom di cui non hai più il catalogo.",
- "{n} had metadata recovered from XMP": "Metadati recuperati da XMP per {n}"
+ "{n} had metadata recovered from XMP": "Metadati recuperati da XMP per {n}",
+ " Choose digiKam database...": " Scegli database digiKam...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "Valutazioni, didascalie, date di scatto, posizioni GPS e tag (i tag che digiKam contrassegna come persona diventano Persone). I file vengono copiati nella libreria -- l'originale non viene modificato.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " dalla cartella del database di digiKam. Si consiglia di chiudere digiKam prima di importare.",
+ "Cannot read the database: {error}": "Impossibile leggere il database: {error}",
+ "Choose a digiKam database": "Scegli un database digiKam",
+ "Choose a digiKam database from the “Source” panel.": "Scegli un database digiKam dal pannello \"Origine\"",
+ "Choose digiKam database": "Scegli database digiKam",
+ "Database digikam4.db": "Database digikam4.db",
+ "Database not found": "Database non trovato",
+ "Import from digiKam": "Importa da digiKam",
+ "Import from digiKam failed: {error}": "Importazione da digiKam non riuscita: {error}",
+ "Reading the database…": "Lettura del database…",
+ "Reading the digiKam database…": "Lettura del database digiKam…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} file referenziati dal database non sono stati trovati sul disco e non verranno importati.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} foto · {1} tag · {2} album · {3}",
+ "{n} items imported from digiKam": "{n} elementi importati da digiKam"
 }

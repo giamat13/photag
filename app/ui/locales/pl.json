@@ -1096,5 +1096,22 @@
  "Found on this computer": "Znaleziono na tym komputerze",
  " Recover ratings, labels and keywords from XMP": " Odzyskaj oceny, etykiety i słowa kluczowe z XMP",
  "Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.": "Odczytuje plik XMP towarzyszący każdemu plikowi lub pakiet XMP w nim osadzony -- przydatne dla oryginałów Lightroom, dla których nie masz już katalogu.",
- "{n} had metadata recovered from XMP": "Odzyskano metadane z XMP dla {n}"
+ "{n} had metadata recovered from XMP": "Odzyskano metadane z XMP dla {n}",
+ " Choose digiKam database...": " Wybierz bazę danych digiKam...",
+ " Ratings, captions, capture dates, GPS locations, and tags (tags digiKam marks as a person become People). Files are copied into the library — the original is not changed.": "Oceny, podpisy, daty wykonania, lokalizacje GPS i tagi (tagi oznaczone przez digiKam jako osoba stają się Osobami). Pliki są kopiowane do biblioteki -- oryginał nie jest zmieniany.",
+ " from digiKam's database folder. Closing digiKam before importing is recommended.": " z folderu bazy danych digiKam. Zaleca się zamknięcie digiKam przed importem.",
+ "Cannot read the database: {error}": "Nie można odczytać bazy danych: {error}",
+ "Choose a digiKam database": "Wybierz bazę danych digiKam",
+ "Choose a digiKam database from the “Source” panel.": "Wybierz bazę danych digiKam z panelu „Źródło”",
+ "Choose digiKam database": "Wybierz bazę danych digiKam",
+ "Database digikam4.db": "Baza danych digikam4.db",
+ "Database not found": "Nie znaleziono bazy danych",
+ "Import from digiKam": "Importuj z digiKam",
+ "Import from digiKam failed: {error}": "Import z digiKam nie powiódł się: {error}",
+ "Reading the database…": "Odczytywanie bazy danych…",
+ "Reading the digiKam database…": "Odczytywanie bazy danych digiKam…",
+ "digiKam — {done}/{total}": "digiKam — {done}/{total}",
+ "{0} files referenced by the database were not found on disk and will not be imported.": "{0} plików, do których odwołuje się baza danych, nie znaleziono na dysku i nie zostaną zaimportowane.",
+ "{0} photos · {1} tags · {2} albums · {3}": "{0} zdjęć · {1} tagów · {2} albumów · {3}",
+ "{n} items imported from digiKam": "Zaimportowano {n} elementów z digiKam"
 }
