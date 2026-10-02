@@ -97,19 +97,27 @@ async function setSource(src, {push=true, keepSel=false}={}){
   markSourceRows();
   await fetchSource();
   if(!keepSel) $('#v-grid').scrollTop = 0;
-  if(S.view==='people') setView('grid');
+  if(S.view==='people' || S.view==='review') setView('grid');
+  else if(S.view==='timeline') renderTimeline();
 }
 async function fetchSource(){
-  const src = S.src, q = S.F.qf!=='name' ? S.F.q : '';
+  const src = S.src, q = S.F.qf!=='name' && S.F.qf!=='meaning' ? S.F.q : '';
   let rows;
-  if(src.kind==='all' && !q) rows = S.all;
+  if(src.kind==='otd') rows = S.all.filter(otdPass);
+  else if(src.kind==='semantic') rows = S.all.filter(p=>src.scores[p.id]!=null);
+  else if(src.kind==='search' && src.id!=='tmp'){
+    const ids = new Set((await send('POST', '/api/smart/ids', {criteria: src.crit})).ids);   // evaluated now: a smart collection is always up to date
+    if(S.src!==src) return;
+    rows = S.all.filter(p=>ids.has(p.id));
+  }
+  else if(src.kind==='all' && !q) rows = S.all;
   else {
     const p = new URLSearchParams({limit:10000000, ...srcParams(src)}); if(q) p.set('q', q);
     rows = (await api('/api/photos?'+p)).map(r=>S.byId.get(r.id) || r);
     if(S.src!==src) return;   // clicked elsewhere meanwhile
   }
   if(src.kind==='smart'){ const f = SMART.find(x=>x[0]===src.id); rows = rows.filter(f[2]); }
-  if(src.kind==='search') rows = rows.filter(searchPass(src.crit));
+  if(src.kind==='search' && src.id==='tmp') rows = rows.filter(searchPass(src.crit));
   S.base = rows;
   applyFilter();
 }
@@ -154,10 +162,12 @@ const SORTS = {
   size:   [t('File Size'), (a,b)=>(a.bytes||0)-(b.bytes||0) || tie(a,b)],
   dims:   [t('Dimensions'), (a,b)=>megapix(a)-megapix(b) || tie(a,b)],
   edited: [t('Edited'),    (a,b)=>(a.edited?1:0)-(b.edited?1:0) || tie(a,b)],
+  quality:[t('Quality Score'), (a,b)=>(a.score||0)-(b.score||0) || tie(a,b)],
+  relevance:[t('Relevance'), (a,b)=>((S.src.scores||{})[a.id]||0)-((S.src.scores||{})[b.id]||0) || tie(a,b)],
   trashed:[t('Date in Trash'), (a,b)=>(a.trashed_at||0)-(b.trashed_at||0) || tie(a,b)],
 };
 const SORT_ASC_FIRST = new Set(['name','ext','folder']);      // text sorts start A→Z, the rest start with the biggest / newest
-const sortKeys = () => Object.keys(SORTS).filter(k => k!=='trashed' || S.src.kind==='trash');
+const sortKeys = () => Object.keys(SORTS).filter(k => (k!=='trashed' || S.src.kind==='trash') && (k!=='relevance' || S.src.kind==='semantic'));
 const lrank = p => p.label ? LABELS.findIndex(l=>l[0]===p.label) : 9;
 function applyFilter({keepScroll=true}={}){
   let rows = S.base;
@@ -206,7 +216,7 @@ function moveAct(d, extend){
   else selectOnly(id);
   scrollToAct();
 }
-const onSelChange = () => { refreshCells(); renderFilm(); renderPath(); renderRight(); renderToolbar(); updateNavigator();
+const onSelChange = () => { refreshCells(); renderFilm(); renderPath(); renderRight(); renderToolbar(); updateNavigator(); if(S.view==='timeline') tlRefresh();
   if(S.view==='loupe') renderLoupe(); else if(S.view==='compare') renderCompare(); else if(S.view==='survey') renderSurvey(); };
 
 // ---------- attribute changes (flags, stars, labels, quick collection, trash) ----------
@@ -382,14 +392,14 @@ function fillCell(c, p, i){
   const r=p.rating||0;
   const stars = [1,2,3,4,5].map(n=>`<b data-r="${n}" class="${n<=r?'':'off'}">${n<=r?'★':'•'}</b>`).join('');
   const bx = (G.cw - c._w)/2, by = S.cell==='xp' ? G.cw*.22 + (G.cw*.58 - c._h)/2 : G.cw*.15 + (G.cw*.65 - c._h)/2;
-  const badges = [p.has_kw && I('kw'), p.edited && I('dev')].filter(Boolean);
+  const badges = [p.has_kw && I('kw'), p.edited && I('dev'), p.score!=null && `<em class="scb ${p.score>=70?'hi':p.score>=40?'mid':'lo'}" title="${t('Quality score: {0}', [p.score])}">${p.score}</em>`].filter(Boolean);
   c.querySelector('.ov').innerHTML =
     `<button class="flag ${p.flag===1?'pick':p.flag===-1?'rej':''}" data-a="flag" title="${t("Flag (P / X / U)")}">${I(p.flag===-1?'reject':'flag')}</button>
      <button class="qc ${p.quick?'on':''}" data-a="qc" title="${t("Quick Collection (B)")}">${I('dot')}</button>
      <button class="rot l" data-a="rotl" title="${t("Rotate Left (Ctrl+[)")}">${I('rotl')}</button>
      <button class="rot r" data-a="rotr" title="${t("Rotate Right (Ctrl+])")}">${I('rotr')}</button>
      <div class="stars ${r?'':'none'}">${stars}</div>
-     ${badges.length?`<div class="badges" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-end:${Math.round(bx+4)}px">${badges.map(b=>`<i>${b}</i>`).join('')}</div>`:''}
+     ${badges.length?`<div class="badges" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-end:${Math.round(bx+4)}px">${badges.map(b=>b.startsWith('<em')?b:`<i>${b}</i>`).join('')}</div>`:''}
      ${p.is_video?`<span class="dur" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-start:${Math.round(bx+4)}px">${I('play')}${t("Video")}</span>`:''}`;
 }
 function refreshCells(){ for(const [i,c] of G.cells){ const p=S.list[i]; if(p) fillCell(c,p,i); } }
@@ -536,8 +546,9 @@ function renderFilterBar(){
   if(S.fb==='meta') renderMetaBrowser();
   $('#fb-state').innerHTML = filterActive() ? (S.F.on ? ("<b>"+t("Filter active")+"</b>") : t('Filter off')) : '';
 }
-$('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
-$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; if(S.F.q) fetchSource(); };
+$('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf==='meaning') return; if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
+$('#ft-q').addEventListener('keydown', e=>{ if(e.key==='Enter' && S.F.qf==='meaning' && $('#ft-q').value.trim()) semanticSearch($('#ft-q').value.trim()); });
+$('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; if(S.F.qf==='meaning') return; if(S.F.q) fetchSource(); };
 function renderMetaBrowser(){
   const base = S.base;
   $('#fb-meta').innerHTML = META_COLS.map(([k,title,fn], ci)=>{
@@ -568,14 +579,17 @@ $('#fb-meta').addEventListener('click', e=>{
 function row(key, icon, name, n, extra='', cls=''){
   return `<div class="row ${cls}" data-src="${esc(key)}">${icon}<span class="nm">${esc(name)}</span>${extra}${n!=null?`<span class="n">${num(n)}</span>`:''}</div>`;
 }
+const otdPass = p => { if(!p.taken_at) return false; const d=new Date(p.taken_at*1000), n=new Date(); return d.getMonth()===n.getMonth() && d.getDate()===n.getDate() && d.getFullYear()!==n.getFullYear(); };
 function renderCatalog(){
   const st=S.status; if(!st) return;
+  const otd = S.all.filter(otdPass).length;
   const q=S.all.filter(p=>p.quick).length;
   const prev = st.last_import ? S.all.filter(p=>(p.imported_at||0)>=st.last_import).length : 0;
   $('#p-catalog').innerHTML =
     row('all', I('photos'), t('All Photographs'), S.all.length) +
     row('quick', I('coll'), t('Quick Collection +'), q) +
     (st.last_import ? row('prev', I('import'), t('Previous Import'), prev) : '') +
+    (otd ? row('otd', I('otd'), t('On This Day'), otd) : '') +
     row('trash', I('trash'), t('Trash'), st.counts.trashed);
   markSourceRows();
 }
@@ -595,11 +609,14 @@ function renderColls(){
   const coll = a => row('album:'+a.id, I('coll'), a.name, a.n, `<button class="x" data-del="${a.id}" title="${t("Delete Collection")}">${I('close')}</button>`, 'ind');
   const smart = SMART.map(([k,n,f])=>row('smart:'+k, I('smart'), n, S.all.filter(f).length, '', 'ind')).join('');
   const people = S.people.map(p=>row('person:'+p.id, I('people'), p.name, (p.face_photos||0)+(p.tag_photos||0), '', 'ind')).join('');
-  const searches = S.searches.map(x=>row('search:'+x.id, I('smart'), x.name, S.all.filter(searchPass(x.criteria)).length,
-    `<button class="x" data-delsearch="${x.id}" title="${t("Delete")}">${I('close')}</button>`, 'ind')).join('');
+  const searchRow = x=>row('search:'+x.id, I('smart'), x.name, x.ids.length,
+    `${x.smart?`<button class="x" data-editsmart="${x.id}" title="${t("Edit")}">${I('edit')}</button>`:''}<button class="x" data-delsearch="${x.id}" title="${t("Delete")}">${I('close')}</button>`, 'ind');
+  const searches = S.searches.filter(x=>!x.smart).map(searchRow).join('');
+  const smartc = S.searches.filter(x=>x.smart).map(searchRow).join('');
   $('#p-colls').innerHTML =
     set('smart', t('Smart Collections'), smart) +
-    (S.searches.length ? set('search', t('Saved Searches'), searches) : '') +
+    (smartc ? set('smartc', t('My Smart Collections'), smartc) : '') +
+    (searches ? set('search', t('Saved Searches'), searches) : '') +
     set('album', t('Collections'), al.filter(a=>a.kind==='album').map(coll).join('') || ("<div class=\"hint\">"+t("Drag photos here after creating a collection")+"</div>")) +
     (al.some(a=>a.kind==='people-share') ? set('shared', t('Shared Albums'), al.filter(a=>a.kind==='people-share').map(coll).join('')) : '') +
     (al.some(a=>a.kind==='year') ? set('year', t('By Year (Google)'), al.filter(a=>a.kind==='year').map(coll).join('')) : '') +
@@ -610,7 +627,7 @@ function markSourceRows(){ const k=srcKey(S.src); $$('#left [data-src]').forEach
 function srcFromKey(key){
   const [kind, id] = key.split(/:(.*)/s);
   const sv = kind==='search' ? S.searches.find(x=>x.id==id) : null;
-  const name = {all:t('All Photographs'), quick:t('Quick Collection'), prev:t('Previous Import'), trash:t('Trash')}[kind]
+  const name = {all:t('All Photographs'), quick:t('Quick Collection'), prev:t('Previous Import'), trash:t('Trash'), otd:t('On This Day')}[kind]
     || (kind==='folder' ? (id||t('(root)')) : kind==='smart' ? SMART.find(s=>s[0]===id)[1]
       : kind==='album' ? S.albums.find(a=>a.id==id)?.name : kind==='person' ? S.people.find(p=>p.id==id)?.name
       : kind==='search' ? (sv ? sv.name : t('Search results')) : '');
@@ -627,11 +644,15 @@ $('#left').addEventListener('click', async e=>{
   if(ds){ e.stopPropagation(); const x=S.searches.find(v=>v.id==ds.dataset.delsearch);
     if(!await confirmBox(t('Delete the saved search “{0}”?', [esc(x.name)]), t('The photos themselves will stay in the catalog.'), t('Delete'))) return;
     await send('DELETE', '/api/searches/'+x.id); if(S.src.kind==='search' && S.src.id==x.id) setSource(srcFromKey('all')); loadSide(); return; }
+  const es=e.target.closest('[data-editsmart]');
+  if(es){ e.stopPropagation(); smartDialog(S.searches.find(v=>v.id==es.dataset.editsmart)); return; }
   const st=e.target.closest('[data-set]');
   if(st){ const k=st.dataset.set; OPEN_SETS.has(k)?OPEN_SETS.delete(k):OPEN_SETS.add(k); pref.set('openSets',[...OPEN_SETS]); renderColls(); return; }
   const r=e.target.closest('[data-src]'); if(r){ if(S.mod!=='library') setModule('library'); setSource(srcFromKey(r.dataset.src)); }
 });
 $('#left').addEventListener('dblclick', async e=>{
+  const sr=e.target.closest('[data-src^="search:"]');
+  if(sr){ const x=S.searches.find(v=>'search:'+v.id===sr.dataset.src); if(x && x.smart) smartDialog(x); return; }
   const r=e.target.closest('[data-src^="album:"]'); if(!r) return;
   const a=S.albums.find(x=>'album:'+x.id===r.dataset.src);
   const n=await promptBox(t('Rename Collection'), a.name); if(!n || n===a.name) return;
@@ -656,6 +677,7 @@ async function newCollection(){
   OPEN_SETS.add('album'); setSource({kind:'album', id:r.id, name:n}); loadSide();
 }
 $('#new-coll').onclick = e=>{ e.stopPropagation(); newCollection(); };
+$('#new-smart').onclick = e=>{ e.stopPropagation(); smartDialog(); };
 
 // collapse panels (click header)
 $$('.pnl>h3').forEach(h=>h.addEventListener('click', e=>{
@@ -780,8 +802,8 @@ function setView(v){
   if(S.mod!=='library') setModule('library');
   if(v==='loupe' && S.act==null && S.list.length) selectOnly(S.list[0].id);
   if(v==='compare' && S.act==null && S.list.length) selectOnly(S.list[0].id);
-  S.prevView = S.view==='people'?S.prevView:S.view; S.view=v;
-  ['grid','loupe','compare','survey','people','map'].forEach(k=>$('#v-'+k).classList.toggle('hidden', k!==v));
+  S.prevView = ['people','review'].includes(S.view)?S.prevView:S.view; S.view=v;
+  ['grid','loupe','compare','survey','people','map','timeline','review'].forEach(k=>$('#v-'+k).classList.toggle('hidden', k!==v));
   $('#v-empty').classList.add('hidden');
   if(v!=='loupe'){ closeLoupeMedia(); }
   if(v==='grid'){ layoutGrid(true); scrollToAct(); $('#v-grid').focus({preventScroll:true}); if(!S.list.length){ $('#v-empty').classList.remove('hidden'); renderEmpty(); } }
@@ -790,6 +812,7 @@ function setView(v){
   if(v==='survey') renderSurvey();
   if(v==='people') renderPeople();
   if(v==='map') renderMapView();
+  if(v==='timeline') renderTimeline();
   renderToolbar(); renderRight(); updateNavigator();
 }
 // ---------- video player: custom controls over <video> ----------
@@ -1114,7 +1137,7 @@ $('#v-map').addEventListener('click', e=>{
 // ---------- toolbar ----------
 function tbViews(){
   const b=(v,ic,tg)=>`<button class="tb-btn ${S.view===v?'on':''}" data-view="${v}" title="${tg}">${I(ic)}</button>`;
-  return `<div class="tb-grp">${b('grid','grid',t('Grid View (G)'))}${b('loupe','loupe',t('Loupe (E)'))}${b('compare','compare',t('Compare (C)'))}${b('survey','survey',t('Survey (N)'))}${b('people','face',t('People (O)'))}${b('map','pin',t('Map: selected photos on the map'))}</div>`;
+  return `<div class="tb-grp">${b('grid','grid',t('Grid View (G)'))}${b('loupe','loupe',t('Loupe (E)'))}${b('compare','compare',t('Compare (C)'))}${b('survey','survey',t('Survey (N)'))}${b('people','face',t('People (O)'))}${b('map','pin',t('Map: selected photos on the map'))}${b('timeline','timeline',t('Timeline: by year and month'))}</div>`;
 }
 function tbAttrs(){
   const p=actPhoto(), r=p?.rating||0;
@@ -1133,11 +1156,14 @@ function renderToolbar(){
   let h = tbViews() + '<span class="tb-sep"></span>';
   if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">${t("Sort:")}</span><button class="tb-btn" data-t="asc" title="${S.asc?t('Ascending'):t('Descending')}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
       <select data-t="sort">${sortKeys().map(k=>`<option value="${k}" ${k===S.sort?'selected':''}>${SORTS[k][0]}</option>`).join('')}</select></div><span class="tb-sep"></span>` + tbAttrs() +
-      `<label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
+      `<button class="tb-btn" data-t="rank" title="${t('Score the selected photos and find the best one')}">${I('rank')} ${t('Rank')}</button>
+      <label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
   else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
   else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} photos in Survey", [num(S.sel.size)])}</span>`;
   else if(S.view==='map') h += `<span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
+  else if(S.view==='timeline') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t('{0} photos', [num(S.list.length)])}</span>`;
+  else if(S.view==='review') h += `<span class="spacer"></span><span class="tb-info" id="rv-info"></span><button class="tb-btn" data-t="rvdone">${t('Done')}</button>`;
   else h += `<span class="spacer"></span><span class="tb-info">${t("Type a name below the faces to name them")}</span>`;
   tb.innerHTML = h;
 }
@@ -1152,6 +1178,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='asc'){ S.asc=!S.asc; pref.set('asc',S.asc); applyFilter(); }
   else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
   else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
+  else if(tg==='rank') rankSelected(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
   else if(tg==='before') devBefore(); else if(tg==='crop') devCropToggle();
 });
 $('#toolbar').addEventListener('change', e=>{ if(e.target.dataset.t==='sort'){ S.sort=e.target.value; S.asc=SORT_ASC_FIRST.has(S.sort); pref.set('sort',S.sort); pref.set('asc',S.asc); applyFilter(); renderToolbar(); } });
@@ -1293,6 +1320,7 @@ function renderMeta(ids, d){
     <div class="kv"><span>${t("Capture Time")}</span>${multi?MIX:`<input id="m-date" type="datetime-local" value="${local}">`}</div>
     <div class="kv"><span>${t("Dimensions")}</span>${multi?MIX:`<span dir="ltr">${d.width||'?'} × ${d.height||'?'}</span>`}</div>
     <div class="kv"><span>${t("File Size")}</span>${multi?MIX:fsize(d.bytes)}</div>
+    ${multi?'':`<div class="kv"><span>${t("Quality score")}</span><span>${(S.byId.get(d.id)||{}).score!=null ? `<b class="scv ${(S.byId.get(d.id).score)>=70?'hi':S.byId.get(d.id).score>=40?'mid':'lo'}">${S.byId.get(d.id).score}</b> / 100` : `<a data-analyse>${t('Not analysed yet')}</a>`}</span></div>`}
     <div class="kv"><span>${t("Kind")}</span>${multi&&!sel.every(p=>ext(p)===ext(sel[0]))?MIX:esc(ext(d))}${d.edited&&!multi?t(' · edited'):''}</div>
     <div class="meta-sub">${t("Location")}</div>
     ${multi?`<div class="kv"><span>GPS</span>${MIX}</div><div class="btnrow"><button id="m-showmap">${I('pin')} ${t('Show the selected photos on the map')}</button></div>`:`
@@ -1314,6 +1342,7 @@ $('#p-meta').addEventListener('click', e=>{
   if(e.target.closest('#m-showmap')) setView('map');
   if(e.target.closest('#mini-map') && !e.target.closest('.leaflet-control')) setView('map');
   if(e.target.id==='m-reveal') reveal();
+  if(e.target.closest('[data-analyse]')) analyseLibrary();
 });
 $('#p-meta').addEventListener('change', async e=>{
   const ids=targets(), tg=e.target;
@@ -1520,10 +1549,11 @@ $('#btn-dev-revert').onclick = async ()=>{
 
 // ---------- slideshow ----------
 const SS={list:[], i:0, t:null, playing:true, cur:'a'};
-function ssStart(){
-  let list = S.sel.size>1 ? S.list.filter(p=>S.sel.has(p.id)) : S.list;
+function ssStart(over){
+  let list = Array.isArray(over) ? over : S.sel.size>1 ? S.list.filter(p=>S.sel.has(p.id)) : S.list;
   list = list.filter(p=>!p.is_video); if(!list.length) return toast(t('No photos to show'));
-  SS.list=list; SS.i=Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
+  SS.otd = Array.isArray(over) && over.otd;
+  SS.list=list; SS.i=SS.otd ? 0 : Math.max(0, list.findIndex(p=>p.id===S.act)); SS.playing=true;
   if(S.view==='loupe') closeLoupeMedia();   // a video in the Loupe must not keep playing behind the slideshow
   $('#slideshow').classList.remove('hidden'); ssShow(); ssTimer();
   document.documentElement.requestFullscreen?.().catch(()=>{});
@@ -1532,7 +1562,7 @@ function ssShow(){
   const p=SS.list[SS.i], nxt=SS.cur==='a'?'b':'a', img=$('#ss-'+nxt), old=$('#ss-'+SS.cur);
   img.onload=()=>{ img.classList.add('on'); old.classList.remove('on'); };
   img.src=mediaUrl(p.id); SS.cur=nxt;
-  $('#ss-count').textContent = `${num(SS.i+1)} / ${num(SS.list.length)}`;
+  $('#ss-count').textContent = (SS.otd && p.taken_at ? `${new Date(p.taken_at*1000).getFullYear()} · ` : '') + `${num(SS.i+1)} / ${num(SS.list.length)}`;
   const pre=SS.list[(SS.i+1)%SS.list.length]; if(pre) new Image().src=mediaUrl(pre.id);
 }
 function ssTimer(){ clearInterval(SS.t); if(SS.playing) SS.t=setInterval(()=>ssStep(1,true), 4000);
@@ -2010,12 +2040,14 @@ async function backupDialog(){
   const coverage = () => {
     const s = i.settings, cat = i.snapshots.reduce((a, m) => a + m.bytes, 0);
     return s.include_media
-      ? t('The backup includes the catalog and all photos and videos ({0}). Backups folder size: {1} (of which media files {2}); free space on the backup drive: {3}.',
+      ? (s.compress_media ? t('The backup includes the catalog and reduced copies of the photos (the originals stay only in your library); the library holds {0}. Backups folder size: {1} (of which media files {2}); free space on the backup drive: {3}.',
           [fmtBytes(i.media_bytes), fmtBytes(cat + i.mirror_bytes), fmtBytes(i.mirror_bytes), fmtBytes(i.free_bytes)])
+        : t('The backup includes the catalog and all photos and videos ({0}). Backups folder size: {1} (of which media files {2}); free space on the backup drive: {3}.',
+          [fmtBytes(i.media_bytes), fmtBytes(cat + i.mirror_bytes), fmtBytes(i.mirror_bytes), fmtBytes(i.free_bytes)]))
       : t('Note: the backup currently includes only the catalog (tags, albums, ratings) and not the photos and videos themselves, so it is small. Check «Also back up photo and video files» to back up everything.');
   };
   const rows = () => i.snapshots.length ? i.snapshots.map(m => `<div class="bk-row"><span class="bk-d">${ltr(fdt(m.created))}</span>
-      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} photos', [num(m.photos)])} · ${fmtBytes(m.total_bytes)}${m.includes_media ? ' · ' + t('Includes photos and videos') + (m.media ? ltr(` (${num(m.media.files)})`) : '') :' · ' + t('Catalog only')}</span>
+      <span class="bk-r">${esc(REASON()[m.reason] || m.reason)}</span><span class="bk-s">${t('{0} photos', [num(m.photos)])} · ${fmtBytes(m.total_bytes)}${m.includes_media ? ' · ' + (m.media_compressed ? t('Includes reduced copies of the photos') : t('Includes photos and videos')) + (m.media ? ltr(` (${num(m.media.files)})`) : '') :' · ' + t('Catalog only')}</span>
       <button data-restore="${esc(m.name)}">${t('Restore…')}</button><button data-del="${esc(m.name)}" title="${t('Delete')}">✕</button></div>`).join('')
     : `<span class="hint" style="padding:0">${t('No backups yet.')}</span>`;
   const draw = () => {
@@ -2024,6 +2056,8 @@ async function backupDialog(){
     $('#bk-health').innerHTML = healthHtml();
     $('#bk-cover').textContent = coverage(); $('#bk-cover').classList.toggle('warn', !s.include_media);
     $('#bk-on').checked = s.enabled; $('#bk-int').value = String(s.interval_hours); $('#bk-keep').value = s.keep; $('#bk-media').checked = s.include_media;
+    $('#bk-comp').checked = s.compress_media; $('#bk-comp').disabled = !s.include_media; $('#bk-comp-box').classList.toggle('hidden', !(s.include_media && s.compress_media));
+    $('#bk-q').value = String(s.compress_quality <= 65 ? 60 : s.compress_quality <= 80 ? 75 : 88); $('#bk-size').value = String(s.compress_max_side); $('#bk-vid').checked = s.include_videos;
     $('#bk-folder').value = i.folder; $('#bk-list').innerHTML = rows();
     $('#bk-int').disabled = $('#bk-keep').disabled = !s.enabled;
   };
@@ -2036,6 +2070,13 @@ async function backupDialog(){
       <label class="fld"><span>${t('How many backups to keep')}</span><input type="number" id="bk-keep" min="3" max="200" dir="ltr"></label></div>
     <label class="chkrow"><input type="checkbox" id="bk-media"> ${t('Also back up photo and video files')}</label>
     <div class="hint" style="padding:0">${t('The catalog includes tags, albums, ratings, people and edits. The media files total about {0}: the first backup copies all of them, and later ones copy only new files.', [fmtBytes(i.media_bytes)])}</div>
+    <label class="chkrow"><input type="checkbox" id="bk-comp"> ${t('Back up reduced, compressed copies of the photos instead of the originals (much smaller; for big libraries)')}</label>
+    <div id="bk-comp-box" class="hidden">
+      <div class="two"><label class="fld"><span>${t('Compression')}</span><select id="bk-q"><option value="60">${t('Strong (smallest files)')}</option><option value="75">${t('Medium')}</option><option value="88">${t('Light (best quality)')}</option></select></label>
+        <label class="fld"><span>${t('Reduce photos to')}</span><select id="bk-size"><option value="1280">${t('HD: 1280 px on the long side')}</option><option value="1920">${t('Full HD: 1920 px')}</option><option value="2560">${t('2560 px')}</option><option value="0">${t('Keep the size, lower the quality only')}</option></select></label></div>
+      <label class="chkrow"><input type="checkbox" id="bk-vid"> ${t('Include videos (copied as they are, not compressed)')}</label>
+      <div class="hint" style="padding:0">${t('Your originals are never changed and stay only in your library, so this is not a full backup of them. If photo files are lost, restoring brings back the reduced copies only for files that are missing; an existing file is never replaced.')}</div>
+    </div>
     <label class="fld"><span>${t('Backups folder (preferably on another disk)')}</span>
       <div class="bk-path"><input id="bk-folder" readonly dir="ltr"><button id="bk-pick">${t('Choose…')}</button><button id="bk-reset">${t('Default')}</button></div></label>
     <div class="lbl-sub" style="padding:0">${t('Existing backups')}</div><div class="bk-list" id="bk-list"></div>
@@ -2046,6 +2087,10 @@ async function backupDialog(){
   $('#bk-int').onchange = () => save({interval_hours: +$('#bk-int').value});
   $('#bk-keep').onchange = () => save({keep: +$('#bk-keep').value});
   $('#bk-media').onchange = () => save({include_media: $('#bk-media').checked});
+  $('#bk-comp').onchange = () => save({compress_media: $('#bk-comp').checked});
+  $('#bk-q').onchange = () => save({compress_quality: +$('#bk-q').value});
+  $('#bk-size').onchange = () => save({compress_max_side: +$('#bk-size').value});
+  $('#bk-vid').onchange = () => save({include_videos: $('#bk-vid').checked});
   $('#bk-pick').onclick = async () => { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(t('Choose a backup folder'))); if(r.path) save({folder: r.path}); };
   $('#bk-reset').onclick = () => save({folder: null});
   $('#bk-close').onclick = closeModal;
@@ -2064,7 +2109,8 @@ function backupRestoreDialog(m, i){
     <p>${t('The catalog (tags, albums, ratings, people and edits) will be restored to its state from {0}: {1} photos.', [ltr(fdt(m.created)), num(m.photos)])}</p>
     <p>${t('A backup of the current state is saved before restoring, so you can undo the restore. Photo files are never deleted by a restore.')}</p>
     <label class="chkrow ${canMedia ? '' : 'off'}"><input type="checkbox" id="rs-media" ${canMedia ? 'checked' : 'disabled'}> ${t('Also restore image files missing from the folder (from the backup)')}</label>
-    <label class="chkrow ${canMedia ? '' : 'off'}"><input type="checkbox" id="rs-over" ${canMedia ? '' : 'disabled'}> ${t('Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup')}</label>
+    ${m.media_compressed ? `<p class="hint" style="padding:0">${t('This backup holds reduced copies of the photos: only files that are missing are restored, and an existing file is never replaced.')}</p>` : ''}
+    <label class="chkrow ${canMedia && !m.media_compressed ? '' : 'off'}"><input type="checkbox" id="rs-over" ${canMedia && !m.media_compressed ? '' : 'disabled'}> ${t('Also replace files that changed since this backup (for example compressed photos and videos) with the versions from the backup')}</label>
     <label class="chkrow"><input type="checkbox" id="rs-set"> ${t('Also restore AI settings and the HandBrake path')}</label>
   </div><div class="mf"><button id="rs-cancel">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="rs-go">${t('Restore')}</button></div>`);
   $('#rs-cancel').onclick = () => backupDialog();
@@ -2146,8 +2192,9 @@ async function libraryMoveNotice(){
 
 // ---------- job screen: click the progress line in the corner for numbers, speed and time left (import has the most detail) ----------
 const JOBSCR = {open: false, name: '', label: '', last: null, samples: [], t0: {}, fin: {}};
-const JOB_CANCEL = {import: '/api/import/cancel', aitag: '/api/aitag/cancel', compress: '/api/compress/cancel'};
-const JOB_UNIT = {import: 'files', compress: 'files', export: 'files', faces: 'photos', aitag: 'photos', backup: 'bytes', update: 'bytes'};
+const JOB_CANCEL = {import: '/api/import/cancel', aitag: '/api/aitag/cancel', compress: '/api/compress/cancel', analysis: '/api/analysis/cancel', semantic: '/api/semantic/cancel'};
+const JOB_UNIT = {import: 'files', compress: 'files', export: 'files', faces: 'photos', aitag: 'photos', analysis: 'photos', semantic: 'photos', backup: 'bytes', update: 'bytes'};
+const AFTER_JOB = {};     // name -> function to run once that job has finished (e.g. open the duplicates screen after the analysis)
 function jobScreenOpen(name, label){
   JOBSCR.open = true; JOBSCR.name = name; JOBSCR.label = label; JOBSCR.samples = [];
   modal(`<h3 id="ims-title">${esc(label)}</h3><div class="mb ims">
@@ -2609,11 +2656,12 @@ async function pollJob(name, label){
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
-    if(['import','faces','aitag','compress','backup','refscan'].includes(name)){
+    if(['import','faces','aitag','compress','backup','refscan','analysis'].includes(name)){
       await reloadAll();
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
       if(S.view==='people') renderPeople();
       if(name==='aitag' || name==='backup') renderRight();
+      if(name==='analysis' && p.state==='done' && AFTER_JOB.analysis){ const f=AFTER_JOB.analysis; delete AFTER_JOB.analysis; f(); }
       if(name==='compress'){
         if(p.result && p.result.batch){
           for(const it of p.result.items) if(it.status === 'done') VER[it.id] = Date.now();
@@ -2661,6 +2709,16 @@ const MENUS = [
     sep,
     [t('Face Detection'), '', ()=>runJob('/api/faces','faces',t('Face Detection'))],
     sep,
+    [t('Search by Meaning...'), 'Ctrl+Shift+M', semanticDialog],
+    [t('On This Day'), '', ()=>setSource(srcFromKey('otd'))],
+    [t('On This Day: Slideshow'), '', otdSlideshow],
+    [t('New Smart Collection...'), '', ()=>smartDialog()],
+    sep,
+    [t('Analyse Photo Quality'), '', analyseLibrary],
+    [t('Find Duplicates and Similar Photos...'), '', openDups],
+    [t('Library Cleanup...'), '', openCleanup],
+    [t('Stop analysis'), '', ()=>send('POST','/api/analysis/cancel')],
+    sep,
     [t('Memories and comments from Google...'), '', memories],
   ]],
   [t('Photo'), [
@@ -2679,6 +2737,8 @@ const MENUS = [
     sep,
     ...LABELS.map(([k,n,key])=>[`${t("Label: {0}", [n])}`, key, ()=>setLabel(k)]),
     [t('No Label'), '', ()=>setAttr({label:''})],
+    sep,
+    [t('Rank Selected Photos'), '', rankSelected],
     sep,
     [t('Compress selected files...'), '', ()=>compressDialog(targets())],
     [t('Stop compression'), '', ()=>send('POST','/api/compress/cancel')],
@@ -2701,7 +2761,7 @@ const MENUS = [
     [t('Language') + (I18N.lang==='en' ? '' : ' / Language') + '...', '', languageDialog],
     sep,
     [t('Grid'), 'G', ()=>setView('grid')], [t('Loupe'), 'E', ()=>setView('loupe')], [t('Compare'), 'C', ()=>setView('compare')],
-    [t('Survey'), 'N', ()=>setView('survey')], [t('People'), 'O', ()=>setView('people')], [t('Map'), '', ()=>setView('map')], [t('Develop'), 'D', ()=>setModule('develop')],
+    [t('Survey'), 'N', ()=>setView('survey')], [t('People'), 'O', ()=>setView('people')], [t('Map'), '', ()=>setView('map')], [t('Timeline'), '', ()=>setView('timeline')], [t('Develop'), 'D', ()=>setModule('develop')],
     [t('Slideshow'), 'Ctrl+Enter', ssStart],
     sep,
     [t('Cycle Grid Cell Style'), 'J', cycleCellStyle],
@@ -2766,6 +2826,7 @@ function photoMenuItems(){
     ...[5,4,3,2,1,0].map(r=>[r?'★'.repeat(r):t('No Rating'), String(r), ()=>setRating(r)]),
     sep,
     [t('Export...'), '', openExport],
+    [t('Rank Selected Photos'), '', rankSelected],
     [t('Compress selected files...'), '', ()=>compressDialog(targets())],
     sep,
     [t('Move to Trash'), 'Delete', trashSelected],
@@ -2838,6 +2899,7 @@ document.addEventListener('keydown', e=>{
       Slash: shortcuts, Enter: ssStart, Comma: preferences,
     };
     if(shift && code==='KeyI'){ e.preventDefault(); openImport('folder'); return; }
+    if(shift && code==='KeyM'){ e.preventDefault(); semanticDialog(); return; }
     if(shift && code==='KeyF'){ e.preventDefault(); advancedSearch(); return; }
     if(shift && code==='KeyE'){ e.preventDefault(); openExport(); return; }
     if(map[code]){ e.preventDefault(); map[code](); }
@@ -2905,6 +2967,345 @@ function devFollowSelection(){
 document.addEventListener('mouseup', ()=>{ if(S.mod==='develop') devFollowSelection(); });
 document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelection(); });
 
+// ======================================================================================================
+// Quality score, ranking, duplicates, library cleanup · search by meaning · On This Day · smart collections · timeline
+// ======================================================================================================
+const scoreCls = n => n>=70 ? 'hi' : n>=40 ? 'mid' : 'lo';
+
+// ---------- photo analysis (score 1-100, closed eyes, duplicates, cleanup) ----------
+async function analyseLibrary(afterDone){
+  const st = await api('/api/analysis/status');
+  if(!st.pending && !st.eyes_pending){ toast(t('All photos are already analysed')); if(typeof afterDone==='function') afterDone(); return; }
+  if(typeof afterDone==='function') AFTER_JOB.analysis = afterDone;
+  await runJob('/api/analysis/run', 'analysis', t('Photo analysis'), {eyes:true});
+}
+// Opens `go` once every photo is analysed; asks first when a lot of work is pending.
+async function withAnalysis(go){
+  const st = await api('/api/analysis/status');
+  if(!st.pending || !st.total){ go(); return; }
+  modal(`<h3>${t('Photo analysis')}</h3><div class="mb"><p>${t('{0} of {1} photos have not been analysed yet. The analysis measures sharpness, exposure and more on this computer (nothing leaves it) and takes a few minutes for a big library.', [num(st.pending), num(st.total)])}</p>
+    ${st.face_model ? '' : `<p class="hint" style="padding:0">${t('Closed eyes are checked only after Face Detection has been run once (Library → Face Detection).')}</p>`}</div>
+    <div class="mf"><button id="wa-cancel">${t('Cancel')}</button><span class="spacer"></span><button id="wa-skip">${t('Show what is analysed so far')}</button><button class="primary" id="wa-go">${t('Analyse now')}</button></div>`);
+  $('#wa-cancel').onclick = closeModal;
+  $('#wa-skip').onclick = ()=>{ closeModal(); go(); };
+  $('#wa-go').onclick = ()=>{ closeModal(); analyseLibrary(go); };
+}
+
+// ---------- rank the selected photos ----------
+async function rankSelected(){
+  const ids = targets().filter(id=>!(S.byId.get(id)||{}).is_video);
+  if(ids.length<2){ toast(t('Select at least two photos to rank')); return; }
+  toast(t('Scoring the selected photos…'), 1500);
+  const r = await send('POST', '/api/analysis/rank', {ids});
+  const rk = r.ranked; if(rk.length<2){ toast(t('Could not read these photos')); return; }
+  const best = rk[0];
+  const card = x => { const p = S.byId.get(x.id) || {filename:''};
+    return `<div class="rk ${x.rank===1?'best':''}" data-id="${x.id}"><div class="rk-n">${x.rank===1?'★ '+t('Best'):'#'+x.rank}</div>
+      <img src="${thumbUrl(x.id)}" alt=""><div class="rk-bar"><i class="${scoreCls(x.score)}" style="width:${x.score}%"></i></div>
+      <div class="rk-s"><b class="scv ${scoreCls(x.score)}">${x.score}</b> / 100</div>
+      <div class="rk-m"><bdi>${esc(p.filename)}</bdi></div>
+      <div class="rk-m">${x.eyes_closed ? `<span class="warn">${t('Closed eyes: {0}', [x.eyes_closed])}</span> · ` : ''}${t('Sharpness {0}', [ltr(String(x.sharp))])}</div></div>`; };
+  modal(`<h3>${t('Ranking of the selected photos')}</h3><div class="mb">
+    <div class="rk-row">${rk.map(card).join('')}</div>
+    <div class="hint" style="padding:0">${t('The score (1-100) combines sharpness, exposure and contrast, and drops when someone has closed eyes.')}${r.eyes_checked ? '' : ' ' + t('Closed eyes were not checked: run Face Detection once to enable that.')}</div>
+  </div><div class="mf"><button id="rk-close">${t('Close')}</button><span class="spacer"></span>
+    <button id="rk-sel">${t('Select the best only')}</button><button class="primary" id="rk-flag">${t('Pick the best, reject the rest')}</button></div>`);
+  $('#rk-close').onclick = closeModal;
+  $('#rk-sel').onclick = ()=>{ closeModal(); selectOnly(best.id); scrollToAct(); };
+  $('#rk-flag').onclick = async ()=>{ closeModal();
+    await setAttr({flag:1}, [best.id]); await setAttr({flag:-1}, rk.slice(1).map(x=>x.id));
+    toast(t('Marked the best photo as Pick and the other {0} as Rejected', [num(rk.length-1)])); };
+  $('.rk-row').onclick = e=>{ const c=e.target.closest('.rk'); if(c) previewPhoto(+c.dataset.id); };
+}
+function previewPhoto(id){
+  const o = document.createElement('div'); o.className='pv-over'; o.innerHTML = `<img src="${mediaUrl(id)}" alt="">`;
+  o.onclick = ()=>o.remove(); document.body.appendChild(o);
+}
+
+// ---------- review screen: duplicates / similar, and library cleanup ----------
+const RV = {kind:'', groups:[], keep:new Set(), pick:new Set(), shown:0, cat:{}};
+const fmtDay = ts => ts ? new Date(ts*1000).toLocaleDateString(I18N.locale, {dateStyle:'medium'}) : '';
+function rvTile(p, state, extra=''){
+  const sc = p.score!=null ? `<em class="scb ${scoreCls(p.score)}">${p.score}</em>` : '';
+  return `<div class="rv-t ${state}" data-id="${p.id}" title="${esc(p.filename||'')}"><img loading="lazy" src="${thumbUrl(p.id)}" alt="">${sc}${extra}</div>`;
+}
+async function openDups(){
+  withAnalysis(async ()=>{
+    RV.kind='dups'; RV.sens = RV.sens || 'normal';
+    if(S.mod!=='library') setModule('library');
+    setView('review'); $('#v-review').innerHTML = `<div class="hint">${t('Loading…')}</div>`;
+    const dist = {strict:[2,6], normal:[4,12], loose:[6,16]}[RV.sens];
+    const r = await api(`/api/analysis/groups?dup=${dist[0]}&sim=${dist[1]}`);
+    RV.groups = r.groups; RV.keep = new Set(r.groups.map(g=>g.best)); RV.shown = 25; renderDups(r);
+  });
+}
+function dupsToTrash(){ const out=[]; for(const g of RV.groups) for(const p of g.photos) if(!RV.keep.has(p.id) && !(S.byId.get(p.id)||{}).trashed) out.push(p); return out; }
+function renderDups(r){
+  const el = $('#v-review'), G = RV.groups, tr = dupsToTrash();
+  const why = g => [g.kind==='copy' ? t('Identical copies') : t('Similar shots'), ...g.why.map(w=>w==='time'?t('Same time'):t('Same place'))];
+  el.innerHTML = `<div class="rv-head"><h2>${I('dup')} ${t('Duplicates and similar photos')} <span>${t('{0} groups', [num(G.length)])}</span></h2>
+    <div class="rv-tools"><label>${t('Sensitivity')} <select id="rv-sens"><option value="strict">${t('Strict')}</option><option value="normal">${t('Normal')}</option><option value="loose">${t('Loose')}</option></select></label>
+      <button id="rv-best">${t('Keep only the best of every group')}</button>
+      <button class="primary" id="rv-trash" ${tr.length?'':'disabled'}>${t('Move {0} photos to Trash ({1})', [num(tr.length), fsize(tr.reduce((a,p)=>a+p.bytes,0))])}</button></div></div>
+    <div class="hint rv-note">${t('Photos marked ★ are the suggested keepers (highest score, then open eyes, then resolution). Click a photo to keep it or not; photos not kept are moved to the Trash, where you can restore them. Double-click to enlarge.')}
+      ${r && !r.face_model ? ' ' + t('Closed eyes are checked only after Face Detection has been run once.') : ''}</div>
+    ${G.length ? G.slice(0, RV.shown).map((g,gi)=>`<div class="rv-g" data-g="${gi}"><div class="rv-gh"><b>${why(g).join(' · ')}</b><span>${fmtDay(g.taken_at)} · ${t('{0} photos', [num(g.photos.length)])}</span>
+        <button data-bestonly="${gi}">${t('Best only')}</button><button data-keepall="${gi}">${t('Keep all')}</button></div>
+      <div class="rv-row">${g.photos.map(p=>rvTile({...p}, RV.keep.has(p.id)?'keep':'drop', `${p.id===g.best?'<i class="rv-star">★</i>':''}${p.eyes_closed?`<i class="rv-eye" title="${t('Closed eyes')}">${I('face')}</i>`:''}<span class="rv-m">${p.w&&p.h?ltr(p.w+'×'+p.h)+' · ':''}${fsize(p.bytes)}</span>`)).join('')}</div></div>`).join('')
+      + (G.length>RV.shown ? `<div class="rv-more"><button id="rv-more">${t('Show more groups')}</button></div>` : '')
+      : `<div class="v-empty-msg"><b>${t('No duplicates or similar photos found')}</b></div>`}`;
+  $('#rv-sens').value = RV.sens;
+  $('#rv-info') && ($('#rv-info').textContent = '');
+  renderToolbar();
+}
+$('#v-review').addEventListener('click', async e=>{
+  const el = e.target;
+  if(RV.kind==='dups'){
+    const t1 = el.closest('.rv-t'), bo = el.closest('[data-bestonly]'), ka = el.closest('[data-keepall]');
+    if(t1){ const id=+t1.dataset.id; RV.keep.has(id)?RV.keep.delete(id):RV.keep.add(id); const g=RV.groups.find(g=>g.photos.some(p=>p.id===id));
+      if(g && !g.photos.some(p=>RV.keep.has(p.id))) RV.keep.add(id);       // a group always keeps at least one photo
+      return renderDups(); }
+    if(bo){ const g=RV.groups[+bo.dataset.bestonly]; g.photos.forEach(p=>RV.keep.delete(p.id)); RV.keep.add(g.best); return renderDups(); }
+    if(ka){ RV.groups[+ka.dataset.keepall].photos.forEach(p=>RV.keep.add(p.id)); return renderDups(); }
+    if(el.closest('#rv-best')){ RV.keep = new Set(RV.groups.map(g=>g.best)); return renderDups(); }
+    if(el.closest('#rv-more')){ RV.shown += 25; return renderDups(); }
+    if(el.closest('#rv-trash')){
+      const tr = dupsToTrash(); if(!tr.length) return;
+      if(!await confirmBox(t('Move {0} photos to Trash?', [num(tr.length)]), t('You can restore them from the Trash.'), t('Move to Trash'))) return;
+      await setAttr({trashed:1}, tr.map(p=>p.id));
+      toast(t('{0} items moved to Trash · permanently deleted after {1} days', [num(tr.length), S.status?.trash_days||60]));
+      return openDups();
+    }
+  } else if(RV.kind==='cleanup'){
+    const t1 = el.closest('.rv-t'), sa = el.closest('[data-selcat]'), sn = el.closest('[data-nonecat]'), mo = el.closest('[data-morecat]');
+    if(t1){ const id=+t1.dataset.id; RV.pick.has(id)?RV.pick.delete(id):RV.pick.add(id); return renderCleanup(); }
+    if(sa) { RV.cat[sa.dataset.selcat].ids.forEach(id=>RV.pick.add(id)); return renderCleanup(); }
+    if(sn) { RV.cat[sn.dataset.nonecat].ids.forEach(id=>RV.pick.delete(id)); return renderCleanup(); }
+    if(mo) { RV.show[mo.dataset.morecat] = (RV.show[mo.dataset.morecat]||60) + 120; return renderCleanup(); }
+    if(el.closest('#rv-trash')){
+      const ids=[...RV.pick]; if(!ids.length) return;
+      if(!await confirmBox(t('Move {0} photos to Trash?', [num(ids.length)]), t('You can restore them from the Trash.'), t('Move to Trash'))) return;
+      await setAttr({trashed:1}, ids); RV.pick.clear();
+      toast(t('{0} items moved to Trash · permanently deleted after {1} days', [num(ids.length), S.status?.trash_days||60]));
+      return openCleanup();
+    }
+  }
+});
+$('#v-review').addEventListener('dblclick', e=>{ const t1=e.target.closest('.rv-t'); if(t1) previewPhoto(+t1.dataset.id); });
+$('#v-review').addEventListener('change', e=>{ if(e.target.id==='rv-sens'){ RV.sens=e.target.value; openDups(); } });
+
+async function openCleanup(){
+  withAnalysis(async ()=>{
+    RV.kind='cleanup'; RV.show = RV.show || {};
+    if(S.mod!=='library') setModule('library');
+    setView('review'); $('#v-review').innerHTML = `<div class="hint">${t('Loading…')}</div>`;
+    const r = await api('/api/analysis/cleanup');
+    RV.cat = r.categories; RV.pick = new Set([...RV.pick].filter(id=>Object.values(RV.cat).some(c=>c.ids.includes(id)))); RV.show = {}; renderCleanup();
+  });
+}
+function renderCleanup(){
+  const C = RV.cat, el = $('#v-review');
+  const INFO = {screenshot:[t('Screenshots'), t('Pictures of a phone or computer screen')], receipt:[t('Receipts and documents'), t('Pages of printed text, probably receipts, bills or paperwork (a guess: review before deleting)')],
+    dark:[t('Very dark photos'), t('Almost black pictures, usually taken by accident')], blurry:[t('Blurry photos'), t('Out of focus or shaken pictures (sharpest area still very soft)')]};
+  const total = Object.values(C).reduce((a,c)=>a+c.ids.length,0), picked = [...RV.pick];
+  const bytes = id => (S.byId.get(id)||{}).bytes||0;
+  el.innerHTML = `<div class="rv-head"><h2>${I('clean')} ${t('Library cleanup')} <span>${t('{0} photos to review', [num(total)])}</span></h2>
+    <div class="rv-tools"><button class="primary" id="rv-trash" ${picked.length?'':'disabled'}>${t('Move {0} photos to Trash ({1})', [num(picked.length), fsize(picked.reduce((a,id)=>a+bytes(id),0))])}</button></div></div>
+    <div class="hint rv-note">${t('Nothing is selected for you. Click photos to mark them, or use Select all in a section; marked photos go to the Trash, where you can restore them. Double-click to enlarge.')}</div>
+    ${Object.keys(INFO).map(k=>{ const c=C[k]; if(!c || !c.ids.length) return ''; const n=RV.show[k]||60;
+      return `<div class="rv-g"><div class="rv-gh"><b>${INFO[k][0]}</b><span>${t('{0} photos', [num(c.ids.length)])} · ${fsize(c.bytes)}</span><span class="rv-d">${INFO[k][1]}</span>
+        <button data-selcat="${k}">${t('Select all')}</button><button data-nonecat="${k}">${t('Deselect')}</button></div>
+        <div class="rv-row wrap">${c.ids.slice(0,n).map(id=>rvTile({id, filename:(S.byId.get(id)||{}).filename, score:(S.byId.get(id)||{}).score}, RV.pick.has(id)?'pick':'')).join('')}</div>
+        ${c.ids.length>n ? `<div class="rv-more"><button data-morecat="${k}">${t('Show more')}</button></div>` : ''}</div>`; }).join('')
+      || `<div class="v-empty-msg"><b>${t('Nothing to clean up')}</b></div>`}`;
+  renderToolbar();
+}
+
+// ---------- On This Day ----------
+function otdSlideshow(){
+  const list = S.all.filter(otdPass).sort((a,b)=>a.taken_at-b.taken_at);
+  if(!list.length){ toast(t('No photos from this day in earlier years')); return; }
+  list.otd = true; ssStart(list);
+}
+function otdNotice(){
+  const n = S.all.filter(otdPass).length, today = new Date().toDateString();
+  if(!n || pref.get('otdDay','')===today) return;
+  pref.set('otdDay', today);
+  toast(`${t('On this day: {0} photos from earlier years', [num(n)])} <button id="otd-go" class="tb-btn">${t('Slideshow')}</button> <button id="otd-show" class="tb-btn">${t('Show')}</button>`, 10000);
+  $('#otd-go').onclick = ()=>{ $('#toast').classList.add('hidden'); otdSlideshow(); };
+  $('#otd-show').onclick = ()=>{ $('#toast').classList.add('hidden'); setSource(srcFromKey('otd')); };
+}
+
+// ---------- search by meaning (local CLIP) ----------
+async function semanticSearch(q){
+  const r = await api('/api/semantic/search?q='+encodeURIComponent(q));
+  const scores = Object.fromEntries(r.results.map(x=>[x.id, x.score]));
+  if(!r.results.length){ toast(t('Nothing matched “{0}”', [esc(q)])); return; }
+  S.sort='relevance'; S.asc=false;           // not saved: leaving the results returns to the usual sort
+  if(S.mod!=='library') setModule('library');
+  await setSource({kind:'semantic', id:null, name:t('Search: {0}', [q]) + (r.english!==r.q ? ` (${r.english})` : ''), scores});
+  if(S.view!=='grid' && S.view!=='loupe' && S.view!=='timeline') setView('grid');
+}
+async function semanticDialog(){
+  let st = await api('/api/semantic/status');
+  const draw = () => {
+    if(!st.ready){
+      modal(`<h3>${t('Search by meaning')}</h3><div class="mb"><p>${t('Find photos by describing them, for example “beach at sunset” or “dog in the snow”. It runs on this computer with a local AI model, so your photos never leave it.')}</p>
+        <p>${t('This needs a one-time download of the model (about {0} MB) and then a one-time pass over your photos (a few minutes for a big library).', [st.model_mb])}</p></div>
+        <div class="mf"><button id="sm-close">${t('Close')}</button><span class="spacer"></span><button class="primary" id="sm-dl">${t('Download and index')}</button></div>`);
+      $('#sm-close').onclick = closeModal;
+      $('#sm-dl').onclick = async ()=>{ closeModal(); await runJob('/api/semantic/index', 'semantic', t('Search indexing'), {download:true}); };
+      return;
+    }
+    const left = st.total - st.indexed;
+    modal(`<h3>${t('Search by meaning')}</h3><div class="mb">
+      <label class="fld"><span>${t('Describe the photo')}</span><input type="text" id="sm-q" placeholder="${t('beach at sunset')}" dir="auto"></label>
+      <div class="hint" style="padding:0">${t('{0} of {1} photos are indexed for search.', [num(st.indexed), num(st.total)])}${left>0 ? ' ' + t('Photos not indexed yet will not be found.') : ''}
+        ${st.can_translate ? ' ' + t('Searches in other languages are translated to English by your AI provider (only the search words are sent).') : ' ' + t('Write in English, or set up an AI provider in AI tagging settings to search in other languages.')}</div>
+    </div><div class="mf"><button id="sm-close">${t('Close')}</button>${left>0 ? `<button id="sm-idx">${t('Index {0} new photos', [num(left)])}</button>` : ''}<span class="spacer"></span><button class="primary" id="sm-go">${t('Search')}</button></div>`);
+    $('#sm-q').focus();
+    $('#sm-close').onclick = closeModal;
+    if($('#sm-idx')) $('#sm-idx').onclick = async ()=>{ closeModal(); await runJob('/api/semantic/index', 'semantic', t('Search indexing'), {download:false}); };
+    const go = async ()=>{ const q=$('#sm-q').value.trim(); if(!q) return; $('#sm-go').disabled = true;
+      try{ await semanticSearch(q); closeModal(); }catch(e){ toast(esc(e.message), 5000); $('#sm-go').disabled=false; } };
+    $('#sm-go').onclick = go; $('#sm-q').onkeydown = e=>{ if(e.key==='Enter') go(); };
+  };
+  draw();
+}
+
+// ---------- smart collections ----------
+async function smartDialog(existing){
+  const c = {people:[], peopleAll:0, tags:[], tagsAll:0, years:[], minRating:0, favorite:0, flag:'', labels:[], minScore:0, hasPlace:0, text:'', ...(existing ? existing.criteria : {})};
+  const yrs = c.years || [], y0 = yrs.length ? Math.min(...yrs) : '', y1 = yrs.length ? Math.max(...yrs) : '';
+  const thisYear = new Date().getFullYear();
+  modal(`<h3>${existing ? t('Edit Smart Collection') : t('New Smart Collection')}</h3><div class="mb as">
+    <label class="fld"><span>${t('Name')}</span><input type="text" id="sc-name" value="${esc(existing ? existing.name : '')}" dir="auto"></label>
+    <div class="hint" style="padding:0">${t('A smart collection fills itself: every photo that fits all the rules below is in it, now and when you add or rate photos later.')}</div>
+    <div class="fld"><span>${t('People')} ${S.people.length ? '' : '— ' + t('There are no named people yet.')}</span>
+      <div class="chips" id="sc-people">${S.people.map(p=>`<button type="button" class="tg ${c.people.includes(p.id)?'on':''}" data-p="${p.id}">${esc(p.name)}</button>`).join('')}</div>
+      <label class="check" style="padding:0"><input type="checkbox" id="sc-pall" ${c.peopleAll?'checked':''}> ${t('All of the chosen people together (otherwise any of them)')}</label></div>
+    <div class="two"><label class="fld"><span>${t('Year: from')}</span><input type="number" id="sc-y0" min="1900" max="${thisYear}" dir="ltr" value="${y0}"></label>
+      <label class="fld"><span>${t('To')}</span><input type="number" id="sc-y1" min="1900" max="${thisYear}" dir="ltr" value="${y1}"></label></div>
+    <div class="two"><label class="fld"><span>${t('Rating at least')}</span><select id="sc-rate">${[0,1,2,3,4,5].map(n=>`<option value="${n}">${n?'★'.repeat(n):t('Any')}</option>`).join('')}</select></label>
+      <label class="fld"><span>${t('Quality score at least')}</span><input type="number" id="sc-score" min="0" max="100" dir="ltr" value="${c.minScore||''}" placeholder="0-100"></label></div>
+    <div class="two"><label class="fld"><span>${t('Flag')}</span><select id="sc-flag"><option value="">${t('Any')}</option><option value="pick">${t('Picks')}</option><option value="reject">${t('Rejects')}</option></select></label>
+      <label class="fld"><span>${t('Color Label')}</span><select id="sc-label"><option value="">${t('Any')}</option>${LABELS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select></label></div>
+    <div class="two"><label class="fld"><span>${t('Keywords (comma separated)')}</span><input type="text" id="sc-tags" value="${esc((c.tags||[]).join(', '))}" dir="auto"></label>
+      <label class="fld"><span>${t('Text in the name or caption')}</span><input type="text" id="sc-text" value="${esc(c.text||'')}" dir="auto"></label></div>
+    <div class="frow"><label class="check" style="padding:0"><input type="checkbox" id="sc-tall" ${c.tagsAll?'checked':''}> ${t('All keywords (otherwise any)')}</label>
+      <label class="check" style="padding:0"><input type="checkbox" id="sc-fav" ${c.favorite?'checked':''}> ${t('Google favorites only')}</label>
+      <label class="check" style="padding:0"><input type="checkbox" id="sc-place" ${c.hasPlace?'checked':''}> ${t('Only photos with a location')}</label></div>
+    <div class="hint" id="sc-count" style="padding:0"></div>
+  </div><div class="mf"><button id="sc-google" title="${t('Creates a smart collection for each person tagged in Google Photos (imported from Google Takeout)')}">${t('Create from Google Photos people')}</button><span class="spacer"></span><button id="sc-cancel">${t('Cancel')}</button><button class="primary" id="sc-save">${t('Save')}</button></div>`);
+  $('#sc-rate').value = String(c.minRating||0); $('#sc-flag').value = c.flag||''; $('#sc-label').value = (c.labels||[])[0]||'';
+  const read = () => {
+    const a = +$('#sc-y0').value||0, b = +$('#sc-y1').value||0, lo = a||b, hi = b||a, years = [];
+    if(lo) for(let y=Math.min(lo,hi); y<=Math.max(lo,hi) && years.length<150; y++) years.push(y);
+    return {smart:1, people:$$('#sc-people .on').map(x=>+x.dataset.p), peopleAll:$('#sc-pall').checked?1:0, years,
+      minRating:+$('#sc-rate').value, minScore:+$('#sc-score').value||0, flag:$('#sc-flag').value, labels:$('#sc-label').value?[$('#sc-label').value]:[],
+      tags:$('#sc-tags').value.split(',').map(x=>x.trim()).filter(Boolean), tagsAll:$('#sc-tall').checked?1:0, text:$('#sc-text').value.trim(),
+      favorite:$('#sc-fav').checked?1:0, hasPlace:$('#sc-place').checked?1:0};
+  };
+  const count = debounce(async ()=>{ const el=$('#sc-count'); if(!el) return; const r=await send('POST','/api/smart/ids',{criteria:read()});
+    if(el) el.textContent = r.ids.length ? t('{0} photos match now', [num(r.ids.length)]) : t('No photo matches these rules yet'); }, 250);
+  $('.modal-box').addEventListener('input', count); $('.modal-box').addEventListener('change', count);
+  $('#sc-people').onclick = e=>{ const b=e.target.closest('[data-p]'); if(b){ b.classList.toggle('on'); count(); } };
+  count();
+  $('#sc-cancel').onclick = closeModal;
+  $('#sc-google').onclick = async ()=>{ const r = await send('POST','/api/smart/from-google',{min_photos:5}); await loadSide(); OPEN_SETS.add('smartc'); pref.set('openSets',[...OPEN_SETS]); renderColls();
+    toast(r.people ? t('{0} smart collections created from Google Photos people', [num(r.created)]) : t('No people from Google Photos were found: import a Google Takeout that includes people tags')); closeModal(); };
+  $('#sc-save').onclick = async ()=>{
+    const name = $('#sc-name').value.trim(), crit = read();
+    if(!name){ toast(t('Give the collection a name')); return; }
+    const empty = !(crit.people.length || crit.years.length || crit.minRating || crit.minScore || crit.flag || crit.labels.length || crit.tags.length || crit.text || crit.favorite || crit.hasPlace);
+    if(empty){ toast(t('Choose at least one rule')); return; }
+    if(existing && existing.name!==name) await send('DELETE', '/api/searches/'+existing.id);
+    const r = await send('POST', '/api/searches', {name, criteria:crit});
+    closeModal(); OPEN_SETS.add('smartc'); pref.set('openSets',[...OPEN_SETS]);
+    await loadSide(); await setSource({kind:'search', id:String(r.id), name, crit}); if(S.view!=='grid' && S.view!=='loupe' && S.view!=='timeline') setView('grid');
+  };
+}
+
+// ---------- timeline: months and years with a fast-scroll rail ----------
+const TL = {groups:[], cs:120, cols:1, io:null, offs:[], raf:0};
+function tlBuild(){
+  const by = new Map();
+  for(const p of S.list.slice().sort((a,b)=>(b.taken_at||0)-(a.taken_at||0) || b.id-a.id)){
+    const d = p.taken_at ? new Date(p.taken_at*1000) : null, key = d ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0') : 'none';
+    if(!by.has(key)) by.set(key, {key, y:d?d.getFullYear():0, m:d?d.getMonth():0, items:[]});
+    by.get(key).items.push(p);
+  }
+  return [...by.values()];
+}
+function renderTimeline(){
+  const main = $('#tl-main'), rail = $('#tl-rail');
+  if(TL.io){ TL.io.disconnect(); TL.io=null; }
+  const W = main.clientWidth - 24 || 800;
+  TL.cs = clamp(Math.round(S.cellsz*0.62), 90, 190); TL.cols = Math.max(1, Math.floor(W/TL.cs)); TL.cs = Math.floor(W/TL.cols);
+  TL.groups = tlBuild();
+  if(!TL.groups.length){ main.innerHTML = `<div class="v-empty-msg"><b>${t('No photos here')}</b></div>`; rail.innerHTML=''; return; }
+  main.innerHTML = TL.groups.map((g,i)=>{
+    const title = g.key==='none' ? t('No date') : new Date(g.y, g.m, 1).toLocaleDateString(I18N.locale, {month:'long', year:'numeric'});
+    return `<section class="tl-s" data-i="${i}"><h4><b>${esc(title)}</b><span>${t('{0} photos', [num(g.items.length)])}</span></h4>
+      <div class="tl-g" style="height:${Math.ceil(g.items.length/TL.cols)*TL.cs}px"></div></section>`; }).join('');
+  TL.io = new IntersectionObserver(es=>{
+    for(const e of es){ const sec=e.target, g=sec.querySelector('.tl-g'), i=+sec.dataset.i;
+      if(e.isIntersecting && !g.dataset.on){ g.dataset.on=1; tlFill(g, TL.groups[i]); }
+      else if(!e.isIntersecting && g.dataset.on){ g.dataset.on=''; g.innerHTML=''; } }
+  }, {root:main, rootMargin:'900px 0px'});
+  $$('.tl-s', main).forEach(s=>TL.io.observe(s));
+  tlRail();
+  main.scrollTop = 0;
+  const a = S.act!=null ? S.act : null; if(a!=null) tlReveal(a);
+}
+function tlFill(g, grp){
+  g.innerHTML = grp.items.map((p,i)=>`<div class="tl-c ${S.sel.has(p.id)?'sel':''} ${S.act===p.id?'act':''}" data-id="${p.id}" style="width:${TL.cs}px;height:${TL.cs}px;inset-block-start:${Math.floor(i/TL.cols)*TL.cs}px;inset-inline-start:${(i%TL.cols)*TL.cs}px" draggable="true">
+    <img loading="lazy" decoding="async" src="${thumbUrl(p.id)}" alt="">${p.is_video?`<i class="tl-v">${I('play')}</i>`:''}${p.flag===1?`<i class="tl-f">${I('flag')}</i>`:''}</div>`).join('');
+}
+function tlRefresh(){ $$('#tl-main .tl-c').forEach(c=>{ const id=+c.dataset.id; c.classList.toggle('sel', S.sel.has(id)); c.classList.toggle('act', S.act===id); }); }
+function tlReveal(id){
+  const gi = TL.groups.findIndex(g=>g.items.some(p=>p.id===id)); if(gi<0) return;
+  const sec = $(`#tl-main .tl-s[data-i="${gi}"]`), main=$('#tl-main'); if(!sec) return;
+  const idx = TL.groups[gi].items.findIndex(p=>p.id===id);
+  main.scrollTop = sec.offsetTop + 30 + Math.floor(idx/TL.cols)*TL.cs - main.clientHeight/2;
+}
+function tlRail(){
+  const main=$('#tl-main'), rail=$('#tl-rail'), total=main.scrollHeight||1, H=rail.clientHeight||400;
+  const secs = $$('.tl-s', main); TL.offs = secs.map(s=>s.offsetTop);
+  let last=-99, html='';
+  TL.groups.forEach((g,i)=>{ const y=TL.offs[i]/total*H;
+    if(g.key==='none') return;
+    const yearStart = i===0 || TL.groups[i-1].y!==g.y;
+    if(yearStart && y-last>=15){ html += `<a class="tl-y" style="top:${y.toFixed(1)}px" data-i="${i}">${g.y}</a>`; last=y; }
+    else if(!yearStart && y-last>=15 && TL.groups.length<120){ html += `<a class="tl-mo" style="top:${y.toFixed(1)}px" data-i="${i}">${new Date(g.y,g.m,1).toLocaleDateString(I18N.locale,{month:'short'})}</a>`; last=y; } });
+  rail.innerHTML = html + `<div class="tl-th" id="tl-th"></div><div class="tl-bub hidden" id="tl-bub"></div>`;
+  tlThumb();
+}
+function tlGroupAt(top){ let lo=0, hi=TL.offs.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(TL.offs[m]<=top+1) lo=m; else hi=m-1; } return lo; }
+function tlLabel(i){ const g=TL.groups[i]; return g ? (g.key==='none' ? t('No date') : new Date(g.y,g.m,1).toLocaleDateString(I18N.locale,{month:'long',year:'numeric'})) : ''; }
+function tlThumb(){
+  const main=$('#tl-main'), th=$('#tl-th'), rail=$('#tl-rail'); if(!th) return;
+  const frac = main.scrollTop / Math.max(1, main.scrollHeight);
+  th.style.top = (frac*rail.clientHeight).toFixed(1)+'px'; th.style.height = Math.max(14, main.clientHeight/Math.max(1, main.scrollHeight)*rail.clientHeight)+'px';
+}
+$('#tl-main').addEventListener('scroll', ()=>{ cancelAnimationFrame(TL.raf); TL.raf=requestAnimationFrame(tlThumb); }, {passive:true});
+(()=>{ // dragging the rail scrolls the whole timeline; the bubble names the month under the pointer
+  const rail=$('#tl-rail'); let drag=false;
+  const at = e=>{ const main=$('#tl-main'), r=rail.getBoundingClientRect(), f=clamp((e.clientY-r.top)/r.height,0,1);
+    main.scrollTop = f*main.scrollHeight - main.clientHeight/2*0; const bub=$('#tl-bub'); if(!bub) return;
+    bub.textContent = tlLabel(tlGroupAt(f*main.scrollHeight)); bub.style.top = (f*r.height)+'px'; bub.classList.remove('hidden'); };
+  rail.addEventListener('pointerdown', e=>{ drag=true; rail.setPointerCapture(e.pointerId); at(e); });
+  rail.addEventListener('pointermove', e=>{ if(drag) at(e); else { const r=rail.getBoundingClientRect(), main=$('#tl-main'), bub=$('#tl-bub'); if(!bub) return;
+    const f=clamp((e.clientY-r.top)/r.height,0,1); bub.textContent = tlLabel(tlGroupAt(f*main.scrollHeight)); bub.style.top=(f*r.height)+'px'; bub.classList.remove('hidden'); } });
+  rail.addEventListener('pointerup', ()=>{ drag=false; });
+  rail.addEventListener('pointerleave', ()=>{ if(!drag) $('#tl-bub')?.classList.add('hidden'); else drag=false; $('#tl-bub')?.classList.add('hidden'); });
+})();
+$('#tl-main').addEventListener('mousedown', e=>{ const c=e.target.closest('.tl-c'); if(c && e.button===0) selectClick(+c.dataset.id, e); else if(!c) selectNone(); });
+$('#tl-main').addEventListener('dblclick', e=>{ const c=e.target.closest('.tl-c'); if(c){ selectOnly(+c.dataset.id); setView('loupe'); } });
+$('#tl-main').addEventListener('dragstart', e=>{ const c=e.target.closest('.tl-c'); if(!c) return; const id=+c.dataset.id; if(!S.sel.has(id)) selectOnly(id);
+  e.dataTransfer.setData('text/x-pm-ids', JSON.stringify([...S.sel])); e.dataTransfer.effectAllowed='copy'; });
+new ResizeObserver(debounce(()=>{ if(S.view==='timeline') renderTimeline(); }, 120)).observe($('#v-timeline'));
+
 // ---------- boot ----------
 (async function boot(){
   await Promise.all([loadCatalog(), loadSide()]);
@@ -2913,10 +3314,11 @@ document.addEventListener('keyup', ()=>{ if(S.mod==='develop') devFollowSelectio
   setView('grid');
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
   setTimeout(backupHealthNotice, 8000);
+  setTimeout(otdNotice, 4500);
   setTimeout(backgroundTick, 3000); setInterval(backgroundTick, 60000);   // quiet check on start-up; a window appears only when a newer release exists
   // an empty catalog shows the empty-state screen with an Import button; it never jumps to the Import screen by itself
   // resume the activity indicator if a job is already running (e.g. after a reload)
-  [['import',t('Import')],['faces',t('Face Detection')],['aitag',t('AI tagging')],['compress',t('Video compression')],['backup',t('Backup')],['export',t('Export')]].forEach(async ([n,l])=>{
+  [['import',t('Import')],['faces',t('Face Detection')],['aitag',t('AI tagging')],['compress',t('Video compression')],['backup',t('Backup')],['export',t('Export')],['analysis',t('Photo analysis')],['semantic',t('Search indexing')]].forEach(async ([n,l])=>{
     try{ const p=await api('/api/job/'+n); if(p && p.state && !['done','error','idle'].includes(p.state)) pollJob(n,l); }catch{}
   });
 })();

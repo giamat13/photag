@@ -58,6 +58,30 @@ The interface is available in 17 languages (English by default). A Hebrew versio
 - **Import from Google Takeout** — reads the ZIP files directly (no need to unpack 19 GB); a large export comes as several ZIPs (`…-001.zip`, `…-002.zip`): choose them all, or just one and the other parts in the folder are added automatically (a missing part is reported, and importing it later never duplicates), keeps each photo once (dedup by SHA-256) and restores
   albums, descriptions, dates taken, GPS, favorites, Google's people tags, memory titles and comments on shared albums.
   All of these imports are in **one Import screen** (File → Import…) where you choose the source.
+- **Photo quality score, series and closed eyes** (Library → Analyse Photo Quality) — every photo gets a score from 1 to 100 (sharpness, exposure,
+  contrast; lower when someone has closed eyes — checked with the face model once Face Detection has been run), shown on the thumbnail and in the
+  metadata, and usable for sorting and in smart collections. Select several photos and click **Rank** to see which one is the best of a series
+  (and, optionally, pick it and reject the rest). Everything is computed on your computer.
+- **Duplicates and similar photos** (Library → Find Duplicates and Similar Photos) — groups of identical copies (a resized or re-saved file) and of
+  similar shots (a burst or the same scene taken within minutes, or at the same place), with the best of each group suggested; keep what you want and
+  move the rest to the Trash in one click.
+- **Library cleanup** (Library → Library Cleanup) — a report of screenshots, receipts / documents, very dark and blurry photos, to review and move to the
+  Trash in bulk (nothing is selected for you; the receipts check is a heuristic).
+- **Search by meaning** (Library → Search by Meaning, or Library Filter → Text → *Meaning*) — find photos by describing them, e.g. "beach at sunset",
+  with a local CLIP model (ONNX, on the same onnxruntime as face recognition): a one-time download (~600 MB, only after you agree) and a one-time pass over
+  the photos; nothing is sent anywhere. CLIP understands English; a query in another language is translated by the AI provider you set up for AI tagging
+  (only the query text is sent), otherwise write it in English.
+- **On This Day** — photos taken on today's date in earlier years (Catalog → On This Day), an automatic slideshow of them (Library → On This Day:
+  Slideshow) and a quiet reminder when you open photag.
+- **Smart collections** (Collections → the smart-collection button, or Library → New Smart Collection) — rules that fill the collection by themselves:
+  people (any / all), years, rating, quality score, flag, color label, keywords, Google favorites, with location, text. They update as you import and
+  rate. One click creates a smart collection for each person tagged in Google Photos (from a Google Takeout import; Google's own "live album" rules are not
+  part of a Takeout and cannot be imported).
+- **Timeline** (View → Timeline, or the toolbar button) — your photos by month and year with a fast-scroll rail: drag it to jump to any month.
+- **Backups of reduced copies for big libraries** (File → Backup and restore) — instead of the originals the backup can hold smaller copies of the photos:
+  strong compression (JPEG quality 60) and HD size (1280 px on the long side) by default, adjustable; videos are copied as they are (or left out). The library
+  is never touched, a file that would not get smaller is copied as is, later backups re-use unchanged copies, and restoring from such a backup only fills in
+  missing files (never replaces one). Safety backups made before a restore, update or compression always hold the originals.
 - **Face recognition** — InsightFace `buffalo_l` (ONNX Runtime) → cosine distance → SciPy average-linkage clustering at a threshold of
   **0.38**. Cluster names are seeded from Google's people tags (majority vote); the rest can be named by hand.
 - **Simple photo editing** — rotate, crop, brightness / contrast / saturation, black and white. The original is always kept and restorable.
@@ -87,7 +111,7 @@ The location pointer is stored in `%APPDATA%\photag\config.json` and can be chan
   telemetry and no analytics.
 - It only talks to the internet when you use these features: **AI tagging** (sends small thumbnails to the provider *you* choose, with your own
   key, and only when you start it), **map tiles** (OpenStreetMap, the tile requests reveal the area you look at), **update check** (asks GitHub
-  for the latest release), and the one-time download of the face model (~300 MB).
+  for the latest release), the one-time download of the face model (~300 MB), and — only after you agree — the one-time download of the search-by-meaning model (~600 MB, from Hugging Face; searches in other languages send only the query words to your AI-tagging provider).
 - The local server listens on `127.0.0.1` only and refuses requests that do not come from photag's own window (Host / Origin checks), so a web
   page open in your browser cannot reach your library.
 - Your AI key is stored encrypted with Windows DPAPI (readable only by your Windows user).

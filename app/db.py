@@ -101,6 +101,20 @@ CREATE TABLE IF NOT EXISTS ref_files(
 );
 CREATE INDEX IF NOT EXISTS ix_ref_files_photo ON ref_files(photo_id);
 
+-- per-photo analysis (app/analysis.py): quality score 1-100, sharpness, exposure, perceptual hash for duplicate finding,
+-- screenshot / receipt hints and closed eyes (NULL = not checked yet). Rebuilt when the file (sha) or ANALYSIS_VERSION changes.
+CREATE TABLE IF NOT EXISTS photo_analysis(
+  photo_id INTEGER PRIMARY KEY, sha TEXT, version INTEGER,
+  phash INTEGER,            -- 64-bit difference hash as a signed integer; NULL for flat images
+  sharp REAL, mean REAL, p5 REAL, p95 REAL, clip_dark REAL, clip_white REAL, sat REAL, ink REAL, white REAL,
+  is_screenshot INTEGER DEFAULT 0, is_receipt INTEGER DEFAULT 0, has_camera INTEGER DEFAULT 0,
+  faces_n INTEGER, eyes_closed INTEGER,
+  score INTEGER
+);
+
+-- CLIP image embeddings for search by meaning (app/semantic.py): float16 x 512, rebuilt when the file (sha) changes
+CREATE TABLE IF NOT EXISTS photo_clip(photo_id INTEGER PRIMARY KEY, sha TEXT, emb BLOB);
+
 -- extra Takeout artifacts so nothing from the ZIP is lost
 CREATE TABLE IF NOT EXISTS memory_titles(title TEXT);
 CREATE TABLE IF NOT EXISTS shared_comments(
@@ -130,9 +144,9 @@ def init_db():
             con.execute(f"ALTER TABLE photos ADD COLUMN {col}")
         except sqlite3.OperationalError:
             pass  # ponytail: column already exists on upgraded DBs
-    # Automatic tagging was removed twice (Ollama, then CLIP): drop what they created.
+    # Automatic tagging was removed twice (Ollama, then CLIP): drop what the keyword versions created.
     # Only tags of those sources go; manual, Lightroom and Google keywords are untouched.
-    # See docs/project-history.md for how to bring the CLIP version back.
+    # (search by meaning, app/semantic.py, keeps its embeddings in photo_clip and makes no keywords.)
     con.execute("DROP TABLE IF EXISTS clip_emb")
     con.execute("DROP TABLE IF EXISTS autotag_rejected")
     if con.execute("SELECT 1 FROM photo_tags WHERE source LIKE 'ollama%' OR source IN ('auto','place') LIMIT 1").fetchone():

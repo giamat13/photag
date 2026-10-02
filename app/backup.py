@@ -14,9 +14,17 @@ changed files are copied. So each backup is a full point-in-time copy, a photo d
 the older ones, and the second backup is fast. Where hard links are not possible (FAT, network drives) the files
 are simply copied. Snapshots made before this change share one folder, media-mirror, and still restore from it.
 
+"Reduced copies" (compress_media) makes that photo set smaller for big libraries: JPEG / PNG / WebP / BMP / TIFF photos are
+re-encoded at a lower quality and capped to a size (default: strong compression, 1280 px = HD) under the same file names,
+other files (videos, RAW, HEIC...) are copied as they are. The library itself is never touched. A file that would not get
+smaller is copied as is. Which source version a reduced file came from is recorded (.photag-index.json), so later backups
+re-use it instead of encoding again. Safety snapshots (before restore / update / compression) always hold the originals,
+and restoring from a reduced set only fills in files that are missing, it never replaces a file.
+
 Restoring first takes a safety snapshot of the current state ("before-restore"), then loads the chosen
 catalog into the live database in one transaction. Photo files are only ever ADDED back (never deleted).
 """
+import concurrent.futures as cf
 import contextlib
 import json
 import os
@@ -30,11 +38,13 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from . import config, db
+from . import config, db, images
 from .config import PATHS
 from .version import __version__
 
-DEFAULTS = {"enabled": True, "interval_hours": 24, "keep": 10, "include_media": True, "folder": None}
+DEFAULTS = {"enabled": True, "interval_hours": 24, "keep": 10, "include_media": True, "folder": None,
+            "compress_media": False, "compress_quality": 60, "compress_max_side": 1280, "include_videos": True}
+INDEX = ".photag-index.json"      # inside a reduced media set: for each file, which version of the source it was made from
 REASONS = ("auto", "manual", "before-restore", "before-update", "before-compress")
 NAME_RE = re.compile(r"^photag-\d{8}-\d{6}-(auto|manual|before-restore|before-update|before-compress)(-\d+)?\.zip$")
 MIRROR = "media-mirror"
@@ -49,6 +59,11 @@ def get_settings() -> dict:
     s["keep"] = max(KEEP_MIN, min(KEEP_MAX, int(DEFAULTS["keep"] if s["keep"] is None else s["keep"])))
     s["enabled"] = bool(s["enabled"])
     s["include_media"] = bool(s["include_media"])
+    s["compress_media"] = bool(s["compress_media"])
+    s["include_videos"] = bool(s["include_videos"])
+    s["compress_quality"] = int(max(40, min(98, int(DEFAULTS["compress_quality"] if s["compress_quality"] is None else s["compress_quality"]))))
+    ms = int(DEFAULTS["compress_max_side"] if s["compress_max_side"] is None else s["compress_max_side"])
+    s["compress_max_side"] = ms if 256 <= ms <= 16384 else 0          # 0 = keep the size
     s["folder"] = (s["folder"] or None)
     return s
 
@@ -196,14 +211,20 @@ def media_dir_name(snapshot_name: str) -> str:
     return "media-" + snapshot_name[:-4]                  # photag-<date>-<reason>.zip -> media-photag-<date>-<reason>
 
 
-def _previous_media_dir() -> Path | None:
-    """The newest complete media set: the media folder of the newest snapshot that has one, else the old shared mirror."""
+def _previous_media_dir(reduced: bool = False) -> Path | None:
+    """The newest complete media set of the same kind (originals or reduced copies): the media folder of the newest snapshot
+    that has one, else (originals only) the old shared mirror."""
     d = backup_dir()
     for m in list_snapshots():
-        if m.get("media_dir") and (d / m["media_dir"]).is_dir():
+        if m.get("media_dir") and bool(m.get("media_compressed")) == reduced and (d / m["media_dir"]).is_dir():
             return d / m["media_dir"]
     old = d / MIRROR
-    return old if old.is_dir() else None
+    return old if (old.is_dir() and not reduced) else None
+
+
+def _media_files(root: Path):
+    """The photo / video files of a media folder (not the temporary .part files, not our own index)."""
+    return [p for p in root.rglob("*") if p.is_file() and not p.name.endswith(".part") and p.name != INDEX]
 
 
 def _same(a: Path, st) -> bool:
@@ -214,46 +235,102 @@ def _same(a: Path, st) -> bool:
         return False
 
 
-def _mirror_media(dst: Path, progress=None) -> dict:
+def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
     """Build a complete copy of the photo files in dst (a new folder): hard-link what the previous set already has,
-    copy the rest."""
-    prev = _previous_media_dir()
+    copy the rest. With `reduce` ({quality, max_side, include_videos}) photos are re-encoded smaller instead of copied."""
+    from . import compress
+    reduced = reduce is not None
+    prev = _previous_media_dir(reduced)
     dst.mkdir(parents=True, exist_ok=True)
+    pidx = {}
+    if reduced and prev is not None:
+        try:
+            pidx = json.loads((prev / INDEX).read_text("utf-8"))
+        except (OSError, ValueError):
+            pidx = {}
+    q, ms = (reduce["quality"], reduce["max_side"]) if reduced else (0, 0)
     files = [p for p in PATHS.media.rglob("*") if p.is_file() and ".compress_tmp" not in p.parts]
-    plan, need = [], 0
+    if reduced and not reduce.get("include_videos", True):
+        files = [p for p in files if p.suffix.lower() not in images.VIDEO_EXT]
+    plan, need, est = [], 0, 0           # plan item: (src, out, old file to link or None, "encode" | "copy", stat)
     for src in files:
         rel = src.relative_to(PATHS.media)
         st = src.stat()
         old = prev / rel if prev else None
-        if old is not None and _same(old, st):
-            plan.append((src, dst / rel, old))
+        encode = reduced and src.suffix.lower() in compress.IMAGE_OK
+        if encode:
+            e = pidx.get(rel.as_posix())
+            reuse = (old is not None and old.is_file() and e and e.get("s") == st.st_size and abs(e.get("m", 0) - int(st.st_mtime)) <= 2
+                     and e.get("q") == q and e.get("x") == ms)
         else:
-            plan.append((src, dst / rel, None)); need += st.st_size
+            reuse = old is not None and _same(old, st)
+        plan.append((src, dst / rel, old if reuse else None, "encode" if encode else "copy", st))
+        if not reuse:
+            need += st.st_size
+            est += st.st_size * (0.4 if encode else 1)
     free = shutil.disk_usage(dst).free
-    if need + 200 * 1024 * 1024 > free:                  # never fill the backup disk to the brim
-        raise NoSpaceError(need, free)
-    copied = nbytes = linked = 0
-    n_copy = sum(1 for _, _, o in plan if o is None)
+    if est + 200 * 1024 * 1024 > free:                   # never fill the backup disk to the brim
+        raise NoSpaceError(int(est), free)
+    todo = [x for x in plan if x[2] is None]
+    stats = {"copied": 0, "encoded": 0, "linked": 0, "bytes_copied": 0, "done": 0}
+    index: dict[str, dict] = {}
     if progress:
         progress.total = max(1, need); progress.done = 0
-    for src, out, old in plan:
+
+    def work(item):
+        src, out, old, how, st = item
         out.parent.mkdir(parents=True, exist_ok=True)
-        if old is not None:
-            try:
-                os.link(old, out); linked += 1
-                continue
-            except OSError:
-                pass                                       # no hard links here: copy instead
         tmp = out.with_name(out.name + ".part")
-        shutil.copy2(src, tmp); os.replace(tmp, out)
-        copied += 1; nbytes += out.stat().st_size
-        if progress:
-            progress.done = nbytes
-            progress.say("Copying photo and video files… {done} of {total} files", done=copied, total=max(n_copy, copied))
-            if getattr(progress, "cancel", False):
-                raise RuntimeError("cancelled")
-    return {"files": len(files), "copied": copied, "linked": linked, "bytes_copied": nbytes,
-            "total_bytes": sum(src.stat().st_size for src, _, _ in plan)}
+        did = "copied"
+        if how == "encode":
+            try:
+                compress._encode_image(src, tmp, {"quality": q, "max_side": ms})
+                if tmp.stat().st_size < st.st_size:
+                    did = "encoded"
+                else:
+                    tmp.unlink(missing_ok=True)          # not smaller: keep the original as it is
+            except Exception:
+                tmp.unlink(missing_ok=True)               # a photo we cannot re-encode (damaged, animated...): copy it
+        if did == "copied":
+            shutil.copy2(src, tmp)
+        os.replace(tmp, out)
+        os.utime(out, (st.st_atime, st.st_mtime))         # same time stamp as the source: later backups can tell it is up to date
+        return item, did
+
+    for src, out, old, how, st in [x for x in plan if x[2] is not None]:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.link(old, out)
+            stats["linked"] += 1
+            if how == "encode":
+                index[src.relative_to(PATHS.media).as_posix()] = {"s": st.st_size, "m": int(st.st_mtime), "q": q, "x": ms}
+        except OSError:
+            todo.append((src, out, None, how, st))        # no hard links here: copy / encode instead
+    ex = cf.ThreadPoolExecutor(2 if reduced else 1)
+    try:
+        for item, did in ex.map(work, todo):
+            src, out, _, how, st = item
+            stats[did] += 1
+            stats["bytes_copied"] += out.stat().st_size
+            stats["done"] += st.st_size
+            if how == "encode":
+                index[src.relative_to(PATHS.media).as_posix()] = {"s": st.st_size, "m": int(st.st_mtime), "q": q, "x": ms}
+            if progress:
+                progress.done = stats["done"]
+                progress.say("Copying photo and video files… {done} of {total} files", done=stats["copied"] + stats["encoded"], total=len(todo))
+                if getattr(progress, "cancel", False):
+                    raise RuntimeError("cancelled")
+    finally:
+        ex.shutdown(wait=True, cancel_futures=True)
+    if reduced:
+        (dst / INDEX).write_text(json.dumps(index), "utf-8")
+    out_bytes = sum(o.stat().st_size for _, o, _, _, _ in plan if o.exists())
+    res = {"files": len(plan), "copied": stats["copied"] + stats["encoded"], "linked": stats["linked"], "bytes_copied": stats["bytes_copied"],
+           "total_bytes": out_bytes if reduced else sum(st.st_size for *_, st in plan)}
+    if reduced:
+        res.update(reduced=True, encoded=stats["encoded"], quality=q, max_side=ms, source_bytes=sum(st.st_size for *_, st in plan),
+                   include_videos=bool(reduce.get("include_videos", True)))
+    return res
 
 
 class NoSpaceError(Exception):
@@ -470,9 +547,13 @@ def _create_snapshot(reason: str = "manual", progress=None, force_media: bool = 
             mdir = media_dir_name(final.name)
             mpart = d / (mdir + ".part")
             shutil.rmtree(mpart, ignore_errors=True)
-            media = _mirror_media(mpart, progress)
+            # reduced copies only for the regular backups: the safety snapshots made before a restore / update / compression
+            # exist to undo it, so they must hold the real files
+            reduce = ({"quality": s["compress_quality"], "max_side": s["compress_max_side"], "include_videos": s["include_videos"]}
+                      if s["compress_media"] and reason in ("auto", "manual") and not force_media else None)
+            media = _mirror_media(mpart, progress, reduce)
         manifest = {"created": now, "reason": reason, "app_version": __version__, "includes_media": bool(media),
-                    "media": media, "media_dir": mdir, **counts}
+                    "media": media, "media_dir": mdir, "media_compressed": bool(media and media.get("reduced")), **counts}
         part = final.with_name(final.name + ".part")
         with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
             z.write(tmpdb, "catalog.db")
@@ -548,6 +629,8 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
             z.extract("catalog.db", work)
             settings = json.loads(z.read("settings.json")) if "settings.json" in z.namelist() else {}
             manifest = json.loads(z.read("manifest.json"))
+        if manifest.get("media_compressed"):
+            overwrite_changed = False                         # a reduced copy never replaces a file that exists: it only fills gaps
         snap = sqlite3.connect(work / "catalog.db")
         try:
             if snap.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
@@ -570,7 +653,7 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
         copied = 0
         mirror = backup_dir() / (manifest.get("media_dir") or MIRROR)
         if restore_media and mirror.is_dir():
-            files = [p for p in mirror.rglob("*") if p.is_file() and not p.name.endswith(".part")]
+            files = _media_files(mirror)
             if progress: progress.total = len(files); progress.done = 0
             for i, src in enumerate(files):
                 out = PATHS.media / src.relative_to(mirror)
@@ -633,7 +716,7 @@ def verify_snapshot(m: dict) -> list[tuple[str, dict]]:
         mdir = d / (m.get("media_dir") or MIRROR)
         if not mdir.is_dir():
             return [("The photo files of the backup {name} are missing from the backup folder", {"name": name})]
-        files = [p for p in mdir.rglob("*") if p.is_file() and not p.name.endswith(".part")]
+        files = _media_files(mdir)
         want = (m.get("media") or {}).get("files")
         if want is not None and len(files) != want:
             bad.append(("The backup {name} should hold {want} photo files but {found} were found", {"name": name, "want": want, "found": len(files)}))

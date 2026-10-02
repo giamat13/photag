@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -33,7 +33,7 @@ _LOCK = threading.Lock()  # ponytail: one job at a time is plenty for a desktop 
 
 
 BUSY_STATES = ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing",
-               "encoding", "verifying", "replacing", "downloading", "backing_up", "restoring")
+               "encoding", "verifying", "replacing", "downloading", "backing_up", "restoring", "analyzing")
 
 
 def _other_job_running(except_name: str = "") -> bool:
@@ -110,7 +110,7 @@ def _start_trash_purge():
 def _start(name, target, *args):
     with _LOCK:
         cur = JOBS.get(name)
-        if cur and cur.state in ("scanning", "importing", "detecting", "clustering", "exporting", "preparing", "tagging", "starting", "probing", "encoding", "verifying", "replacing", "downloading", "backing_up", "restoring"):
+        if cur and cur.state in BUSY_STATES:
             raise err(409, "The task is already running")
         prog = importer.Progress()
         prog.state = "starting"   # not "idle": a poll right after the start must not read the job as finished
@@ -403,6 +403,10 @@ class BackupSettingsIn(BaseModel):
     keep: int | None = None
     include_media: bool | None = None
     folder: str | None = None
+    compress_media: bool | None = None
+    compress_quality: int | None = None
+    compress_max_side: int | None = None
+    include_videos: bool | None = None
 
 class RestoreIn(BaseModel):
     name: str
@@ -772,7 +776,8 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
         args += [f"%{q}%"] * 4
     sql = (f"SELECT p.id,p.filename,p.is_video,p.taken_at,p.favorited,p.rating,p.width,p.height,"
            f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.trashed_at,p.rel_path,p.lat,p.lng,"
-           f"EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=p.id) has_kw "
+           f"EXISTS(SELECT 1 FROM photo_tags pt WHERE pt.photo_id=p.id) has_kw, "
+           f"(SELECT a.score FROM photo_analysis a WHERE a.photo_id=p.id) score "
            f"FROM photos p{joins} WHERE {' AND '.join(where)} "
            f"ORDER BY p.taken_at DESC, p.id DESC LIMIT ? OFFSET ?")
     args += [limit, offset]
@@ -1189,13 +1194,13 @@ class SearchIn(BaseModel):
 
 @app.get("/api/searches")
 def searches():
-    import json
+    """Saved searches and smart collections. `ids` is evaluated now, so a smart collection is always up to date."""
+    con = db.connect()
     out = []
-    for r in db.connect().execute("SELECT id,name,criteria FROM saved_searches ORDER BY name"):
-        try:
-            out.append({"id": r["id"], "name": r["name"], "criteria": json.loads(r["criteria"])})
-        except ValueError:
-            pass
+    for r in con.execute("SELECT id,name,criteria FROM saved_searches ORDER BY name"):
+        c = smart.parse(r["criteria"])
+        if c is not None:
+            out.append({"id": r["id"], "name": r["name"], "criteria": c, "smart": smart.is_smart(c), "ids": smart.query_ids(con, c)})
     return out
 
 
@@ -1219,6 +1224,133 @@ def delete_search(sid: int):
     con.execute("DELETE FROM saved_searches WHERE id=?", (sid,))
     con.commit()
     return {"ok": True}
+
+
+# ---- smart collections ------------------------------------------------------
+class SmartIn(BaseModel):
+    criteria: dict
+
+
+@app.post("/api/smart/ids")
+def smart_ids(body: SmartIn):
+    """Ids of the photos that match a rule set right now (a smart collection, or a search being edited)."""
+    return {"ids": smart.query_ids(db.connect(), body.criteria)}
+
+
+class GoogleSmartIn(BaseModel):
+    min_photos: int = 5
+
+
+@app.post("/api/smart/from-google")
+def smart_from_google(body: GoogleSmartIn):
+    """One smart collection per person Google Photos tagged in the imported Takeout (existing names are left alone)."""
+    con = db.connect()
+    rules = smart.google_people_rules(con, max(1, body.min_photos))
+    made = 0
+    for r in rules:
+        name = r["name"]
+        if con.execute("SELECT 1 FROM saved_searches WHERE name=?", (name,)).fetchone():
+            continue
+        con.execute("INSERT INTO saved_searches(name,criteria,created_at) VALUES(?,?,?)",
+                    (name, json.dumps(r["criteria"], ensure_ascii=False), int(time.time())))
+        made += 1
+    con.commit()
+    return {"created": made, "people": len(rules)}
+
+
+# ---- quality score, duplicates, cleanup --------------------------------------
+@app.get("/api/analysis/status")
+def analysis_status():
+    return analysis.pending_counts(db.connect())
+
+
+class AnalysisIn(BaseModel):
+    eyes: bool = True
+
+
+@app.post("/api/analysis/run")
+def analysis_run(body: AnalysisIn):
+    _start("analysis", analysis.run_analysis, body.eyes)
+    return {"ok": True}
+
+
+@app.post("/api/analysis/cancel")
+def analysis_cancel():
+    p = JOBS.get("analysis")
+    if p:
+        p.cancel = True
+    return {"ok": True}
+
+
+class RankIn(BaseModel):
+    ids: list[int]
+
+
+@app.post("/api/analysis/rank")
+def analysis_rank(body: RankIn):
+    """Score and order the selected photos, best first (analyses the ones that were not analysed yet)."""
+    if len(body.ids) < 2:
+        raise err(400, "Select at least two photos to rank")
+    return {"ranked": analysis.rank(db.connect(), body.ids), "eyes_checked": analysis.face_model_present()}
+
+
+@app.get("/api/analysis/groups")
+def analysis_groups(dup: int = analysis.DUP_DIST, sim: int = analysis.SIM_DIST, window: int = analysis.TIME_WINDOW, place: int = analysis.PLACE_M):
+    con = db.connect()
+    return {"groups": analysis.find_groups(con, min(max(dup, 0), 16), min(max(sim, 0), 24), max(window, 0), max(place, 0)),
+            **analysis.pending_counts(con)}
+
+
+@app.get("/api/analysis/cleanup")
+def analysis_cleanup():
+    con = db.connect()
+    return {**analysis.cleanup_report(con), **analysis.pending_counts(con)}
+
+
+# ---- search by meaning (local CLIP) -------------------------------------------
+@app.get("/api/semantic/status")
+def semantic_status():
+    return {**semantic.counts(db.connect()), "can_translate": aitag.can_translate()}
+
+
+class SemanticIndexIn(BaseModel):
+    download: bool = False
+
+
+@app.post("/api/semantic/index")
+def semantic_index(body: SemanticIndexIn):
+    _start("semantic", semantic.run_index, body.download)
+    return {"ok": True}
+
+
+@app.post("/api/semantic/cancel")
+def semantic_cancel():
+    p = JOBS.get("semantic")
+    if p:
+        p.cancel = True
+    return {"ok": True}
+
+
+@app.get("/api/semantic/search")
+def semantic_search(q: str, limit: int = 600):
+    q = q.strip()
+    if not q:
+        raise err(400, "Type what to look for")
+    if not semantic.model_ready():
+        raise err(409, "The search model is not installed yet")
+    con = db.connect()
+    if semantic.counts(con)["indexed"] == 0:
+        raise err(409, "No photos are indexed for search yet")
+    english = q
+    if not semantic.is_english(q):
+        if not aitag.can_translate():
+            raise err(422, "Write the search in English, or set up an AI provider in AI tagging settings to search in other languages")
+        try:
+            english = aitag.translate_query(q)
+        except aitag.AIError as e:
+            raise err(502, "Could not translate the search: {error}", error=str(e))
+    res = semantic.search(con, english, min(max(limit, 1), 2000))
+    return {"q": q, "english": english, "results": [{"id": i, "score": s} for i, s in res.items()]}
 
 
 # ---- import from folder / export -------------------------------------------

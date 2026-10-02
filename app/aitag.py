@@ -258,6 +258,41 @@ def _tag_with_retry(args, cancel):
             time.sleep(min(e.retry_after or 2 ** attempt, 20))
 
 
+# ---------------------------------------------------------------- query translation (search by meaning)
+def can_translate() -> bool:
+    c = get_settings()
+    return c["provider"] == "custom" or bool(c["providers"].get(c["provider"], {}).get("has_key"))
+
+
+def translate_query(text: str) -> str:
+    """The search words in English, through the provider chosen for AI tagging (only this text is sent)."""
+    cfg = get_settings()
+    provider = cfg["provider"]
+    key = _key(provider)
+    if provider != "custom" and not key:
+        raise AIError(401, "no API key")
+    model = cfg["model"] or pick_auto(provider, list_models(provider, key, cfg["base_url"]))
+    if not model:
+        raise AIError(0, "no model")
+    kind, base, h = PROVIDERS[provider]["kind"], _base(provider, cfg["base_url"]), _headers(PROVIDERS[provider]["kind"], key)
+    ask = ("Translate this photo search query into short, plain English for an image search. "
+           "Answer with ONLY the English words, no quotes, no explanation.\n\n" + text[:200])
+    if kind == "anthropic":
+        r = _http("POST", f"{base}/messages", h, {"model": model, "max_tokens": 60, "messages": [{"role": "user", "content": ask}]}, secret=key)
+        out = "".join(b.get("text", "") for b in r.get("content", []) if b.get("type") == "text")
+    elif kind == "gemini":
+        r = _http("POST", f"{base}/models/{model}:generateContent", h, {"contents": [{"role": "user", "parts": [{"text": ask}]}]}, secret=key)
+        out = "".join(p.get("text", "") for p in ((r.get("candidates") or [{}])[0].get("content") or {}).get("parts", []))
+    else:
+        r = _http("POST", f"{base}/chat/completions", h, {"model": model, "messages": [{"role": "user", "content": ask}]}, secret=key)
+        c = ((r.get("choices") or [{}])[0].get("message") or {}).get("content", "")
+        out = c if isinstance(c, str) else "".join(p.get("text", "") for p in c)
+    out = re.sub(r"\s+", " ", out).strip().strip("\"'`.")
+    if not out:
+        raise AIError(0, "empty answer")
+    return out[:120]
+
+
 # ---------------------------------------------------------------- probe (settings dialog)
 def probe(provider: str, base_url: str, api_key: str | None) -> dict:
     key = _key(provider, api_key)

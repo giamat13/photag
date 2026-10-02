@@ -44,7 +44,7 @@ def delete_forever(con, rows) -> int:
         for b in con.execute("SELECT backup_rel FROM video_backups WHERE photo_id=?", (r["id"],)).fetchall():
             (PATHS.media / b["backup_rel"]).unlink(missing_ok=True)
         pid = r["id"]
-        for table in ("photo_albums", "photo_people", "photo_tags", "faces", "video_backups", "ref_files"):
+        for table in ("photo_albums", "photo_people", "photo_tags", "faces", "video_backups", "ref_files", "photo_analysis", "photo_clip"):
             con.execute(f"DELETE FROM {table} WHERE photo_id=?", (pid,))
         con.execute("DELETE FROM photos WHERE id=?", (pid,))
         done += 1
