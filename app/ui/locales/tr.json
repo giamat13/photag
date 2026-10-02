@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "Bu seri çekimde {0} fotoğraf — hepsini görmek için tıklayın",
  "Face Timeline": "Yüz Zaman Çizelgesi",
  "No dated photos of {0} yet": "{0} için henüz tarihli fotoğraf yok",
- "One photo per year -- the best-scored shot of {0} that year.": "Yıl başına bir fotoğraf -- o yılki {0} için en yüksek puanlı kare."
+ "One photo per year -- the best-scored shot of {0} that year.": "Yıl başına bir fotoğraf -- o yılki {0} için en yüksek puanlı kare.",
+ "Flythrough": "Uçuş",
+ "Fly through these photos on the map, oldest to newest": "Haritadaki bu fotoğrafların üzerinden en eskiden en yeniye uçun",
+ "Need at least 2 dated, geotagged photos to fly through": "Uçuş için tarihli ve konumlu en az 2 fotoğraf gerekir"
 }

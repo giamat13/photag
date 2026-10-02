@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "この連写には{0}枚の写真があります — クリックしてすべて表示",
  "Face Timeline": "顔の年表",
  "No dated photos of {0} yet": "{0}の日付付き写真はまだありません",
- "One photo per year -- the best-scored shot of {0} that year.": "年に1枚 -- その年の{0}の最高評価の写真。"
+ "One photo per year -- the best-scored shot of {0} that year.": "年に1枚 -- その年の{0}の最高評価の写真。",
+ "Flythrough": "フライスルー",
+ "Fly through these photos on the map, oldest to newest": "地図上でこれらの写真を古い順に飛行表示",
+ "Need at least 2 dated, geotagged photos to fly through": "フライスルーには日付と位置情報付きの写真が2枚以上必要です"
 }

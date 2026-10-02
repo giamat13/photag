@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "{0} фото в цій серії — натисніть, щоб побачити всі",
  "Face Timeline": "Хронологія обличчя",
  "No dated photos of {0} yet": "Поки немає фотографій з датою для {0}",
- "One photo per year -- the best-scored shot of {0} that year.": "Одне фото на рік -- знімок {0} з найкращою оцінкою того року."
+ "One photo per year -- the best-scored shot of {0} that year.": "Одне фото на рік -- знімок {0} з найкращою оцінкою того року.",
+ "Flythrough": "Обліт",
+ "Fly through these photos on the map, oldest to newest": "Обліт цих фотографій на мапі, від найстаріших до найновіших",
+ "Need at least 2 dated, geotagged photos to fly through": "Потрібно принаймні 2 фото з датою та геоміткою для облету"
 }

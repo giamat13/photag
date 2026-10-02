@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "이 연속 촬영에 사진 {0}장 — 클릭하면 모두 보기",
  "Face Timeline": "얼굴 타임라인",
  "No dated photos of {0} yet": "{0}의 날짜가 있는 사진이 아직 없습니다",
- "One photo per year -- the best-scored shot of {0} that year.": "연도별 한 장 -- 해당 연도 {0}의 최고 점수 사진."
+ "One photo per year -- the best-scored shot of {0} that year.": "연도별 한 장 -- 해당 연도 {0}의 최고 점수 사진.",
+ "Flythrough": "플라이스루",
+ "Fly through these photos on the map, oldest to newest": "지도에서 이 사진들을 오래된 순서로 비행",
+ "Need at least 2 dated, geotagged photos to fly through": "비행하려면 날짜와 위치가 있는 사진이 최소 2장 필요합니다"
 }

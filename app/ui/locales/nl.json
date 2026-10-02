@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "{0} foto's in deze reeks — klik om ze allemaal te zien",
  "Face Timeline": "Gezichtstijdlijn",
  "No dated photos of {0} yet": "Nog geen gedateerde foto's van {0}",
- "One photo per year -- the best-scored shot of {0} that year.": "Eén foto per jaar -- de best scorende foto van {0} dat jaar."
+ "One photo per year -- the best-scored shot of {0} that year.": "Eén foto per jaar -- de best scorende foto van {0} dat jaar.",
+ "Flythrough": "Overvlucht",
+ "Fly through these photos on the map, oldest to newest": "Vlieg over deze foto's op de kaart, van oud naar nieuw",
+ "Need at least 2 dated, geotagged photos to fly through": "Minstens 2 gedateerde foto's met locatie nodig om over te vliegen"
 }

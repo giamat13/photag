@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "इस बर्स्ट में {0} तस्वीरें — सभी देखने के लिए क्लिक करें",
  "Face Timeline": "चेहरा समयरेखा",
  "No dated photos of {0} yet": "{0} की अभी तक कोई दिनांकित तस्वीर नहीं है",
- "One photo per year -- the best-scored shot of {0} that year.": "प्रति वर्ष एक तस्वीर -- उस वर्ष {0} की सर्वश्रेष्ठ स्कोर वाली तस्वीर।"
+ "One photo per year -- the best-scored shot of {0} that year.": "प्रति वर्ष एक तस्वीर -- उस वर्ष {0} की सर्वश्रेष्ठ स्कोर वाली तस्वीर।",
+ "Flythrough": "फ़्लाईथ्रू",
+ "Fly through these photos on the map, oldest to newest": "मानचित्र पर इन तस्वीरों के ऊपर से उड़ें, सबसे पुरानी से सबसे नई तक",
+ "Need at least 2 dated, geotagged photos to fly through": "उड़ान भरने के लिए कम से कम 2 दिनांकित, जियोटैग की गई तस्वीरें चाहिए"
 }

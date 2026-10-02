@@ -837,6 +837,7 @@ function setView(v){
   ['grid','loupe','compare','survey','people','map','timeline','review'].forEach(k=>$('#v-'+k).classList.toggle('hidden', k!==v));
   $('#v-empty').classList.add('hidden');
   if(v!=='loupe'){ closeLoupeMedia(); }
+  if(v!=='map' && FLY.running) flyStop();
   if(v==='grid'){ layoutGrid(true); scrollToAct(); $('#v-grid').focus({preventScroll:true}); if(!S.list.length){ $('#v-empty').classList.remove('hidden'); renderEmpty(); } }
   if(v==='loupe') renderLoupe();
   if(v==='compare') renderCompare();
@@ -1125,6 +1126,7 @@ $('#v-people').addEventListener('keydown', async e=>{
 
 // ---------- map: pins for the photos you selected (Leaflet, bundled; tiles from OpenStreetMap) ----------
 let MAP = null, MAPLAYER = null, SIDEMAP = null, MAPINFO = '', MAPSEQ = 0;
+const FLY = {running:false, points:[], raf:0, t0:0, marker:null, line:null};
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 function mapTiles(onFail){
   let bad = 0;
@@ -1141,7 +1143,44 @@ function drawMiniMap(d){
   L.marker([d.lat, d.lng], {icon: pinIcon(1), interactive: false}).addTo(m);
   SIDEMAP = m;
 }
+function flyStop(){
+  FLY.running = false;
+  if(FLY.raf) cancelAnimationFrame(FLY.raf);
+  FLY.raf = 0;
+  if(FLY.marker){ MAPLAYER.removeLayer(FLY.marker); FLY.marker = null; }
+  if(FLY.line){ MAPLAYER.removeLayer(FLY.line); FLY.line = null; }
+  renderToolbar();
+}
+async function mapFlythrough(){
+  if(FLY.running){ flyStop(); return; }
+  const ids = S.sel.size ? [...S.sel] : S.list.map(p=>p.id);
+  let r; try{ r = await send('POST', '/api/map', {ids}); } catch(e){ return toast(e.message); }
+  const pts = r.points.filter(p=>p.taken_at).sort((a,b)=>a.taken_at-b.taken_at);
+  if(pts.length < 2){ toast(t('Need at least 2 dated, geotagged photos to fly through')); return; }
+  FLY.points = pts; FLY.t0 = 0; FLY.running = true;
+  FLY.line = L.polyline([], {color:'#4b98f0', weight:3, opacity:.85}).addTo(MAPLAYER);
+  FLY.marker = L.marker([pts[0].lat, pts[0].lng], {icon: L.divIcon({className:'mp fly', html:'<i></i>', iconSize:[18, 18], iconAnchor:[9, 9]})}).addTo(MAPLAYER);
+  MAP.fitBounds(pts.map(p=>[p.lat, p.lng]), {padding:[50, 50], maxZoom:14});
+  renderToolbar();
+  FLY.raf = requestAnimationFrame(flyTick);
+}
+function flyTick(now){
+  if(!FLY.running) return;
+  if(!FLY.t0) FLY.t0 = now;
+  const HOP=1400, PAUSE=400, per=HOP+PAUSE;
+  const elapsed = now - FLY.t0, seg = Math.floor(elapsed / per);
+  if(seg >= FLY.points.length - 1){ flyStop(); return; }
+  const f = Math.min(1, (elapsed - seg * per) / HOP);
+  const a=FLY.points[seg], b=FLY.points[seg+1];
+  const lat = a.lat + (b.lat - a.lat) * f, lng = a.lng + (b.lng - a.lng) * f;
+  FLY.marker.setLatLng([lat, lng]);
+  const trail = FLY.points.slice(0, seg + 1).map(p=>[p.lat, p.lng]);
+  if(f < 1) trail.push([lat, lng]);
+  FLY.line.setLatLngs(trail);
+  FLY.raf = requestAnimationFrame(flyTick);
+}
 async function renderMapView(){
+  flyStop();
   const note = $('#map-note'); note.className = 'map-note'; note.textContent = '';
   if(!MAP){
     MAP = L.map('map-canvas', {zoomControl: true, worldCopyJump: true}).setView([31.8, 35.0], 3);
@@ -1203,7 +1242,7 @@ function renderToolbar(){
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
   else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
   else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} photos in Survey", [num(S.sel.size)])}</span>`;
-  else if(S.view==='map') h += `<span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
+  else if(S.view==='map') h += `<button class="tb-btn ${FLY.running?'on':''}" data-t="flythrough" title="${t('Fly through these photos on the map, oldest to newest')}">${I('play')} ${t('Flythrough')}</button><span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
   else if(S.view==='timeline') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t('{0} photos', [num(S.list.length)])}</span>`;
   else if(S.view==='review') h += `<span class="spacer"></span><span class="tb-info" id="rv-info"></span><button class="tb-btn" data-t="rvdone">${t('Done')}</button>`;
   else h += `<span class="spacer"></span><span class="tb-info">${t("Type a name below the faces to name them")}</span>`;
@@ -1222,6 +1261,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
   else if(tg==='rank') rankSelected(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
   else if(tg==='before') devBefore(); else if(tg==='crop') devCropToggle();
+  else if(tg==='flythrough') mapFlythrough();
 });
 $('#toolbar').addEventListener('change', e=>{ if(e.target.dataset.t==='sort'){ S.sort=e.target.value; S.asc=SORT_ASC_FIRST.has(S.sort); pref.set('sort',S.sort); pref.set('asc',S.asc); applyFilter(); renderToolbar(); } });
 $('#toolbar').addEventListener('input', e=>{ if(e.target.dataset.t==='size'){ S.cellsz=+e.target.value; pref.set('cellsz',S.cellsz); layoutGrid(true); scrollToAct(); } });

@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "{0} foto in questa raffica — fai clic per vederle tutte",
  "Face Timeline": "Cronologia del volto",
  "No dated photos of {0} yet": "Nessuna foto datata di {0} ancora",
- "One photo per year -- the best-scored shot of {0} that year.": "Una foto per anno -- lo scatto con il punteggio migliore di {0} quell'anno."
+ "One photo per year -- the best-scored shot of {0} that year.": "Una foto per anno -- lo scatto con il punteggio migliore di {0} quell'anno.",
+ "Flythrough": "Sorvolo",
+ "Fly through these photos on the map, oldest to newest": "Sorvola queste foto sulla mappa, dalla più vecchia alla più recente",
+ "Need at least 2 dated, geotagged photos to fly through": "Servono almeno 2 foto datate e geolocalizzate per il sorvolo"
 }

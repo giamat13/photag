@@ -1079,5 +1079,8 @@
  "{0} photos in this burst — click to see them all": "{0} Fotos in dieser Serie — klicken, um alle zu sehen",
  "Face Timeline": "Gesichts-Zeitstrahl",
  "No dated photos of {0} yet": "Noch keine datierten Fotos von {0}",
- "One photo per year -- the best-scored shot of {0} that year.": "Ein Foto pro Jahr -- die bestbewertete Aufnahme von {0} in diesem Jahr."
+ "One photo per year -- the best-scored shot of {0} that year.": "Ein Foto pro Jahr -- die bestbewertete Aufnahme von {0} in diesem Jahr.",
+ "Flythrough": "Flugmodus",
+ "Fly through these photos on the map, oldest to newest": "Durch diese Fotos auf der Karte fliegen, von den ältesten zu den neuesten",
+ "Need at least 2 dated, geotagged photos to fly through": "Mindestens 2 datierte Fotos mit Standort werden für den Flugmodus benötigt"
 }
