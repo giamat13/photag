@@ -218,8 +218,8 @@ def set_library_root(path: str | os.PathLike) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     if PORTABLE:
         try:
-            rel = root.relative_to(PORTABLE)
-            _write_pointer(library_root="portable:" + str(rel))   # stays correct if the whole portable folder is moved
+            rel = root.relative_to(PORTABLE.resolve())    # PORTABLE resolved too: Windows can report the same folder
+            _write_pointer(library_root="portable:" + str(rel))   # under a short (8.3) name in one place and the long name in another
             return root
         except ValueError:
             pass                                                  # a path outside the portable folder: the user's deliberate choice, kept as-is
