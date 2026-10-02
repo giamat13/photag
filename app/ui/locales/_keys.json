@@ -890,6 +890,7 @@
  "Tagged {n} photos with {model}",
  "Tagging was stopped",
  "Tagging with {model} · {done}/{total}",
+ "Tester mode: also offer pre-release versions",
  "Text",
  "Text Search",
  "Text in the name or caption",

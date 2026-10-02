@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "triplan bağlantısını kaldır",
  "Untitled trip": "Başlıksız seyahat",
  "Which triplan trip is this?": "Bu hangi triplan seyahati?",
- "{0} days": "{0} gün"
+ "{0} days": "{0} gün",
+ "Tester mode: also offer pre-release versions": "Test modu: ön sürümleri de sun"
 }

@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "إلغاء الربط مع triplan",
  "Untitled trip": "رحلة بلا عنوان",
  "Which triplan trip is this?": "ما هي رحلة triplan هذه؟",
- "{0} days": "{0} أيام"
+ "{0} days": "{0} أيام",
+ "Tester mode: also offer pre-release versions": "وضع المختبِر: اعرض إصدارات تجريبية أيضًا"
 }

@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "取消与 triplan 的关联",
  "Untitled trip": "未命名行程",
  "Which triplan trip is this?": "这是哪个 triplan 行程？",
- "{0} days": "{0} 天"
+ "{0} days": "{0} 天",
+ "Tester mode: also offer pre-release versions": "测试者模式：也提供预发布版本"
 }

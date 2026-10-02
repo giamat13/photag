@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "בטל קישור מ-triplan",
  "Untitled trip": "טיול ללא שם",
  "Which triplan trip is this?": "איזה טיול ב-triplan זה?",
- "{0} days": "{0} ימים"
+ "{0} days": "{0} ימים",
+ "Tester mode: also offer pre-release versions": "מצב בוחן: הציעו גם גרסאות טרום-שחרור"
 }

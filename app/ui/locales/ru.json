@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "Отвязать от triplan",
  "Untitled trip": "Поездка без названия",
  "Which triplan trip is this?": "Какая это поездка triplan?",
- "{0} days": "{0} дней"
+ "{0} days": "{0} дней",
+ "Tester mode: also offer pre-release versions": "Режим тестировщика: предлагать и предварительные версии"
 }

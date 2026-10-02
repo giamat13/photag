@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "triplanとのリンクを解除",
  "Untitled trip": "無題の旅行",
  "Which triplan trip is this?": "これはどのtriplanの旅行ですか？",
- "{0} days": "{0}日間"
+ "{0} days": "{0}日間",
+ "Tester mode: also offer pre-release versions": "テスターモード：プレリリース版も提供する"
 }

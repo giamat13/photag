@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "Desvincular de triplan",
  "Untitled trip": "Viaje sin título",
  "Which triplan trip is this?": "¿Qué viaje de triplan es este?",
- "{0} days": "{0} días"
+ "{0} days": "{0} días",
+ "Tester mode: also offer pre-release versions": "Modo probador: ofrecer también versiones preliminares"
 }

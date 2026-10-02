@@ -181,6 +181,15 @@ def set_update_skipped(version: str | None) -> None:
     _write_pointer(update_skipped=version or None)
 
 
+def get_beta_channel() -> bool:
+    """Tester mode: the update check also offers pre-releases, not just full releases."""
+    return bool(_read_pointer().get("beta_channel"))
+
+
+def set_beta_channel(on: bool) -> None:
+    _write_pointer(beta_channel=bool(on) or None)
+
+
 def settings_dir() -> Path:
     """The folder of the settings file (%APPDATA%\\photag)."""
     return _POINTER.parent

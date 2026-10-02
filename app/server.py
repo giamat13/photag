@@ -512,6 +512,19 @@ def update_skip(body: SkipIn):
     return {"ok": True}
 
 
+class BetaIn(BaseModel):
+    on: bool
+
+@app.get("/api/update/beta")
+def update_beta_get():
+    return {"on": config.get_beta_channel()}
+
+@app.post("/api/update/beta")
+def update_beta_set(body: BetaIn):
+    config.set_beta_channel(body.on)
+    return {"ok": True}
+
+
 @app.post("/api/update/download")
 def update_download():
     _start("update", updater.run_download)

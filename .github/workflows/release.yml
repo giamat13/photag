@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:        # run it by hand on main: the tag vX.Y.Z (from app/version.py) is created by the release itself
+    inputs:
+      prerelease:
+        description: "Mark as a pre-release (hidden from the in-app update check, flagged on GitHub)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -47,4 +52,6 @@ jobs:
         run: |
           notes=docs/release-notes-v${VERSION}.md
           [ -f "$notes" ] || notes=docs/release-notes-v1.0.0.md
-          gh release create "${TAG}" --target "${GITHUB_SHA}" installer_output/photagSetup.exe dist/photag-code-*.zip dist/photag-*-portable.zip --title "photag ${VERSION}" --notes-file "$notes"
+          flags=()
+          [ "${{ inputs.prerelease }}" = "true" ] && flags+=(--prerelease)
+          gh release create "${TAG}" --target "${GITHUB_SHA}" installer_output/photagSetup.exe dist/photag-code-*.zip dist/photag-*-portable.zip --title "photag ${VERSION}" --notes-file "$notes" "${flags[@]}"

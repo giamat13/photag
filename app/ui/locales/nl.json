@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "Ontkoppelen van triplan",
  "Untitled trip": "Naamloze reis",
  "Which triplan trip is this?": "Welke triplan-reis is dit?",
- "{0} days": "{0} dagen"
+ "{0} days": "{0} dagen",
+ "Tester mode: also offer pre-release versions": "Testermodus: ook pre-releaseversies aanbieden"
 }

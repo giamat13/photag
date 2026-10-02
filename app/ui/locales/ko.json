@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "triplan 연결 해제",
  "Untitled trip": "제목 없는 여행",
  "Which triplan trip is this?": "이것은 어떤 triplan 여행인가요?",
- "{0} days": "{0}일"
+ "{0} days": "{0}일",
+ "Tester mode: also offer pre-release versions": "테스터 모드: 사전 출시 버전도 제공"
 }

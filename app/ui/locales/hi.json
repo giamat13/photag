@@ -1129,5 +1129,6 @@
  "Unlink from triplan": "triplan से लिंक हटाएं",
  "Untitled trip": "अनाम यात्रा",
  "Which triplan trip is this?": "यह कौन सी triplan यात्रा है?",
- "{0} days": "{0} दिन"
+ "{0} days": "{0} दिन",
+ "Tester mode: also offer pre-release versions": "परीक्षक मोड: पूर्व-रिलीज़ संस्करण भी प्रस्तुत करें"
 }

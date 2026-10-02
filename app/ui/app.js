@@ -1753,11 +1753,12 @@ async function storageBreakdown(){
   </div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
 }
 async function preferences(){
-  const [s, ai, rf0] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref')]);
+  const [s, ai, rf0, beta] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta')]);
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
     <label class="chkrow"><input type="checkbox" id="pf-upd" ${pref.get('autoUpdate', true) ? 'checked' : ''}> ${t('Check for updates automatically once a day')}</label>
+    <label class="chkrow"><input type="checkbox" id="pf-beta" ${beta.on ? 'checked' : ''}> ${t('Tester mode: also offer pre-release versions')}</label>
     <div class="lbl-sub" style="padding:0">${t('Automatic import')}</div>
     <label class="chkrow"><input type="checkbox" id="ai-on"> ${t('Import new photos automatically from a folder')}</label>
     <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
@@ -1771,6 +1772,7 @@ async function preferences(){
   </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button>
     <button id="pf-ai">${t("AI tagging settings")}</button><button class="primary" id="pf-faces">${t("Detect Faces")}</button></div>`);
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
+  $('#pf-beta').onchange=e=>send('POST', '/api/update/beta', {on: e.target.checked});
   $('#pf-ai').onclick=()=>{ closeModal(); aiSettings(); };
   $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('Face Detection')); };
   let cur = ai;

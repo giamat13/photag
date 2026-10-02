@@ -98,19 +98,26 @@ def check(force: bool = False) -> dict:
     """Latest release info + whether it is newer. Never raises: a failed check is just {"available": False, "error"}."""
     out = {"current": __version__, "available": False, "latest": None, "notes": "", "page": f"https://github.com/{REPO}/releases",
            "asset": None, "code_asset": None, "published": None, "skipped": False, "error": None}
+    beta = config.get_beta_channel()
     now = time.time()
-    if not force and _cache["data"] and now - _cache["at"] < CACHE_SECONDS:
+    if not force and _cache["data"] and _cache.get("beta") == beta and now - _cache["at"] < CACHE_SECONDS:
         rel = _cache["data"]
     else:
         try:
-            rel = json.loads(_get(f"{API}/repos/{REPO}/releases/latest"))
+            if beta:
+                # GitHub's own "latest" endpoint always skips pre-releases, so tester mode asks for the
+                # most recent release of any kind instead and picks the first one by hand.
+                rels = json.loads(_get(f"{API}/repos/{REPO}/releases?per_page=5"))
+                rel = rels[0] if rels else {}
+            else:
+                rel = json.loads(_get(f"{API}/repos/{REPO}/releases/latest"))
         except urllib.error.HTTPError as e:
             out["error"] = f"HTTP {e.code}" + (" (no releases yet)" if e.code == 404 else "")
             return out
         except Exception as e:
             out["error"] = str(getattr(e, "reason", e))[:200]
             return out
-        _cache.update(at=now, data=rel)
+        _cache.update(at=now, data=rel, beta=beta)
     tag = rel.get("tag_name") or ""
     out.update(latest=tag.lstrip("vV"), notes=rel.get("body") or "", page=rel.get("html_url") or out["page"],
                asset=_pick_asset(rel.get("assets") or []), published=rel.get("published_at"))
