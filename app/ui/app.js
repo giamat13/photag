@@ -1605,6 +1605,11 @@ function togglePanel(k, force){
 $$('[data-toggle]').forEach(b=>b.onclick=()=>togglePanel(b.dataset.toggle));
 (()=>{ const hid=pref.get('hidden',{}); Object.entries(hid).forEach(([k,v])=>v&&togglePanel(k,true)); })();
 function cycleLights(){ S.lights=(S.lights+1)%3; document.body.classList.toggle('lights-dim', S.lights===1); document.body.classList.toggle('lights-off', S.lights===2); }
+function toggleTheme(){
+  const light = document.documentElement.dataset.theme !== 'light';
+  if(light) document.documentElement.dataset.theme='light'; else delete document.documentElement.dataset.theme;
+  pref.set('theme', light ? 'light' : 'dark');
+}
 
 // ---------- dialogs ----------
 function modal(html){ $('#modal-box').innerHTML=html; $('#modal').classList.remove('hidden'); const f=$('#modal-box input:not([type=checkbox]),#modal-box button.primary'); f?.focus(); f?.select?.(); }
@@ -2794,6 +2799,8 @@ const MENUS = [
     [t('Hide/Show All Panels'), 'Shift+Tab', toggleAllPanels],
     [t('Toolbar'), 'T', ()=>togglePanel('tool'), null, ()=>!document.body.classList.contains('hide-tool')],
     [t('Lights Out'), 'L', cycleLights],
+    sep,
+    [t('Light Theme'), '', toggleTheme, null, ()=>document.documentElement.dataset.theme==='light'],
   ]],
   [t('Help'), [
     [t('Keyboard Shortcuts'), 'Ctrl+/', shortcuts],

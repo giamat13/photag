@@ -29,6 +29,7 @@ const I18N = (() => {
   const dir = (LANGS.find(l => l[0] === lang) || [, , 'ltr'])[2];
   document.documentElement.lang = lang;
   document.documentElement.dir = dir;
+  try { if (JSON.parse(localStorage.getItem('pm.theme') || '"dark"') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}
   // Intl locale for numbers/dates ("zh" -> "zh-CN" etc. handled by the browser)
   return { lang, dir, dict, locale: lang === 'he' ? 'he-IL' : lang };
 })();
