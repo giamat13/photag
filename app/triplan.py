@@ -15,7 +15,7 @@ from . import config, keystore
 
 API_KEY = "AIzaSyDQLgYhR0IzbeJ6WiFW6Pt-7C1yyTweVOk"          # triplan's public Firebase Web API key (config.js)
 SIGN_IN_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={API_KEY}"
-APP_URL = "https://triplan-giamat13.web.app"
+APP_URL = "https://giamat13.github.io/triplan/"   # GitHub Pages -- triplan's Firebase Hosting site was never deployed
 
 _ERROR_MESSAGES = {
     "EMAIL_NOT_FOUND": "No triplan account with that email",
