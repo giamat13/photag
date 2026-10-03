@@ -26,6 +26,8 @@ internet only when you ask it to or when you switched a feature on:
 - AI tagging sends small thumbnails to the AI provider you chose, only when you start it;
 - the triplan connection talks to your own triplan account, only when you connect it.
 
+The full privacy policy is [docs/PRIVACY.md](PRIVACY.md).
+
 ## Reporting a problem
 Open an issue at <https://github.com/giamat13/photag/issues>.
 
