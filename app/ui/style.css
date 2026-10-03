@@ -776,3 +776,11 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
 .tl-th{position:absolute;inset-inline:0;background:rgba(255,255,255,.16);border-inline-start:3px solid var(--acc);pointer-events:none;min-height:14px}
 .tl-bub{position:absolute;inset-inline-end:60px;transform:translateY(-50%);background:#111;color:#fff;border:1px solid #555;padding:3px 9px;border-radius:3px;white-space:nowrap;pointer-events:none;z-index:5;font-size:12px}
 .tb-btn svg.ic{margin-inline-end:2px}
+
+.btnrow90 button.on{background:var(--accent,#3b6fd9);color:#fff}
+.dsl.temp{--track:linear-gradient(90deg,#3b78d9,#ddd,#e0a030)}
+.dsl.tint{--track:linear-gradient(90deg,#3bbd4f,#ddd,#c43bb0)}
+.exif-all{margin:6px 12px}
+.exif-all summary{cursor:pointer;color:var(--t2);font-size:12px}
+.exif-kv span:first-child{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exif-kv span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end}

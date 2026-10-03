@@ -31,8 +31,10 @@ REFUSED: dict = {}          # photo id -> why migrate_one() left it as it was (f
 def is_neutral(ops: dict) -> bool:
     """Every setting at its zero point: nothing to render."""
     return (not ops.get("rotate") and not ops.get("grayscale")
+            and not ops.get("flip_h") and not ops.get("flip_v")
             and ops.get("crop") in (None, [0, 0, 1, 1])
-            and all(ops.get(k) in (None, 1, 1.0) for k in ("brightness", "contrast", "saturation")))
+            and all(ops.get(k) in (None, 1, 1.0) for k in ("brightness", "contrast", "saturation"))
+            and not images.has_tone(ops))
 
 
 def _col(row, key):

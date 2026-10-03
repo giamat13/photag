@@ -190,6 +190,16 @@ def set_beta_channel(on: bool) -> None:
     _write_pointer(beta_channel=bool(on) or None)
 
 
+def get_catalog_edits() -> bool:
+    """True (the default): edits and EXIF live in the catalog database and the photo file is never changed.
+    False: edits are written into the photo file like before (a pristine copy is kept) and EXIF is read from the file."""
+    return _read_pointer().get("catalog_edits") is not False
+
+
+def set_catalog_edits(on: bool) -> None:
+    _write_pointer(catalog_edits=None if on else False)
+
+
 def settings_dir() -> Path:
     """The folder of the settings file (%APPDATA%\\photag)."""
     return _POINTER.parent

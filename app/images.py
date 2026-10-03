@@ -286,10 +286,85 @@ def export_resized(src: Path, dst: Path, long_edge: int | None, quality: int):
 
 
 # ---------- simple editing ----------
+# Develop settings that change the picture itself ("stage 1", done on the full frame before rotating/cropping) -- the
+# rest (rotate, crop, flips, brightness, contrast, saturation, grayscale) is geometry and simple tone ("stage 2").
+TONE_KEYS = ("exposure", "highlights", "shadows", "temperature", "tint", "vibrance", "clarity", "sharpness",
+             "blur", "vignette", "sepia")
+FLIP_KEYS = ("flip_h", "flip_v")
+
+
+def has_tone(ops: dict) -> bool:
+    return any(ops.get(k) not in (None, 0, 0.0) for k in TONE_KEYS)
+
+
+def _smooth(x, a, b):
+    import numpy as np
+    t = np.clip((x - a) / (b - a), 0.0, 1.0)
+    return t * t * (3 - 2 * t)
+
+
+def _unit(im):
+    import numpy as np
+    return np.asarray(im.convert("RGB"), dtype=np.float32) / 255.0
+
+
+def _from_unit(a):
+    import numpy as np
+    return Image.fromarray((np.clip(a, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8), "RGB")
+
+
+def apply_tone(im, ops: dict):
+    """Stage 1: exposure (EV), highlights, shadows, temperature, tint, vibrance, clarity, sharpness, blur, vignette,
+    sepia. All amounts are -100..100 (0..100 where only one direction exists) except exposure, which is in stops.
+    Radii scale with the picture size, so a small preview looks like the full-size render."""
+    import numpy as np
+    from PIL import ImageFilter
+    if not has_tone(ops):
+        return im
+    im = im.convert("RGB")
+    size = max(im.size)
+    g = lambda k: float(ops.get(k) or 0)
+    if g("blur"):
+        im = im.filter(ImageFilter.GaussianBlur(radius=g("blur") / 100.0 * 0.012 * size))
+    if g("clarity"):
+        im = im.filter(ImageFilter.UnsharpMask(radius=max(2.0, size / 60.0), percent=int(g("clarity") * 1.2), threshold=0))
+    if g("sharpness"):
+        im = im.filter(ImageFilter.UnsharpMask(radius=max(0.6, size / 1800.0), percent=int(g("sharpness") * 2.5), threshold=2))
+    a = _unit(im)
+    if g("exposure"):                                              # gain in linear light
+        lin = np.power(a, 2.2) * (2.0 ** g("exposure"))
+        a = np.power(np.clip(lin, 0.0, 1.0), 1 / 2.2)
+    if g("highlights") or g("shadows"):
+        lum = a.mean(axis=2, keepdims=True)
+        a = a + (g("highlights") / 100.0) * 0.35 * _smooth(lum, 0.5, 1.0) \
+              + (g("shadows") / 100.0) * 0.35 * (1.0 - _smooth(lum, 0.0, 0.5))
+    if g("temperature") or g("tint"):
+        t, ti = g("temperature") / 100.0, g("tint") / 100.0
+        a = a * np.array([1 + 0.3 * t, 1 - 0.2 * ti, 1 - 0.3 * t], dtype=np.float32)
+    if g("vibrance"):
+        mx, mn = a.max(axis=2, keepdims=True), a.min(axis=2, keepdims=True)
+        sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0.0)
+        v = g("vibrance") / 100.0
+        f = 1 + v * (1 - sat) if v > 0 else 1 + v * (0.5 + 0.5 * sat)
+        gray = a.mean(axis=2, keepdims=True)
+        a = gray + (a - gray) * f
+    if g("vignette"):
+        h, w = a.shape[:2]
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        r = np.sqrt(((xx - (w - 1) / 2) / (w / 2)) ** 2 + ((yy - (h - 1) / 2) / (h / 2)) ** 2) / np.sqrt(2.0)
+        m = (np.clip((r - 0.35) / 0.65, 0.0, 1.0) ** 2)[..., None]
+        v = g("vignette") / 100.0
+        a = a * (1 - (-v) * 0.9 * m) if v < 0 else a + v * 0.9 * m * (1 - a)
+    if g("sepia"):
+        k = np.array([[0.393, 0.769, 0.189], [0.349, 0.686, 0.168], [0.272, 0.534, 0.131]], dtype=np.float32)
+        a = a + (np.clip(a @ k.T, 0.0, 1.0) - a) * (g("sepia") / 100.0)
+    return _from_unit(a)
+
+
 def apply_edit(src: Path, ops: dict, dst: Path):
-    """ops: rotate(deg), crop[x1,y1,x2,y2 fractions], brightness, contrast,
-    saturation, grayscale(bool). Saves to dst. Caller keeps a backup."""
-    im = open_image(src)
+    """ops: tone settings (see TONE_KEYS), rotate(deg), crop[x1,y1,x2,y2 fractions], brightness, contrast,
+    saturation, grayscale(bool), flip_h, flip_v. Saves to dst. The source file is never touched."""
+    im = apply_tone(open_image(src), ops)
     if ops.get("rotate"):
         im = im.rotate(-float(ops["rotate"]), expand=True)
     c = ops.get("crop")
@@ -305,10 +380,66 @@ def apply_edit(src: Path, ops: dict, dst: Path):
             im = enh(im).enhance(float(v))
     if ops.get("grayscale"):
         im = ImageOps.grayscale(im).convert("RGB")
+    if ops.get("flip_h"):
+        im = ImageOps.mirror(im)
+    if ops.get("flip_v"):
+        im = ImageOps.flip(im)
     dst.parent.mkdir(parents=True, exist_ok=True)
     fmt = "JPEG" if dst.suffix.lower() in (".jpg", ".jpeg") else "PNG"
     im.save(dst, fmt, quality=92)
     return dst
+
+
+def preview_tone(src: Path, ops: dict, dst_max: int = 1600) -> bytes:
+    """JPEG of the original (shrunk to dst_max) with only the tone settings applied -- the live preview of the
+    Develop sliders that CSS filters cannot show. Geometry and the simple tone sliders are drawn by the page."""
+    import io
+    im = open_image(src)
+    im.thumbnail((dst_max, dst_max))
+    out = io.BytesIO()
+    apply_tone(im, ops).save(out, "JPEG", quality=88)
+    return out.getvalue()
+
+
+def auto_ops(src: Path) -> dict:
+    """What this picture needs, worked out from the picture itself ("Auto"): exposure so the average brightness lands
+    near the middle, contrast from how much of the tonal range is used, highlights/shadows pulled back when they clip,
+    white balance from the grey-world average, vibrance when colours are dull, a touch of sharpness. Returns develop
+    settings in the same units apply_edit() takes (everything stays moderate: Auto improves, it never ruins)."""
+    import numpy as np
+    im = open_image(src)
+    im.thumbnail((640, 640))
+    a = _unit(im)
+    lum = (0.2126 * a[..., 0] + 0.7152 * a[..., 1] + 0.0722 * a[..., 2])
+    mean = float(lum.mean())
+    p1, p99 = float(np.percentile(lum, 1)), float(np.percentile(lum, 99))
+    clip_hi = float((lum > 0.97).mean())
+    clip_lo = float((lum < 0.03).mean())
+    clamp = lambda v, lo, hi: max(lo, min(hi, v))
+    out = {}
+    # exposure: move the mean towards 0.45 (in linear light, limited to +-1.5 stops, only 80% of the way)
+    target = 0.45
+    out["exposure"] = 0.0                                          # (an all-black picture has nothing to recover)
+    if mean > 0.001:
+        ev = float(np.log2(max(target, 1e-3) ** 2.2 / max(mean, 1e-3) ** 2.2)) * 0.8
+        out["exposure"] = round(clamp(ev, -1.5, 1.5), 2)
+    # highlights / shadows: only what is actually blown out or crushed
+    out["highlights"] = -round(clamp(clip_hi * 600, 0, 60))
+    out["shadows"] = round(clamp(clip_lo * 600 + max(0.0, 0.25 - float(np.percentile(lum, 10))) * 150, 0, 60))
+    # contrast: a narrow tonal range needs more, a very wide one less
+    spread = p99 - p1
+    out["contrast"] = round(1 + clamp((0.8 - spread) * 70, -15, 30) / 100, 3)       # a factor, like apply_edit takes
+    # white balance (grey world, limited): warm up a bluish cast, cool down a yellow one; green/magenta likewise
+    r, g, b = (float(a[..., i].mean()) for i in range(3))
+    gray = (r + g + b) / 3 or 1e-3
+    out["temperature"] = round(clamp((b - r) / gray * 120, -40, 40))
+    out["tint"] = round(clamp((g - (r + b) / 2) / gray * 120, -30, 30))
+    # colour: dull pictures get vibrance
+    mx, mn = a.max(axis=2), a.min(axis=2)
+    sat = float(np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0.0).mean())
+    out["vibrance"] = round(clamp((0.38 - sat) * 160, -10, 40))
+    out["sharpness"] = 20
+    return out
 
 
 # ---------- EXIF write-back (JPEG only; DB is always source of truth) ----------

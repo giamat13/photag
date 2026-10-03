@@ -39,6 +39,18 @@ def get(con, pid: int) -> dict | None:
     return json.loads(text)
 
 
+def read_file(con, pid: int) -> dict | None:
+    """The photo's EXIF read from the file right now, nothing stored (catalog mode switched off). A photo whose
+    file was edited into the file the old way is read from its pristine copy. None if it cannot be read."""
+    r = con.execute("SELECT id, rel_path, orig_backup FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r:
+        return None
+    p = source_path(r)
+    if not p.is_file() or cloud.is_online_only(p):
+        return None
+    return json.loads(images.exif_json_text(p))
+
+
 def backfill_batch(con, after_id: int = 0, limit: int = 50) -> tuple[int, int]:
     """Fills in up to `limit` photos that have no stored EXIF yet, with ids above `after_id`.
     Returns (done, last_id): `done` photos were filled in; last_id is where the next batch continues

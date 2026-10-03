@@ -1407,6 +1407,7 @@ function renderMeta(ids, d){
     ${!multi && (d.camera_model || d.lens || d.focal_length) ? `<div class="kv"><span>${t("Camera")}</span><span>${esc([d.camera_make, d.camera_model].filter(Boolean).join(' ')) || '—'}</span></div>
     ${d.lens ? `<div class="kv"><span>${t("Lens")}</span><span>${esc(d.lens)}</span></div>` : ''}
     ${d.focal_length ? `<div class="kv"><span>${t("Focal Length")}</span><span dir="ltr">${ltr(d.focal_length+' mm')}${d.focal_length_35mm?' '+ltr('('+d.focal_length_35mm+' mm '+t('equiv.')+')'):''}</span></div>` : ''}` : ''}
+    ${multi?'':`<details class="exif-all" id="m-exifall"><summary>${t("All EXIF tags")}</summary><div class="hint" id="m-exifbox">${t("Loading…")}</div></details>`}
     <div class="meta-sub">${t("Location")}</div>
     ${multi?`<div class="kv"><span>GPS</span>${MIX}</div><div class="btnrow"><button id="m-showmap">${I('pin')} ${t('Show the selected photos on the map')}</button></div>`:`
     <div class="kv"><span>${t("Latitude")}</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>
@@ -1419,6 +1420,19 @@ function renderMeta(ids, d){
     <div class="kv"><span>${t("Imported")}</span>${fdate(d.imported_at)}</div>
     <div class="btnrow"><button id="m-exif" title="${t("Write the description, date and location into the JPG file (Ctrl+S)")}">${t("Save Metadata to File")}</button><button id="m-reveal" title="Ctrl+R">${t("Show in Explorer")}</button></div>`}`;
   if(!multi && d.lat!=null && $('#mini-map')) drawMiniMap(d);
+  const ex=$('#m-exifall'); if(ex) ex.addEventListener('toggle', ()=>{ if(ex.open) loadExif(d.id); }, {once:true});
+}
+// Every EXIF tag of the photo: from the catalog database (read from the file once and kept), or straight from the file when
+// the catalog mode is switched off in Preferences.
+async function loadExif(id){
+  const box=$('#m-exifbox'); if(!box) return;
+  let r; try{ r = await api(`/api/photo/${id}/exif`); }catch(e){ box.textContent=t('No EXIF information available'); return; }
+  if(!$('#m-exifbox') || DETAIL?.id!==id) return;
+  const groups = Object.entries(r.exif||{}).filter(([,v])=>v && Object.keys(v).length);
+  const fmtv = v => Array.isArray(v) ? v.join(', ') : (v!==null && typeof v==='object') ? JSON.stringify(v) : String(v);
+  $('#m-exifbox').outerHTML = `<div id="m-exifbox">
+    <div class="hint" style="padding:0">${r.source==='catalog' ? t('From the catalog') : t('Read from the file')}</div>
+    ${groups.length ? groups.map(([g,tags])=>`<div class="lbl-sub" style="padding:0">${esc(g)}</div>`+Object.entries(tags).map(([k,v])=>`<div class="kv exif-kv"><span title="${esc(k)}">${esc(k)}</span><span dir="ltr" title="${esc(fmtv(v))}">${esc(fmtv(v))}</span></div>`).join('')).join('') : `<div class="hint" style="padding:0">${t('No EXIF information available')}</div>`}</div>`;
 }
 $('#p-meta').addEventListener('click', e=>{
   const s=e.target.closest('[data-mr]'); if(s){ const n=+s.dataset.mr, p=actPhoto(); setRating(p&&p.rating===n&&targets().length===1?0:n); setTimeout(renderRight, 50); return; }
@@ -1477,7 +1491,11 @@ async function setModule(m){
 
 // ---------- develop ----------
 const DEV = {id:null, ops:null, saved:null, hist:[], crop:false, before:false, dirty:false, last:pref.get('lastDev', null)};
-const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1]});
+const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1],
+  exp:0, hi:0, sh:0, temp:0, tint:0, vib:0, cla:0, shp:0, blr:0, vig:0, sep:0, fh:false, fv:false});
+// slider key -> develop-setting name, for the settings that change the picture itself (the server draws their preview)
+const TONEK = {exp:'exposure', hi:'highlights', sh:'shadows', temp:'temperature', tint:'tint', vib:'vibrance', cla:'clarity', shp:'sharpness', blr:'blur', vig:'vignette', sep:'sepia'};
+const toneApi = o => { const r={}; for(const [k,n] of Object.entries(TONEK)) if(o[k]) r[n] = k==='exp' ? o[k]/100 : o[k]; return r; };
 const fac = (v, lo) => v>=0 ? 1+v/100 : 1+(v/100)*(1-lo);
 const unfac = (f, lo) => f==null ? 0 : Math.round(f>=1 ? (f-1)*100 : (f-1)/(1-lo)*100);
 const PRESETS = [
@@ -1487,7 +1505,10 @@ const PRESETS = [
   [t('Vivid and Colorful'), {sat:40, con:15}],
   [t('Muted'), {sat:-40, con:-10}],
   [t('Light and Airy'), {bri:20, con:-15, sat:-10}],
-  [t('Dark and Dramatic'), {bri:-15, con:35, sat:-15}],
+  [t('Dark and Dramatic'), {bri:-15, con:35, sat:-15, vig:-35}],
+  [t('Warm Sepia'), {sep:70, vig:-25, con:10}],
+  [t('Warm Glow'), {temp:30, vib:20, hi:-15}],
+  [t('Cool Tones'), {temp:-30, tint:5, con:8}],
 ];
 async function devOpen(){
   const p=actPhoto();
@@ -1497,12 +1518,15 @@ async function devOpen(){
   DEV.id=p.id;
   const d=await api('/api/photo/'+p.id); if(DEV.id!==p.id) return;
   const o = d.edit_ops ? JSON.parse(d.edit_ops) : {};
-  DEV.ops = {bri:unfac(o.brightness,.3), con:unfac(o.contrast,.3), sat:unfac(o.saturation,0), gray:!!o.grayscale,
-             rot:o.rotate||0, crop:o.crop&&o.crop.length===4?o.crop:[0,0,1,1]};
+  DEV.ops = {...NEUTRAL(), bri:unfac(o.brightness,.3), con:unfac(o.contrast,.3), sat:unfac(o.saturation,0), gray:!!o.grayscale,
+             rot:o.rotate||0, crop:o.crop&&o.crop.length===4?o.crop:[0,0,1,1], fh:!!o.flip_h, fv:!!o.flip_v};
+  for(const [k,n] of Object.entries(TONEK)) if(o[n]) DEV.ops[k] = k==='exp' ? Math.round(o[n]*100) : o[n];
+  DEV.pvKey = null;
   DEV.saved = JSON.stringify(DEV.ops);
   DEV.hist=[{t:d.edited?t('Saved Settings'):t('Import'), ops:{...DEV.ops}}];
   const img=$('#dev-img'); img.onload=()=>{ layoutDev(); drawHisto(img); };
-  img.src = `/original/${p.id}${VER[p.id]?'?v='+VER[p.id]:''}`;
+  img.src = DEV.orig = `/original/${p.id}${VER[p.id]?'?v='+VER[p.id]:''}`;
+  devPreview();
   renderDevPanels(); renderToolbar(); updateNavigator();
 }
 async function devLeave(){ if(DEV.id!=null && DEV.dirty) await devApply(true); }
@@ -1522,6 +1546,9 @@ function layoutDev(){
   Object.assign(img.style, {width:w*s+'px', height:h*s+'px', left:(cw-w*s)/2+'px', top:(ch-h*s)/2+'px',
     transform:`rotate(${DEV.before?0:o.rot}deg)`,
     filter: DEV.before ? '' : `brightness(${fac(o.bri,.3)}) contrast(${fac(o.con,.3)}) saturate(${fac(o.sat,0)})${o.gray?' grayscale(1)':''}`});
+  const flip = !DEV.before && !DEV.crop && (o.fh || o.fv);                 // flips are applied last: mirror the picture around the visible centre
+  cv.style.transformOrigin = `${(c[0]+c[2])/2*cw}px ${(c[1]+c[3])/2*ch}px`;
+  cv.style.transform = flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '';
   $('#dev-badge').classList.toggle('hidden', !DEV.before);
   const ov=$('#crop-ov'); ov.classList.toggle('hidden', !DEV.crop);
   if(DEV.crop){ const k=o.crop; Object.assign(ov.style, {left:left+k[0]*cw+'px', top:top+k[1]*ch+'px', width:(k[2]-k[0])*cw+'px', height:(k[3]-k[1])*ch+'px'});
@@ -1532,40 +1559,64 @@ function devSet(changes, label){
   Object.assign(DEV.ops, changes);
   DEV.dirty = JSON.stringify(DEV.ops)!==DEV.saved;
   if(label) DEV.hist.push({t:label, ops:{...DEV.ops, crop:[...DEV.ops.crop]}});
-  layoutDev(); renderDevPanels(); renderToolbar();
+  layoutDev(); renderDevPanels(); renderToolbar(); devPreview();
 }
+// The sliders CSS cannot draw (highlights, white balance, sharpness, ...) are previewed by the server on a shrunk copy of the
+// original; the page then adds geometry and the simple sliders on top. Nothing is saved until Apply.
+async function devPreview(force){
+  if(DEV.id==null) return;
+  const id=DEV.id, api_=toneApi(DEV.ops), key=JSON.stringify(api_), img=$('#dev-img');
+  if(!force && key===DEV.pvKey) return;
+  DEV.pvKey = key; const seq = DEV.pvSeq = (DEV.pvSeq||0)+1;
+  if(DEV.before || !Object.keys(api_).length){ if(DEV.orig && !img.src.endsWith(DEV.orig)) img.src = DEV.orig; return; }
+  try{
+    const r = await fetch(`/api/photo/${id}/preview`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(api_)});
+    if(!r.ok || seq!==DEV.pvSeq || DEV.id!==id) return;
+    const url = URL.createObjectURL(await r.blob());
+    if(DEV.pvUrl) URL.revokeObjectURL(DEV.pvUrl);
+    DEV.pvUrl = url; img.src = url;
+  }catch(e){}
+}
+let _pvTimer=null;
+const devPreviewSoon = ()=>{ clearTimeout(_pvTimer); _pvTimer=setTimeout(devPreview, 160); };
 function renderDevPanels(){
   const o=DEV.ops || NEUTRAL(), dis = DEV.id==null ? 'disabled' : '';
-  const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="${t("Double-click to reset")}"><output>${o[k]>0?'+':''}${o[k]}</output></div>`;
+  const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="${t("Double-click to reset")}"><output>${dfmt(k,o[k])}</output></div>`;
   $('#p-basic').innerHTML = `
     <div class="dsec">${t("Treatment")}</div>
     <div class="treat"><a data-gray="0" class="${o.gray?'':'on'}">${t("Color")}</a><a data-gray="1" class="${o.gray?'on':''}">${t("Black & White")}</a></div>
-    <div class="dsec">${t("Tone")}</div>
-    ${sl('bri',t('Exposure'),'exp')}${sl('con',t('Contrast'),'con')}
-    <div class="dsec">${t("Presence")}</div>
-    ${sl('sat',t('Saturation'),'sat')}`;
+    <div class="dsec">${t("Light")}</div>
+    ${sl('exp',t('Exposure'),'exp',-300,300)}${sl('bri',t('Brightness'),'exp')}${sl('con',t('Contrast'),'con')}${sl('hi',t('Highlights'),'exp')}${sl('sh',t('Shadows'),'exp')}
+    <div class="dsec">${t("Color")}</div>
+    ${sl('temp',t('Temperature'),'temp')}${sl('tint',t('Tint'),'tint')}${sl('vib',t('Vibrance'),'sat')}${sl('sat',t('Saturation'),'sat')}
+    <div class="dsec">${t("Detail")}</div>
+    ${sl('cla',t('Clarity'),'',0,100)}${sl('shp',t('Sharpness'),'',0,100)}${sl('blr',t('Blur'),'',0,100)}
+    <div class="dsec">${t("Effects")}</div>
+    ${sl('vig',t('Vignette'),'exp')}${sl('sep',t('Sepia'),'',0,100)}`;
   const fine = Math.round((o.rot - Math.round(o.rot/90)*90)*10)/10;
   $('#p-transform').innerHTML = `
     <div class="dsl"><label for="d-straight">${t("Straighten")}</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
     <div class="btnrow90"><button data-rot="-90" ${dis}>${I('rotl')} 90°</button><button data-rot="90" ${dis}>90° ${I('rotr')}</button></div>
+    <div class="btnrow90"><button data-flip="h" class="${o.fh?'on':''}" ${dis}>${t("Flip horizontally")}</button><button data-flip="v" class="${o.fv?'on':''}" ${dis}>${t("Flip vertically")}</button></div>
     <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('Done Cropping (Enter)'):t('Crop (R)')}</button><button data-t="cropreset" ${dis}>${t("Reset Crop")}</button></div>`;
   $('#p-presets').innerHTML = PRESETS.map(([n],i)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${n}</span></div>`).join('');
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
 }
-const DLABEL = {bri:t('Exposure'), con:t('Contrast'), sat:t('Saturation')};
+const dfmt = (k,v)=>k==='exp' ? (v>0?'+':'')+(v/100).toFixed(2) : (v>0?'+':'')+v;
+const DLABEL = {bri:t('Brightness'), con:t('Contrast'), sat:t('Saturation'), exp:t('Exposure'), hi:t('Highlights'), sh:t('Shadows'), temp:t('Temperature'), tint:t('Tint'), vib:t('Vibrance'), cla:t('Clarity'), shp:t('Sharpness'), blr:t('Blur'), vig:t('Vignette'), sep:t('Sepia')};
 $('#right').addEventListener('input', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
   if(k==='straight'){ DEV.ops.rot = Math.round(DEV.ops.rot/90)*90 + v; }
   else DEV.ops[k]=v;
-  e.target.nextElementSibling.textContent = (v>0?'+':'')+v+(k==='straight'?'°':'');
-  DEV.dirty = true; layoutDev();
+  e.target.nextElementSibling.textContent = k==='straight' ? (v>0?'+':'')+v+'°' : dfmt(k,v);
+  DEV.dirty = true; layoutDev(); if(TONEK[k]) devPreviewSoon();
 });
 $('#right').addEventListener('change', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
-  devSet({}, k==='straight' ? `${t("Straighten")} ${v>0?'+':''}${v}°` : `${DLABEL[k]} ${v>0?'+':''}${v}`);
+  devSet({}, k==='straight' ? `${t("Straighten")} ${v>0?'+':''}${v}°` : `${DLABEL[k]} ${dfmt(k,v)}`);
 });
 $('#right').addEventListener('dblclick', e=>{
   const k=e.target.dataset?.k; if(!k || DEV.id==null) return;
@@ -1574,8 +1625,9 @@ $('#right').addEventListener('dblclick', e=>{
 $('#right').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
   const g=e.target.closest('[data-gray]'); if(g){ const on=g.dataset.gray==='1'; if(on!==DEV.ops.gray) devSet({gray:on}, on?t('Black & White'):t('Color')); return; }
-  const r=e.target.closest('[data-rot]'); if(r){ const d=+r.dataset.rot; const k=DEV.ops.crop, c = d>0 ? [1-k[3],k[0],1-k[1],k[2]] : [k[1],1-k[2],k[3],1-k[0]];
-    let rot=DEV.ops.rot+d; if(rot>180) rot-=360; if(rot<=-180) rot+=360; devSet({rot, crop:c}, d>0?t('Rotate Right'):t('Rotate Left')); return; }
+  const fl=e.target.closest('[data-flip]'); if(fl){ const h=fl.dataset.flip==='h'; devSet(h?{fh:!DEV.ops.fh}:{fv:!DEV.ops.fv}, h?t('Flip horizontally'):t('Flip vertically')); return; }
+  const r=e.target.closest('[data-rot]'); if(r){ let d=+r.dataset.rot; if(!!DEV.ops.fh!==!!DEV.ops.fv) d=-d; const k=DEV.ops.crop, c = d>0 ? [1-k[3],k[0],1-k[1],k[2]] : [k[1],1-k[2],k[3],1-k[0]];
+    let rot=DEV.ops.rot+d; if(rot>180) rot-=360; if(rot<=-180) rot+=360; devSet({rot, crop:c}, +r.dataset.rot>0?t('Rotate Right'):t('Rotate Left')); return; }
   const tg=e.target.closest('[data-t]')?.dataset.t;
   if(tg==='crop') devCropToggle();
   if(tg==='cropreset') devSet({crop:[0,0,1,1]}, t('Reset Crop'));
@@ -1587,7 +1639,7 @@ $('#left').addEventListener('click', e=>{
   const h=e.target.closest('[data-hist]'); if(h){ const s=DEV.hist[+h.dataset.hist]; devSet({...s.ops, crop:[...s.ops.crop]}); }
 });
 function devCropToggle(){ if(DEV.id==null) return; DEV.crop=!DEV.crop; if(!DEV.crop) devSet({}, t('Crop')); else { layoutDev(); renderDevPanels(); renderToolbar(); } }
-function devBefore(){ if(DEV.id==null) return; DEV.before=!DEV.before; layoutDev(); renderToolbar(); }
+function devBefore(){ if(DEV.id==null) return; DEV.before=!DEV.before; devPreview(true); layoutDev(); renderToolbar(); }
 $('#crop-ov').addEventListener('mousedown', e=>{
   e.preventDefault();
   const ov=$('#crop-ov'), b=ov._box, h=e.target.dataset.h || 'move', start=[...DEV.ops.crop], sx=e.clientX, sy=e.clientY;
@@ -1604,7 +1656,8 @@ $('#crop-ov').addEventListener('mousedown', e=>{
 function devOpsToApi(o){
   const full = o.crop.every((v,i)=>Math.abs(v-[0,0,1,1][i])<1e-3);
   return {rotate:o.rot||null, crop: full?null:o.crop.map(v=>Math.round(v*10000)/10000),
-    brightness:fac(o.bri,.3), contrast:fac(o.con,.3), saturation:fac(o.sat,0), grayscale:o.gray||null};
+    brightness:fac(o.bri,.3), contrast:fac(o.con,.3), saturation:fac(o.sat,0), grayscale:o.gray||null,
+    ...toneApi(o), flip_h:o.fh||null, flip_v:o.fv||null};
 }
 async function devApply(silent){
   if(DEV.id==null) return;
@@ -1614,13 +1667,25 @@ async function devApply(silent){
   const d=await api('/api/photo/'+id);
   const p=S.byId.get(id); if(p) Object.assign(p, {width:d.width, height:d.height, edited:d.edited, bytes:d.bytes});
   VER[id]=Date.now();
-  DEV.last = {bri:ops.bri, con:ops.con, sat:ops.sat, gray:ops.gray}; pref.set('lastDev', DEV.last);
+  DEV.last = {bri:ops.bri, con:ops.con, sat:ops.sat, gray:ops.gray, exp:ops.exp, hi:ops.hi, sh:ops.sh, temp:ops.temp, tint:ops.tint, vib:ops.vib, cla:ops.cla, shp:ops.shp, blr:ops.blr, vig:ops.vig, sep:ops.sep}; pref.set('lastDev', DEV.last);
   if(DEV.id===id){ DEV.saved=JSON.stringify(DEV.ops); DEV.dirty=false; renderToolbar(); }
   G.cells.forEach(c=>{ if(+c.dataset.id===id){ const img=c.querySelector('img'); if(img) img.src=thumbUrl(id); } });
   renderFilm(true); renderColls();
   if(!silent) toast(t('Settings applied · original kept'));
 }
 $('#btn-dev-apply').onclick = ()=>devApply();
+// Auto: the server looks at the picture and works out what it needs; the result goes onto the sliders and is applied at once
+// (it is an ordinary edit: it shows in History and Reset / Revert take it back).
+$('#btn-dev-auto').onclick = async ()=>{
+  if(DEV.id==null) return;
+  toast(t('Improving the photo…'), 1500);
+  let r; try{ r = await send('POST', `/api/photo/${DEV.id}/auto`); }catch(e){ return; }
+  const a = r.ops||{};
+  devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, gray:DEV.ops.gray, fh:DEV.ops.fh, fv:DEV.ops.fv,
+    exp:Math.round((a.exposure||0)*100), hi:a.highlights||0, sh:a.shadows||0, con:unfac(a.contrast,.3), temp:a.temperature||0,
+    tint:a.tint||0, vib:a.vibrance||0, shp:a.sharpness||0}, t('Auto'));
+  await devApply(true); toast(t('Auto: the photo was improved · original kept'));
+};
 $('#btn-dev-reset').onclick = ()=>{ if(DEV.id!=null) devSet(NEUTRAL(), t('Reset')); };
 $('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast(t('No settings have been applied to another photo yet')); devSet({...DEV.last}, t('Previous Settings')); };
 $('#btn-dev-revert').onclick = async ()=>{
@@ -1753,12 +1818,14 @@ async function storageBreakdown(){
   </div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
 }
 async function preferences(){
-  const [s, ai, rf0, beta] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta')]);
+  const [s, ai, rf0, beta, cat] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta'), api('/api/catalog-edits')]);
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
     <label class="chkrow"><input type="checkbox" id="pf-upd" ${pref.get('autoUpdate', true) ? 'checked' : ''}> ${t('Check for updates automatically once a day')}</label>
     <label class="chkrow"><input type="checkbox" id="pf-beta" ${beta.on ? 'checked' : ''}> ${t('Tester mode: also offer pre-release versions')}</label>
+    <label class="chkrow"><input type="checkbox" id="pf-cat" ${cat.on ? 'checked' : ''}> ${t('Keep edits and EXIF in the catalog database, never in the photo file')}</label>
+    <div class="hint" style="padding:0">${t('On: edits are saved as settings in the catalog and the photo file is never changed; the EXIF shown comes from the catalog. Off: edits are written into the photo file (a copy of the original is kept) and the EXIF is read from the file.')}</div>
     <div class="lbl-sub" style="padding:0">${t('Automatic import')}</div>
     <label class="chkrow"><input type="checkbox" id="ai-on"> ${t('Import new photos automatically from a folder')}</label>
     <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
@@ -1773,6 +1840,7 @@ async function preferences(){
     <button id="pf-ai">${t("AI tagging settings")}</button><button class="primary" id="pf-faces">${t("Detect Faces")}</button></div>`);
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
   $('#pf-beta').onchange=e=>send('POST', '/api/update/beta', {on: e.target.checked});
+  $('#pf-cat').onchange=e=>send('POST', '/api/catalog-edits', {on: e.target.checked}).then(()=>toast(e.target.checked ? t('Edits and EXIF are kept in the catalog') : t('Edits will be written into the photo files')));
   $('#pf-ai').onclick=()=>{ closeModal(); aiSettings(); };
   $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('Face Detection')); };
   let cur = ai;

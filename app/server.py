@@ -121,7 +121,7 @@ def _edit_migrate_loop():
     skip: set = set()
     while True:
         try:
-            if not _other_job_running():
+            if config.get_catalog_edits() and not _other_job_running():
                 ok, bad = render.migrate_batch(db.connect(), skip, 20)
                 if ok + bad:
                     print(f"edited photos moved to the new model: {ok} migrated, {bad} refused {dict(render.REFUSED)}", file=sys.stderr, flush=True)
@@ -1093,6 +1093,19 @@ class EditIn(BaseModel):
     contrast: float | None = None
     saturation: float | None = None
     grayscale: bool | None = None
+    exposure: float | None = None        # stops (EV), -3..3
+    highlights: float | None = None      # -100..100
+    shadows: float | None = None
+    temperature: float | None = None
+    tint: float | None = None
+    vibrance: float | None = None
+    clarity: float | None = None         # 0..100
+    sharpness: float | None = None
+    blur: float | None = None
+    vignette: float | None = None        # negative darkens the corners, positive lightens them
+    sepia: float | None = None
+    flip_h: bool | None = None
+    flip_v: bool | None = None
 
 
 _is_neutral = render.is_neutral
@@ -1157,7 +1170,27 @@ def _set_look_locked(con, r, ops):
     images.make_thumb(look, r["sha256"])
 
 
+def _ensure_backup(con, r):
+    """Catalog mode is off and a photo is about to be edited into its file: keep the untouched original once
+    (the same pristine copy the old versions made), so the edit stays reversible. Returns the fresh row."""
+    import shutil
+    src = PATHS.media / r["rel_path"]
+    bdir = PATHS.media / ".originals"
+    bdir.mkdir(exist_ok=True)
+    bpath = bdir / f"{r['id']}_{r['filename']}"
+    if not bpath.exists():
+        shutil.copy2(src, bpath)
+    con.execute("UPDATE photos SET orig_backup=? WHERE id=?", (str(bpath.relative_to(PATHS.media)), r["id"]))
+    con.commit()
+    render.drop_renders(r["id"])
+    return con.execute("SELECT * FROM photos WHERE id=?", (r["id"],)).fetchone()
+
+
 def _render(con, r, ops: dict):
+    if not config.get_catalog_edits():                    # the user chose to write edits into the photo file
+        if not r["orig_backup"]:
+            r = _ensure_backup(con, r)
+        return _render_legacy(con, r, ops)
     if r["orig_backup"] and not render.migrate_one(con, r):
         return _render_legacy(con, r, ops)
     if r["orig_backup"]:                                  # just migrated: look at the row as it is now
@@ -1194,6 +1227,8 @@ def rotate_image(pid: int, body: RotateIn):
     r = _editable(con, pid)
     ops = json.loads(r["edit_ops"]) if r["edit_ops"] else {}
     d = 90 if body.degrees > 0 else -90
+    if bool(ops.get("flip_h")) != bool(ops.get("flip_v")):      # the flip is applied last: a mirrored picture turns the other way
+        d = -d
     ops["rotate"] = (float(ops.get("rotate") or 0) + d + 180) % 360 - 180
     c = ops.get("crop")
     if c and len(c) == 4:
@@ -1205,11 +1240,55 @@ def rotate_image(pid: int, body: RotateIn):
 
 @app.get("/api/photo/{pid}/exif")
 def photo_exif(pid: int):
-    """Every EXIF tag of the photo's original file, from the catalog (read from the file and stored on first ask)."""
-    ex = exifindex.get(db.connect(), pid)
+    """Every EXIF tag of the photo's original file. From the catalog (read from the file and stored on first ask) --
+    or, when the catalog mode is switched off, read from the file itself each time."""
+    con = db.connect()
+    if config.get_catalog_edits():
+        ex, source = exifindex.get(con, pid), "catalog"
+    else:
+        ex, source = exifindex.read_file(con, pid), "file"
     if ex is None:
         raise err(404, "Photo not found or its file is not available right now")
-    return {"exif": ex}
+    return {"exif": ex, "source": source}
+
+
+class CatalogEditsIn(BaseModel):
+    on: bool
+
+@app.get("/api/catalog-edits")
+def catalog_edits_get():
+    return {"on": config.get_catalog_edits()}
+
+@app.post("/api/catalog-edits")
+def catalog_edits_set(body: CatalogEditsIn):
+    config.set_catalog_edits(body.on)
+    return {"on": config.get_catalog_edits()}
+
+
+def _original_path(con, pid):
+    r = con.execute("SELECT rel_path, orig_backup, is_video FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r or r["is_video"]:
+        raise err(400, "Cannot edit")
+    p = PATHS.media / (r["orig_backup"] or r["rel_path"])
+    if not p.is_file() or images.is_raw(p):
+        raise err(400, "Cannot edit")
+    return p
+
+
+@app.post("/api/photo/{pid}/preview")
+def edit_preview(pid: int, e: EditIn):
+    """Live preview of the Develop tone sliders: the original, shrunk, with only the tone settings applied.
+    Nothing is saved."""
+    p = _original_path(db.connect(), pid)
+    data = images.preview_tone(p, {k: v for k, v in e.dict(exclude_none=True).items() if k in images.TONE_KEYS})
+    return Response(data, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/photo/{pid}/auto")
+def edit_auto(pid: int):
+    """The "Auto" button: what this picture needs, worked out from the picture. Returned, not saved -- the page puts it
+    on the sliders and applies it like any other edit (so it shows in History and can be undone)."""
+    return {"ops": images.auto_ops(_original_path(db.connect(), pid))}
 
 
 @app.post("/api/photo/{pid}/revert")
