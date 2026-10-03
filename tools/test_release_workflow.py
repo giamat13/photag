@@ -32,7 +32,8 @@ check("signing is switched on only by repository variables + a secret (SIGNING e
 check("every signing step is conditional on it (an unconfigured build behaves exactly as before)", len(signing) == 7 and all(s.get("if") == "env.SIGNING == 'true'" for s in signing), len(signing))
 check("no non-signing step depends on signing", all("if" not in s or "SIGNING" not in str(s["if"]) for s in steps if s not in signing))
 check("the programs are signed AFTER PyInstaller and BEFORE the installer is built", idx("PyInstaller --noconfirm photag_backup.spec") < idx("Signing: collect the programs") < idx("Signing: put the signed programs back") < idx("Build the installer"))
-check("the installer is signed right after it is built, before anything is packaged or published", idx("Build the installer") < idx("Signing: upload the installer") < idx("Signing: put the signed installer back") < idx("Build the code update") < idx("Build the portable ZIP") < idx("Publish the release"))
+check("the installer is signed right after it is built, before anything is packaged or published", idx("Build the installer") < idx("Signing: upload the installer") < idx("Signing: put the signed installer back") < idx("Put a copy of the installer in a ZIP") < idx("Build the code update") < idx("Build the portable ZIP") < idx("Publish the release"))
+check("the ZIP copy of the installer contains the SIGNED installer (it is made after signing)", idx("Signing: put the signed installer back") < idx("Put a copy of the installer in a ZIP"))
 check("the portable ZIP is built after the programs are signed (it contains photag.exe)", idx("Signing: put the signed programs back") < idx("Build the portable ZIP"))
 sp = [s for s in signing if s.get("uses", "").startswith("signpath/")]
 check("two SignPath requests: one for the programs, one for the installer", [s["with"]["artifact-configuration-slug"] for s in sp] == ["programs", "installer"])
@@ -40,11 +41,12 @@ check("each waits for the result and names an output folder", all(s["with"]["wai
 check("the SignPath token is only ever referenced as the secret, never written in the file", all(x["with"]["api-token"] == "${{ secrets.SIGNPATH_API_TOKEN }}" for x in sp))
 check("the publish step still ships the installer, the code zip and the portable ZIP", all(f in steps[-1]["run"] for f in ("photagSetup.exe", "photag-code-", "-portable.zip")))
 plain = [name(x) for x in steps if x not in signing]
-check("without signing, the build is exactly the original 12 steps in the original order",
-      len(plain) == 12 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
+check("without signing, the build is exactly the usual 13 steps in the usual order (installer, its ZIP copy, code zip, portable ZIP, publish)",
+      len(plain) == 13 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
                                          "python tools/make_version_info.py", "python -m PyInstaller --noconfirm photag.spec", "python -m PyInstaller --noconfirm photag_backup.spec",
                                          "choco install innosetup --no-progress -y"]
-      and plain[8] == "Build the installer" and plain[9].startswith("Build the code update") and plain[10].startswith("Build the portable ZIP") and plain[11].startswith("Publish the release"), plain)
+      and plain[8] == "Build the installer" and plain[9].startswith("Put a copy of the installer in a ZIP") and plain[10].startswith("Build the code update")
+      and plain[11].startswith("Build the portable ZIP") and plain[12].startswith("Publish the release"), plain)
 
 # ---- tools/signing.py
 import signing  # noqa: E402
