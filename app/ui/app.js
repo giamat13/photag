@@ -2692,7 +2692,7 @@ function shortcuts(){
 function openExport(){
   const ids=targets().length ? targets() : [];
   if(!ids.length) return toast(t('Select photos to export'));
-  const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90, kind:'folder', xmp:false, title:'Photos'});
+  const last=pref.get('export', {dest:'', mode:'current', edge:2048, q:90, kind:'folder', xmp:false, meta:false, title:'Photos'});
   if(!['folder','zip','html'].includes(last.kind)) last.kind = last.zip ? 'zip' : 'folder';   // migrate the old boolean pref
   modal(`<h3>${t("Export {0} Files", [num(ids.length)])}</h3><div class="mb">
     <label class="fld"><span>${t('Export As')}</span><select id="ex-kind">
@@ -2709,6 +2709,8 @@ function openExport(){
     <div class="frow" id="ex-jpeg"><span>${t("Long Edge")}</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>${t("Pixels · Quality")}</span>
       <input type="range" id="ex-q" min="40" max="100" value="${last.q}" style="width:120px"><output id="ex-qv">${last.q}</output></div>
     <label class="check" id="ex-xmp-row" style="padding:4px 0 0"><input type="checkbox" id="ex-xmp" ${last.xmp?'checked':''}> ${t('Include an XMP sidecar (rating, label, keywords, people, caption)')}</label>
+    <label class="check" id="ex-meta-row" style="padding:4px 0 0"><input type="checkbox" id="ex-meta" ${last.meta?'checked':''}> ${t('Update the EXIF of the exported JPEG files and write the edit settings with the originals')}</label>
+    <p class="hint" id="ex-meta-hint" style="padding:0 0 0 24px">${t("The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.")}</p>
     <p id="ex-note">${t("Videos are always copied as they are. Duplicate file names get a number.")}</p>
   </div><div class="mf"><button onclick="closeModal()">${t("Cancel")}</button><button class="primary" id="ex-go">${t("Export")}</button></div>`);
   $('#ex-q').oninput=e=>$('#ex-qv').textContent=e.target.value;
@@ -2720,6 +2722,7 @@ function openExport(){
     $('#ex-title-row').classList.toggle('hidden', k!=='html');
     $('#ex-modes').classList.toggle('hidden', k==='html');
     $('#ex-xmp-row').classList.toggle('hidden', k==='html');
+    $('#ex-meta-row').classList.toggle('hidden', k==='html'); $('#ex-meta-hint').classList.toggle('hidden', k==='html');
     $('#ex-note').classList.toggle('hidden', k==='html');
   };
   $('#ex-kind').onchange = syncKind; syncKind();
@@ -2732,12 +2735,12 @@ function openExport(){
   };
   $('#ex-go').onclick=async()=>{
     const dest=$('#ex-dest').value.trim(), kind=$('#ex-kind').value, mode=$('input[name=ex-mode]:checked').value,
-      edge=+$('#ex-edge').value||null, q=+$('#ex-q').value, xmp=$('#ex-xmp').checked, title=$('#ex-title').value.trim()||'Photos';
+      edge=+$('#ex-edge').value||null, q=+$('#ex-q').value, xmp=$('#ex-xmp').checked, meta=$('#ex-meta').checked, title=$('#ex-title').value.trim()||'Photos';
     if(!dest) return toast(t('Choose a destination'));
-    pref.set('export', {dest, mode, edge:edge||2048, q, kind, xmp, title});
+    pref.set('export', {dest, mode, edge:edge||2048, q, kind, xmp, meta, title});
     closeModal();
     if(kind==='html') runJob('/api/export-html','export',t('Export'),{ids, dest, long_edge:edge, quality:q, title});
-    else runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip:kind==='zip', xmp});
+    else runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip:kind==='zip', xmp, update_metadata:meta});
   };
 }
 

@@ -1168,5 +1168,7 @@
  "Pre-release available": "Ön sürüm mevcut",
  "This is a pre-release: a test version that may still have bugs.": "Bu bir ön sürümdür: hâlâ hatalar içerebilecek bir test sürümü.",
  "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "Sürüm {0} bir ön sürümdür. Test modu kapalı olduğundan otomatik olarak önerilmez. Ön sürümlerin önerilmesi için Tercihler'de test modunu açın veya sürüm sayfasını açın.",
- "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "Daha yeni bir ön sürüm de mevcut: {0}. Ön sürümlerin önerilmesi için Tercihler'de test modunu açın."
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "Daha yeni bir ön sürüm de mevcut: {0}. Ön sürümlerin önerilmesi için Tercihler'de test modunu açın.",
+ "The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.": "Kopyalar, açıklamayı, çekim zamanını, konumu, puanı ve anahtar sözcükleri photag'daki güncel hâliyle alır; düzenlenmiş veya küçültülmüş olsalar bile kameranın EXIF'ini korur. Düzenlenmemiş bir orijinal, düzenleme ayarlarıyla birlikte XMP dosyasında dışa aktarılır. Kitaplık dosyalarınız asla değiştirilmez. Yalnızca JPEG.",
+ "Update the EXIF of the exported JPEG files and write the edit settings with the originals": "Dışa aktarılan JPEG dosyalarının EXIF'ini güncelle ve düzenleme ayarlarını orijinallerle birlikte yaz"
 }

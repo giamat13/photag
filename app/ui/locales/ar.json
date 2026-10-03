@@ -1168,5 +1168,7 @@
  "Pre-release available": "يتوفر إصدار تجريبي",
  "This is a pre-release: a test version that may still have bugs.": "هذا إصدار تجريبي: نسخة اختبار قد تحتوي على أخطاء.",
  "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "الإصدار {0} هو إصدار تجريبي. وضع المختبر متوقف، لذلك لا يُعرض تلقائيًا. فعّل وضع المختبر في التفضيلات ليُعرض عليك الإصدارات التجريبية، أو افتح صفحة الإصدار.",
- "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "يتوفر أيضًا إصدار تجريبي أحدث: {0}. فعّل وضع المختبر في التفضيلات ليُعرض عليك الإصدارات التجريبية."
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "يتوفر أيضًا إصدار تجريبي أحدث: {0}. فعّل وضع المختبر في التفضيلات ليُعرض عليك الإصدارات التجريبية.",
+ "The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.": "تحصل النسخ على التعليق ووقت الالتقاط والموقع والتقييم والكلمات المفتاحية كما هي الآن في photag، وتحتفظ ببيانات EXIF الخاصة بالكاميرا حتى بعد التعديل أو التصغير. يُصدَّر الأصل غير المعدّل مع إعدادات تعديله في ملف XMP الجانبي. لا تتغير ملفات مكتبتك أبدًا. JPEG فقط.",
+ "Update the EXIF of the exported JPEG files and write the edit settings with the originals": "حدّث بيانات EXIF لملفات JPEG المصدَّرة واكتب إعدادات التعديل مع النسخ الأصلية"
 }

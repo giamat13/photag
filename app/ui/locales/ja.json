@@ -1168,5 +1168,7 @@
  "Pre-release available": "プレリリース版が利用できます",
  "This is a pre-release: a test version that may still have bugs.": "これはプレリリース版です。まだ不具合が残っている可能性のあるテスト用バージョンです。",
  "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "バージョン {0} はプレリリース版です。テスターモードがオフのため、自動では案内されません。プレリリース版の案内を受けるには環境設定でテスターモードをオンにするか、リリースページを開いてください。",
- "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "さらに新しいプレリリース版もあります：{0}。プレリリース版の案内を受けるには、環境設定でテスターモードをオンにしてください。"
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "さらに新しいプレリリース版もあります：{0}。プレリリース版の案内を受けるには、環境設定でテスターモードをオンにしてください。",
+ "The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.": "コピーには、キャプション、撮影日時、位置情報、評価、キーワードが photag の現在の内容で書き込まれ、編集やリサイズをしてもカメラの EXIF が引き継がれます。未編集の元ファイルは、編集設定を XMP サイドカーに入れて書き出されます。ライブラリのファイルは変更されません。JPEG のみ。",
+ "Update the EXIF of the exported JPEG files and write the edit settings with the originals": "書き出す JPEG の EXIF を更新し、元ファイルには編集設定も書き込む"
 }

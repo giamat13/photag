@@ -462,6 +462,61 @@ def write_exif_jpeg(path: Path, description=None, taken_at=None, lat=None, lng=N
         return False
 
 
+def embed_exif(dst: Path, src: Path | None, *, description=None, taken_at=None, lat=None, lng=None, rating=None,
+               keywords=(), upright=False) -> bool:
+    """Writes EXIF into the JPEG `dst` (an EXPORTED copy, never a library file): all the tags of `src` (the original photo --
+    an edited render and a re-encoded copy have none of their own), then what the catalog knows on top: caption, capture
+    time, GPS, star rating and keywords. `upright` says dst's pixels are already turned the right way up (a render or a
+    re-encode), so Orientation becomes 1 -- otherwise a viewer would turn the picture a second time -- and the stored
+    pixel size is corrected; the camera's embedded thumbnail is dropped (it would show the unedited picture).
+    False if dst is not a JPEG or nothing could be written; a tag that cannot be carried over never stops the rest."""
+    if dst.suffix.lower() not in (".jpg", ".jpeg"):
+        return False
+    import datetime
+    import piexif
+    empty = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "Interop": {}, "thumbnail": None}
+    exif = dict(empty)
+    if src is not None:
+        try:
+            exif = piexif.load(str(src))
+        except Exception:
+            exif = dict(empty)                                         # no EXIF in the source (PNG, HEIC, damaged): the catalog's values only
+
+    def fill(e):
+        e["thumbnail"] = None
+        e["1st"] = {}
+        if upright:
+            e["0th"][piexif.ImageIFD.Orientation] = 1
+            try:
+                w, h = dimensions(dst)
+                e["Exif"][piexif.ExifIFD.PixelXDimension] = int(w)
+                e["Exif"][piexif.ExifIFD.PixelYDimension] = int(h)
+            except Exception:
+                pass
+        if description:
+            e["0th"][piexif.ImageIFD.ImageDescription] = str(description).encode("utf-8", "replace")
+        if taken_at:
+            dt = datetime.datetime.utcfromtimestamp(int(taken_at)).strftime("%Y:%m:%d %H:%M:%S").encode()
+            e["Exif"][piexif.ExifIFD.DateTimeOriginal] = dt
+            e["Exif"][piexif.ExifIFD.DateTimeDigitized] = dt
+        if lat is not None and lng is not None:
+            e["GPS"] = _gps_ifd(lat, lng)
+        if rating:
+            e["0th"][piexif.ImageIFD.Rating] = int(rating)
+        kw = [str(k) for k in keywords if k]
+        if kw:
+            e["0th"][piexif.ImageIFD.XPKeywords] = (";".join(kw) + "\x00").encode("utf-16le")
+        return e
+
+    for candidate in (exif, dict(empty)):                              # a tag piexif cannot write: retry with the catalog's values alone
+        try:
+            piexif.insert(piexif.dump(fill(candidate)), str(dst))
+            return True
+        except Exception:
+            continue
+    return False
+
+
 def _gps_ifd(lat, lng):
     import piexif
     def deg(v):

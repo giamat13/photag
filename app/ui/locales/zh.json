@@ -1168,5 +1168,7 @@
  "Pre-release available": "有预发布版可用",
  "This is a pre-release: a test version that may still have bugs.": "这是预发布版：仍可能存在错误的测试版本。",
  "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "版本 {0} 是预发布版。测试模式已关闭，因此不会自动提供。请在偏好设置中开启测试模式以获取预发布版，或打开发布页面。",
- "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "另有更新的预发布版可用：{0}。请在偏好设置中开启测试模式以获取预发布版。"
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "另有更新的预发布版可用：{0}。请在偏好设置中开启测试模式以获取预发布版。",
+ "The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.": "副本会写入 photag 中当前的说明文字、拍摄时间、位置、评分和关键字，并且即使经过编辑或缩小，也会保留相机的 EXIF。未编辑的原图导出时，会在 XMP 附属文件中带上它的编辑设置。你的图库文件永远不会被修改。仅限 JPEG。",
+ "Update the EXIF of the exported JPEG files and write the edit settings with the originals": "更新导出的 JPEG 文件的 EXIF，并将编辑设置与原图一起写入"
 }

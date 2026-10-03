@@ -228,6 +228,35 @@ try:
         pg.click("#modules [data-mod=develop]")
         pg.wait_for_timeout(800)
         check("re-opening Develop picks the stored settings up again", pg.input_value("#d-hi") == "-40" and pg.input_value("#d-temp") == "25", (pg.input_value("#d-hi"), pg.input_value("#d-temp")))
+        # ---- Export with "Update the EXIF ... and write the edit settings with the originals"
+        import piexif
+        call("PATCH", f"/api/photo/{A}", {"description": "UI caption"})
+        pg.click("#modules [data-mod=library]")
+        pg.wait_for_timeout(600)
+        cell("a_dark.jpg")
+        pg.evaluate("openExport()")
+        pg.wait_for_selector("#ex-meta", timeout=5000)
+        check("the export dialog has the 'Update the EXIF ...' checkbox, off by default", pg.locator("#ex-meta").count() == 1 and not pg.is_checked("#ex-meta"))
+        pg.select_option("#ex-kind", "html")
+        pg.wait_for_timeout(200)
+        check("...it is hidden for the HTML gallery (nothing to update there)", not pg.locator("#ex-meta").is_visible())
+        pg.select_option("#ex-kind", "folder")
+        pg.wait_for_timeout(200)
+        exp = tmp / "exported"
+        pg.fill("#ex-dest", str(exp))
+        pg.check("input[name=ex-mode][value=original]")
+        pg.check("#ex-meta")
+        pg.click("#ex-go")
+        for _ in range(60):
+            if call("GET", "/api/job/export")["state"] in ("done", "error"):
+                break
+            time.sleep(0.5)
+        files = sorted(exp.glob("*.jpg"))
+        e = piexif.load(str(files[0])) if files else {"0th": {}}
+        check("the export ran and the exported JPEG has the camera's EXIF plus the catalog's caption", len(files) == 1 and e["0th"].get(piexif.ImageIFD.Make) == b"UiMake" and e["0th"].get(piexif.ImageIFD.ImageDescription) == b"UI caption", e["0th"].get(270))
+        xmp = list(exp.glob("*.xmp"))
+        check("...and, as the photo is edited and the original was exported, an XMP sidecar with its edit settings", len(xmp) == 1 and "photag:EditSettings" in xmp[0].read_text("utf-8") and "crs:Highlights2012" in xmp[0].read_text("utf-8"))
+        check("...the choice is remembered for next time", pg.evaluate("pref.get('export', {}).meta") is True)
         check("no JavaScript errors", not errs, errs[:3])
         b.close()
 finally:

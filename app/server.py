@@ -1767,12 +1767,14 @@ class ExportIn(BaseModel):
     quality: int = 100
     zip: bool = False
     xmp: bool = False
+    update_metadata: bool = False      # write the catalog's EXIF into exported JPEGs; edit settings into the sidecar of unedited originals
 
 @app.post("/api/export")
 def start_export(body: ExportIn):
     if not body.ids or not body.dest.strip():
         raise err(400, "Missing items or destination folder")
-    _start("export", importer.run_export, body.ids, body.dest.strip(), body.originals,
+    import functools
+    _start("export", functools.partial(importer.run_export, update_metadata=body.update_metadata), body.ids, body.dest.strip(), body.originals,
            body.long_edge, max(10, min(100, body.quality)), body.zip, body.xmp)
     return {"ok": True}
 

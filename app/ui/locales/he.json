@@ -1168,5 +1168,7 @@
  "Pre-release available": "גרסת טרום-שחרור זמינה",
  "This is a pre-release: a test version that may still have bugs.": "זו גרסת טרום-שחרור: גרסת בדיקה שעדיין עשויה להכיל באגים.",
  "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "גרסה {0} היא גרסת טרום-שחרור. מצב בוחן כבוי, ולכן היא לא מוצעת אוטומטית. הפעל את מצב בוחן בהעדפות כדי לקבל הצעות לגרסאות טרום-שחרור, או פתח את דף השחרור.",
- "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "קיימת גם גרסת טרום-שחרור חדשה יותר: {0}. הפעל את מצב בוחן בהעדפות כדי לקבל הצעות לגרסאות טרום-שחרור."
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "קיימת גם גרסת טרום-שחרור חדשה יותר: {0}. הפעל את מצב בוחן בהעדפות כדי לקבל הצעות לגרסאות טרום-שחרור.",
+ "The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.": "העותקים מקבלים את הכיתוב, זמן הצילום, המיקום, הדירוג ומילות המפתח כפי שהם ב-photag עכשיו, ושומרים את ה-EXIF של המצלמה גם כשהם נערכו או הוקטנו. מקור שלא נערך מיוצא עם הגדרות העריכה שלו בקובץ ה-XMP. קובצי הספרייה שלך לא משתנים לעולם. JPEG בלבד.",
+ "Update the EXIF of the exported JPEG files and write the edit settings with the originals": "עדכן את ה-EXIF של קובצי ה-JPEG המיוצאים וכתוב את הגדרות העריכה יחד עם המקורות"
 }

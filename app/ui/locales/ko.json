@@ -1168,5 +1168,7 @@
  "Pre-release available": "프리릴리스 사용 가능",
  "This is a pre-release: a test version that may still have bugs.": "이것은 프리릴리스입니다. 아직 버그가 있을 수 있는 테스트 버전입니다.",
  "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "버전 {0}은(는) 프리릴리스입니다. 테스터 모드가 꺼져 있어 자동으로 제안되지 않습니다. 프리릴리스를 제안받으려면 환경설정에서 테스터 모드를 켜거나 릴리스 페이지를 여세요.",
- "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "더 최신 프리릴리스도 있습니다: {0}. 프리릴리스를 제안받으려면 환경설정에서 테스터 모드를 켜세요."
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "더 최신 프리릴리스도 있습니다: {0}. 프리릴리스를 제안받으려면 환경설정에서 테스터 모드를 켜세요.",
+ "The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.": "사본에는 캡션, 촬영 시간, 위치, 평점, 키워드가 지금 photag에 있는 그대로 기록되고, 편집하거나 크기를 줄여도 카메라의 EXIF가 유지됩니다. 편집하지 않은 원본은 편집 설정이 XMP 사이드카에 담겨 내보내집니다. 라이브러리 파일은 절대 바뀌지 않습니다. JPEG만 해당.",
+ "Update the EXIF of the exported JPEG files and write the edit settings with the originals": "내보내는 JPEG 파일의 EXIF를 업데이트하고 원본과 함께 편집 설정을 기록"
 }

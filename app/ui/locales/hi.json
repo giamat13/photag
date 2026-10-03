@@ -1168,5 +1168,7 @@
  "Pre-release available": "प्री-रिलीज़ उपलब्ध है",
  "This is a pre-release: a test version that may still have bugs.": "यह एक प्री-रिलीज़ है: एक टेस्ट संस्करण जिसमें अभी भी बग हो सकते हैं।",
  "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "संस्करण {0} एक प्री-रिलीज़ है। टेस्टर मोड बंद है, इसलिए यह अपने-आप नहीं सुझाया जाता। प्री-रिलीज़ पाने के लिए प्राथमिकताओं में टेस्टर मोड चालू करें, या रिलीज़ पेज खोलें।",
- "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "एक नया प्री-रिलीज़ भी उपलब्ध है: {0}। प्री-रिलीज़ पाने के लिए प्राथमिकताओं में टेस्टर मोड चालू करें।"
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "एक नया प्री-रिलीज़ भी उपलब्ध है: {0}। प्री-रिलीज़ पाने के लिए प्राथमिकताओं में टेस्टर मोड चालू करें।",
+ "The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.": "प्रतियों में कैप्शन, खींचने का समय, स्थान, रेटिंग और कीवर्ड वैसे ही आते हैं जैसे अभी photag में हैं, और संपादित या छोटी करने पर भी कैमरे का EXIF बना रहता है। बिना संपादित मूल फ़ाइल अपनी संपादन सेटिंग के साथ XMP साइडकार फ़ाइल में निर्यात होती है। आपकी लाइब्रेरी की फ़ाइलें कभी नहीं बदलतीं। केवल JPEG।",
+ "Update the EXIF of the exported JPEG files and write the edit settings with the originals": "निर्यात की गई JPEG फ़ाइलों का EXIF अपडेट करें और मूल फ़ाइलों के साथ संपादन सेटिंग लिखें"
 }

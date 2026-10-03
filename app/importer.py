@@ -1135,8 +1135,41 @@ def _xmp_escape(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
+def _unfac(f, lo) -> int:
+    """The develop page's slider position (-100..100) of a stored brightness/contrast/saturation factor."""
+    f = float(f)
+    return round((f - 1) * 100) if f >= 1 else round((f - 1) / (1 - lo) * 100)
+
+
+def _crs_settings(ops: dict) -> dict:
+    """The develop settings that have a counterpart in Lightroom's / Camera Raw's own XMP vocabulary (crs:), as strings.
+    Best effort: same idea and range, but another program may draw it slightly differently; the exact settings travel
+    separately in the photag: attribute. Settings without a clear counterpart (temperature, tint, blur, sepia, brightness,
+    flips, rotation) are left out, and a crop is written only when the picture is not rotated."""
+    out = {}
+    sgn = lambda v: f"{int(round(v)):+d}"
+    if ops.get("exposure"):
+        out["Exposure2012"] = f"{float(ops['exposure']):+.2f}"
+    if ops.get("contrast") not in (None, 1, 1.0):
+        out["Contrast2012"] = sgn(_unfac(ops["contrast"], .3))
+    for key, name in (("highlights", "Highlights2012"), ("shadows", "Shadows2012"), ("vibrance", "Vibrance"),
+                      ("clarity", "Clarity2012"), ("vignette", "PostCropVignetteAmount")):
+        if ops.get(key):
+            out[name] = sgn(ops[key])
+    if ops.get("saturation") not in (None, 1, 1.0):
+        out["Saturation"] = sgn(_unfac(ops["saturation"], 0))
+    if ops.get("sharpness"):
+        out["Sharpness"] = str(int(round(ops["sharpness"])))
+    if ops.get("grayscale"):
+        out["ConvertToGrayscale"] = "True"
+    c = ops.get("crop")
+    if c and len(c) == 4 and list(c) != [0, 0, 1, 1] and not (ops.get("rotate") or 0) % 360:
+        out.update(HasCrop="True", CropLeft=f"{c[0]:.6f}", CropTop=f"{c[1]:.6f}", CropRight=f"{c[2]:.6f}", CropBottom=f"{c[3]:.6f}", CropAngle="0")
+    return out
+
+
 def _xmp_sidecar(rating: int, label: str | None, tags: list[str], people: list[str], description: str | None,
-                  albums: list[str] = ()) -> str:
+                  albums: list[str] = (), edit_ops: dict | None = None) -> str:
     """A standard XMP packet carrying the metadata a plain file copy can't: star rating, color label,
     keywords (and people, as keywords) and caption -- readable by Lightroom, Bridge, digiKam and most
     other photo software. Everything embedded in the file itself (EXIF date/GPS/camera) isn't repeated.
@@ -1151,10 +1184,19 @@ def _xmp_sidecar(rating: int, label: str | None, tags: list[str], people: list[s
     subjects = [_xmp_escape(x) for x in (*tags, *people, *(f"Album/{a}" for a in albums)) if x]
     subject_block = ("<dc:subject><rdf:Bag>" + "".join(f"<rdf:li>{s}</rdf:li>" for s in subjects) + "</rdf:Bag></dc:subject>") if subjects else ""
     desc_block = (f'<dc:description><rdf:Alt><rdf:li xml:lang="x-default">{_xmp_escape(description)}</rdf:li></rdf:Alt></dc:description>') if description else ""
+    ns = ""
+    if edit_ops:                          # the edit settings of a photo exported WITHOUT its edits (the pixels are the original's)
+        import json as _json
+        crs = _crs_settings(edit_ops)
+        ns = (' xmlns:photag="https://github.com/giamat13/photag/ns/1.0/"'
+              f' photag:EditVersion="1" photag:EditSettings="{_xmp_escape(_json.dumps(edit_ops, sort_keys=True, separators=(",", ":")))}"')
+        if crs:
+            ns += (' xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/" crs:Version="15.0" crs:ProcessVersion="11.0" crs:HasSettings="True"'
+                   + "".join(f' crs:{k}="{_xmp_escape(v)}"' for k, v in crs.items()))
     return ('<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>\n'
             '<x:xmpmeta xmlns:x="adobe:ns:meta/">\n'
             ' <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n'
-            f'  <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xmp="http://ns.adobe.com/xap/1.0/"{attrs}>\n'
+            f'  <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xmp="http://ns.adobe.com/xap/1.0/"{attrs}{ns}>\n'
             f'   {subject_block}{desc_block}\n'
             '  </rdf:Description>\n'
             ' </rdf:RDF>\n'
@@ -1174,9 +1216,22 @@ def _photo_xmp_fields(con, pid: int) -> dict:
     return {"rating": r["rating"] or 0, "label": r["label"], "tags": tags, "people": people, "description": r["description"], "albums": albums}
 
 
+def _edit_settings_of(r) -> dict | None:
+    """The develop settings of a photo, if it has any worth carrying along (None otherwise)."""
+    import json
+    try:
+        ops = json.loads(r["edit_ops"]) if r["edit_ops"] else None
+    except ValueError:
+        return None
+    return ops if ops and not render.is_neutral(ops) else None
+
+
 def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None,
-               quality: int, as_zip: bool, xmp_sidecar: bool, progress: Progress):
-    """Copy (or re-encode as JPEG) the chosen photos into `dest` -- a folder, or (as_zip) a single ZIP file."""
+               quality: int, as_zip: bool, xmp_sidecar: bool, progress: Progress, update_metadata: bool = False):
+    """Copy (or re-encode as JPEG) the chosen photos into `dest` -- a folder, or (as_zip) a single ZIP file.
+    update_metadata: the exported JPEGs get the catalog's EXIF (all tags of the original, plus caption, capture time, GPS,
+    rating and keywords as they are in the catalog now -- a render or re-encode has none of its own), and a photo exported
+    as its UNEDITED original gets an XMP sidecar that carries its edit settings. Library files are never touched."""
     con = db.connect()
     progress.state = "exporting"; progress.total = len(ids); progress.done = 0
     out_dir = None
@@ -1193,8 +1248,8 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
         for pid in ids:
             progress.done += 1
             progress.say("{done}/{total}", done=progress.done, total=progress.total)
-            r = con.execute("SELECT id, sha256, filename, rel_path, orig_backup, is_video, edited, edit_ops FROM photos WHERE id=?",
-                            (pid,)).fetchone()
+            r = con.execute("SELECT id, sha256, filename, rel_path, orig_backup, is_video, edited, edit_ops, description, taken_at, lat, lng, rating "
+                            "FROM photos WHERE id=?", (pid,)).fetchone()
             if not r:
                 continue
             if originals:                                    # the untouched original: the library file, or the old model's pristine copy
@@ -1205,14 +1260,29 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
                 continue
             name = _safe_component(r["filename"])
             as_is = r["is_video"] or originals or (not long_edge and quality >= 100)
-            xmp_text = _xmp_sidecar(**_photo_xmp_fields(con, pid)) if xmp_sidecar else None
+            fields = _photo_xmp_fields(con, pid)
+            keep_edits = update_metadata and originals and not r["is_video"]            # the pixels are the original's: the edits go in the sidecar
+            xmp_text = _xmp_sidecar(**fields, edit_ops=_edit_settings_of(r) if keep_edits else None) if (xmp_sidecar or (keep_edits and _edit_settings_of(r))) else None
+            exif_src = PATHS.media / (r["orig_backup"] or r["rel_path"])                # the original: only it still has the camera's EXIF
+            upright = (not as_is) or (not originals and bool(r["edited"]))              # a render / re-encode is already turned the right way up
+            embed = update_metadata and not r["is_video"]
+
+            def embed_into(f: Path):
+                if embed:
+                    images.embed_exif(f, exif_src, description=r["description"], taken_at=r["taken_at"], lat=r["lat"], lng=r["lng"],
+                                      rating=r["rating"], keywords=[*fields["tags"], *fields["people"]], upright=upright)
             if as_zip:
                 arcname = _unique_name(name if as_is else Path(name).stem + ".jpg", used_names)
-                if as_is:
+                if as_is and not (embed and Path(arcname).suffix.lower() in (".jpg", ".jpeg")):
                     zf.write(src, arcname)
                 else:
+                    import shutil
                     tmp = tmp_dir / arcname
-                    images.export_resized(src, tmp, long_edge, quality)
+                    if as_is:
+                        shutil.copy2(src, tmp)
+                    else:
+                        images.export_resized(src, tmp, long_edge, quality)
+                    embed_into(tmp)
                     zf.write(tmp, arcname)
                     tmp.unlink(missing_ok=True)
                 if xmp_text:
@@ -1225,6 +1295,7 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
                 else:
                     out = _unique_dest(out_dir / (Path(name).stem + ".jpg"))
                     images.export_resized(src, out, long_edge, quality)
+                embed_into(out)
                 if xmp_text:
                     out.with_suffix(out.suffix + ".xmp").write_text(xmp_text, "utf-8")
         progress.state = "done"
