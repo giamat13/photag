@@ -9,5 +9,5 @@ second ("8.2"). Pre-releases add "-beta.N" ("9.0-beta.1"). "9.0" and "9.0.0" are
 The FIRST release in this scheme is written with three parts ("9.0.0" / "8.2.0"): programs that are already installed
 only recognise a code update whose version has three parts. From the one after it on, use the short form.
 """
-__version__ = "1.8.1"
+__version__ = "9.0.0"
 REPO = "giamat13/photag"
