@@ -22,9 +22,9 @@ PORT, MOCK = 8797, 8798
 APP = f"http://127.0.0.1:{PORT}"
 tmp = Path(tempfile.mkdtemp(prefix="photag_preui_"))
 res = []
-PRE = {"tag_name": "v9.0.0-beta.1", "body": "## Pre notes\n- try the new thing", "html_url": "https://example.invalid/pre", "published_at": "2026-10-03T00:00:00Z", "assets": [], "prerelease": True}
+PRE = {"tag_name": "v99.0.0-beta.1", "body": "## Pre notes\n- try the new thing", "html_url": "https://example.invalid/pre", "published_at": "2026-10-03T00:00:00Z", "assets": [], "prerelease": True}
 OLD = {"tag_name": "v1.0.0", "body": "old", "html_url": "https://example.invalid/old", "published_at": "2026-01-01T00:00:00Z", "assets": [], "prerelease": False}
-NEW = {"tag_name": "v8.0.0", "body": "## Stable notes\n- stable thing", "html_url": "https://example.invalid/new", "published_at": "2026-10-01T00:00:00Z", "assets": [], "prerelease": False}
+NEW = {"tag_name": "v98.0.0", "body": "## Stable notes\n- stable thing", "html_url": "https://example.invalid/new", "published_at": "2026-10-01T00:00:00Z", "assets": [], "prerelease": False}
 STATE = {"pre": True, "stable": OLD}
 
 
@@ -80,7 +80,7 @@ try:
     o = call("GET", "/api/update/check?force=1")
     check("API, tester off, plain check: no pre-release is mentioned", o["pre"] is None and not o["available"], o)
     o = call("GET", "/api/update/check?force=1&pre=1")
-    check("API, tester off, manual check (pre=1): the pre-release is reported", o["pre"] and o["pre"]["latest"] == "9.0.0-beta.1" and not o["available"], o["pre"])
+    check("API, tester off, manual check (pre=1): the pre-release is reported", o["pre"] and o["pre"]["latest"] == "99.0.0-beta.1" and not o["available"], o["pre"])
 
     with sync_playwright() as pw:
         exe = os.environ.get("PHOTAG_TEST_BROWSER")
@@ -100,7 +100,7 @@ try:
         ev("updateCheck(true)")
         pg.wait_for_selector(".pre-banner", timeout=10000)
         t = text()
-        check("tester OFF, MANUAL check: a pre-release window appears", "Pre-release available" in t and "9.0.0-beta.1" in t, t[:80].replace("\n", " "))
+        check("tester OFF, MANUAL check: a pre-release window appears", "Pre-release available" in t and "99.0.0-beta.1" in t, t[:80].replace("\n", " "))
         check("...with the big PRE-RELEASE banner", "PRE-RELEASE" in t)
         fs = ev("parseFloat(getComputedStyle(document.querySelector('.pre-banner')).fontSize)")
         w = ev("document.querySelector('.pre-banner').getBoundingClientRect().width")
@@ -120,7 +120,7 @@ try:
         pg.wait_for_selector("#up-go", timeout=10000)
         t = text()
         check("tester ON: the update window shows the PRE-RELEASE banner", ev("!!document.querySelector('.pre-banner')") and "PRE-RELEASE" in t)
-        check("...titled 'Pre-release available' with the version", "Pre-release available" in t and "9.0.0-beta.1" in t)
+        check("...titled 'Pre-release available' with the version", "Pre-release available" in t and "99.0.0-beta.1" in t)
         check("...and keeps its Skip / Later buttons", ev("!!document.querySelector('#up-skip') && !!document.querySelector('#up-later')"))
         if os.environ.get("PHOTAG_TEST_SHOTS"):
             pg.screenshot(path=str(Path(os.environ["PHOTAG_TEST_SHOTS"]) / "prerelease_tester.png"))
@@ -129,7 +129,7 @@ try:
         ev("pref.set('updateCheckedAt', Date.now() - 25*3600*1000)")
         ev("autoUpdateTick()")
         pg.wait_for_selector(".pre-banner", timeout=10000)
-        check("tester ON: the automatic check offers it with the banner too", "9.0.0-beta.1" in text())
+        check("tester ON: the automatic check offers it with the banner too", "99.0.0-beta.1" in text())
         ev("closeModal()")
 
         # ---- a stable update never gets the banner
@@ -138,8 +138,8 @@ try:
         ev("updateCheck(true)")
         pg.wait_for_selector("#up-go", timeout=10000)
         t = text()
-        check("a STABLE update: normal window, no banner", "Update available" in t and "8.0.0" in t and not ev("!!document.querySelector('.pre-banner')"))
-        check("...and, tester OFF, it still mentions the newer pre-release (manual check) without offering it", "A newer pre-release is also available" in t and "9.0.0-beta.1" in t)
+        check("a STABLE update: normal window, no banner", "Update available" in t and "98.0.0" in t and not ev("!!document.querySelector('.pre-banner')"))
+        check("...and, tester OFF, it still mentions the newer pre-release (manual check) without offering it", "A newer pre-release is also available" in t and "99.0.0-beta.1" in t)
         ev("closeModal()")
 
         # ---- nothing at all

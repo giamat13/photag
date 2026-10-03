@@ -103,7 +103,7 @@ try:
         check("start-up check remembered when it ran", ev("pref.get('updateCheckedAt', 0)") > time.time() * 1000 - 60000)
 
         # a newer release appears; less than a day since the last check: nothing happens
-        STATE["tag"] = "v9.9.9"
+        STATE["tag"] = "v99.9.9"
         hits = STATE["hits"]
         ev("autoUpdateTick()"); pg.wait_for_timeout(800)
         check("less than a day since the last check: no request, no window", hidden() and STATE["hits"] == hits)
@@ -113,7 +113,7 @@ try:
         ev("autoUpdateTick()")
         pg.wait_for_selector("#up-skip", timeout=8000)
         txt = ev("document.querySelector('#modal-box').innerText")
-        check("a day later the update window appears by itself", "9.9.9" in txt and "Mock release" in txt, txt[:60].replace("\n", " "))
+        check("a day later the update window appears by itself", "99.9.9" in txt and "Mock release" in txt, txt[:60].replace("\n", " "))
         check("...and the check time was renewed", ev("pref.get('updateCheckedAt', 0)") > time.time() * 1000 - 60000)
         ev("closeModal()")
 
@@ -122,7 +122,7 @@ try:
         ev("backupDialog()"); pg.wait_for_timeout(600)
         hits = STATE["hits"]
         ev("autoUpdateTick()"); pg.wait_for_timeout(600)
-        check("another dialog is open: the check waits (no request)", STATE["hits"] == hits and "9.9.9" not in ev("document.querySelector('#modal-box').innerText"))
+        check("another dialog is open: the check waits (no request)", STATE["hits"] == hits and "99.9.9" not in ev("document.querySelector('#modal-box').innerText"))
         ev("closeModal()")
         ev("autoUpdateTick()")
         pg.wait_for_selector("#up-skip", timeout=8000)
