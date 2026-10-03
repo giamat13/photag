@@ -118,10 +118,9 @@ The location pointer is stored in `%APPDATA%\photag\config.json` and can be chan
 - Your AI key is stored encrypted with Windows DPAPI (readable only by your Windows user).
 
 ## Windows says the installer is blocked (Smart App Control)
-_Code signing is being prepared (see [docs/CODE_SIGNING_POLICY.md](docs/CODE_SIGNING_POLICY.md)): once the free certificate for open-source projects
-is granted, releases will be signed and this section will no longer apply to them._
+_Releases are not code-signed yet (see [docs/CODE_SIGNING_POLICY.md](docs/CODE_SIGNING_POLICY.md)); the signing steps are ready in the release workflow and will be switched on once a signing service is set up._
 
-photag is not code-signed yet (a signing certificate costs money; we are applying for free signing for open-source projects). Windows 11
+photag is not code-signed yet (a signing certificate costs money; the application to the free signing program for open-source projects was declined for now). Windows 11
 **Smart App Control** (when it is on) blocks unsigned programs it does not know, with no "run anyway" button. SmartScreen only warns
 ("More info" → "Run anyway"). If the installer is blocked:
 1. Right-click `photagSetup.exe` → Properties → tick **Unblock** if shown, OK, and run it again. Or run it from File Explorer instead of a terminal.
@@ -202,5 +201,4 @@ Not bundled, and therefore not covered by this license:
 4. People → name or correct the names. Catalog / collections / keywords → browse and search.
 
 ## Code signing
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org) (once granted; until
-then releases are unsigned). Policy, roles and privacy statement: [docs/CODE_SIGNING_POLICY.md](docs/CODE_SIGNING_POLICY.md).
+Not signed yet. Policy, status and privacy statement: [docs/CODE_SIGNING_POLICY.md](docs/CODE_SIGNING_POLICY.md).

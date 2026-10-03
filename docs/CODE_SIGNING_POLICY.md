@@ -1,9 +1,11 @@
 # Code signing policy
 
-photag's Windows programs (`photag.exe`, `photag-backup.exe` and the installer `photagSetup.exe`) are signed so that Windows can tell they
+When signing is on, photag's Windows programs (`photag.exe`, `photag-backup.exe` and the installer `photagSetup.exe`) are signed so that Windows can tell they
 come from this project and were not changed afterwards (this is what Windows Smart App Control and SmartScreen look for).
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+**Status: releases are not signed yet.** The release workflow already contains the signing steps (they stay off until a signing service is
+configured, see the end of this page). The application to the free [SignPath Foundation](https://signpath.org) program was declined for now
+because the project is still young; a paid signing service or a later re-application are the options.
 
 ## What is signed
 Only files built by this repository's own GitHub Actions workflow ([`release.yml`](../.github/workflows/release.yml)) from the public source
@@ -34,8 +36,8 @@ Open an issue at <https://github.com/giamat13/photag/issues>.
 ## For the maintainer: how to switch signing on
 Signing is built into the release workflow but stays OFF until these exist (so a normal build is unchanged without them):
 
-1. **Apply** for the free certificate at <https://signpath.org/apply> (open-source projects; this repository is public and GPL-3.0). Link this
-   page when asked for the code signing policy.
+1. **Get a signing service.** The workflow is written for [SignPath](https://signpath.io) (a regular paid subscription works the same way; the free
+   Foundation program needs more public recognition first -- stars, independent articles, community). Another provider needs its own steps in `release.yml`.
 2. In SignPath, once approved: create a project (its *slug* is used below), connect it to GitHub (the SignPath "GitHub Actions" trusted build
    system), and add two **artifact configurations** and one **signing policy**:
    - artifact configuration `programs`
