@@ -438,8 +438,8 @@ class InstallIn(BaseModel):
 
 
 @app.get("/api/update/check")
-def update_check(force: int = 0):
-    info = updater.check(bool(force))
+def update_check(force: int = 0, pre: int = 0):
+    info = updater.check(bool(force), include_pre=bool(pre))
     info["can_install"] = updater.can_install(info)
     # packaged EXE only; the dry-run test mode (never launches anything) behaves like it so the whole flow can be tested
     info["frozen"] = bool(getattr(__import__("sys"), "frozen", False)) or bool(os.environ.get("PHOTAG_UPDATE_DRY_RUN"))

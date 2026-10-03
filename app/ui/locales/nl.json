@@ -1163,5 +1163,10 @@
  "Vibrance": "Levendigheid",
  "Vignette": "Vignettering",
  "Warm Glow": "Warme gloed",
- "Warm Sepia": "Warm sepia"
+ "Warm Sepia": "Warm sepia",
+ "PRE-RELEASE": "PRE-RELEASE (TESTVERSIE)",
+ "Pre-release available": "Pre-release beschikbaar",
+ "This is a pre-release: a test version that may still have bugs.": "Dit is een pre-release: een testversie die nog fouten kan bevatten.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "Versie {0} is een pre-release. De testmodus staat uit, dus hij wordt niet automatisch aangeboden. Zet de testmodus aan in Voorkeuren om pre-releases aangeboden te krijgen, of open de releasepagina.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "Er is ook een nieuwere pre-release beschikbaar: {0}. Zet de testmodus aan in Voorkeuren om pre-releases aangeboden te krijgen."
 }

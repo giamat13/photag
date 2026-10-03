@@ -1163,5 +1163,10 @@
  "Vibrance": "वाइब्रेंस",
  "Vignette": "विनेट",
  "Warm Glow": "गर्म चमक",
- "Warm Sepia": "गर्म सेपिया"
+ "Warm Sepia": "गर्म सेपिया",
+ "PRE-RELEASE": "प्री-रिलीज़ (PRE-RELEASE)",
+ "Pre-release available": "प्री-रिलीज़ उपलब्ध है",
+ "This is a pre-release: a test version that may still have bugs.": "यह एक प्री-रिलीज़ है: एक टेस्ट संस्करण जिसमें अभी भी बग हो सकते हैं।",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "संस्करण {0} एक प्री-रिलीज़ है। टेस्टर मोड बंद है, इसलिए यह अपने-आप नहीं सुझाया जाता। प्री-रिलीज़ पाने के लिए प्राथमिकताओं में टेस्टर मोड चालू करें, या रिलीज़ पेज खोलें।",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "एक नया प्री-रिलीज़ भी उपलब्ध है: {0}। प्री-रिलीज़ पाने के लिए प्राथमिकताओं में टेस्टर मोड चालू करें।"
 }

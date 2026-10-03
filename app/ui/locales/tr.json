@@ -1163,5 +1163,10 @@
  "Vibrance": "Canlılık",
  "Vignette": "Vinyet",
  "Warm Glow": "Sıcak parıltı",
- "Warm Sepia": "Sıcak sepya"
+ "Warm Sepia": "Sıcak sepya",
+ "PRE-RELEASE": "ÖN SÜRÜM (PRE-RELEASE)",
+ "Pre-release available": "Ön sürüm mevcut",
+ "This is a pre-release: a test version that may still have bugs.": "Bu bir ön sürümdür: hâlâ hatalar içerebilecek bir test sürümü.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "Sürüm {0} bir ön sürümdür. Test modu kapalı olduğundan otomatik olarak önerilmez. Ön sürümlerin önerilmesi için Tercihler'de test modunu açın veya sürüm sayfasını açın.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "Daha yeni bir ön sürüm de mevcut: {0}. Ön sürümlerin önerilmesi için Tercihler'de test modunu açın."
 }

@@ -784,3 +784,4 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
 .exif-all summary{cursor:pointer;color:var(--t2);font-size:12px}
 .exif-kv span:first-child{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .exif-kv span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end}
+.pre-banner{background:#c9731a;color:#fff;font-weight:700;font-size:22px;letter-spacing:.12em;text-align:center;padding:10px 12px;border-radius:4px}

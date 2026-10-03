@@ -1163,5 +1163,10 @@
  "Vibrance": "חיוניות (Vibrance)",
  "Vignette": "ויניטה",
  "Warm Glow": "זוהר חם",
- "Warm Sepia": "ספיה חמה"
+ "Warm Sepia": "ספיה חמה",
+ "PRE-RELEASE": "גרסת טרום-שחרור (PRE-RELEASE)",
+ "Pre-release available": "גרסת טרום-שחרור זמינה",
+ "This is a pre-release: a test version that may still have bugs.": "זו גרסת טרום-שחרור: גרסת בדיקה שעדיין עשויה להכיל באגים.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "גרסה {0} היא גרסת טרום-שחרור. מצב בוחן כבוי, ולכן היא לא מוצעת אוטומטית. הפעל את מצב בוחן בהעדפות כדי לקבל הצעות לגרסאות טרום-שחרור, או פתח את דף השחרור.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "קיימת גם גרסת טרום-שחרור חדשה יותר: {0}. הפעל את מצב בוחן בהעדפות כדי לקבל הצעות לגרסאות טרום-שחרור."
 }

@@ -107,10 +107,18 @@ def _pick_code_asset(assets: list[dict], latest: str) -> dict | None:
     return None
 
 
-def check(force: bool = False) -> dict:
-    """Latest release info + whether it is newer. Never raises: a failed check is just {"available": False, "error"}."""
+def _is_pre(rel: dict) -> bool:
+    return bool(rel.get("prerelease")) or parse_version(rel.get("tag_name") or "")[3] == 0
+
+
+def check(force: bool = False, include_pre: bool = False) -> dict:
+    """Latest release info + whether it is newer. Never raises: a failed check is just {"available": False, "error"}.
+    "prerelease" says the release offered is a pre-release (only possible in tester mode). include_pre (a manual check)
+    also looks for a newer pre-release while tester mode is OFF and reports it as "pre" -- it is only mentioned, never
+    offered for installation."""
     out = {"current": __version__, "available": False, "latest": None, "notes": "", "page": f"https://github.com/{REPO}/releases",
-           "asset": None, "code_asset": None, "published": None, "skipped": False, "error": None}
+           "asset": None, "code_asset": None, "published": None, "skipped": False, "error": None,
+           "prerelease": False, "pre": None}
     beta = config.get_beta_channel()
     now = time.time()
     if not force and _cache["data"] and _cache.get("beta") == beta and now - _cache["at"] < CACHE_SECONDS:
@@ -135,11 +143,27 @@ def check(force: bool = False) -> dict:
     out.update(latest=tag.lstrip("vV"), notes=rel.get("body") or "", page=rel.get("html_url") or out["page"],
                asset=_pick_asset(rel.get("assets") or []), published=rel.get("published_at"))
     out["code_asset"] = _pick_code_asset(rel.get("assets") or [], out["latest"])
-    out["available"] = bool(tag) and is_newer(tag)
+    out["prerelease"] = bool(tag) and _is_pre(rel)
+    out["available"] = bool(tag) and is_newer(tag, __version__)
     out["skipped"] = out["available"] and config.get_update_skipped() == out["latest"]
     if out["available"]:
         out["notes"] = _notes_since(__version__)       # several versions behind: show what's new in all of them, not just the latest
+    if include_pre and not beta:
+        out["pre"] = _newest_pre(out["latest"] if out["available"] else __version__)
     return out
+
+
+def _newest_pre(newer_than: str) -> dict | None:
+    """The newest pre-release that is newer than both the running version and `newer_than`, or None (also on any failure)."""
+    try:
+        rels = json.loads(_get(f"{API}/repos/{REPO}/releases?per_page=10"))
+    except Exception:
+        return None
+    for r in rels:
+        tag = r.get("tag_name") or ""
+        if tag and _is_pre(r) and is_newer(tag, __version__) and is_newer(tag, newer_than):
+            return {"latest": tag.lstrip("vV"), "page": r.get("html_url") or "", "notes": r.get("body") or ""}
+    return None
 
 
 def _notes_since(current: str) -> str:
@@ -399,7 +423,7 @@ _notes_cache: dict[str, dict] = {}
 
 def whats_new(version: str) -> dict:
     """Release notes of one version, fetched from GitHub (tag v<version>)."""
-    out = {"version": version, "notes": "", "page": f"https://github.com/{REPO}/releases", "published": None, "error": None}
+    out = {"version": version, "notes": "", "page": f"https://github.com/{REPO}/releases", "published": None, "error": None, "prerelease": False}
     if version in _notes_cache:
         return _notes_cache[version]
     try:
@@ -410,7 +434,7 @@ def whats_new(version: str) -> dict:
     except Exception as e:
         out["error"] = str(getattr(e, "reason", e))[:200]
         return out
-    out.update(notes=rel.get("body") or "", page=rel.get("html_url") or out["page"], published=rel.get("published_at"))
+    out.update(notes=rel.get("body") or "", page=rel.get("html_url") or out["page"], published=rel.get("published_at"), prerelease=_is_pre(rel))
     _notes_cache[version] = out
     return out
 

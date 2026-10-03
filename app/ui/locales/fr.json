@@ -1163,5 +1163,10 @@
  "Vibrance": "Vibrance",
  "Vignette": "Vignettage",
  "Warm Glow": "Lueur chaude",
- "Warm Sepia": "Sépia chaud"
+ "Warm Sepia": "Sépia chaud",
+ "PRE-RELEASE": "PRÉ-VERSION (PRE-RELEASE)",
+ "Pre-release available": "Pré-version disponible",
+ "This is a pre-release: a test version that may still have bugs.": "Ceci est une pré-version : une version de test qui peut encore contenir des bugs.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "La version {0} est une pré-version. Le mode testeur est désactivé, elle n'est donc pas proposée automatiquement. Activez le mode testeur dans les Préférences pour recevoir les pré-versions, ou ouvrez la page de la version.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "Une pré-version plus récente est aussi disponible : {0}. Activez le mode testeur dans les Préférences pour recevoir les pré-versions."
 }

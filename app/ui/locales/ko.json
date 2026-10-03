@@ -1163,5 +1163,10 @@
  "Vibrance": "활기",
  "Vignette": "비네팅",
  "Warm Glow": "따뜻한 광채",
- "Warm Sepia": "따뜻한 세피아"
+ "Warm Sepia": "따뜻한 세피아",
+ "PRE-RELEASE": "프리릴리스(PRE-RELEASE)",
+ "Pre-release available": "프리릴리스 사용 가능",
+ "This is a pre-release: a test version that may still have bugs.": "이것은 프리릴리스입니다. 아직 버그가 있을 수 있는 테스트 버전입니다.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "버전 {0}은(는) 프리릴리스입니다. 테스터 모드가 꺼져 있어 자동으로 제안되지 않습니다. 프리릴리스를 제안받으려면 환경설정에서 테스터 모드를 켜거나 릴리스 페이지를 여세요.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "더 최신 프리릴리스도 있습니다: {0}. 프리릴리스를 제안받으려면 환경설정에서 테스터 모드를 켜세요."
 }

@@ -54,7 +54,7 @@ try:
     call("POST", "/api/settings/library", {"path": str(tmp / "lib")})
     # an empty library: the main window shows the empty state, it must not jump to the Import screen by itself
     with sync_playwright() as pw0:
-        b0 = pw0.chromium.launch(channel="msedge", headless=True)
+        b0 = (pw0.chromium.launch(executable_path=os.environ["PHOTAG_TEST_BROWSER"], headless=True, args=["--no-sandbox"]) if os.environ.get("PHOTAG_TEST_BROWSER") else pw0.chromium.launch(channel="msedge", headless=True))
         p0 = b0.new_page(viewport={"width": 1400, "height": 900})
         p0.goto(APP + "/")
         p0.wait_for_selector("#v-empty:not(.hidden)", timeout=20000)
@@ -72,7 +72,7 @@ try:
     check("sample photos imported", len(ph) == len(files), len(ph))
 
     with sync_playwright() as pw:
-        b = pw.chromium.launch(channel="msedge", headless=True)
+        b = (pw.chromium.launch(executable_path=os.environ["PHOTAG_TEST_BROWSER"], headless=True, args=["--no-sandbox"]) if os.environ.get("PHOTAG_TEST_BROWSER") else pw.chromium.launch(channel="msedge", headless=True))
 
         def open_page(lang):
             pg = b.new_page(viewport={"width": 1500, "height": 950})

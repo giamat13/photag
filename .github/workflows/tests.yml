@@ -40,3 +40,8 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: python tools/test_develop_ui.py
+      - name: UI test of the pre-release banner and manual check (Edge)
+        if: ${{ !cancelled() }}
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python tools/test_prerelease_ui.py

@@ -1163,5 +1163,10 @@
  "Vibrance": "Соковитість",
  "Vignette": "Віньєтування",
  "Warm Glow": "Тепле сяйво",
- "Warm Sepia": "Тепла сепія"
+ "Warm Sepia": "Тепла сепія",
+ "PRE-RELEASE": "ПОПЕРЕДНЯ ВЕРСІЯ (PRE-RELEASE)",
+ "Pre-release available": "Доступна попередня версія",
+ "This is a pre-release: a test version that may still have bugs.": "Це попередня версія: тестова версія, у якій ще можуть бути помилки.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "Версія {0} — попередня. Режим тестувальника вимкнено, тому її не пропонують автоматично. Увімкніть режим тестувальника в налаштуваннях, щоб отримувати попередні версії, або відкрийте сторінку релізу.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "Також доступна новіша попередня версія: {0}. Увімкніть режим тестувальника в налаштуваннях, щоб отримувати попередні версії."
 }

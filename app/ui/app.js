@@ -2554,10 +2554,14 @@ function mdLite(md){
 // Returns true when the check itself worked (even if there is nothing new), false when it could not reach GitHub.
 async function updateCheck(manual, force=manual){
   let info;
-  try{ info = await api('/api/update/check' + (force ? '?force=1' : '')); }
+  try{ info = await api('/api/update/check' + (force ? '?force=1' : '?force=0') + (manual ? '&pre=1' : '')); }
   catch(e){ if(manual) toast(e.message); return false; }
   if(info.error){ if(manual) toast(t('Unable to check for updates: {0}', [info.error])); return false; }
-  if(!info.available){ if(manual) toast(t('You are using the latest version ({0})', [ltr(info.current)])); return true; }
+  if(!info.available){
+    if(manual && info.pre){ preDialog(info.pre); return true; }       // tester mode is off, but a manual check still says a pre-release exists
+    if(manual) toast(t('You are using the latest version ({0})', [ltr(info.current)]));
+    return true;
+  }
   if(info.skipped && !manual) return true;
   updateDialog(info);
   return true;
@@ -2596,23 +2600,37 @@ async function whatsNew(manual){
   }
   if(!manual && r.updated){
     modal(`<h3>${t('Updated to version {0}', [ltr(String(r.updated.to))])}</h3><div class="mb upd">
+      ${r.notes && r.notes.prerelease ? preBanner() : ''}
       <p>${t('The update has finished. Your photos and data are unchanged.')}</p>
       <div class="lbl-sub" style="padding:0">${t('What\'s new')}</div>${notesHtml(r.notes)}
     </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('Close')}</button></div>`);
     wire(); return true;
   }
   if(manual){
-    modal(`<h3>${t('What\'s new in version {0}', [ltr(String(r.current))])}</h3><div class="mb upd">${notesHtml(r.notes)}</div>
+    modal(`<h3>${t('What\'s new in version {0}', [ltr(String(r.current))])}</h3><div class="mb upd">${r.notes && r.notes.prerelease ? preBanner() : ''}${notesHtml(r.notes)}</div>
       <div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('Close')}</button></div>`);
     wire(); return true;
   }
   return false;
 }
 
+const preBanner = () => `<div class="pre-banner">${t('PRE-RELEASE')}</div><p class="hint" style="padding:0">${t('This is a pre-release: a test version that may still have bugs.')}</p>`;
+// Tester mode is off but a manual check found a pre-release: say so (big), and open its page -- it is never installed from here.
+function preDialog(pre){
+  modal(`<h3>${t('Pre-release available')}</h3><div class="mb upd">
+    ${preBanner()}
+    <p>${t('Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.', [ltr(pre.latest)])}</p>
+    <div class="upd-notes">${pre.notes.trim() ? mdLite(pre.notes) : `<span class="hint" style="padding:0">${t('No details for this version.')}</span>`}</div>
+  </div><div class="mf"><span class="spacer"></span><button id="pre-close">${t('Close')}</button><button class="primary" id="pre-page">${t('Open the release page')}</button></div>`);
+  $('#pre-close').onclick = closeModal;
+  $('#pre-page').onclick = ()=>{ send('POST', '/api/update/open-page'); closeModal(); };
+}
 function updateDialog(info){
   const auto = info.can_install && info.frozen;
-  modal(`<h3>${t('Update available')}</h3><div class="mb upd">
+  modal(`<h3>${info.prerelease ? t('Pre-release available') : t('Update available')}</h3><div class="mb upd">
+    ${info.prerelease ? preBanner() : ''}
     <p>${t('Version {0} is available. Installed version: {1}.', [ltr(info.latest), ltr(info.current)])}</p>
+    ${info.pre ? `<p class="hint" style="padding:0">${t('A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.', [ltr(info.pre.latest)])}</p>` : ''}
     <div class="lbl-sub" style="padding:0">${t('What\'s new')}</div>
     <div class="upd-notes">${info.notes.trim() ? mdLite(info.notes) : `<span class="hint" style="padding:0">${t('No details for this version.')}</span>`}</div>
     ${auto ? `<p class="hint" style="padding:0">${t('The update is installed over the existing version. Your photos and data are not touched, and if it is interrupted midway (for example, the computer shuts down) the previous version is restored automatically.')}</p>` : ''}

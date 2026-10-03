@@ -1163,5 +1163,10 @@
  "Vibrance": "Красочность",
  "Vignette": "Виньетирование",
  "Warm Glow": "Тёплое свечение",
- "Warm Sepia": "Тёплая сепия"
+ "Warm Sepia": "Тёплая сепия",
+ "PRE-RELEASE": "ПРЕДВАРИТЕЛЬНАЯ ВЕРСИЯ (PRE-RELEASE)",
+ "Pre-release available": "Доступна предварительная версия",
+ "This is a pre-release: a test version that may still have bugs.": "Это предварительная версия: тестовая версия, в которой ещё могут быть ошибки.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "Версия {0} — предварительная. Режим тестировщика выключен, поэтому она не предлагается автоматически. Включите режим тестировщика в настройках, чтобы получать предварительные версии, или откройте страницу релиза.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "Также доступна более новая предварительная версия: {0}. Включите режим тестировщика в настройках, чтобы получать предварительные версии."
 }

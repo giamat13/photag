@@ -62,7 +62,7 @@ try:
     trip = next(a["id"] for a in call("GET", "/api/albums") if a["name"] == "Trip")
 
     with sync_playwright() as pw:
-        b = pw.chromium.launch(channel="msedge", headless=True)
+        b = (pw.chromium.launch(executable_path=os.environ["PHOTAG_TEST_BROWSER"], headless=True, args=["--no-sandbox"]) if os.environ.get("PHOTAG_TEST_BROWSER") else pw.chromium.launch(channel="msedge", headless=True))
         pg = b.new_page(viewport={"width": 1500, "height": 950})
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))

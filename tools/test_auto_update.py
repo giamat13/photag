@@ -90,7 +90,7 @@ try:
     time.sleep(2)
 
     with sync_playwright() as pw:
-        br = pw.chromium.launch(channel="msedge", headless=True)
+        br = (pw.chromium.launch(executable_path=os.environ["PHOTAG_TEST_BROWSER"], headless=True, args=["--no-sandbox"]) if os.environ.get("PHOTAG_TEST_BROWSER") else pw.chromium.launch(channel="msedge", headless=True))
         pg = br.new_page(viewport={"width": 1400, "height": 900})
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))

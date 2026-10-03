@@ -1163,5 +1163,10 @@
  "Vibrance": "الحيوية",
  "Vignette": "تظليل الحواف",
  "Warm Glow": "توهج دافئ",
- "Warm Sepia": "سيبيا دافئ"
+ "Warm Sepia": "سيبيا دافئ",
+ "PRE-RELEASE": "إصدار تجريبي (PRE-RELEASE)",
+ "Pre-release available": "يتوفر إصدار تجريبي",
+ "This is a pre-release: a test version that may still have bugs.": "هذا إصدار تجريبي: نسخة اختبار قد تحتوي على أخطاء.",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "الإصدار {0} هو إصدار تجريبي. وضع المختبر متوقف، لذلك لا يُعرض تلقائيًا. فعّل وضع المختبر في التفضيلات ليُعرض عليك الإصدارات التجريبية، أو افتح صفحة الإصدار.",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "يتوفر أيضًا إصدار تجريبي أحدث: {0}. فعّل وضع المختبر في التفضيلات ليُعرض عليك الإصدارات التجريبية."
 }

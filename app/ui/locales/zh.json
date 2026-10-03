@@ -1163,5 +1163,10 @@
  "Vibrance": "自然饱和度",
  "Vignette": "暗角",
  "Warm Glow": "暖色光晕",
- "Warm Sepia": "暖棕褐色"
+ "Warm Sepia": "暖棕褐色",
+ "PRE-RELEASE": "预发布版（PRE-RELEASE）",
+ "Pre-release available": "有预发布版可用",
+ "This is a pre-release: a test version that may still have bugs.": "这是预发布版：仍可能存在错误的测试版本。",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "版本 {0} 是预发布版。测试模式已关闭，因此不会自动提供。请在偏好设置中开启测试模式以获取预发布版，或打开发布页面。",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "另有更新的预发布版可用：{0}。请在偏好设置中开启测试模式以获取预发布版。"
 }

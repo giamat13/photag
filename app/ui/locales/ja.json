@@ -1163,5 +1163,10 @@
  "Vibrance": "自然な彩度",
  "Vignette": "周辺光量",
  "Warm Glow": "暖かい輝き",
- "Warm Sepia": "暖色セピア"
+ "Warm Sepia": "暖色セピア",
+ "PRE-RELEASE": "プレリリース版（PRE-RELEASE）",
+ "Pre-release available": "プレリリース版が利用できます",
+ "This is a pre-release: a test version that may still have bugs.": "これはプレリリース版です。まだ不具合が残っている可能性のあるテスト用バージョンです。",
+ "Version {0} is a pre-release. Tester mode is off, so it is not offered automatically. Turn on Tester mode in Preferences to be offered pre-releases, or open the release page.": "バージョン {0} はプレリリース版です。テスターモードがオフのため、自動では案内されません。プレリリース版の案内を受けるには環境設定でテスターモードをオンにするか、リリースページを開いてください。",
+ "A newer pre-release is also available: {0}. Turn on Tester mode in Preferences to be offered pre-releases.": "さらに新しいプレリリース版もあります：{0}。プレリリース版の案内を受けるには、環境設定でテスターモードをオンにしてください。"
 }
