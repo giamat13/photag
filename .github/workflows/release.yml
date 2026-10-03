@@ -17,6 +17,11 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 60
+    env:
+      # Code signing (SignPath) is OFF until it is configured: it needs the repository variables SIGNPATH_ORGANIZATION_ID and
+      # SIGNPATH_PROJECT_SLUG and the secret SIGNPATH_API_TOKEN (see docs/CODE_SIGNING_POLICY.md). Without them every step below
+      # that mentions signing is skipped and the build is exactly what it was before.
+      SIGNING: ${{ (vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' && secrets.SIGNPATH_API_TOKEN != '') && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,10 +42,63 @@ jobs:
       - run: python tools/make_version_info.py
       - run: python -m PyInstaller --noconfirm photag.spec
       - run: python -m PyInstaller --noconfirm photag_backup.spec
+      - name: "Signing: collect the programs (photag.exe, photag-backup.exe)"
+        if: env.SIGNING == 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force to_sign | Out-Null
+          Copy-Item dist/photag/photag.exe to_sign/
+          Copy-Item dist/photag-backup.exe to_sign/
+      - name: "Signing: upload the programs"
+        if: env.SIGNING == 'true'
+        id: upload_exes
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-programs
+          path: to_sign
+      - name: "Signing: sign the programs (SignPath)"
+        if: env.SIGNING == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: programs
+          github-artifact-id: ${{ steps.upload_exes.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed_programs
+      - name: "Signing: put the signed programs back and check them"
+        if: env.SIGNING == 'true'
+        shell: pwsh
+        run: python tools/signing.py install-programs signed_programs
       - run: choco install innosetup --no-progress -y
       - name: Build the installer
         shell: cmd
         run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=%VERSION% installer.iss'
+      - name: "Signing: upload the installer"
+        if: env.SIGNING == 'true'
+        id: upload_setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: installer_output/photagSetup.exe
+      - name: "Signing: sign the installer (SignPath)"
+        if: env.SIGNING == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.upload_setup.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed_installer
+      - name: "Signing: put the signed installer back and check it"
+        if: env.SIGNING == 'true'
+        shell: pwsh
+        run: python tools/signing.py install-setup signed_installer
       - name: "Build the code update (a small zip of the app code - updates run without an installer, so Smart App Control cannot block them)"
         run: python tools/make_code_zip.py
       - name: "Build the portable ZIP (no installer - runs from a USB stick or any folder)"
