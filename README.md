@@ -118,6 +118,9 @@ The location pointer is stored in `%APPDATA%\photag\config.json` and can be chan
 - Your AI key is stored encrypted with Windows DPAPI (readable only by your Windows user).
 
 ## Windows says the installer is blocked (Smart App Control)
+_Code signing is being prepared (see [docs/CODE_SIGNING_POLICY.md](docs/CODE_SIGNING_POLICY.md)): once the free certificate for open-source projects
+is granted, releases will be signed and this section will no longer apply to them._
+
 photag is not code-signed yet (a signing certificate costs money; we are applying for free signing for open-source projects). Windows 11
 **Smart App Control** (when it is on) blocks unsigned programs it does not know, with no "run anyway" button. SmartScreen only warns
 ("More info" → "Run anyway"). If the installer is blocked:
@@ -197,3 +200,7 @@ Not bundled, and therefore not covered by this license:
 2. File → Import… → choose the source (folder / memory card, Lightroom catalog, or Google Takeout ZIP) → start.
 3. Library → "Face recognition" to group people. Add keywords in the "Keywording" panel.
 4. People → name or correct the names. Catalog / collections / keywords → browse and search.
+
+## Code signing
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org) (once granted; until
+then releases are unsigned). Policy, roles and privacy statement: [docs/CODE_SIGNING_POLICY.md](docs/CODE_SIGNING_POLICY.md).

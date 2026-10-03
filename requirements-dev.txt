@@ -2,3 +2,4 @@
 pyinstaller==6.22.3
 pywin32-ctypes==0.2.3
 playwright==1.63.0
+pyyaml==6.0.1
