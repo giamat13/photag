@@ -123,6 +123,9 @@ _Releases are not code-signed yet (see [docs/CODE_SIGNING_POLICY.md](docs/CODE_S
 photag is not code-signed yet (a signing certificate costs money; the application to the free signing program for open-source projects was declined for now). Windows 11
 **Smart App Control** (when it is on) blocks unsigned programs it does not know, with no "run anyway" button. SmartScreen only warns
 ("More info" → "Run anyway"). If the installer is blocked:
+0. **Try the install script** from the release page: `photag-install.bat` (double-click it; Windows asks "Run / Cancel" instead of blocking it) or `photag-install.ps1`.
+   It downloads the portable version straight from GitHub, checks its SHA-256, unpacks it into `%LOCALAPPDATA%\Programs\photag` and makes shortcuts. The files it
+   unpacks are never marked "from the internet", which is what Smart App Control looks at. It is plain text -- read it first. It is not guaranteed to work on every PC.
 1. Right-click `photagSetup.exe` → Properties → tick **Unblock** if shown, OK, and run it again. Or run it from File Explorer instead of a terminal.
 2. Try the **portable version** instead (see below) — same program, no installer.
 3. Otherwise run photag from source (see below), or turn Smart App Control off in *Windows Security → App & browser control → Smart App Control*

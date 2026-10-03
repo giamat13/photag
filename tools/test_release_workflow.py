@@ -39,14 +39,14 @@ sp = [s for s in signing if s.get("uses", "").startswith("signpath/")]
 check("two SignPath requests: one for the programs, one for the installer", [s["with"]["artifact-configuration-slug"] for s in sp] == ["programs", "installer"])
 check("each waits for the result and names an output folder", all(s["with"]["wait-for-completion"] is True and s["with"]["output-artifact-directory"] for s in sp))
 check("the SignPath token is only ever referenced as the secret, never written in the file", all(x["with"]["api-token"] == "${{ secrets.SIGNPATH_API_TOKEN }}" for x in sp))
-check("the publish step still ships the installer, the code zip and the portable ZIP", all(f in steps[-1]["run"] for f in ("photagSetup.exe", "photag-code-", "-portable.zip")))
+check("the publish step still ships the installer, the code zip, the portable ZIP and the install scripts", all(f in steps[-1]["run"] for f in ("photagSetup.exe", "photag-code-", "-portable.zip", "photag-install.bat", "photag-install.ps1")))
 plain = [name(x) for x in steps if x not in signing]
-check("without signing, the build is exactly the usual 13 steps in the usual order (installer, its ZIP copy, code zip, portable ZIP, publish)",
-      len(plain) == 13 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
+check("without signing, the build is exactly the usual 14 steps in the usual order (installer, its ZIP copy, code zip, portable ZIP, install scripts, publish)",
+      len(plain) == 14 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
                                          "python tools/make_version_info.py", "python -m PyInstaller --noconfirm photag.spec", "python -m PyInstaller --noconfirm photag_backup.spec",
                                          "choco install innosetup --no-progress -y"]
       and plain[8] == "Build the installer" and plain[9].startswith("Put a copy of the installer in a ZIP") and plain[10].startswith("Build the code update")
-      and plain[11].startswith("Build the portable ZIP") and plain[12].startswith("Publish the release"), plain)
+      and plain[11].startswith("Build the portable ZIP") and plain[12].startswith("Build the install scripts") and plain[13].startswith("Publish the release"), plain)
 
 # ---- tools/signing.py
 import signing  # noqa: E402
