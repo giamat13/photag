@@ -41,7 +41,7 @@ from .version import REPO, __version__
 API = os.environ.get("PHOTAG_UPDATE_API", "https://api.github.com").rstrip("/")     # tests point this at a mock
 ALLOWED_DOWNLOAD = os.environ.get("PHOTAG_UPDATE_ALLOW_PREFIX") or f"https://github.com/{REPO}/releases/download/"
 ASSET_RE = re.compile(r"^photagSetup.*\.exe$", re.I)
-CODE_RE = re.compile(r"^photag-code-(\d+\.\d+\.\d+)-rt(\d+)\.zip$")      # a code update (see codeboot.py): no installer to run
+CODE_RE = re.compile(r"^photag-code-(\d+\.\d+(?:\.\d+)?)-rt(\d+)\.zip$")      # a code update (see codeboot.py): no installer to run
 CACHE_SECONDS = 6 * 3600
 _cache: dict = {"at": 0, "data": None}
 
@@ -51,7 +51,8 @@ class UpdateError(Exception):
 
 
 def parse_version(s: str) -> tuple:
-    """"v1.10.2" -> (1, 10, 2); a pre-release suffix ("-beta") sorts before the release itself."""
+    """"v1.10.2" -> (1, 10, 2, 1); a missing part is 0, so "9.1" is (9, 1, 0, 1) and equals "9.1.0"; a pre-release suffix
+    ("-beta") sorts before the release itself."""
     m = re.match(r"\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(.*)$", s or "")
     if not m:
         return (0, 0, 0, 0)
@@ -99,7 +100,7 @@ def _pick_code_asset(assets: list[dict], latest: str) -> dict | None:
     import codeboot
     for a in assets:
         m = CODE_RE.match(a.get("name", ""))
-        if not m or m.group(1) != latest or int(m.group(2)) != codeboot.RUNTIME:
+        if not m or parse_version(m.group(1)) != parse_version(latest) or int(m.group(2)) != codeboot.RUNTIME:       # "9.0" and "9.0.0" are the same version
             continue
         digest = (a.get("digest") or "").removeprefix("sha256:")
         if re.fullmatch(r"[0-9a-f]{64}", digest):

@@ -13,7 +13,15 @@ push straight to `main`.
 ## How versions and releases work
 - `app/version.py` (`__version__`) is the single source of truth for the app's version. Bump it
   before every release.
-- Each release has a `docs/release-notes-vX.Y.Z.md` file; its contents become the GitHub Release
+- **Numbering ("FEATURE.FIX", decided with the user): 1.8.1 became 8.1.** A release with a new feature raises
+  the first number and resets the second (`9.0`); a release with only fixes raises the second (`8.2`);
+  pre-releases add `-beta.N`. `9.0` and `9.0.0` are the same version everywhere (`updater.parse_version`).
+  **The first release in this scheme must still be written with three parts** (`9.0.0`, or `8.2.0` if it is
+  only fixes): programs installed before the change only recognise a code update `photag-code-X.Y.Z-rtN.zip`
+  with three parts, and without it they fall back to the full installer (which Smart App Control may block).
+  From the release after that use the short form (`9.1`). The tag is `v<version>` and the notes file is
+  `docs/release-notes-v<version>.md`, both exactly as written in `app/version.py`.
+- Each release has a `docs/release-notes-v<version>.md` file; its contents become the GitHub Release
   body (and what the in-app "What's new" dialog shows, fetched live from the GitHub release).
 - CI (`.github/workflows/tests.yml`) runs automatically on every push to `main` (Windows runner:
   server/import/backup/update/library tests, then UI smoke tests). Always check it went green on
