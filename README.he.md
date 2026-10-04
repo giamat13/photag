@@ -115,7 +115,13 @@ _הגרסאות עדיין לא חתומות דיגיטלית (ראה [docs/CODE
 
 photag עדיין לא חתומה דיגיטלית (תעודת חתימה עולה כסף; הבקשה לחתימה חינמית לפרויקטי קוד פתוח נדחתה בינתיים). ב-Windows 11, **Smart App Control**
 (כשהוא פעיל) חוסם תוכנות לא חתומות שהוא לא מכיר, בלי כפתור "הפעל בכל זאת". SmartScreen רק מזהיר ("מידע נוסף" ← "הפעל בכל זאת"). אם המתקין נחסם:
-0. **נסה את סקריפט ההתקנה** מדף השחרור: `photag-install.bat` (לחיצה כפולה; Windows שואל "הפעל / ביטול" במקום לחסום) או `photag-install.ps1`. הוא מוריד את הגרסה הניידת ישר מ-GitHub, בודק את ה-SHA-256 שלה, פורס אותה ב-`%LOCALAPPDATA%\Programs\photag` ויוצר קיצורי דרך. קבצים שהוא פורס לא מסומנים "מהאינטרנט", וזה מה ש-Smart App Control בודק. הוא קובץ טקסט רגיל: קרא אותו לפני ההרצה. אין הבטחה שזה יעבוד בכל מחשב.
+0. **נסה את סקריפט ההתקנה** מדף השחרור: `photag-install.bat` (לחיצה כפולה; Windows שואל "הפעל / ביטול" במקום לחסום) או `photag-install.ps1`. הוא מוריד את הגרסה הניידת ישר מ-GitHub, בודק את ה-SHA-256 שלה, פורס אותה ב-`%LOCALAPPDATA%\Programs\photag` ויוצר קיצורי דרך. קבצים שהוא פורס לא מסומנים "מהאינטרנט", וזה מה ש-Smart App Control בודק. הוא קובץ טקסט רגיל: קרא אותו לפני ההרצה. **גבול שנבדק:** במחשב ש-Smart App Control בו *דלוק* (נבדק ב-Windows Sandbox) הסקריפט מתקין הכול, אבל Windows מסרב *להפעיל* את `photag.exe` הלא חתום ("An Application Control policy has blocked this file"). שום סקריפט לא משנה את זה: תעודה עצמית, גם אם היא מהימנה על המחשב, מתעלמים ממנה; ו-Python חתום לא יכול לטעון את המודולים הלא חתומים (Pillow, numpy, pydantic). רק גרסה חתומה עוזרת (מתוכנן: Microsoft Store), או כיבוי Smart App Control (אבטחת Windows > בקרת אפליקציות ודפדפן > Smart App Control; אי אפשר להדליק אותו חזרה בלי התקנת Windows מחדש). כשהוא כבוי, SmartScreen רק מזהיר, וההתקנה והסקריפט עובדים.
+   אין הבטחה שזה יעבוד בכל מחשב.
+   **אם גם ה-`.bat` / `.ps1` שהורדת נחסם** (קובץ שהורד מהאינטרנט מסומן "מהאינטרנט"; קובץ שאתה יוצר בעצמך לא): פתח **Windows PowerShell** (לא cmd), הדבק שורה אחת ולחץ Enter -- היא מריצה את הסקריפט ישר מ-GitHub בלי לשמור קובץ:
+   ```
+[Net.ServicePointManager]::SecurityProtocol='Tls12'; $w=New-Object Net.WebClient; $w.Encoding=[Text.Encoding]::UTF8; & ([scriptblock]::Create($w.DownloadString('https://github.com/giamat13/photag/releases/latest/download/photag-install.ps1').TrimStart([char]0xFEFF)))
+   ```
+   או: פתח את הסקריפט בדף השחרור, העתק את כל הטקסט שלו, הדבק בפנקס רשימות, שמור בשם `photag-install.bat` (סוג הקובץ: כל הקבצים) ולחץ עליו פעמיים.
 1. הרץ את `photagSetup.exe` מסייר הקבצים (לא מטרמינל), ואם מופיע ב"מאפיינים" סימון **Unblock** סמן אותו.
 2. נסה את **הגרסה הניידת (Portable)** (ראה למטה) — אותה תוכנה, בלי מתקין.
 3. אחרת, הרץ מהמקור (ראה למטה), או כבה את Smart App Control ב-*אבטחת Windows ← בקרת אפליקציות ודפדפן* (אי אפשר להפעיל אותו שוב בלי התקנת Windows מחדש).

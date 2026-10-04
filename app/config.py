@@ -32,6 +32,16 @@ def portable_dir() -> Path | None:
 PORTABLE = portable_dir()
 
 
+def in_store_package() -> bool:
+    """True when running from a Microsoft Store (MSIX) package: its folder is read-only and the Store does the updating."""
+    if os.environ.get("PHOTAG_STORE_PACKAGE"):          # tests
+        return os.environ["PHOTAG_STORE_PACKAGE"] == "1"
+    return bool(getattr(sys, "frozen", False)) and "\\windowsapps\\" in str(Path(sys.executable)).lower()
+
+
+IN_STORE_PACKAGE = in_store_package()
+
+
 def _appdata_dir() -> Path:
     if PORTABLE:
         d = PORTABLE / "data"

@@ -38,6 +38,8 @@ def exe() -> str | None:
 
 def supported() -> bool:
     from . import backup_unix, config
+    if config.IN_STORE_PACKAGE:
+        return False           # the package folder is read-only and its exe path is not stable: the app's own catch-up runs the backups
     if config.PORTABLE:
         return False           # a USB stick / moved folder has no stable path to register a scheduled task against
     if sys.platform == "win32":

@@ -42,9 +42,11 @@ check("the batch part runs PowerShell without the execution-policy problem and p
 check("both files use Windows line endings", b"\n" not in ps1_bytes.replace(b"\r\n", b"") and b"\n" not in bat_bytes.replace(b"\r\n", b""))
 check("the script's parameters are documented in its header", all(f"-{x}" in src.split("#>")[0] for x in ("InstallDir", "ZipPath", "Sha256", "ListOnly", "Uninstall", "NoLaunch", "NoShortcuts", "NoPause")))
 check("it never touches photos or the catalog (only the install folder and shortcuts)", "Pictures" not in src and "photag\\catalog" not in src.lower())
-check("it checks the SHA-256 before installing anything", src.index("Get-FileHash") < src.index("ExtractToDirectory"))
+check("it checks the SHA-256 before installing anything", src.index("Get-FileHash") < src.index("ExtractToFile"))
 check("it stops if photag is running instead of replacing files under it", src.count("is running") >= 2)
 check("the end of the batch part cannot run into the PowerShell text (exit /b before the marker)", head.rstrip().endswith("exit /b %errorlevel%"))
+check("it shows progress: numbered steps, a live download line and an unpacking line", all(x in src for x in ("Step 1 of 4", "Step 2 of 4", "Step 3 of 4", "Step 4 of 4", 'Show-Progress "Downloading"', 'Show-Progress "Unpacking"', "Write-Progress")))
+check("it refuses ZIP entries that point outside the unpack folder", "unsafe path" in src)
 check("an offline -ZipPath path exists", "[string]$ZipPath" in src)
 
 if not sys.platform.startswith("win"):
@@ -73,6 +75,7 @@ else:
     subprocess.run(["powershell", "-NoProfile", "-Command", f"Set-Content -LiteralPath '{z1}' -Stream Zone.Identifier -Value \"[ZoneTransfer]`r`nZoneId=3\""], capture_output=True)
     r = run(PS + ["-ZipPath", str(z1), "-Sha256", h1] + common)
     check("install from a ZIP: exit code 0", r.returncode == 0, (r.stdout + r.stderr)[-300:])
+    check("...and it said what it was doing, with progress (steps, check, unpacking at 100%)", all(x in r.stdout for x in ("Step 2 of 4", "Step 3 of 4", "Unpacking", "100%", "Step 4 of 4")), r.stdout[-300:])
     check("...the program is in place (photag.exe, subfolder, marker)", (inst / "photag.exe").read_text() == "fake exe old" and (inst / "_internal" / "lib.dll").exists() and (inst / "portable.txt").exists())
     check("...there is a data folder", (inst / "data").is_dir())
     z = run(["powershell", "-NoProfile", "-Command", f"(Get-Item -LiteralPath '{inst / 'photag.exe'}' -Stream *).Stream -join ','"])
@@ -125,6 +128,19 @@ if sys.platform.startswith("win"):
             print("SKIP -ListOnly (GitHub not reachable here):", out[-120:].replace("\n", " "))
     except Exception as e:
         print("SKIP -ListOnly:", e)
+
+# ---- the one-line command from the README (runs the script from a URL, no file saved: nothing carries a Mark-of-the-Web)
+ONE = ("[Net.ServicePointManager]::SecurityProtocol='Tls12'; $w=New-Object Net.WebClient; $w.Encoding=[Text.Encoding]::UTF8; "
+       "& ([scriptblock]::Create($w.DownloadString('https://github.com/giamat13/photag/releases/latest/download/photag-install.ps1').TrimStart([char]0xFEFF)))")
+for readme in ("README.md", "README.he.md"):
+    check(f"{readme} shows the one-line command exactly as tested", ONE in (ROOT / readme).read_text(encoding="utf-8"))
+if sys.platform.startswith("win"):
+    inst2 = tmp / "inst_oneliner"
+    inst2.mkdir()
+    (inst2 / "photag.exe").write_text("x")
+    local = ONE.replace("https://github.com/giamat13/photag/releases/latest/download/photag-install.ps1", ps1.as_uri()) + f" -Uninstall -InstallDir '{inst2}' -NoPause"
+    r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", local], capture_output=True, text=True, timeout=120)
+    check("the one-line command runs the script (here from a local URL) and passes parameters on", r.returncode == 0 and "Done." in r.stdout and not (inst2 / "photag.exe").exists(), (r.stdout + r.stderr)[-250:])
 
 shutil.rmtree(tmp, ignore_errors=True)
 n_fail = res.count(False)
