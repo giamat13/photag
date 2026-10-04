@@ -13,8 +13,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 tmp = Path(tempfile.mkdtemp(prefix="photag_face_suggest_test_"))
-for k, v in (("APPDATA", "a"), ("LOCALAPPDATA", "l"), ("USERPROFILE", "h")):
-    (tmp / v).mkdir()
+for k, v in (("APPDATA", "a"), ("LOCALAPPDATA", "l"), ("USERPROFILE", "h"), ("HOME", "h")):
+    (tmp / v).mkdir(exist_ok=True)
     os.environ[k] = str(tmp / v)
 os.environ["PYTHONIOENCODING"] = "utf-8"
 sys.path.insert(0, str(ROOT))

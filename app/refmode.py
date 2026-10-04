@@ -224,13 +224,47 @@ def run_scan(progress):
 
 
 # ---- deleting for good: the file goes to the Recycle Bin ------------------------------
+def _unique(folder: Path, name: str) -> Path:
+    cand, n = folder / name, 1
+    while cand.exists():
+        cand = folder / f"{Path(name).stem} {n}{Path(name).suffix}"
+        n += 1
+    return cand
+
+
+def _trash_unix(p: Path) -> bool:
+    """macOS: ~/.Trash. Linux: the freedesktop.org trash (~/.local/share/Trash/files + info/*.trashinfo), so the file manager can
+    restore it. False when it could not be done (the file is then left alone)."""
+    import shutil
+    import sys
+    from datetime import datetime
+    from urllib.parse import quote
+    try:
+        home = Path(os.environ.get("HOME") or Path.home())
+        if sys.platform == "darwin":
+            d = home / ".Trash"
+            d.mkdir(exist_ok=True)
+            shutil.move(str(p), str(_unique(d, p.name)))
+            return not p.exists()
+        base = Path(os.environ.get("XDG_DATA_HOME") or home / ".local" / "share") / "Trash"
+        (base / "files").mkdir(parents=True, exist_ok=True)
+        (base / "info").mkdir(parents=True, exist_ok=True)
+        dest = _unique(base / "files", p.name)
+        (base / "info" / (dest.name + ".trashinfo")).write_text(
+            f"[Trash Info]\nPath={quote(str(p.resolve()), safe='/')}\nDeletionDate={datetime.now().strftime('%Y-%m-%dT%H:%M:%S')}\n", encoding="utf-8")
+        shutil.move(str(p), str(dest))
+        return not p.exists()
+    except OSError:
+        return False
+
+
 def recycle(path: str) -> bool:
-    """Send one file to the Windows Recycle Bin. False if it could not be done (the file is then left alone)."""
+    """Send one file to the Recycle Bin (Windows) / Trash (macOS, Linux). False if it could not be done (the file is then left alone)."""
     p = Path(path)
     if not p.exists():
         return True
     if os.name != "nt":
-        return False
+        return _trash_unix(p)
     import ctypes
     from ctypes import wintypes
     drive = os.path.splitdrive(os.path.abspath(path))[0] + "\\"

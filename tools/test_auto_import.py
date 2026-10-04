@@ -69,6 +69,7 @@ db.init_db().close()
 watch0 = tmp / "watch0"
 watch0.mkdir()
 shutil.copy2(SAMPLES / "paris.jpg", watch0 / "fresh.jpg")
+os.utime(watch0 / "fresh.jpg")                               # copy2 keeps the sample's old date: it must look just written
 os.environ["PHOTAG_AUTOIMPORT_SETTLE"] = "3600"           # "settled" = untouched for an hour: the file counts as still being written
 r = importer.run_auto_import(str(watch0), importer.Progress())
 check("a file that was just modified is not imported yet", r["added"] == 0, r)

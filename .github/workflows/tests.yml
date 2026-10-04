@@ -22,7 +22,7 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          for t in test_import_stats test_takeout_parts test_update_rollback test_server_security test_port_instance test_library_default test_backup_media_sets test_trash_menu test_compress_backup test_auto_update test_auto_import test_backup_verify test_features_ui test_update_blocked test_code_update test_runtime_lock test_ref_folder test_backup_reduced test_smart_features test_onedrive test_exif_search test_face_suggest test_cf_fallback test_storage_breakdown test_triplan test_burst_stack test_export_zip test_export_xmp test_export_html test_lrcat_candidates test_import_xmp_recovery test_digikam_import test_social_import test_backup_no_pil test_beta_channel test_exif_full test_nondestructive_edit test_edit_ops_v2 test_release_workflow test_version_scheme test_install_script test_export_meta test_platform_dirs test_opener test_keystore test_backup_unix test_msix test_portable; do
+          for t in test_import_stats test_takeout_parts test_update_rollback test_server_security test_port_instance test_library_default test_backup_media_sets test_trash_menu test_compress_backup test_auto_update test_auto_import test_backup_verify test_features_ui test_update_blocked test_code_update test_runtime_lock test_ref_folder test_backup_reduced test_smart_features test_onedrive test_exif_search test_face_suggest test_cf_fallback test_storage_breakdown test_triplan test_burst_stack test_export_zip test_export_xmp test_export_html test_lrcat_candidates test_import_xmp_recovery test_digikam_import test_social_import test_backup_no_pil test_beta_channel test_exif_full test_nondestructive_edit test_edit_ops_v2 test_release_workflow test_version_scheme test_install_script test_export_meta test_platform_dirs test_opener test_keystore test_backup_unix test_trash_unix test_msix test_portable; do
             echo "=== $t"; python tools/$t.py || exit 1
           done
       - name: UI smoke test (Edge)
@@ -45,3 +45,27 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: python tools/test_prerelease_ui.py
+
+  # The same code on Linux (issue #3): the tests that do not need Windows. test_update_rollback needs powershell.exe and the
+  # *_ui tests need Edge; both stay on the Windows job above.
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-0
+      - run: python -m pip install -r requirements.txt pyyaml==6.0.1
+      - name: Translations are complete
+        run: python tools/i18n.py check
+      - name: Tests that do not need Windows
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          for t in test_import_stats test_takeout_parts test_server_security test_port_instance test_library_default test_backup_media_sets test_compress_backup test_auto_import test_backup_verify test_update_blocked test_code_update test_runtime_lock test_ref_folder test_backup_reduced test_smart_features test_onedrive test_exif_search test_face_suggest test_cf_fallback test_storage_breakdown test_triplan test_burst_stack test_export_zip test_export_xmp test_export_html test_lrcat_candidates test_import_xmp_recovery test_digikam_import test_social_import test_backup_no_pil test_beta_channel test_exif_full test_nondestructive_edit test_edit_ops_v2 test_version_scheme test_export_meta test_platform_dirs test_opener test_keystore test_backup_unix test_trash_unix test_msix test_portable; do
+            echo "=== $t"; python tools/$t.py || exit 1
+          done
