@@ -17,12 +17,20 @@ if (-not (Test-Path (Join-Path $Dir "photag.exe"))) { throw "photag.exe not foun
 Write-Host "1/4 making a self-signed code-signing certificate..."
 $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=photag test signing" -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddYears(2)
 
-Write-Host "2/4 trusting it on this PC (Trusted Root + Trusted Publishers)..."
+$admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+Write-Host "2/4 trusting it on this PC (Trusted Root + Trusted Publishers). Running as administrator: $admin"
 $cer = Join-Path $env:TEMP "photag-test.cer"
 Export-Certificate -Cert $cert -FilePath $cer | Out-Null
+$where = @()
 foreach ($store in @("Root", "TrustedPublisher")) {
-    Import-Certificate -FilePath $cer -CertStoreLocation "Cert:\LocalMachine\$store" | Out-Null
+    try { Import-Certificate -FilePath $cer -CertStoreLocation "Cert:\LocalMachine\$store" | Out-Null; $where += "LocalMachine\$store" }
+    catch {
+        Write-Host "  LocalMachine\$store refused ($($_.Exception.Message.Trim())); trying the current user's store (Windows may ask you to confirm: answer Yes)..."
+        certutil -user -f -addstore $store $cer | Out-Null
+        if ($LASTEXITCODE -eq 0) { $where += "CurrentUser\$store" } else { Write-Host "  CurrentUser\$store refused too." -ForegroundColor Yellow }
+    }
 }
+Write-Host "  trusted in: $($where -join ', ')"
 
 Write-Host "3/4 signing the program files (this takes a minute)..."
 $files = Get-ChildItem -LiteralPath $Dir -Recurse -File | Where-Object { $_.Extension -in ".exe", ".dll", ".pyd" }
