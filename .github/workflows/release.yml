@@ -21,6 +21,9 @@ jobs:
       # Code signing (SignPath) is OFF until it is configured: it needs the repository variables SIGNPATH_ORGANIZATION_ID and
       # SIGNPATH_PROJECT_SLUG and the secret SIGNPATH_API_TOKEN (see docs/CODE_SIGNING_POLICY.md). Without them every step below
       # that mentions signing is skipped and the build is exactly what it was before.
+      # Microsoft Store package (MSIX): built only when the three repository variables from the app's Partner Center page exist
+      # (STORE_IDENTITY_NAME, STORE_PUBLISHER, STORE_PUBLISHER_NAME); it is kept as a workflow artifact to upload to Partner Center by hand.
+      STORE: ${{ (vars.STORE_IDENTITY_NAME != '' && vars.STORE_PUBLISHER != '' && vars.STORE_PUBLISHER_NAME != '') && 'true' || 'false' }}
       SIGNING: ${{ (vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' && secrets.SIGNPATH_API_TOKEN != '') && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
@@ -108,6 +111,20 @@ jobs:
         run: python tools/make_portable.py
       - name: "Build the install scripts (photag-install.bat / .ps1: download + unpack the portable ZIP without the Mark-of-the-Web)"
         run: python tools/make_install_script.py
+      - name: "Store: build the Microsoft Store package (MSIX; Microsoft signs it when it is published)"
+        if: env.STORE == 'true'
+        env:
+          PHOTAG_STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          PHOTAG_STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          PHOTAG_STORE_PUBLISHER_NAME: ${{ vars.STORE_PUBLISHER_NAME }}
+        run: python tools/make_msix.py
+      - name: "Store: keep the MSIX to upload to Partner Center"
+        if: env.STORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: photag-store-msix
+          path: dist/photag-*.msix
+          retention-days: 30
       - name: Publish the release (the release body is the "what is new" text inside the app)
         shell: bash
         env:

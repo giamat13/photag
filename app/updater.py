@@ -120,6 +120,9 @@ def check(force: bool = False, include_pre: bool = False) -> dict:
     out = {"current": __version__, "available": False, "latest": None, "notes": "", "page": f"https://github.com/{REPO}/releases",
            "asset": None, "code_asset": None, "published": None, "skipped": False, "error": None,
            "prerelease": False, "pre": None}
+    if config.IN_STORE_PACKAGE:
+        out["store"] = True          # the Microsoft Store updates this copy; no check, no download, no installer
+        return out
     beta = config.get_beta_channel()
     now = time.time()
     if not force and _cache["data"] and _cache.get("beta") == beta and now - _cache["at"] < CACHE_SECONDS:
