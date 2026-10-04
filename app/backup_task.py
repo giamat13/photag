@@ -1,4 +1,6 @@
-"""A Windows Scheduled Task that runs "photag.exe --backup" so backups happen even when the app is closed
+"""(On macOS / Linux this delegates to backup_unix.py: a launchd agent / a systemd user timer.)
+
+A Windows Scheduled Task that runs "photag.exe --backup" so backups happen even when the app is closed
 (this is what keeps a backup from silently "forgetting" to run, the way Windows File History sometimes does).
 
 The task (per user, no admin rights):
@@ -35,10 +37,12 @@ def exe() -> str | None:
 
 
 def supported() -> bool:
-    from . import config
+    from . import backup_unix, config
     if config.PORTABLE:
         return False           # a USB stick / moved folder has no stable path to register a scheduled task against
-    return sys.platform == "win32" and bool(exe())
+    if sys.platform == "win32":
+        return bool(exe())
+    return bool(backup_unix.tool()) and bool(backup_unix.command())      # macOS: launchd, Linux: systemd --user
 
 
 def _q(s: str) -> str:
@@ -79,6 +83,11 @@ def status() -> dict:
     out = {"supported": supported(), "registered": False, "name": task_name()}
     if not out["supported"]:
         return out
+    if sys.platform != "win32":
+        from . import backup_unix
+        out["registered"] = backup_unix.registered()
+        out["enabled"] = out["registered"]
+        return out
     script = f"""
 $t = Get-ScheduledTask -TaskName {_q(task_name())} -ErrorAction SilentlyContinue
 if (-not $t) {{ '{{"registered":false}}'; exit }}
@@ -105,6 +114,10 @@ def register() -> dict:
     p = exe()
     if not supported():
         raise RuntimeError("scheduled task is only available from the packaged app")
+    if sys.platform != "win32":
+        from . import backup_unix
+        backup_unix.register(backup_unix.command())
+        return status()
     script = f"""
 $ErrorActionPreference = 'Stop'
 $a  = New-ScheduledTaskAction -Execute {_q(p)} -Argument '--backup'
@@ -123,6 +136,10 @@ Register-ScheduledTask -TaskName {_q(task_name())} -Action $a -Trigger $t1,$t2 -
 def unregister():
     if not supported():
         return
+    if sys.platform != "win32":
+        from . import backup_unix
+        backup_unix.unregister()
+        return
     _ps(f"Unregister-ScheduledTask -TaskName {_q(task_name())} -Confirm:$false -ErrorAction SilentlyContinue")
     _run_key(False)
 
@@ -133,6 +150,8 @@ def ensure(enabled: bool) -> dict:
         if not supported():
             return status()
         st = status()
+        if enabled and sys.platform != "win32":
+            return st if st.get("registered") else register()
         if enabled:
             if (not st.get("registered") or st.get("exe") != exe() or st.get("args") != "--backup" or not st.get("start_when_available")
                     or not st.get("enabled") or st.get("priority") != 7 or not st.get("run_key")):
