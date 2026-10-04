@@ -125,7 +125,11 @@ photag is not code-signed yet (a signing certificate costs money; the applicatio
 ("More info" → "Run anyway"). If the installer is blocked:
 0. **Try the install script** from the release page: `photag-install.bat` (double-click it; Windows asks "Run / Cancel" instead of blocking it) or `photag-install.ps1`.
    It downloads the portable version straight from GitHub, checks its SHA-256, unpacks it into `%LOCALAPPDATA%\Programs\photag` and makes shortcuts. The files it
-   unpacks are never marked "from the internet", which is what Smart App Control looks at. It is plain text -- read it first. It is not guaranteed to work on every PC.
+   unpacks are never marked "from the internet", which is what Smart App Control looks at. It is plain text -- read it first.
+   **Tested limit:** on a PC where Smart App Control is *on* (tested in Windows Sandbox) the script installs everything, but Windows then refuses to *start* the unsigned `photag.exe`
+   ("An Application Control policy has blocked this file"). Nothing a script can do changes that: a self-made certificate, even trusted on the PC, is ignored, and a signed Python
+   cannot load the unsigned native modules (Pillow, numpy, pydantic) either. Only a signed build helps (planned: Microsoft Store), or turning Smart App Control off
+   (Windows Security > App & browser control > Smart App Control; it cannot be turned back on without reinstalling Windows). Where Smart App Control is off, SmartScreen only warns, and the installer/script work.
    **If the downloaded `.bat` / `.ps1` is blocked too** (a file from the internet carries a "from the internet" mark; a file you make yourself does not):
    either open **Windows PowerShell** (not cmd), paste this one line and press Enter -- it runs the script straight from GitHub without saving any file --
    ```
