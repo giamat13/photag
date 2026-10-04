@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import backup, cloud, config, db, ffmpeg, images, importer, refmode
+from . import backup, cloud, config, db, ffmpeg, images, importer, platform_dirs, refmode
 from .config import PATHS
 
 HANDBRAKE_PAGE = "https://handbrake.fr/downloads2.php"      # the "Command Line Version" lives on this page
@@ -62,7 +62,7 @@ def _candidates():
         if base:
             yield os.path.join(base, "HandBrake", "HandBrakeCLI.exe")
             yield os.path.join(base, "Programs", "HandBrake", "HandBrakeCLI.exe")
-    yield str(Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "photag" / "tools" / "HandBrakeCLI.exe")
+    yield str(platform_dirs.local_base() / "photag" / "tools" / "HandBrakeCLI.exe")
 
 
 def find_handbrake() -> str | None:

@@ -34,7 +34,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from . import config
+from . import config, platform_dirs
 from .net import ssl_context
 from .version import REPO, __version__
 
@@ -212,7 +212,7 @@ def code_update_possible() -> bool:
 def state_dir() -> Path:
     """Where the update journal, the rollback copy and the installer's done.flag live (survives restarts)."""
     env = os.environ.get("PHOTAG_UPDATE_STATE_DIR")
-    d = Path(env) if env else Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "photag" / "update"
+    d = Path(env) if env else platform_dirs.local_base() / "photag" / "update"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

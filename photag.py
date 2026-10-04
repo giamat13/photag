@@ -22,7 +22,7 @@ def _ensure_std_streams():
     server ever listens. Send them to a log file instead."""
     if sys.stdout is not None and sys.stderr is not None:
         return
-    log_dir = Path(os.environ.get("APPDATA") or Path.home()) / "photag"
+    log_dir = Path(os.environ.get("APPDATA") or Path.home()) / "photag"   # windowed exe = Windows only
     log_dir.mkdir(parents=True, exist_ok=True)
     log = open(log_dir / "photag.log", "a", encoding="utf-8", buffering=1)
     if sys.stdout is None:
@@ -43,8 +43,9 @@ if "--backup" in sys.argv:       # headless: used by the Windows scheduled task,
     sys.stdout.flush(); sys.stderr.flush()
     os._exit(_rc)                # leave at once: nothing stays in memory after a background backup
 
+from app import platform_dirs
 _T0 = time.time()
-LOG = Path(os.environ.get("APPDATA") or Path.home()) / "photag" / "startup.log"
+LOG = platform_dirs.roaming_base() / "photag" / "startup.log"
 
 
 def _log(msg: str):

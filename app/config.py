@@ -12,6 +12,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from . import platform_dirs
+
 APP_NAME = "photag"
 OLD_APP_NAME = "PhotoManager"  # the app's name before the rename; its folders keep working
 
@@ -35,7 +37,7 @@ def _appdata_dir() -> Path:
         d = PORTABLE / "data"
         d.mkdir(parents=True, exist_ok=True)
         return d
-    base = Path(os.environ.get("APPDATA") or os.path.expanduser("~"))
+    base = platform_dirs.roaming_base()
     d = base / APP_NAME
     old = base / OLD_APP_NAME
     if not (d / "config.json").exists() and (old / "config.json").exists():

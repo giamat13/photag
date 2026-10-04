@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from . import cloud, config, db, images
+from . import cloud, config, db, images, platform_dirs
 from .config import PATHS
 from .net import ssl_context
 
@@ -35,7 +35,7 @@ def models_dir() -> Path:
     if config.PORTABLE:
         d = config.PORTABLE / "data" / "models" / "clip-vit-b32"
     else:
-        d = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "photag" / "models" / "clip-vit-b32"
+        d = platform_dirs.local_base() / "photag" / "models" / "clip-vit-b32"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
