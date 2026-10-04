@@ -30,10 +30,22 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProgressPreference = "SilentlyContinue"
+$ProgressPreference = "Continue"
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
 function Say($m) { Write-Host $m }
+# A live progress line (and the Windows progress bar), so a long step visibly moves.
+$script:lastTick = [Diagnostics.Stopwatch]::StartNew()
+function Show-Progress([string]$what, [double]$done, [double]$total, [switch]$Force) {
+    if (-not $Force -and $script:lastTick.ElapsedMilliseconds -lt 150) { return }
+    $script:lastTick.Restart()
+    $pct = if ($total -gt 0) { [math]::Min(100, [int](100 * $done / $total)) } else { 0 }
+    $bar = ("#" * [int]($pct / 4)).PadRight(25, "-")
+    $mb = "{0:N0} / {1:N0} MB" -f ($done / 1MB), ($total / 1MB)
+    Write-Progress -Activity "photag installer" -Status "$what $pct%  ($mb)" -PercentComplete $pct
+    Write-Host ("`r  {0} [{1}] {2,3}%  {3}   " -f $what, $bar, $pct, $mb) -NoNewline
+}
+function End-Progress { Write-Progress -Activity "photag installer" -Completed; Write-Host "" }
 function Finish($code) {
     if (-not $NoPause) { Read-Host "Press Enter to close" | Out-Null }
     exit $code
@@ -71,8 +83,27 @@ try {
         if ($ListOnly) { Say "URL: $($asset.browser_download_url)"; Say "SHA256: $expected"; Finish 0 }
         $ZipPath = Join-Path $env:TEMP "photag-portable-$([guid]::NewGuid().ToString('N')).zip"
         $cleanup = $ZipPath
-        Say "Downloading (this is a large file)..."
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $ZipPath -UseBasicParsing -Headers @{ "User-Agent" = "photag-installer" }
+        Say "Step 1 of 4: downloading (about $([math]::Round($asset.size / 1MB)) MB; keep this window open)..."
+        Add-Type -AssemblyName System.Net.Http
+        $client = New-Object System.Net.Http.HttpClient
+        $client.Timeout = [TimeSpan]::FromMinutes(120)
+        $client.DefaultRequestHeaders.UserAgent.ParseAdd("photag-installer")
+        $resp = $client.GetAsync($asset.browser_download_url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+        $resp.EnsureSuccessStatusCode() | Out-Null
+        $total = [double]$asset.size
+        if ($resp.Content.Headers.ContentLength) { $total = [double]$resp.Content.Headers.ContentLength }
+        $inStream = $resp.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+        $outStream = [IO.File]::Create($ZipPath)
+        try {
+            $buf = New-Object byte[] (1MB)
+            $got = 0.0
+            while (($n = $inStream.Read($buf, 0, $buf.Length)) -gt 0) {
+                $outStream.Write($buf, 0, $n)
+                $got += $n
+                Show-Progress "Downloading" $got $total
+            }
+            Show-Progress "Downloading" $total $total -Force
+        } finally { $outStream.Dispose(); $inStream.Dispose(); $client.Dispose(); End-Progress }
     } elseif ($ListOnly) {
         Say "Would install $ZipPath"
         Finish 0
@@ -81,6 +112,7 @@ try {
 
     # ---- 2. check it
     if ($expected) {
+        Say "Step 2 of 4: checking the download (SHA-256)..."
         $actual = (Get-FileHash -LiteralPath $ZipPath -Algorithm SHA256).Hash
         if ($actual -ne $expected.ToUpper() -and $actual.ToLower() -ne $expected.ToLower()) { Fail "The ZIP does not match its SHA-256 (expected $expected, got $actual). Nothing was installed." }
         Say "SHA-256 checked."
@@ -91,11 +123,29 @@ try {
     # ---- 3. unpack beside the install folder, then swap
     if (Get-Process -Name photag -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe }) { Fail "photag is running. Close it, then run this again." }
     $stage = Join-Path $env:TEMP "photag-stage-$([guid]::NewGuid().ToString('N'))"
+    Say "Step 3 of 4: unpacking..."
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $stage)
+    $stageFull = [IO.Path]::GetFullPath($stage).TrimEnd("\") + "\"
+    New-Item -ItemType Directory -Force -Path $stage | Out-Null
+    $zip = [IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        $all = 0.0; foreach ($e in $zip.Entries) { $all += $e.Length }
+        $did = 0.0
+        foreach ($e in $zip.Entries) {
+            $target = [IO.Path]::GetFullPath((Join-Path $stage $e.FullName))
+            if (-not $target.StartsWith($stageFull, [StringComparison]::OrdinalIgnoreCase)) { throw "The ZIP contains an unsafe path: $($e.FullName)" }
+            if ($e.FullName.EndsWith("/")) { New-Item -ItemType Directory -Force -Path $target | Out-Null; continue }
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($e, $target, $true)
+            $did += $e.Length
+            Show-Progress "Unpacking" $did $all
+        }
+        Show-Progress "Unpacking" $all $all -Force
+    } finally { $zip.Dispose(); End-Progress }
     $src = Join-Path $stage "photag"
     if (-not (Test-Path -LiteralPath (Join-Path $src "photag.exe"))) { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue; Fail "The ZIP does not contain photag\photag.exe." }
 
+    Say "Step 4 of 4: installing into $InstallDir ..."
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     Get-ChildItem -LiteralPath $InstallDir -Force | Where-Object { $_.Name -ne "data" } | Remove-Item -Recurse -Force
     Get-ChildItem -LiteralPath $src -Force | Where-Object { $_.Name -ne "data" } | Move-Item -Destination $InstallDir -Force
