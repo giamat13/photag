@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -582,7 +582,7 @@ def update_install(body: InstallIn):
     try:
         return updater.launch(body.path)
     except updater.BlockedError:
-        subprocess.Popen(["explorer", "/select,", str(body.path)])      # show the file: Explorer may be allowed to run it
+        opener.reveal(body.path)      # show the file: Explorer may be allowed to run it
         raise err(400, "Windows blocked the update installer (Smart App Control). The folder with the downloaded update was opened: double-click the file there, or see the README")
     except updater.UpdateError as e:
         if str(e) == "not a downloaded update":
@@ -1338,10 +1338,11 @@ def open_external(pid: int):
     if vlc:
         subprocess.Popen([vlc, path])
         return {"player": "vlc"}
-    if sys.platform == "win32":
-        os.startfile(path)
+    try:
+        opener.open_default(path)
         return {"player": "default"}
-    raise err(501, "No external player found")
+    except OSError:
+        raise err(501, "No external player found")
 
 
 @app.post("/api/photo/{pid}/reveal")
@@ -1351,7 +1352,7 @@ def reveal(pid: int):
     r = db.connect().execute("SELECT rel_path FROM photos WHERE id=?", (pid,)).fetchone()
     if not r:
         raise HTTPException(404)
-    subprocess.Popen(["explorer", "/select,", str(PATHS.media / r["rel_path"])])
+    opener.reveal(PATHS.media / r["rel_path"])
     return {"ok": True}
 
 
