@@ -203,6 +203,7 @@ try:
         pg.wait_for_timeout(500)
         pg.click("#toolbar [data-view=timeline]")
         pg.wait_for_selector(".tl-s")
+        pg.wait_for_timeout(600)      # opening the view resizes it once more and the (debounced) re-render resets the scroll: let that settle
         shot("timeline")
         heads = pg.locator(".tl-s h4 b").all_inner_texts()
         check("the timeline groups photos by month and year, newest first", len(heads) >= 3 and any("2023" in h for h in heads), heads)
@@ -214,6 +215,7 @@ try:
         pg.mouse.move(box["x"] + 20, box["y"] + box["height"] * 0.97)
         bub = pg.inner_text("#tl-bub")
         pg.mouse.up()
+        pg.wait_for_timeout(500)      # the scroll is applied a frame later: reading it at once made this check flaky
         check("dragging the rail scrolls far and names the month under the pointer", bub.strip() != "" and pg.evaluate("document.querySelector('#tl-main').scrollTop") > 0 or pg.evaluate("document.querySelector('#tl-main').scrollHeight <= document.querySelector('#tl-main').clientHeight"), bub)
         pg.wait_for_timeout(600)                                     # let the scroll settle and the visible months draw
         pg.wait_for_selector(".tl-c img")
