@@ -14,19 +14,26 @@ $root = Join-Path $env:TEMP "photag-probe"
 if (Test-Path $root) { Remove-Item -Recurse -Force $root }
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 $py = Join-Path $root "python\python.exe"
-$results = @()
+$results = New-Object System.Collections.ArrayList
 
 function Get-File($url, $dest) {
     $w = New-Object Net.WebClient
     $w.DownloadFile($url, $dest)    # saved by this script itself: no Mark-of-the-Web
 }
+# PASS = ran fine.  BLOCKED = Windows said an Application Control policy blocked it.  OTHER = failed for another reason (e.g. not installed).
 function Try-Run($label, [scriptblock]$cmd) {
-    $out = & $cmd 2>&1 | Out-String
-    $ok = $LASTEXITCODE -eq 0
-    $script:results += [pscustomobject]@{ Test = $label; Result = $(if ($ok) { "PASS" } else { "BLOCKED/FAILED" }); Detail = $(if ($ok) { "" } else { ($out.Trim() -split "`n" | Select-Object -Last 2) -join " | " }) }
-    Write-Host ("{0,-38} {1}" -f $label, $(if ($ok) { "PASS" } else { "BLOCKED/FAILED" }))
-    if (-not $ok) { Write-Host ("    " + ($out.Trim() -split "`n" | Select-Object -Last 2) -join " | ") -ForegroundColor Yellow }
-    return $ok
+    $out = (& $cmd 2>&1 | Out-String).Trim()
+    $code = $LASTEXITCODE
+    $verdict = "PASS"
+    if ($code -ne 0) { $verdict = if ($out -match "Application Control|blocked|DLL load failed|policy") { "BLOCKED" } else { "OTHER" } }
+    [void]$results.Add([pscustomobject]@{ Test = $label; Result = $verdict })
+    $color = switch ($verdict) { "PASS" { "Green" } "BLOCKED" { "Red" } default { "Yellow" } }
+    Write-Host ("{0,-38} {1}" -f $label, $verdict) -ForegroundColor $color
+    if ($verdict -ne "PASS") {
+        $tail = ($out -split "`n" | Select-Object -Last 3) -join " | "
+        Write-Host ("    " + $tail) -ForegroundColor DarkGray
+    }
+    return ($verdict -eq "PASS")
 }
 
 Write-Host "1/4 downloading python.org's embeddable Python 3.12.10 (signed by the Python Software Foundation)..."
@@ -48,15 +55,23 @@ $txt += "Lib\site-packages"
 Set-Content $pth.FullName $txt
 Get-File "https://bootstrap.pypa.io/get-pip.py" (Join-Path $root "get-pip.py")
 & $py (Join-Path $root "get-pip.py") --no-warn-script-location 2>&1 | Out-Null
-& $py -m pip install --no-warn-script-location --disable-pip-version-check pillow numpy pydantic fastapi uvicorn pywebview 2>&1 | Select-Object -Last 3 | ForEach-Object { Write-Host "    $_" }
+foreach ($pkg in @("pillow", "numpy", "pydantic", "fastapi", "uvicorn", "pywebview")) {
+    # --only-binary: take ready-made wheels only (nothing is compiled on this PC)
+    $o = (& $py -m pip install --only-binary=:all: --no-warn-script-location --disable-pip-version-check $pkg 2>&1 | Out-String).Trim()
+    $okInstall = $LASTEXITCODE -eq 0
+    Write-Host ("    pip install {0,-10} {1}" -f $pkg, $(if ($okInstall) { "ok" } else { "FAILED: " + (($o -split "`n" | Select-Object -Last 1)) }))
+}
 
 Write-Host "4/4 importing each (the unsigned native modules are the question)..."
-foreach ($m in @("PIL.Image", "numpy", "pydantic_core", "fastapi", "uvicorn", "webview")) {
-    Try-Run "import $m" { & $py -c "import $m" } | Out-Null
+foreach ($m in @("PIL.Image", "numpy", "pydantic_core", "fastapi", "uvicorn", "webview", "clr_loader")) {
+    [void](Try-Run "import $m" { & $py -c "import $m" })
 }
 Write-Host ""
-$bad = @($results | Where-Object { $_.Result -ne "PASS" })
-if ($bad.Count -eq 0) { Write-Host "ALL PASS: a signed Python can run photag's native modules on this PC. Tell Claude." -ForegroundColor Green }
-else { Write-Host ("{0} of {1} were blocked/failed -- copy this whole window to Claude." -f $bad.Count, $results.Count) -ForegroundColor Yellow }
+$blocked = @($results | Where-Object { $_.Result -eq "BLOCKED" })
+$other = @($results | Where-Object { $_.Result -eq "OTHER" })
+$pass = @($results | Where-Object { $_.Result -eq "PASS" })
+if ($blocked.Count -gt 0) { Write-Host ("{0} module(s) BLOCKED by Windows: that route is closed (or needs those files signed). Copy this window to Claude." -f $blocked.Count) -ForegroundColor Red }
+elseif ($other.Count -gt 0) { Write-Host ("{0} passed, {1} failed for another reason (usually not installed) -- NOT a block, but not proven either. Copy this window to Claude." -f $pass.Count, $other.Count) -ForegroundColor Yellow }
+else { Write-Host ("ALL {0} PASS: a signed Python ran photag's native modules on this PC. Tell Claude." -f $pass.Count) -ForegroundColor Green }
 Write-Host "(You can delete $root now.)"
 Read-Host "Press Enter to close" | Out-Null
