@@ -17,7 +17,7 @@ def calls(plat, fn, arg):
 
 check("windows: explorer /select,", calls("win32", opener.reveal, "C:/a/b.jpg") == ["explorer", "/select,", "C:/a/b.jpg"])
 check("macOS: open -R", calls("darwin", opener.reveal, "/a/b.jpg") == ["open", "-R", "/a/b.jpg"])
-check("linux: xdg-open of the folder", calls("linux", opener.reveal, "/a/b.jpg") == ["xdg-open", "/a"])
+check("linux: xdg-open of the folder", calls("linux", opener.reveal, "/a/b.jpg") == ["xdg-open", str(Path("/a"))])
 check("macOS: open", calls("darwin", opener.open_default, "/a/b.mp4") == ["open", "/a/b.mp4"])
 check("linux: xdg-open", calls("linux", opener.open_default, "/a/b.mp4") == ["xdg-open", "/a/b.mp4"])
 with mock.patch.object(sys, "platform", "win32"), mock.patch.object(opener.os, "startfile", create=True) as sf:
