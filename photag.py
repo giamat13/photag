@@ -181,7 +181,7 @@ def _own_taskbar_identity():
 def _browser_mode():
     """No native window: open photag's page in the default browser and keep the server running until Ctrl+C."""
     import webbrowser
-    print(f"photag is running at {URL}  (press Ctrl+C to stop)")
+    print(f"photag is running at {URL}  (press Ctrl+C to stop)", flush=True)
     try:
         webbrowser.open(URL)
     except Exception:
