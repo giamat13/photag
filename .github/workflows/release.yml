@@ -14,7 +14,11 @@ permissions:
   contents: write
 
 jobs:
+  unix:
+    # Linux (tar.gz) and macOS (zip with photag.app) builds, made by the same reusable workflow that tests them on every change to the spec
+    uses: ./.github/workflows/unix-build.yml
   build:
+    needs: unix
     runs-on: windows-latest
     timeout-minutes: 60
     env:
@@ -125,6 +129,15 @@ jobs:
           name: photag-store-msix
           path: dist/photag-*.msix
           retention-days: 30
+      - name: Take the Linux and macOS builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: photag-*
+          path: unix_builds
+          merge-multiple: true
+      - name: Put them next to the Windows files
+        shell: bash
+        run: cp unix_builds/* dist/ && ls -la dist/photag-*-linux-* dist/photag-*-macos-*
       - name: Publish the release (the release body is the "what is new" text inside the app)
         shell: bash
         env:
@@ -134,4 +147,4 @@ jobs:
           [ -f "$notes" ] || notes=docs/release-notes-v1.0.0.md
           flags=()
           [ "${{ inputs.prerelease }}" = "true" ] && flags+=(--prerelease)
-          gh release create "${TAG}" --target "${GITHUB_SHA}" installer_output/photagSetup.exe dist/photagSetup-*.zip dist/photag-code-*.zip dist/photag-*-portable.zip dist/photag-install.bat dist/photag-install.ps1 --title "photag ${VERSION}" --notes-file "$notes" "${flags[@]}"
+          gh release create "${TAG}" --target "${GITHUB_SHA}" installer_output/photagSetup.exe dist/photagSetup-*.zip dist/photag-code-*.zip dist/photag-*-portable.zip dist/photag-install.bat dist/photag-install.ps1 dist/photag-*-linux-x64.tar.gz dist/photag-*-macos-*.zip --title "photag ${VERSION}" --notes-file "$notes" "${flags[@]}"

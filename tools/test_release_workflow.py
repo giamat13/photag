@@ -40,18 +40,21 @@ sp = [s for s in signing if s.get("uses", "").startswith("signpath/")]
 check("two SignPath requests: one for the programs, one for the installer", [s["with"]["artifact-configuration-slug"] for s in sp] == ["programs", "installer"])
 check("each waits for the result and names an output folder", all(s["with"]["wait-for-completion"] is True and s["with"]["output-artifact-directory"] for s in sp))
 check("the SignPath token is only ever referenced as the secret, never written in the file", all(x["with"]["api-token"] == "${{ secrets.SIGNPATH_API_TOKEN }}" for x in sp))
+check("the Windows job waits for the Linux / macOS builds and attaches them", wf["jobs"]["build"]["needs"] == "unix" and wf["jobs"]["unix"]["uses"].endswith("unix-build.yml")
+      and "linux-x64.tar.gz" in steps[-1]["run"] and "macos-" in steps[-1]["run"])
 check("the publish step still ships the installer, the code zip, the portable ZIP and the install scripts", all(f in steps[-1]["run"] for f in ("photagSetup.exe", "photag-code-", "-portable.zip", "photag-install.bat", "photag-install.ps1")))
 check("the Store package steps run only when the Store variables exist (an unconfigured build is unchanged)",
       len(store) == 2 and all(s.get("if") == "env.STORE == 'true'" for s in store) and all(v in job["env"]["STORE"] for v in ("STORE_IDENTITY_NAME", "STORE_PUBLISHER", "STORE_PUBLISHER_NAME")))
 check("the Store package is built after the programs (it contains photag.exe) and before the release is published", idx("Signing: put the signed programs back") < idx("Store: build") < idx("Publish the release"))
 check("the MSIX is kept as an artifact, never attached to the public release", "msix" not in steps[-1]["run"].lower())
 plain = [name(x) for x in steps if x not in signing and x not in store]
-check("without signing, the build is exactly the usual 14 steps in the usual order (installer, its ZIP copy, code zip, portable ZIP, install scripts, publish)",
-      len(plain) == 14 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
+check("without signing, the build is exactly the usual 16 steps in the usual order (installer, its ZIP copy, code zip, portable ZIP, install scripts, publish)",
+      len(plain) == 16 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
                                          "python tools/make_version_info.py", "python -m PyInstaller --noconfirm photag.spec", "python -m PyInstaller --noconfirm photag_backup.spec",
                                          "choco install innosetup --no-progress -y"]
       and plain[8] == "Build the installer" and plain[9].startswith("Put a copy of the installer in a ZIP") and plain[10].startswith("Build the code update")
-      and plain[11].startswith("Build the portable ZIP") and plain[12].startswith("Build the install scripts") and plain[13].startswith("Publish the release"), plain)
+      and plain[11].startswith("Build the portable ZIP") and plain[12].startswith("Build the install scripts")
+      and plain[13].startswith("Take the Linux and macOS builds") and plain[14].startswith("Put them next to") and plain[15].startswith("Publish the release"), plain)
 
 # ---- tools/signing.py
 import signing  # noqa: E402

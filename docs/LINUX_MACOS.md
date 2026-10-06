@@ -3,7 +3,11 @@
 photag is built for Windows (the installer and the portable ZIP are Windows programs). On **Linux and macOS you run it from the source code**.
 Everything except the Windows-only parts works: import, catalog, search, edit, export, backup, the web UI.
 
-## Run it
+## Download (no source needed)
+The release page has `photag-<version>-linux-x64.tar.gz` and `photag-<version>-macos-arm64.zip` (Apple Silicon). Unpack and run `./photag/photag` (Linux) or open `photag.app`
+(macOS: right-click > Open the first time, the app is not signed). Everything below applies to both ways of running it.
+
+## Run it from the source
 ```
 git clone https://github.com/giamat13/photag.git && cd photag
 python3.12 -m venv .venv && . .venv/bin/activate
@@ -22,7 +26,7 @@ python photag.py
 * **Updates:** git pull. The in-app update check tells you about a new release but does not offer the Windows installer.
 
 ## What is not there
-* No packaged app (AppImage, `.deb`, `.dmg`) and no Apple signing: a signed macOS app needs a paid Apple developer account. Tracked in a separate issue.
+* No AppImage / `.deb` / `.dmg`, no Apple signing or notarization (a signed macOS app needs a paid Apple developer account), no Intel-Mac build. Tracked in issue #4.
 * Casting to a TV (Win+K), the Windows installer/portable ZIP and Smart App Control notes are Windows only.
 
 ## What is tested
