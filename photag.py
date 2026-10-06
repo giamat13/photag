@@ -178,6 +178,20 @@ def _own_taskbar_identity():
         pass
 
 
+def _browser_mode():
+    """No native window: open photag's page in the default browser and keep the server running until Ctrl+C."""
+    import webbrowser
+    print(f"photag is running at {URL}  (press Ctrl+C to stop)")
+    try:
+        webbrowser.open(URL)
+    except Exception:
+        pass
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        pass
+
+
 def main():
     _own_taskbar_identity()
     if ALREADY_RUNNING:                          # photag is already open: just show another window of it, no second server
@@ -199,6 +213,10 @@ def main():
         _log("opening the window")
         webview.start(icon=str(ICON) if ICON.exists() else None)
     except Exception as e:
+        if sys.platform != "win32":                    # Linux / macOS without a usable window toolkit (GTK / Qt): use the browser
+            _log(f"no window ({type(e).__name__}: {e}); opening {URL} in the default browser instead")
+            _browser_mode()
+            return
         _fatal("photag could not open its window", f"{type(e).__name__}: {e} (is the Microsoft Edge WebView2 runtime installed?)")
     _log("window closed, exiting")
 

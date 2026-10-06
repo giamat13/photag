@@ -146,6 +146,8 @@ def check(force: bool = False, include_pre: bool = False) -> dict:
     tag = rel.get("tag_name") or ""
     out.update(latest=tag.lstrip("vV"), notes=rel.get("body") or "", page=rel.get("html_url") or out["page"],
                asset=_pick_asset(rel.get("assets") or []), published=rel.get("published_at"))
+    if sys.platform != "win32" and not os.environ.get("PHOTAG_UPDATE_ANY_PLATFORM"):
+        out["asset"] = None                  # photagSetup.exe is a Windows installer: macOS / Linux get the release page (and code updates)
     out["code_asset"] = _pick_code_asset(rel.get("assets") or [], out["latest"])
     out["prerelease"] = bool(tag) and _is_pre(rel)
     out["available"] = bool(tag) and is_newer(tag, __version__)
