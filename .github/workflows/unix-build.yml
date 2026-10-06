@@ -1,0 +1,56 @@
+name: unix-build
+# Builds photag for Linux (tar.gz) and macOS (zip with photag.app) with PyInstaller, checks that the packaged program starts and answers,
+# and keeps the files as workflow artifacts. The release workflow calls this and attaches the files to the GitHub release.
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    paths: ["photag_unix.spec", "tools/make_unix_package.py", ".github/workflows/unix-build.yml", "requirements.txt", "photag.py"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: System libraries (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-0
+      - run: python -m pip install -r requirements.txt pyinstaller==6.22.3
+      - name: Build the program
+        run: python -m PyInstaller --noconfirm photag_unix.spec
+      - name: The packaged program starts and answers (no window)
+        shell: bash
+        env:
+          PHOTAG_NO_WINDOW: "1"
+          PHOTAG_PORT: "18756"
+          HOME: ${{ runner.temp }}/smoke-home
+        run: |
+          mkdir -p "$HOME"
+          if [ "$RUNNER_OS" = "macOS" ]; then BIN=dist/photag.app/Contents/MacOS/photag; else BIN=dist/photag/photag; fi
+          "$BIN" > "$RUNNER_TEMP/photag.log" 2>&1 &
+          PID=$!
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:18756/api/status > /dev/null 2>&1; then echo "answered after $i s"; kill $PID; exit 0; fi
+            sleep 1
+          done
+          echo "the packaged program did not answer"; cat "$RUNNER_TEMP/photag.log"; cat "$HOME/.config/photag/startup.log" 2>/dev/null; kill $PID || true; exit 1
+      - name: Pack it
+        run: python tools/make_unix_package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photag-${{ runner.os }}
+          path: |
+            dist/photag-*-linux-x64.tar.gz
+            dist/photag-*-macos-*.zip
+          if-no-files-found: error
+          retention-days: 14
