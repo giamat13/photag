@@ -48,7 +48,10 @@ port = 18000 + os.getpid() % 1000
 env = {**os.environ, "PHOTAG_PORT": str(port), "PHOTAG_NO_WEBVIEW_TEST": "1", "BROWSER": "true", "PYTHONIOENCODING": "utf-8"}
 code = ("import sys, types; sys.modules['webview'] = None\n"      # `import webview` raises ImportError: no toolkit
         "import runpy; runpy.run_path(%r, run_name='__main__')" % str(ROOT / "photag.py"))
+import threading  # noqa: E402
 p = subprocess.Popen([sys.executable, "-c", code], env=env, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+lines = []
+threading.Thread(target=lambda: [lines.append(l) for l in p.stdout], daemon=True).start()
 ok = False
 url = None
 for _ in range(120):
@@ -66,10 +69,15 @@ for _ in range(120):
         break
 alive = p.poll() is None
 check("photag.py without a window toolkit keeps running and serves the app (browser mode)", ok and alive, f"port {url}, alive={alive}")
+for _ in range(40):                      # the server answers a moment before the main thread prints the address
+    if any("photag is running at http://" in l for l in lines):
+        break
+    time.sleep(0.25)
 p.terminate()
 try:
-    out = p.communicate(timeout=10)[0]
+    p.wait(timeout=10)
 except Exception:
-    p.kill(); out = ""
+    p.kill()
+out = "".join(lines)
 check("it tells you the address", "photag is running at http://" in out, out[-200:])
 n = res.count(False); print(f"\n{len(res)-n}/{len(res)} passed"); sys.exit(1 if n else 0)
