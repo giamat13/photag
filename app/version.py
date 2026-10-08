@@ -9,5 +9,5 @@ the second ("9.1.0"). Pre-releases add "-beta.N" ("9.1.0-beta.1"). ALWAYS write 
 programs installed before this scheme only recognise a code update "photag-code-X.Y.Z-rtN.zip" with three parts.
 (The short "9.1" is still read as 9.1.0 everywhere, but is never written.)
 """
-__version__ = "10.0.0"
+__version__ = "11.0.0"
 REPO = "giamat13/photag"
