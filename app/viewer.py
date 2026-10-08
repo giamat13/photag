@@ -370,7 +370,7 @@ def rename(token: str, name: str) -> dict:
     if not p.is_file():
         raise FileNotFoundError(str(p))
     new = p.with_name(clean_name(name, p.suffix))
-    if new != p:
+    if new.name != p.name:                          # Path equality ignores case on Windows: compare the spelling
         if new.exists() and not (new.name.lower() == p.name.lower() and os.path.samefile(new, p)):
             raise AlreadyExists(new.name)
         os.rename(p, new)
