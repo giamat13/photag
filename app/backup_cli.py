@@ -19,6 +19,17 @@ def _log(msg: str):
 
 
 def main(argv: list[str]) -> int:
+    try:
+        return _main(argv)
+    finally:
+        try:                                         # no window here: a problem with the backup is announced from a short-lived icon
+            from . import background
+            background.announce_headless()
+        except Exception:
+            pass
+
+
+def _main(argv: list[str]) -> int:
     force = "--force" in argv
     try:
         with backup.background_mode(process=True):       # lowest CPU / disk priority: never gets in the way

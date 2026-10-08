@@ -143,6 +143,9 @@ photag is not code-signed yet (a signing certificate costs money; the applicatio
 Smart App Control can still block the portable EXE itself the first time it runs on a given PC; there is no installer-vs-portable difference
 there, only signing fixes that for good.
 
+## Background mode (Windows)
+photag keeps an icon next to the clock. Closing the window does not end the program: automatic import and the backup keep working, and the icon's menu has **Open photag**, **Back up now** and **Exit**. photag tells you with a notification when the backup drive is not connected, when there was no backup for several days, or when the backup keeps failing (once every 12 hours at most, in your language). Preferences > Background switches the icon off, or starts photag in the background when you sign in.
+
 ## Use photag as your picture viewer
 Right-click a picture > **Open with > photag** shows it in a fast viewer (zoom, pan, next/previous picture in the folder, rotate, full screen) **without adding it to your library**. A button in the viewer adds it if you want. The installer offers this as an option, and Preferences > *Picture viewer* switches it on or off for the portable version. To replace the Windows Photos app, press *Choose in Windows settings* there and pick photag for each picture type (Windows does not allow a program to make itself the default).
 

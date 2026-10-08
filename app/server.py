@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -150,6 +150,10 @@ def _start_trash_purge():
     threading.Thread(target=_trash_purge_loop, daemon=True).start()
     try:
         fileassoc.ensure()    # "Open with photag" is on by default (Windows, the packaged program); Preferences can switch it off
+    except Exception:
+        pass
+    try:
+        bgmode.start()    # the icon next to the clock: closing the window keeps the program (import, backup) running; Preferences can switch it off
     except Exception:
         pass
 
@@ -1389,6 +1393,42 @@ def fileassoc_default_apps():
     if not fileassoc.supported():
         raise err(400, "Windows could not be changed")
     fileassoc.open_default_apps()
+    return {"ok": True}
+
+
+# ---- background mode: the icon next to the clock (app/background.py) ----------------------------------------------------
+class BackgroundIn(BaseModel):
+    keep: bool | None = None
+    autostart: bool | None = None
+
+
+@app.get("/api/tray")
+def tray_status():
+    d = bgmode.status()
+    d["autostart"] = bool(d["supported"] and d["autostart"] and bgmode.autostart_on())
+    return d
+
+
+@app.post("/api/tray")
+def tray_set(body: BackgroundIn):
+    if not bgmode.supported():
+        raise err(400, "Windows could not be changed")
+    try:
+        cur = bgmode.set_(body.keep, body.autostart)
+        bgmode.set_autostart_entry(cur["autostart"])
+    except OSError:
+        raise err(500, "Windows could not be changed")
+    bgmode.apply()
+    return tray_status()
+
+
+class UiLangIn(BaseModel):
+    lang: str
+
+
+@app.post("/api/ui-lang")
+def ui_lang(body: UiLangIn):
+    bgmode.set_ui_lang(body.lang)       # the language of the notifications (they come from the program, not from the window)
     return {"ok": True}
 
 

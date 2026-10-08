@@ -1818,7 +1818,7 @@ async function storageBreakdown(){
   </div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
 }
 async function preferences(){
-  const [s, ai, rf0, beta, cat, fa] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta'), api('/api/catalog-edits'), api('/api/fileassoc')]);
+  const [s, ai, rf0, beta, cat, fa, bg] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta'), api('/api/catalog-edits'), api('/api/fileassoc'), api('/api/tray').catch(()=>({supported:false}))]);
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
@@ -1830,6 +1830,10 @@ async function preferences(){
     <label class="chkrow"><input type="checkbox" id="fa-on" ${fa.on ? 'checked' : ''}> ${t('Offer photag in the “Open with” menu for pictures')}</label>
     <div class="bk-path"><button id="fa-default">${t('Choose default apps…')}</button></div>
     <div class="hint" style="padding:0">${t('A picture opened with photag is shown without being added to the catalog. To open pictures with a double click, choose photag for each picture type in Windows’ Default apps.')}</div>` : ''}
+    ${bg.supported ? `<div class="lbl-sub" style="padding:0">${t('Background')}</div>
+    <label class="chkrow"><input type="checkbox" id="bg-keep" ${bg.keep ? 'checked' : ''}> ${t('Keep photag running after the window is closed (an icon next to the clock)')}</label>
+    <label class="chkrow"><input type="checkbox" id="bg-auto" ${bg.autostart ? 'checked' : ''}> ${t('Start photag in the background when I sign in to Windows')}</label>
+    <div class="hint" style="padding:0">${t('In the background photag keeps importing and backing up, and tells you with a notification when the backup drive is not connected or no backup was made for several days. Use the icon next to the clock to open photag or to exit.')}</div>` : ''}
     <div class="lbl-sub" style="padding:0">${t('Automatic import')}</div>
     <label class="chkrow"><input type="checkbox" id="ai-on"> ${t('Import new photos automatically from a folder')}</label>
     <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
@@ -1845,6 +1849,11 @@ async function preferences(){
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
   $('#pf-beta').onchange=e=>send('POST', '/api/update/beta', {on: e.target.checked});
   $('#pf-cat').onchange=e=>send('POST', '/api/catalog-edits', {on: e.target.checked}).then(()=>toast(e.target.checked ? t('Edits and EXIF are kept in the catalog') : t('Edits will be written into the photo files')));
+  if ($('#bg-keep')) {
+    const sync = d => { $('#bg-keep').checked = d.keep; $('#bg-auto').checked = d.autostart; };
+    $('#bg-keep').onchange=e=>send('POST', '/api/tray', {keep: e.target.checked, ...(e.target.checked ? {} : {autostart: false})}).then(sync).catch(()=>{ e.target.checked = !e.target.checked; });
+    $('#bg-auto').onchange=e=>send('POST', '/api/tray', {autostart: e.target.checked}).then(sync).catch(()=>{ e.target.checked = !e.target.checked; });
+  }
   if ($('#fa-on')) {
     $('#fa-on').onchange=e=>send('POST', '/api/fileassoc', {on: e.target.checked}).then(()=>toast(e.target.checked ? t('photag is now in the “Open with” menu') : t('photag was removed from the “Open with” menu'))).catch(()=>{ e.target.checked = !e.target.checked; });
     $('#fa-default').onclick=()=>send('POST', '/api/fileassoc/default-apps', {});
@@ -2562,6 +2571,20 @@ function mdLite(md){
 }
 
 // Returns true when the check itself worked (even if there is nothing new), false when it could not reach GitHub.
+// Once, the first time the program is opened after it was installed: offer to make photag the program that opens pictures.
+async function viewerOffer(){
+  if(pref.get('viewerOffer', false) || !$('#modal').classList.contains('hidden')) return;
+  let fa; try{ fa = await api('/api/fileassoc'); }catch{ return; }
+  if(!fa.supported || !fa.on) return;                                  // not Windows / not the installed program / "Open with" was switched off
+  pref.set('viewerOffer', true);
+  modal(`<h3>${t('Make photag your picture viewer?')}</h3><div class="mb">
+    <p>${t('Pictures you open from your folders will open in photag, quickly and without being added to your library.')}</p>
+    <p class="hint" style="padding:0">${t('Windows will open its settings: press “Set default” for the picture types you want.')}</p></div>
+    <div class="mf"><button id="vo-no">${t('Not now')}</button><span class="spacer"></span><button class="primary" id="vo-yes">${t('Yes, make photag my picture viewer')}</button></div>`);
+  $('#vo-no').onclick = closeModal;
+  $('#vo-yes').onclick = ()=>{ closeModal(); send('POST', '/api/fileassoc/default-apps', {}).catch(()=>{}); };
+}
+
 async function updateCheck(manual, force=manual){
   let info;
   try{ info = await api('/api/update/check' + (force ? '?force=1' : '?force=0') + (manual ? '&pre=1' : '')); }
@@ -3761,6 +3784,8 @@ function oneDriveNotice(force){
   setTimeout(otdNotice, 4500);
   setTimeout(yirNotice, 5000);
   setTimeout(()=>oneDriveNotice(false), 1500);
+  setTimeout(viewerOffer, 6000);
+  send('POST', '/api/ui-lang', {lang: I18N.lang}).catch(()=>{});          // the language of the notifications from the icon next to the clock
   setTimeout(backgroundTick, 3000); setInterval(backgroundTick, 60000);   // quiet check on start-up; a window appears only when a newer release exists
   // an empty catalog shows the empty-state screen with an Import button; it never jumps to the Import screen by itself
   // resume the activity indicator if a job is already running (e.g. after a reload)

@@ -240,6 +240,7 @@ def _read_startup(args) -> None:
 
 
 _read_startup(sys.argv[1:])
+STARTED_WITH_PICTURE = bool(_STARTUP)          # this program was started by "Open with" on a picture: a viewer, not the whole program
 
 
 def startup_token() -> str | None:
