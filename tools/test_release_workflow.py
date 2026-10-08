@@ -50,8 +50,12 @@ check("the publish step still ships the installer, the code zip, the portable ZI
 check("the Store package steps run only when the Store variables exist (an unconfigured build is unchanged)",
       len(store) == 2 and all(s.get("if") == "env.STORE == 'true'" for s in store) and all(v in job["env"]["STORE"] for v in ("STORE_IDENTITY_NAME", "STORE_PUBLISHER", "STORE_PUBLISHER_NAME")))
 check("the Store package is built after the programs (it contains photag.exe) and before the release is published", idx("Signing: put the signed programs back") < idx("Store: build") < idx("Keep the release files"))
+msi = [x for x in steps if name(x).startswith("Build the MSI")]
 check("the MSIX is kept as an artifact, never attached to the public release", "msix" not in pub_run.lower())
-plain = [name(x) for x in steps if x not in signing and x not in store]
+check("the MSI is built after the install scripts, can fail without stopping the release, and is attached when it was made",
+      len(msi) == 1 and msi[0].get("continue-on-error") is True and idx("Build the install scripts") < idx("Build the MSI") < idx("Collect the release files")
+      and "photag-*.msi" in pub_run and "nullglob" in pub_run)
+plain = [name(x) for x in steps if x not in signing and x not in store and x not in msi]
 check("without signing, the build is exactly the usual 15 steps in the usual order (installer, its ZIP copy, code zip, portable ZIP, install scripts, collect, keep for the publish job)",
       len(plain) == 15 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
                                          "python tools/make_version_info.py", "python -m PyInstaller --noconfirm photag.spec", "python -m PyInstaller --noconfirm photag_backup.spec",

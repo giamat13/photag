@@ -109,7 +109,11 @@ try:
         for name, js in dialogs.items():
             try:
                 ev(f"(()=>{{ closeModal(); const r = ({js}); return 1; }})()")
-                pg.wait_for_timeout(700)
+                try:                                         # some dialogs ask the server first (compress: /api/handbrake): wait for them, up to 10 s
+                    pg.wait_for_function("(document.querySelector('#modal:not(.hidden) #modal-box')?.innerText || document.querySelector('#import:not(.hidden)')?.innerText || '').trim().length > 0", timeout=10000)
+                except Exception:
+                    pass
+                pg.wait_for_timeout(300)
                 txt = ev("document.querySelector('#modal:not(.hidden) #modal-box')?.innerText || document.querySelector('#import:not(.hidden)')?.innerText || ''")
                 bad = HEB.findall(txt.replace("עברית", ""))     # the language list shows each language in its own script
                 check(f"{name}: shown, no Hebrew", bool(txt.strip()) and not bad, bad[:5] if bad else f"{len(txt)} chars")

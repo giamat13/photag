@@ -1596,6 +1596,7 @@ def _viewer_path(token: str) -> Path:
 @app.post("/api/viewer/open")
 def viewer_open(body: ViewerOpenIn):
     try:
+        viewer.drop_handoff(body.path)
         return {"token": viewer.open_path(body.path)}
     except viewer.NotAPicture:
         raise err(400, "This file is not a picture photag can show")
@@ -1741,6 +1742,17 @@ def viewer_edit(token: str, body: ViewerEditIn):
         raise HTTPException(404)
     except Exception:
         raise err(500, "The picture could not be saved")
+
+
+class HandoffIn(BaseModel):
+    paths: list[str]
+
+
+@app.post("/api/viewer/handoff")
+def viewer_handoff(body: HandoffIn):
+    """A photag started by "Open with" of an older photag.exe while this one runs gives its picture here; its window (on this
+    program's main page) then gets it from /api/viewer/startup."""
+    return {"taken": viewer.take_handoff(body.paths)}
 
 
 @app.get("/api/viewer/startup")

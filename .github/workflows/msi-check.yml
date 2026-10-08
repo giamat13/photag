@@ -1,0 +1,44 @@
+name: msi-check
+# By hand (Actions > msi-check > Run workflow): builds the program and the MSI exactly as the release does, then installs it silently,
+# checks photag.exe is there, and uninstalls it again. Nothing is published; the MSI is kept as an artifact for a few days.
+on:
+  workflow_dispatch:
+
+jobs:
+  msi:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m PyInstaller --noconfirm photag.spec
+      - run: python -m PyInstaller --noconfirm photag_backup.spec
+      - name: Build the MSI
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          $env:PATH = "$env:USERPROFILE\.dotnet\tools;$env:PATH"
+          python tools/make_msi.py
+      - name: Install it silently, check, uninstall
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem dist\photag-*.msi)[0].FullName
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v msi-install.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content msi-install.log -Tail 60; throw "install failed: $($p.ExitCode)" }
+          $exe = "$env:LOCALAPPDATA\Programs\photag-msi\photag.exe"
+          if (-not (Test-Path $exe)) { throw "photag.exe was not installed" }
+          if (-not (Test-Path "$env:LOCALAPPDATA\Programs\photag-msi\photag-backup.exe")) { throw "photag-backup.exe was not installed" }
+          Write-Host "installed: $exe"
+          $p = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /l*v msi-uninstall.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content msi-uninstall.log -Tail 60; throw "uninstall failed: $($p.ExitCode)" }
+          if (Test-Path $exe) { throw "photag.exe is still there after uninstalling" }
+          Write-Host "uninstalled"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photag-msi
+          path: dist/photag-*.msi
+          retention-days: 5

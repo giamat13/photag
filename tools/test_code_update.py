@@ -135,24 +135,27 @@ try:
           updater._pick_code_asset(rel_assets, "9.4.0") is None and updater._pick_code_asset([{**rel_assets[1], "digest": None}], "9.3.0") is None)
     check("can_install is true with only a code zip", updater.can_install({"asset": None, "code_asset": ca}))
 
-    # restarting after an update: the command line must reach cmd.exe with its quotes intact
+    # restarting after an update: photag.exe itself, started directly (no cmd.exe / start and its quoting), told to wait for this process
     exe_with_space = r"C:\Program Files\photag\photag.exe"
-    cmd = updater.restart_command(exe_with_space)
-    check("the restart command keeps the quotes around the program (no backslash-escaped quotes)", '\\"' not in cmd and f'start "" "{exe_with_space}"' in cmd, cmd)
-    check("...and is one string, so Python does not re-quote it", isinstance(cmd, str) and cmd.startswith("cmd.exe /d /s /c "))
-    if sys.platform == "win32":
-        import subprocess
-        import time
-        d = tmp / "restart test dir"
-        d.mkdir()
-        marker = d / "started.txt"
-        (d / "fake photag.cmd").write_text(f'@echo started> "{marker}"\r\n')
-        subprocess.Popen(updater.restart_command(str(d / "fake photag.cmd"), wait_pings=1), close_fds=True)
-        for _ in range(60):
-            if marker.exists():
-                break
-            time.sleep(0.25)
-        check("on Windows the program (a path with spaces) really is started again", marker.exists())
+    args, env = updater.restart_args(exe_with_space)
+    check("the restart starts the program itself, as one argument (no cmd.exe, no 'start')", args == [exe_with_space] and not any("cmd" in a.lower() for a in args), args)
+    check("...and tells it to wait for this process", env.get("PHOTAG_WAIT_PID") == str(os.getpid()))
+    import subprocess
+    import time
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(1.5)"])
+    import threading
+    threading.Thread(target=child.wait, daemon=True).start()     # reaped as soon as it ends (Linux keeps a finished child as a zombie)
+    os.environ["PHOTAG_WAIT_PID"] = str(child.pid)
+    t0 = time.time()
+    waited = updater.wait_for_previous(timeout=20)
+    dt = time.time() - t0
+    child.wait()
+    check("the new process waits until the old one has ended", waited and 1.0 <= dt < 10 and child.returncode is not None, round(dt, 2))
+    check("...and does not pass the wait on to programs it starts", "PHOTAG_WAIT_PID" not in os.environ)
+    os.environ["PHOTAG_WAIT_PID"] = str(child.pid)          # already gone
+    t0 = time.time(); updater.wait_for_previous(timeout=20)
+    check("a process that is already gone: no waiting", time.time() - t0 < 1.0)
+    check("nothing to wait for without the variable", updater.wait_for_previous() is False)
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
     for f in (ROOT / "dist").glob("photag-code-*.zip"):

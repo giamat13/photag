@@ -442,11 +442,79 @@ _read_startup(sys.argv[1:])
 STARTED_WITH_PICTURE = bool(_STARTUP)          # this program was started by "Open with" on a picture: a viewer, not the whole program
 
 
+# Pictures handed over by a photag started meanwhile by "Open with" of an older photag.exe, while this one was already running (since
+# 13.0.0 photag keeps running in the background): that launcher only opens a window on this program's main page, which then asks
+# for them here. (path, time); forgotten after HANDOFF_TTL seconds, and dropped when the new program opened the viewer itself.
+_HANDOFF: list[tuple[str, float]] = []
+HANDOFF_TTL = 30.0
+HANDED_OFF = False                            # this (new) program gave its picture to the photag that was already running
+
+
+def take_handoff(paths: list[str]) -> int:
+    now = time.time()
+    n = 0
+    for x in paths[:20]:
+        try:
+            p = Path(x)
+            if p.is_file() and is_picture(p):
+                _HANDOFF.append((str(p.resolve()), now)); n += 1
+        except OSError:
+            pass
+    return n
+
+
+def drop_handoff(path: str) -> None:
+    """The new program opened that picture in its own viewer window (a launcher that knows pictures): the main page must not show it again."""
+    try:
+        key = str(Path(path).resolve())
+    except OSError:
+        return
+    _HANDOFF[:] = [h for h in _HANDOFF if h[0] != key]
+
+
+def _hand_to_running() -> bool:
+    """At start-up, when this program was started with a picture and another photag is already answering: give it the picture."""
+    import json
+    import urllib.request
+    base = int(os.environ.get("PHOTAG_BASE_PORT", 8756))
+    body = json.dumps({"paths": _STARTUP}).encode()
+    for port in range(base, base + 50):
+        url = f"http://127.0.0.1:{port}"
+        try:
+            with urllib.request.urlopen(url + "/api/status", timeout=3) as r:
+                st = json.loads(r.read())
+            if not isinstance(st, dict) or "library_root" not in st:
+                continue
+            req = urllib.request.Request(url + "/api/viewer/handoff", data=body, headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=3) as r:
+                return bool(json.loads(r.read()).get("taken"))
+        except Exception:
+            continue
+    return False
+
+
+if STARTED_WITH_PICTURE and not os.environ.get("PHOTAG_NO_HANDOFF"):
+    try:
+        HANDED_OFF = _hand_to_running()
+    except Exception:
+        HANDED_OFF = False
+
+
 def startup_token() -> str | None:
-    """The token of the picture this program was started with, once (None when there is none or it was already taken)."""
-    while _STARTUP:
+    """The token of the picture this program was started with -- or one handed over by a photag started meanwhile -- once (None
+    when there is none or it was already taken)."""
+    while _STARTUP and not HANDED_OFF:
         try:
             return open_path(_STARTUP.pop(0))
+        except NotAPicture:
+            continue
+    now = time.time()
+    while _HANDOFF:
+        path, at = _HANDOFF.pop(0)
+        if now - at > HANDOFF_TTL:
+            continue
+        try:
+            return open_path(path)
         except NotAPicture:
             continue
     return None

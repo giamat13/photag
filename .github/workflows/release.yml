@@ -119,6 +119,13 @@ jobs:
         run: python tools/make_portable.py
       - name: "Build the install scripts (photag-install.bat / .ps1: download + unpack the portable ZIP without the Mark-of-the-Web)"
         run: python tools/make_install_script.py
+      - name: "Build the MSI (Windows Installer package for msiexec / Intune; an extra download -- if it fails, the release goes on without it)"
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          $env:PATH = "$env:USERPROFILE\.dotnet\tools;$env:PATH"
+          python tools/make_msi.py
       - name: "Store: build the Microsoft Store package (MSIX; Microsoft signs it when it is published)"
         if: env.STORE == 'true'
         env:
@@ -138,6 +145,7 @@ jobs:
         run: |
           mkdir release_files
           cp installer_output/photagSetup.exe dist/photagSetup-*.zip dist/photag-code-*.zip dist/photag-*-portable.zip dist/photag-install.bat dist/photag-install.ps1 release_files/
+          cp dist/photag-*.msi release_files/ 2>/dev/null || echo "no MSI this time (its step failed): the release goes on without it"
           ls -la release_files
       - name: Keep the release files for the publish job
         uses: actions/upload-artifact@v4
@@ -177,4 +185,6 @@ jobs:
           flags=()
           [ "${{ inputs.prerelease }}" = "true" ] && flags+=(--prerelease)
           cd release_files
-          gh release create "${TAG}" --target "${GITHUB_SHA}" photagSetup.exe photagSetup-*.zip photag-code-*.zip photag-*-portable.zip photag-install.bat photag-install.ps1 photag-*-linux-x64.tar.gz photag-*-macos-*.zip --title "photag ${VERSION}" --notes-file "../$notes" "${flags[@]}"
+          shopt -s nullglob
+          msi=(photag-*.msi)
+          gh release create "${TAG}" --target "${GITHUB_SHA}" photagSetup.exe photagSetup-*.zip photag-code-*.zip photag-*-portable.zip photag-install.bat photag-install.ps1 photag-*-linux-x64.tar.gz photag-*-macos-*.zip "${msi[@]}" --title "photag ${VERSION}" --notes-file "../$notes" "${flags[@]}"

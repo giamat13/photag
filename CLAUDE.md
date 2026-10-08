@@ -6,6 +6,12 @@ original requests. Add a task when you start something, mark it `in_progress` wh
 `completed` the moment it's actually done (code pushed and CI verified, not just written) — update
 it continuously as you go, not only at the end of a session or when asked.
 
+## Ideas from other projects
+You may take features (ideas, UX, and code where the license allows it) from **https://github.com/storytold/lightcraft** — the
+user approved it. Add the repo to the session with `add_repo` (owner `storytold`, repo `lightcraft`) to read it. photag is
+GPL-3.0: copy code only when lightcraft's license is compatible, and keep its copyright notice (THIRD_PARTY_NOTICES.md);
+otherwise re-implement the idea in photag's own style. Rebuild it the photag way (every string in all 16 locales, tests, notes).
+
 ## Git workflow
 All development happens directly on `main` — no feature branches, no pull requests. Commit and
 push straight to `main`.
@@ -40,7 +46,10 @@ push straight to `main`.
   `workflow_dispatch` (e.g. `mcp__github__actions_run_trigger` with `method: run_workflow`,
   `workflow_id: release.yml`, `ref: main`). The workflow itself reads `app/version.py`, creates the
   tag (`vX.Y.Z`), builds the installer (`photagSetup.exe`), the portable ZIP, and the code-update
-  ZIP, and publishes them to a GitHub Release using the matching release-notes file.
+  ZIP, and publishes them to a GitHub Release using the matching release-notes file. Since 14.0.0 it also builds an
+  **MSI** (`tools/make_msi.py`, WiX 5, per user, into `%LOCALAPPDATA%\Programs\photag-msi`); that step may fail without
+  stopping the release (the release then has no .msi). To check the MSI without releasing, run the `msi-check` workflow by hand
+  (it builds, silently installs, checks and uninstalls it).
 - If a feature commit lands on `main` *after* a version has already been released, bump the version
   again (e.g. 1.6.0 → 1.6.1) and release separately — don't fold unreleased commits into a release
   that's already been published.

@@ -504,12 +504,45 @@ class BlockedError(UpdateError):
     """The downloaded installer exists but Windows refused to run it (the app keeps running, nothing was changed)."""
 
 
-def restart_command(exe: str, wait_pings: int = 4) -> str:
-    """The command line (one string, handed to Windows as it is) that starts `exe` again a few seconds later.
-    It must not go through Python's list quoting: that escapes the quotes around the program with a backslash, which cmd.exe
-    does not understand, so `start` was given a lone backslash as the program to open ("Windows cannot find '\\\\'") and
-    photag did not restart after an update."""
-    return f'cmd.exe /d /s /c "ping -n {wait_pings} 127.0.0.1 >nul & start "" "{exe}""'
+def restart_args(exe: str) -> tuple[list[str], dict]:
+    """How to start `exe` again after a code update: the program itself, directly -- no cmd.exe / `start`, whose quoting rules
+    went wrong on some computers ("Windows cannot find '\\\\'" and photag did not come back). The new process is told this
+    one's pid (PHOTAG_WAIT_PID) and waits at start-up until it has gone (wait_for_previous), so it finds the port free."""
+    env = {**os.environ, "PHOTAG_WAIT_PID": str(os.getpid()),
+           "PYINSTALLER_RESET_ENVIRONMENT": "1"}              # a fresh start of the packaged program, not a child of this one
+    return [str(exe)], env
+
+
+def wait_for_previous(timeout: float = 30.0) -> bool:
+    """Called once when photag's code is loaded (any launcher imports it before choosing its port): when this process was
+    started by an update of another one, wait until that one has ended. True when there was something to wait for."""
+    pid = os.environ.pop("PHOTAG_WAIT_PID", "")
+    if not pid.isdigit() or int(pid) == os.getpid():
+        return False
+    pid, end = int(pid), time.time() + timeout
+    if sys.platform == "win32":
+        import ctypes
+        k = ctypes.windll.kernel32
+        h = k.OpenProcess(0x00100000, False, pid)            # SYNCHRONIZE
+        if not h:
+            return True                                      # already gone
+        try:
+            k.WaitForSingleObject(h, int(timeout * 1000))
+        finally:
+            k.CloseHandle(h)
+        return True
+    while time.time() < end:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            break
+        except PermissionError:
+            pass
+        time.sleep(0.1)
+    return True
+
+
+wait_for_previous()
 
 
 def apply_code(zip_path: Path) -> dict:
@@ -562,9 +595,9 @@ def apply_code(zip_path: Path) -> dict:
     if os.environ.get("PHOTAG_UPDATE_DRY_RUN"):
         return {"mode": "code-dry-run", "version": version, "code": str(code)}
     # start the same (already allowed) photag.exe again a moment after this process has gone
-    subprocess.Popen(restart_command(str(_exe_path())), close_fds=True,
-                     creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-                     | getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    args, env = restart_args(str(_exe_path()))
+    subprocess.Popen(args, env=env, close_fds=True,
+                     creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
     threading.Timer(1.0, lambda: os._exit(0)).start()
     return {"mode": "installing", "version": version}
 
