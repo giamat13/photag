@@ -168,13 +168,14 @@ try:
     check("compressing is refused", j["state"] == "error", j.get("error"))
     check("still nothing in the folder changed", snapshot(mine) == after_scan)
 
-    # ---- backups stay in the normal place and do not copy your folder
+    # ---- backups stay in the normal place and DO hold your folder's photos (under _external; they were left out before 12.1.0)
     code, r = call("POST", "/api/backup/run", {})
     j = wait("backup")
     snaps = call("GET", "/api/backup")[1]["snapshots"]
     mdir = tmp / "bk" / snaps[0]["media_dir"] if snaps and snaps[0].get("media_dir") else None
     check("a backup works and is stored in the normal backup folder", j["state"] == "done" and snaps, j.get("error"))
-    check("your folder's photos are not copied into the backup", mdir is None or not any(mdir.rglob("*.jpg")))
+    check("your folder's photos are copied into the backup, under _external", mdir is not None and any((mdir / "_external").rglob("*.jpg")))
+    check("...and not loose next to the library's own photos", mdir is not None and not any(p.parent == mdir for p in mdir.glob("*.jpg")))
     check("nothing in the folder changed by the backup", snapshot(mine) == after_scan)
 
     # ---- trash: moving to the trash leaves the file; deleting from the trash sends it to the Recycle Bin

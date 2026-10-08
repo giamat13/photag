@@ -172,7 +172,7 @@ their ratings and keywords, files you delete disappear. It is **off by default**
 - The files in that folder are **never moved, copied, renamed or changed** by photag. Develop edits, rotate, compress and "save metadata to the
   file" are therefore not available for these photos (import a copy to edit it); ratings, flags, keywords, collections and descriptions work, they
   live in the catalog.
-- The catalog, thumbnails, backups and settings stay in photag's own folder. Backups do not copy your folder (it is yours to back up).
+- The catalog, thumbnails, backups and settings stay in photag's own folder. Backups also hold the photos of your folder (reduced copies if you chose that, under `_external` in the backup); a restore only puts back files that are missing, at their own path, and never replaces one.
 - The only time a file in your folder is touched: you delete a photo from the trash for good, and its file then goes to the **Recycle Bin**
   (never deleted outright; on drives without a Recycle Bin photag leaves the file alone and keeps the photo in the trash).
 - A drive that is unplugged never empties the catalog: when the folder cannot be read, or an unusually large part of it vanishes at once, nothing is removed.
