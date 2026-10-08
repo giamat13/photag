@@ -102,8 +102,9 @@ async function show(token) {
     history.replaceState(null, '', `?t=${token}`);
     if (panelKind === 'info') loadInfo(); else if (panelKind === 'map') loadMap();
     stripUpdate();
-  } catch (e) { say(t(e.message), 0); }
+  } catch (e) { if (!cur) openMain(); else say(t(e.message), 0); }
 }
+function openMain() { location.replace('/'); }          // the first picture cannot be shown: open photag itself, without it
 function sizeText(b) { return b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`; }
 const go = k => { if (cur && cur[k]) show(cur[k]); };
 function rotate(d) { st.rot = (st.rot + d + 360) % 360; apply(); }
@@ -546,4 +547,4 @@ window.addEventListener('keydown', e => {
   e.preventDefault();
 });
 setInterval(() => fetch('/api/viewer/ping').catch(() => {}), 4000);       // tells the program that a viewer window is still open
-if (tok) show(tok); else say(t('This file is not a picture photag can show'), 0);
+if (tok) show(tok); else openMain();
