@@ -18,7 +18,7 @@ push straight to `main`.
   raises the second and resets the third (`11.1.0`); a release with only small fixes raises the third (`11.1.1`);
   pre-releases add `-beta.N`. **Always write all three parts** (never `9.1`): programs
   installed before the change only recognise a code update `photag-code-X.Y.Z-rtN.zip` with three parts, and
-  without it they fall back to the full installer (which Smart App Control may block). `9.1` and `9.1.0` are
+  without it they fall back to the full installer (which Smart App Control may block). `9.1` and `9.1.0`
   are read as the same version (`updater.parse_version`), but only the three-part form is ever written. The tag is
   `v<version>` and the notes file is `docs/release-notes-v<version>.md`, both exactly as written in
   `app/version.py`.
