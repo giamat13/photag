@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import geotag, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
+from . import geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -353,6 +353,14 @@ def pick_file(kind: str = "zip", title: str = ""):
             path = filedialog.asksaveasfilename(
                 title=title or "Export as HTML Gallery", parent=root, defaultextension=".html",
                 filetypes=[("HTML file", "*.html")])
+        elif kind == "savemp4":
+            path = filedialog.asksaveasfilename(
+                title=title or "Save the video", parent=root, defaultextension=".mp4",
+                filetypes=[("MP4 video", "*.mp4")])
+        elif kind == "audio":
+            path = filedialog.askopenfilename(
+                title=title or "Choose music", parent=root,
+                filetypes=[("Music", "*.mp3 *.m4a *.aac *.wav *.flac *.ogg"), ("All files", "*.*")])
         elif kind == "exe":
             path = filedialog.askopenfilename(
                 title=title or "Select HandBrakeCLI.exe", parent=root,
@@ -2158,6 +2166,35 @@ def start_export_html(body: ExportHtmlIn):
         raise err(400, "Missing items or destination file")
     _start("export", importer.run_export_html, body.ids, body.dest.strip(),
            body.long_edge, max(10, min(100, body.quality)), body.title.strip())
+    return {"ok": True}
+
+
+class SlideVideoIn(BaseModel):
+    ids: list[int]                   # in the order they appear in the video
+    dest: str
+    seconds: float = 4
+    fade: float = 0.8                # 0 = hard cuts
+    height: int = 1080
+    music: str | None = None
+
+
+@app.get("/api/slideshow-video/status")
+def slidevideo_status():
+    return {"available": ffmpeg_ok(), "max_pictures": slidevideo.MAX_PICTURES}
+
+
+def ffmpeg_ok() -> bool:
+    from . import ffmpeg
+    return ffmpeg.available()
+
+
+@app.post("/api/slideshow-video")
+def start_slidevideo(body: SlideVideoIn):
+    if not body.ids or not body.dest.strip():
+        raise err(400, "Missing items or destination file")
+    if not ffmpeg_ok():
+        raise err(400, "The video maker (ffmpeg) is not available on this computer")
+    _start("export", slidevideo.run, body.ids, body.dest.strip(), body.seconds, body.fade, body.height, (body.music or "").strip() or None)
     return {"ok": True}
 
 

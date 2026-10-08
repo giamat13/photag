@@ -11,6 +11,11 @@
 - **A strip of thumbnails** at the bottom of the viewer (`T` or its button): click a picture to go to it.
 - **Kind to the battery.** On a laptop that runs on battery, the heavy background work (the automatic backup, filling in EXIF, scanning your own folder, reading the edits) waits until the charger is connected. A backup never waits more than 3 days; "Back up now" and anything you start yourself always run. Preferences > Background has a switch.
 - **Develop:** after straightening a photo, the empty corners are cropped automatically (as long as you did not set the crop yourself).
+- **Places for photos without GPS.** *Library > Add places to photos without GPS...*: photag suggests a place for every picture that has none -- from a **GPX track** (the trail a phone app recorded; the camera's clock zone can be set) or from **pictures taken at about the same time** that do have one. You see the list, untick what is wrong and confirm; nothing changes before that, and a place that is already there is never moved.
+- **Compare two pictures in the viewer.** `C` (or the button) shows two pictures side by side with the same zoom and move on both, so you can see which one is sharper. The arrows change the right picture, `X` swaps them, `C` goes back.
+- **A slideshow video.** *File > Make a slideshow video...*: the selected pictures (or the whole view), in the order you see them, become one MP4 with soft fades, the seconds per picture you choose and music of your own if you want -- ready to send to the family. Needs the video tool (ffmpeg) that photag already uses for videos.
+- **Ctrl+K: one search box.** Type a command ("back up", "preferences"), a place (album, person, folder, keyword), a year ("2019") or a photo's file name and press Enter. (Add Keywords moved to `Ctrl+Shift+K`.)
 
 ## Fixes
 - The backup could fail with "[WinError 5] Access is denied" on the `media-....part` folder when an antivirus, the search indexer or OneDrive was holding a file in it open. photag now builds the photo folder under its final name in that case, and the backup succeeds.
+- A viewer rename that only changes the case of the name (`holiday.jpg` to `Holiday.jpg`) did nothing on Windows; now it works.

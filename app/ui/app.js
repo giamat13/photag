@@ -3007,6 +3007,7 @@ const MENUS = [
   [t('File'), [
     [t('Import...'), 'Ctrl+Shift+I', ()=>openImport('folder')],        // one screen: choose the source there (folder / card, Lightroom, Google Takeout)
     [t('Export...'), 'Ctrl+Shift+E', openExport],
+    [t('Make a slideshow video...'), '', slideVideoDialog],
     sep,
     [t('Backup and restore...'), '', backupDialog],
     [t('Catalog Settings...'), 'Ctrl+Alt+,', catalogSettings],
@@ -3700,6 +3701,33 @@ function openPalette(){
   };
   $('#pl-list').onclick = e=>{ const r = e.target.closest('.pl-row'); if(r) run(+r.dataset.i); };
   find();
+}
+
+// ---------- slideshow video (MP4) ----------
+async function slideVideoDialog(){
+  const st = await api('/api/slideshow-video/status');
+  const sel = [...S.sel], list = (sel.length > 1 ? S.list.filter(p=>S.sel.has(p.id)) : S.list).filter(p=>!p.is_video);
+  if(!st.available){ toast(t('The video maker (ffmpeg) is not available on this computer'), 5000); return; }
+  if(!list.length){ toast(t('There are no pictures to put in the video'), 4000); return; }
+  const last = pref.get('slideVideo', {seconds:4, fade:1, height:1080});
+  modal(`<h3>${t('Make a slideshow video')}</h3><div class="mb as">
+    <div class="hint" style="padding:0">${t('{0} pictures, in the order you see them, become one MP4 video you can send to anyone.', [num(Math.min(list.length, st.max_pictures))])}${list.length > st.max_pictures ? ' ' + t('Only the first {0} are used.', [st.max_pictures]) : ''}</div>
+    <div class="two"><label class="fld"><span>${t('Seconds per picture')}</span><select id="sv-sec">${[2,3,4,6,8,12].map(n=>`<option value="${n}" ${n===last.seconds?'selected':''}>${n}</option>`).join('')}</select></label>
+      <label class="fld"><span>${t('Between pictures')}</span><select id="sv-fade"><option value="1" ${last.fade?'selected':''}>${t('Soft fade')}</option><option value="0" ${last.fade?'':'selected'}>${t('Straight cut')}</option></select></label></div>
+    <label class="fld"><span>${t('Quality')}</span><select id="sv-h"><option value="1080" ${last.height===1080?'selected':''}>Full HD 1080p</option><option value="720" ${last.height===720?'selected':''}>HD 720p (${t('smaller file')})</option></select></label>
+    <label class="fld"><span>${t('Music (optional)')}</span><div class="frow"><input type="text" id="sv-music" dir="ltr" readonly placeholder="${t('No music')}"><button id="sv-pick">${t('Choose...')}</button><button id="sv-clear">${t('Clear')}</button></div></label>
+  </div><div class="mf"><button id="sv-cancel">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="sv-go">${t('Choose where to save and start')}</button></div>`);
+  $('#sv-cancel').onclick = closeModal;
+  $('#sv-clear').onclick = ()=>{ $('#sv-music').value = ''; };
+  $('#sv-pick').onclick = async()=>{ const r = await api('/api/pick-file?kind=audio&title='+encodeURIComponent(t('Choose music'))); if(r.path) $('#sv-music').value = r.path; };
+  $('#sv-go').onclick = async()=>{
+    const seconds = +$('#sv-sec').value, fade = +$('#sv-fade').value ? 0.8 : 0, height = +$('#sv-h').value, music = $('#sv-music').value || null;
+    const r = await api('/api/pick-file?kind=savemp4&title='+encodeURIComponent(t('Save the video')));
+    if(!r.path) return;
+    pref.set('slideVideo', {seconds, fade:fade?1:0, height});
+    closeModal();
+    runJob('/api/slideshow-video', 'export', t('Slideshow video'), {ids:list.slice(0, st.max_pictures).map(p=>p.id), dest:r.path, seconds, fade, height, music});
+  };
 }
 
 // ---------- places for photos without GPS ----------

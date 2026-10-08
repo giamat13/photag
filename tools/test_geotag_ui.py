@@ -100,6 +100,25 @@ try:
         pg.wait_for_function("S.act === 3 && S.view === 'loupe'", timeout=8000)
         check("a photo is found by its file name and opened", pg.evaluate("S.act") == 3)
         pg.keyboard.press("Control+Shift+K")
+        # ---- slideshow video: the dialog sends the pictures in order with the chosen options (the job itself is tested in test_slidevideo)
+        sent = []
+        pg.route("**/api/pick-file**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"path": "C:/out/show.mp4" if "savemp4" in r.request.url else "C:/m.mp3"})))
+        def job(r):
+            sent.append(json.loads(r.request.post_data)); r.fulfill(status=200, content_type="application/json", body="{}")
+        pg.route("**/api/slideshow-video", lambda r: job(r) if r.request.method == "POST" else r.continue_())
+        pg.evaluate("setSource(srcFromKey('all')); setView('grid'); 0")
+        pg.wait_for_function("S.list.length === 3", timeout=8000)
+        pg.evaluate("slideVideoDialog(); 0")
+        pg.wait_for_selector("#sv-go")
+        pg.select_option("#sv-sec", "6"); pg.select_option("#sv-fade", "0"); pg.select_option("#sv-h", "720")
+        pg.click("#sv-pick")
+        pg.wait_for_function("document.querySelector('#sv-music').value === 'C:/m.mp3'", timeout=5000)
+        pg.click("#sv-go")
+        pg.wait_for_function("window.__x = 1; true")
+        for _ in range(40):
+            if sent: break
+            pg.wait_for_timeout(100)
+        check("the video dialog sends the pictures in the order of the view with the chosen options", sent and len(sent[0]["ids"]) == 3 and sent[0]["seconds"] == 6 and sent[0]["fade"] == 0 and sent[0]["height"] == 720 and sent[0]["music"] == "C:/m.mp3" and sent[0]["dest"] == "C:/out/show.mp4", sent)
         check("no JavaScript errors", not errs, errs[:2])
         br.close()
 finally:
