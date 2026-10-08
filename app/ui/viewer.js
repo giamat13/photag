@@ -28,7 +28,9 @@ async function api(path, opts) {
   }
   return r.json();
 }
-const size = () => { const r = stage.getBoundingClientRect(); return { w: r.width, h: r.height }; };
+const pane1 = $('#pane1'), pic2 = $('#pic2');
+let cmp = null;                         // compare mode: { tok, info, nat } of the picture on the right
+const size = () => { const r = pane1.getBoundingClientRect(); return { w: r.width, h: r.height }; };
 const ang = () => st.rot + (edit.on ? edit.angle : 0);                 // the turn the picture is shown with: 90-degree steps + the straightening
 function bbox() {                                                       // the size of the turned picture (what the crop is measured on)
   const a = ang() * Math.PI / 180, c = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a));
@@ -49,6 +51,10 @@ function apply() {
   if (st.fit || edit.cropOn) { st.s = fitScale(); st.x = 0; st.y = 0; } else clamp();
   pic.style.filter = edit.on ? filterCss() : '';
   pic.style.transform = `translate(-50%,-50%) translate(${st.x}px,${st.y}px) rotate(${ang()}deg) scale(${st.s})`;
+  if (cmp && cmp.nat.w) {                       // the other picture: the same zoom (so details can be compared) and the same move; fitted on its own while the left one is fitted
+    const { w, h } = size(), s2 = st.fit ? Math.min(w / cmp.nat.w, h / cmp.nat.h, 1) : st.s;
+    pic2.style.transform = `translate(-50%,-50%) translate(${st.x}px,${st.y}px) scale(${s2})`;
+  }
   drawCrop();
 }
 function zoomAt(factor, cx, cy) {
@@ -70,6 +76,7 @@ async function show(token) {
     st = { s: 1, x: 0, y: 0, rot: 0, fit: true };
     const vid = $('#vid');
     document.body.classList.toggle('video', !!d.video);
+    if (d.video) compareStop();
     if (d.video) {
       pic.removeAttribute('src'); closePanel();
       vid.onerror = () => say(t('This video cannot be played here'), 0);
@@ -85,6 +92,7 @@ async function show(token) {
       apply();
     }
     $('#name').textContent = d.name;
+    if (cmp) $('#lab1').textContent = `${d.name}  ·  ${nat.w} × ${nat.h}  ·  ${sizeText(d.bytes)}`;
     $('#meta').textContent = [t('{n} of {total}', { n: d.index, total: d.count }), nat.w && `${nat.w} × ${nat.h}`, sizeText(d.bytes)].filter(Boolean).join('  ·  ');
     document.title = `${d.name} - photag`;
     $('#b-prev').disabled = !d.prev; $('#b-next').disabled = !d.next;
@@ -277,6 +285,7 @@ function closePanel() {
 }
 async function openPanel(kind) {
   if (panelKind === kind) { closePanel(); return; }
+  compareStop();
   panelKind = kind; edit.on = kind === 'edit'; if (edit.on) { if (!$('#e-angle')) buildEdit(); editSync(); }
   const P = $('#panel'); P.dataset.k = kind; P.classList.remove('hidden');
   $('#ptitle').textContent = { info: t('All EXIF tags'), map: t('Location'), edit: t('Edit') }[kind];
@@ -329,6 +338,48 @@ async function saveCopy() {
 }
 $('#b-edit').onclick = () => openPanel('edit'); $('#b-info').onclick = () => openPanel('info'); $('#b-map').onclick = () => openPanel('map');
 $('#b-del').onclick = trash; $('#pclose').onclick = closePanel;
+
+// ---- compare two pictures side by side (C): the same zoom and move on both; arrows change the right one, X swaps, C ends ----
+async function loadRight(token) {
+  const d = await api(`/api/viewer/${token}/info`);
+  if (d.video) throw new Error('This file is not a picture photag can show');
+  await new Promise((ok, bad) => { pic2.onload = ok; pic2.onerror = () => bad(new Error('This file is not a picture photag can show')); pic2.src = `/api/viewer/${token}/image`; });
+  cmp = { tok: token, info: d, nat: { w: pic2.naturalWidth, h: pic2.naturalHeight } };
+  pic2.style.width = cmp.nat.w + 'px'; pic2.style.height = cmp.nat.h + 'px';
+  $('#lab2').textContent = `${d.name}  ·  ${cmp.nat.w} × ${cmp.nat.h}  ·  ${sizeText(d.bytes)}`;
+  $('#lab1').textContent = `${cur.name}  ·  ${nat.w} × ${nat.h}  ·  ${sizeText(cur.bytes)}`;
+}
+async function compareStart() {
+  if (!cur || cur.video) return;
+  const other = cur.next || cur.prev;
+  if (!other) { say(t('There is no other picture in this folder')); return; }
+  slideStop(); closePanel(); closeMenu();
+  try {
+    await loadRight(other);
+    document.body.classList.add('cmp'); $('#b-cmp').classList.add('on');
+    st.fit = true; apply(); setTimeout(apply, 30);
+  } catch (e) { cmp = null; say(t(e.message)); }
+}
+function compareStop() {
+  if (!cmp) return;
+  cmp = null; document.body.classList.remove('cmp'); $('#b-cmp').classList.remove('on'); pic2.removeAttribute('src');
+  st.fit = true; apply(); setTimeout(apply, 30);
+}
+const compareToggle = () => cmp ? compareStop() : compareStart();
+async function compareStep(k) {                 // the right picture moves through the folder (never onto the left one)
+  if (!cmp) return;
+  let tk = cmp.info[k];
+  if (tk === tok) tk = (await api(`/api/viewer/${tk}/info`))[k];
+  if (!tk) return;
+  try { await loadRight(tk); apply(); } catch (e) { say(t(e.message)); }
+}
+async function compareSwap() {
+  if (!cmp) return;
+  const right = cmp.tok, left = tok;
+  await show(right);                              // show() leaves compare mode alone; the old left picture goes to the right
+  try { await loadRight(left); document.body.classList.add('cmp'); st.fit = true; apply(); } catch (e) { say(t(e.message)); }
+}
+$('#b-cmp').onclick = e => { e.stopPropagation(); compareToggle(); };
 
 // ---- the thumbnail strip at the bottom ----
 let stripOn = false;
@@ -445,7 +496,7 @@ function printIt() {
 let slide = null;
 function slideStop() { if (slide) { clearInterval(slide); slide = null; } document.body.classList.remove('show'); $('#b-show').classList.remove('on'); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
 function slideStart(sec) {
-  slideStop(); closePanel(); document.body.classList.add('show'); $('#b-show').classList.add('on');
+  slideStop(); compareStop(); closePanel(); document.body.classList.add('show'); $('#b-show').classList.add('on');
   if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
   slide = setInterval(() => { if (!cur) return; if (cur.next) show(cur.next); else if (cur.first && cur.first !== tok) show(cur.first); }, sec * 1000);
 }
@@ -460,7 +511,7 @@ $('#b-more').onclick = e => { e.stopPropagation(); moreMenu(); };
 $('#b-show').onclick = e => { e.stopPropagation(); if (slide) slideStop(); else slideMenu(); };
 document.addEventListener('click', () => closeMenu());
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && slide) slideStop(); });
-stage.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - stage.getBoundingClientRect().left, e.clientY - stage.getBoundingClientRect().top); }, { passive: false });
+stage.addEventListener('wheel', e => { e.preventDefault(); const r = (cmp && e.clientX > $('#pane2').getBoundingClientRect().left ? $('#pane2') : pane1).getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
 stage.addEventListener('dblclick', e => { if (st.fit && fitScale() < 1) actual(); else fit(); });
 let drag = null;
 stage.addEventListener('pointerdown', e => { drag = { x: e.clientX - st.x, y: e.clientY - st.y }; stage.classList.add('drag'); stage.setPointerCapture(e.pointerId); });
@@ -469,7 +520,12 @@ stage.addEventListener('pointerup', () => { drag = null; stage.classList.remove(
 window.addEventListener('resize', apply);
 window.addEventListener('keydown', e => {
   const k = e.key;
-  if (k === 'ArrowLeft' || k === 'PageUp') go('prev');
+  if (cmp && (k === 'ArrowLeft' || k === 'PageUp')) compareStep('prev');
+  else if (cmp && (k === 'ArrowRight' || k === 'PageDown' || k === ' ')) compareStep('next');
+  else if (cmp && (k === 'x' || k === 'X')) compareSwap();
+  else if (cmp && k === 'Escape') compareStop();
+  else if ((k === 'c' || k === 'C') && !(e.ctrlKey || e.metaKey)) compareToggle();
+  else if (k === 'ArrowLeft' || k === 'PageUp') go('prev');
   else if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') go('next');
   else if (k === 'Home') go('first'); else if (k === 'End') go('last');
   else if (k === '+' || k === '=') zoomCenter(1.25); else if (k === '-') zoomCenter(0.8);

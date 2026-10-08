@@ -785,3 +785,11 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
 .exif-kv span:first-child{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .exif-kv span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end}
 .pre-banner{background:#c9731a;color:#fff;font-weight:700;font-size:22px;letter-spacing:.12em;text-align:center;padding:10px 12px;border-radius:4px}
+
+.palette{min-width:min(560px,90vw)}
+.palette input{width:100%;font-size:15px;padding:9px 10px}
+#pl-list{max-height:min(380px,50vh);overflow:auto;margin-top:8px}
+.pl-row{display:flex;gap:12px;justify-content:space-between;padding:6px 10px;border-radius:3px;cursor:pointer}
+.pl-row.on,.pl-row:hover{background:var(--raise1)}
+.pl-row.on{outline:1px solid var(--line)}
+.pl-h{color:var(--t3,#888);font-size:12px;white-space:nowrap;direction:ltr}

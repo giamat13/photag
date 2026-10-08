@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
+from . import geotag, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -1071,6 +1071,63 @@ def update_many(b: BatchIn):
     if b.ids:
         _apply_meta(db.connect(), b.ids, b)
     return {"ok": True, "n": len(b.ids)}
+
+
+# ---- places for photos without GPS (from a GPX track or from pictures taken at about the same time) ----
+class GeotagSuggestIn(BaseModel):
+    mode: str = "photos"                 # "gpx" | "photos"
+    gpx: str | None = None               # the text of the .gpx file (mode "gpx")
+    offset_min: int | None = None        # the camera's distance from UTC in minutes; None = this computer's
+    max_gap_min: int = 30
+
+
+@app.post("/api/geotag/suggest")
+def geotag_suggest(b: GeotagSuggestIn):
+    con = db.connect()
+    rows = con.execute("SELECT id, taken_at FROM photos WHERE trashed=0 AND taken_at IS NOT NULL AND taken_at>0 AND (lat IS NULL OR lng IS NULL)").fetchall()
+    todo = [(r["id"], r["taken_at"]) for r in rows]
+    gap = max(1, min(int(b.max_gap_min), 24 * 60)) * 60
+    if b.mode == "gpx":
+        track = geotag.parse_gpx(b.gpx or "")
+        if not track:
+            raise err(400, "The file has no track points with a time")
+        items = geotag.from_track(todo, track, b.offset_min, gap)
+    else:
+        placed = [(r["id"], r["taken_at"], r["lat"], r["lng"]) for r in con.execute(
+            "SELECT id, taken_at, lat, lng FROM photos WHERE trashed=0 AND taken_at>0 AND lat IS NOT NULL AND lng IS NOT NULL")]
+        items = geotag.from_neighbors(todo, placed, gap)
+    names = {r["id"]: r["filename"] for r in con.execute("SELECT id, filename FROM photos WHERE id IN (%s)" % ",".join(str(i["id"]) for i in items))} if items else {}
+    taken = dict(todo)
+    for i in items:
+        i["filename"] = names.get(i["id"], ""); i["taken_at"] = taken.get(i["id"])
+    return {"items": items, "without_place": len(todo)}
+
+
+class GeotagApplyIn(BaseModel):
+    items: list[dict]                     # [{id, lat, lng}]
+    write_exif: bool = False
+
+
+@app.post("/api/geotag/apply")
+def geotag_apply(b: GeotagApplyIn):
+    con = db.connect()
+    n = 0
+    for it in b.items:
+        try:
+            pid, lat, lng = int(it["id"]), float(it["lat"]), float(it["lng"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            continue
+        r = con.execute("SELECT rel_path FROM photos WHERE id=? AND (lat IS NULL OR lng IS NULL)", (pid,)).fetchone()    # never moves a place that is already there
+        if not r:
+            continue
+        con.execute("UPDATE photos SET lat=?, lng=? WHERE id=?", (lat, lng, pid))
+        n += 1
+        if b.write_exif and not refmode.is_external(r["rel_path"]):
+            images.write_exif_jpeg(PATHS.media / r["rel_path"], lat=lat, lng=lng)
+    con.commit()
+    return {"applied": n}
 
 
 class ForeverIn(BaseModel):

@@ -2729,7 +2729,7 @@ function shortcuts(){
     <h4>${t("Rating and Flagging")}</h4>${k('P',t('Flag as Pick'))}${k('X',t('Flag as Rejected'))}${k('U',t('Remove Flag'))}${k('`',t('Toggle Flag'))}${k('0–5',t('Star Rating'))}${k('[ / ]',t('Decrease / Increase Rating'))}${k('6–9',t('Label Red/Yellow/Green/Blue'))}${k(t('Shift+key'),t('Mark and Go to Next'))}${k('B',t('Quick Collection'))}${k('Ctrl+B',t('Show Quick Collection'))}
     <h4>${t("Selection")}</h4>${k('Ctrl+A',t('Select All'))}${k('Ctrl+D',t('Deselect'))}${k(t('Ctrl+click'),t('Add to Selection'))}${k(t('Shift+click'),t('Select Range'))}${k('← → ↑ ↓',t('Move Between Photos'))}${k('Delete',t('Move to Trash'))}${k('Ctrl+Z',t('Undo'))}${k('Ctrl+Y',t('Redo'))}
     <h4>${t("Interface")}</h4>${k('Tab',t('Hide Side Panels'))}${k('Shift+Tab',t('Hide All Panels'))}${k('F5 / F6',t('Top Panel / Filmstrip'))}${k('F7 / F8',t('Right / Left Panel'))}${k('T',t('Toolbar'))}${k('L',t('Lights Out'))}${k('J',t('Grid Cell Style'))}${k('I',t('Loupe Info'))}${k('\\\\',t('Filter Bar / Before-After'))}${k('Ctrl+L',t('Enable/Disable Filters'))}${k('Ctrl+F',t('Text Search'))}${k(t('Z / Space'),t('Zoom 1:1'))}
-    <h4>${t("Files")}</h4>${k('Ctrl+Shift+I',t('Import'))}${k('Ctrl+Shift+E',t('Export'))}${k('Ctrl+N',t('New Collection'))}${k('Ctrl+Shift+F',t('Advanced Search'))}${k('Ctrl+[ / ]',t('Rotation'))}${k('Ctrl+R',t('Show in Explorer'))}${k('Ctrl+S',t('Save Metadata to File'))}${k('Ctrl+K',t('Add Keywords'))}${k('R',t('Crop (Develop)'))}
+    <h4>${t("Files")}</h4>${k('Ctrl+Shift+I',t('Import'))}${k('Ctrl+Shift+E',t('Export'))}${k('Ctrl+N',t('New Collection'))}${k('Ctrl+Shift+F',t('Advanced Search'))}${k('Ctrl+[ / ]',t('Rotation'))}${k('Ctrl+R',t('Show in Explorer'))}${k('Ctrl+S',t('Save Metadata to File'))}${k('Ctrl+Shift+K',t('Add Keywords'))}${k('Ctrl+K',t('Command search'))}${k('R',t('Crop (Develop)'))}
     <h4>${t("Video")}</h4>${k('Space / K',t('Play / Pause'))}${k('Shift+← / →',t('Skip 10 seconds'))}${k(', / .',t('Frame back / forward'))}${k('Shift+, / .',t('Playback speed'))}${k('↑ / ↓',t('Volume'))}${k('M',t('Mute'))}${k('F',t('Fullscreen'))}
   </div></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`);
 }
@@ -3039,6 +3039,7 @@ const MENUS = [
     [t('On This Day'), '', ()=>setSource(srcFromKey('otd'))],
     [t('On This Day: Slideshow'), '', otdSlideshow],
     [t('Year in Review...'), '', yearReviewDialog],
+    [t('Add places to photos without GPS...'), '', geotagDialog],
     [t('New Smart Collection...'), '', ()=>smartDialog()],
     sep,
     [t('Analyse Photo Quality'), '', analyseLibrary],
@@ -3076,7 +3077,7 @@ const MENUS = [
     [t('Empty the trash'), '', emptyTrash],
   ]],
   [t('Metadata'), [
-    [t('Add Keywords'), 'Ctrl+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
+    [t('Add Keywords'), 'Ctrl+Shift+K', ()=>{ document.body.classList.remove('hide-right'); $('.pnl[data-p=kwing]').classList.remove('shut'); $('#kw-add')?.focus(); }],
     [t('AI tagging for selected photos...'), '', aiRun],
     [t('AI tagging settings...'), '', aiSettings],
     [t('Stop AI tagging'), '', ()=>send('POST','/api/aitag/cancel')],
@@ -3240,7 +3241,7 @@ document.addEventListener('keydown', e=>{
       KeyA: ()=>e.altKey?selectPicks():selectAll(), KeyD: selectNone, KeyB: ()=>setSource(srcFromKey('quick')), KeyN: newCollection,
       KeyL: ()=>{ S.F.on=!S.F.on; applyFilter(); toast(S.F.on?t('Filters enabled'):t('Filters disabled'), 1200); },
       KeyF: ()=>{ S.fb='text'; renderFilterBar(); $('#filterbar').classList.remove('hidden'); $('#ft-q').focus(); },
-      KeyR: reveal, KeyS: saveMetaToFile, KeyK: ()=>MENUS[4][1][0][2](),
+      KeyR: reveal, KeyS: saveMetaToFile, KeyK: ()=>{ if(shift) MENUS[4][1][0][2](); else openPalette(); },
       BracketLeft: ()=>rotateSel(-90), BracketRight: ()=>rotateSel(90),
       Slash: shortcuts, Enter: ssStart, Comma: preferences,
     };
@@ -3637,6 +3638,112 @@ async function semanticDialog(){
     const go = async ()=>{ const q=$('#sm-q').value.trim(); if(!q) return; $('#sm-go').disabled = true;
       try{ await semanticSearch(q); closeModal(); }catch(e){ toast(esc(e.message), 5000); $('#sm-go').disabled=false; } };
     $('#sm-go').onclick = go; $('#sm-q').onkeydown = e=>{ if(e.key==='Enter') go(); };
+  };
+  draw();
+}
+
+// ---------- Ctrl+K: one search box for every command, place and photo ----------
+function paletteItems(){
+  const out = [];
+  MENUS.forEach(([menu, items])=>items.forEach(it=>{
+    if(!it || it===sep || typeof it[2]!=='function' || it[2]===collectionItems) return;
+    out.push({kind:'cmd', label:String(it[0]).replace(/<[^>]*>/g,''), hint:[menu, it[1]].filter(Boolean).join('  ·  '), run:it[2]});
+  }));
+  [['grid',t('Grid')],['loupe',t('Loupe')],['compare',t('Compare')],['survey',t('Survey')],['people',t('People')],['develop',t('Develop Module')]].forEach(([v,n])=>
+    out.push({kind:'view', label:n, hint:t('View'), run:()=>setView(v)}));
+  const go = (key, name) => out.push({kind:'place', label:name, hint:t('Go to'), run:()=>{ const src = srcFromKey(key); if(name) src.name = name; setSource(src); }});
+  [['all',t('All Photographs')],['quick',t('Quick Collection')],['prev',t('Previous Import')],['trash',t('Trash')],['otd',t('On This Day')]].forEach(([k,n])=>go(k,n));
+  SMART.forEach(([id,n])=>go('smart:'+id, n));
+  (S.albums||[]).forEach(a=>go('album:'+a.id, a.name));
+  (S.people||[]).forEach(p=>go('person:'+p.id, p.name));
+  ((S.folders||{}).folders||[]).forEach(f=>go('folder:'+f.name, f.name || t('(root)')));
+  (S.tags||[]).slice(0,300).forEach(tg=>go('tag:'+tg.id, tg.name));
+  return out;
+}
+function paletteScore(label, q){
+  const l = label.toLowerCase();
+  if(l===q) return 100; if(l.startsWith(q)) return 80;
+  if(l.split(/[\s\-_.·:()]+/).some(w=>w.startsWith(q))) return 60;
+  const i = l.indexOf(q); return i>=0 ? 40 - Math.min(i, 30)/2 : 0;
+}
+function openPalette(){
+  const all = paletteItems(), recent = pref.get('paletteRecent', []);
+  let list = [], cur = 0;
+  modal(`<div class="mb palette"><input type="text" id="pl-q" autocomplete="off" dir="auto" placeholder="${esc(t('Type a command, a place, a year or a photo name...'))}"><div id="pl-list"></div></div>`);
+  const draw = ()=>{
+    $('#pl-list').innerHTML = list.map((it,i)=>`<div class="pl-row ${i===cur?'on':''}" data-i="${i}"><span class="pl-l" dir="auto">${esc(it.label)}</span><span class="pl-h">${esc(it.hint||'')}</span></div>`).join('') || `<div class="hint">${t('Nothing found')}</div>`;
+    $('#pl-list .pl-row.on')?.scrollIntoView({block:'nearest'});
+  };
+  const find = ()=>{
+    const q = $('#pl-q').value.trim().toLowerCase(); cur = 0;
+    if(!q){ list = recent.map(r=>all.find(a=>a.kind+':'+a.label===r)).filter(Boolean).concat(all.filter(a=>a.kind==='cmd').slice(0, 8)).slice(0, 12); draw(); return; }
+    list = all.map(it=>({it, sc:paletteScore(it.label, q)})).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc).map(x=>x.it).slice(0, 10);
+    const ym = q.match(/^(\d{4})(?:[-/](\d{1,2}))?$/);
+    if(ym){
+      const y = +ym[1], m = ym[2] ? +ym[2].padStart(2,'0') : 0, from = m ? `${y}-${String(m).padStart(2,'0')}-01` : `${y}-01-01`, to = m ? `${y}-${String(m).padStart(2,'0')}-${new Date(y, m, 0).getDate()}` : `${y}-12-31`;
+      list.unshift({kind:'year', label:m ? t('Photos from {0}', [`${y}-${String(m).padStart(2,'0')}`]) : t('Photos from {0}', [y]), hint:t('Go to'), run:()=>{ SEARCH_TMP = {from, to}; const src = srcFromKey('search:tmp'); src.name = m ? `${y}-${String(m).padStart(2,'0')}` : String(y); setSource(src); }});
+    }
+    const ph = S.all.filter(p=>(p.filename||'').toLowerCase().includes(q)).slice(0, 8)
+      .map(p=>({kind:'photo', label:p.filename, hint:p.taken_at ? new Date(p.taken_at*1000).toISOString().slice(0,10) : t('Photo'), run:async ()=>{ await setSource(srcFromKey('all')); selectOnly(p.id); setView('loupe'); }}));
+    list = list.concat(ph); draw();
+  };
+  const run = i=>{
+    const it = list[i]; if(!it) return;
+    if(it.kind!=='year' && it.kind!=='photo') pref.set('paletteRecent', [it.kind+':'+it.label, ...recent.filter(r=>r!==it.kind+':'+it.label)].slice(0, 5));
+    closeModal(); setTimeout(()=>it.run(), 0);
+  };
+  $('#pl-q').oninput = find;
+  $('#pl-q').onkeydown = e=>{
+    if(e.key==='ArrowDown'){ e.preventDefault(); cur = Math.min(list.length-1, cur+1); draw(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); cur = Math.max(0, cur-1); draw(); }
+    else if(e.key==='Enter'){ e.preventDefault(); run(cur); }
+  };
+  $('#pl-list').onclick = e=>{ const r = e.target.closest('.pl-row'); if(r) run(+r.dataset.i); };
+  find();
+}
+
+// ---------- places for photos without GPS ----------
+async function geotagDialog(){
+  const st = {mode:'photos', gpx:'', items:[], sel:new Set(), total:0};
+  const when = ts => ts ? new Date(ts*1000).toISOString().replace('T',' ').slice(0,16) : '';
+  const gapText = g => g < 60 ? t('{0} seconds', [g]) : t('{0} minutes', [Math.round(g/60)]);
+  const draw = ()=>{
+    const found = st.items.length;
+    modal(`<h3>${t('Add places to photos without GPS')}</h3><div class="mb as">
+      <div class="hint" style="padding:0">${t('photag suggests a place for pictures that have none. Nothing changes until you confirm the list below.')}</div>
+      <label class="check" style="padding:0"><input type="radio" name="gt-mode" value="photos" ${st.mode==='photos'?'checked':''}> ${t('From pictures taken at about the same time')}</label>
+      <label class="check" style="padding:0"><input type="radio" name="gt-mode" value="gpx" ${st.mode==='gpx'?'checked':''}> ${t('From a GPX track file (recorded by a phone app)')}</label>
+      ${st.mode==='gpx' ? `<label class="fld"><span>${t('GPX file')}</span><input type="file" id="gt-file" accept=".gpx,.xml"></label>
+        <label class="fld"><span>${t('Camera clock: hours from UTC (empty = this computer)')}</span><input type="number" id="gt-off" step="0.5" min="-14" max="14" dir="ltr"></label>` : ''}
+      <label class="fld"><span>${t('Most minutes between the picture and the place')}</span><input type="number" id="gt-gap" min="1" max="1440" value="30" dir="ltr"></label>
+      <div id="gt-res">${st.total ? `<div class="hint" style="padding:0">${t('{0} photos have no place; {1} places found.', [num(st.total), num(found)])}</div>` : ''}
+        ${found ? `<div class="gt-list" style="max-height:240px;overflow:auto;border:1px solid var(--line,#444);border-radius:4px;margin:6px 0">${st.items.map(i=>`<label class="check" style="padding:2px 6px;display:flex;gap:8px"><input type="checkbox" data-id="${i.id}" ${st.sel.has(i.id)?'checked':''}> <span dir="auto" style="flex:1">${esc(i.filename)}</span><span dir="ltr">${when(i.taken_at)}</span><span dir="ltr">${i.lat.toFixed(4)}, ${i.lng.toFixed(4)}</span><span>${gapText(i.gap_s)}</span></label>`).join('')}</div>
+        <label class="check" style="padding:0"><input type="checkbox" id="gt-exif"> ${t('Also write the place into the JPEG files (your own folder is never changed)')}</label>` : ''}</div>
+    </div><div class="mf"><button id="gt-close">${t('Close')}</button><span class="spacer"></span><button id="gt-find">${t('Find places')}</button>${found ? `<button class="primary" id="gt-apply">${t('Apply to {0} photos', [num(st.sel.size)])}</button>` : ''}</div>`);
+    $('#gt-close').onclick = closeModal;
+    $$('input[name=gt-mode]').forEach(r=>r.onchange = ()=>{ st.mode = r.value; st.items = []; st.sel.clear(); st.total = 0; draw(); });
+    if($('#gt-file')) $('#gt-file').onchange = async e=>{ const f = e.target.files[0]; st.gpx = f ? await f.text() : ''; };
+    $$('.gt-list input[data-id]').forEach(c=>c.onchange = ()=>{ const id = +c.dataset.id; if(c.checked) st.sel.add(id); else st.sel.delete(id); $('#gt-apply').textContent = t('Apply to {0} photos', [num(st.sel.size)]); $('#gt-apply').disabled = !st.sel.size; });
+    $('#gt-find').onclick = async ()=>{
+      if(st.mode==='gpx' && !st.gpx){ toast(t('Choose a GPX file first'), 3000); return; }
+      const off = $('#gt-off') && $('#gt-off').value !== '' ? Math.round(+$('#gt-off').value*60) : null, gap = Math.max(1, +$('#gt-gap').value || 30);
+      $('#gt-find').disabled = true;
+      try{
+        const r = await send('POST', '/api/geotag/suggest', {mode:st.mode, gpx:st.mode==='gpx' ? st.gpx : null, offset_min:off, max_gap_min:gap});
+        st.items = r.items; st.total = r.without_place; st.sel = new Set(r.items.map(i=>i.id));
+        if(!r.items.length) toast(t('No places could be found for these photos'), 4000);
+      }catch(e){ toast(esc(e.message), 5000); }
+      draw(); $('#gt-gap').value = gap;
+    };
+    if($('#gt-apply')) $('#gt-apply').onclick = async ()=>{
+      const items = st.items.filter(i=>st.sel.has(i.id)).map(i=>({id:i.id, lat:i.lat, lng:i.lng}));
+      if(!items.length) return;
+      $('#gt-apply').disabled = true;
+      try{
+        const r = await send('POST', '/api/geotag/apply', {items, write_exif:!!$('#gt-exif').checked});
+        closeModal(); await reloadAll(); toast(t('Places added to {0} photos', [num(r.applied)]), 4000);
+      }catch(e){ toast(esc(e.message), 5000); $('#gt-apply').disabled = false; }
+    };
   };
   draw();
 }

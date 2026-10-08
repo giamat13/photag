@@ -3,7 +3,7 @@
 html,body{margin:0;height:100%;background:#282828;color:#e6e6e6;font:13px/1.4 Heebo,"Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none}
 #stage{position:absolute;inset:0 0 40px 0;overflow:hidden;cursor:grab;touch-action:none}
 #stage.drag{cursor:grabbing}
-#pic{position:absolute;left:50%;top:50%;max-width:none;max-height:none;transform-origin:center center;will-change:transform;image-orientation:from-image}
+#pic,#pic2{position:absolute;left:50%;top:50%;max-width:none;max-height:none;transform-origin:center center;will-change:transform;image-orientation:from-image}
 #bar{position:absolute;inset-inline:0;bottom:0;height:40px;display:flex;align-items:center;gap:2px;padding:0 10px;background:#1b1b1b;border-top:1px solid #111}
 #bar .sp{flex:1}
 #name{font-weight:500;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-inline-end:10px}
@@ -97,3 +97,10 @@ body.strip #stage{bottom:130px}
 body.strip #panel{bottom:130px}
 body.fs #strip,body.show #strip{display:none}
 body.fs.strip #stage{inset:0}
+
+.pane{position:absolute;inset:0;overflow:hidden}
+#pane2{display:none}
+body.cmp #pane1{right:50%;left:0;border-right:1px solid #111}
+body.cmp #pane2{display:block;left:50%;right:0}
+.lab{display:none;position:absolute;top:6px;left:8px;right:8px;text-align:center;pointer-events:none;color:#e6e6e6;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2}
+body.cmp .lab{display:block}
