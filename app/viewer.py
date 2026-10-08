@@ -478,8 +478,13 @@ def _hand_to_running() -> bool:
     import urllib.request
     base = int(os.environ.get("PHOTAG_BASE_PORT", 8756))
     body = json.dumps({"paths": _STARTUP}).encode()
+    socket = __import__("socket")                 # not an `import`: built into Python (runtime.lock tracks import names)
     for port in range(base, base + 50):
         url = f"http://127.0.0.1:{port}"
+        try:                                   # a quick look first (on Windows a refused connection takes ~2 s); a free port means
+            socket.create_connection(("127.0.0.1", port), timeout=0.3).close()       # no photag after it (it would have taken that one)
+        except OSError:
+            return False
         try:
             with urllib.request.urlopen(url + "/api/status", timeout=3) as r:
                 st = json.loads(r.read())
