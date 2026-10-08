@@ -106,6 +106,40 @@ def unregister(exe_path: str | None = None, classes: str = CLASSES, software: st
     _notify()
 
 
+def _off_marker() -> Path:
+    from . import platform_dirs
+    return platform_dirs.roaming_base() / "photag" / "no-open-with"
+
+
+def opted_out() -> bool:
+    """The user switched "Open with" off in Preferences: photag does not put itself back."""
+    return _off_marker().exists()
+
+
+def set_opted_out(off: bool) -> None:
+    m = _off_marker()
+    try:
+        if off:
+            m.parent.mkdir(parents=True, exist_ok=True)
+            m.write_text("", "utf-8")
+        elif m.exists():
+            m.unlink()
+    except OSError:
+        pass
+
+
+def ensure() -> bool:
+    """On by default: when photag starts (installed or portable, or after a code update) and is not yet in the "Open with" menu
+    for this photag.exe, put it there -- unless the user switched it off. Returns True when it registered."""
+    if not supported() or opted_out() or is_registered():
+        return False
+    try:
+        register()
+        return True
+    except OSError:
+        return False
+
+
 def is_registered(exe_path: str | None = None, classes: str = CLASSES) -> bool:
     """True when the "Open with" entry exists and points at this photag.exe."""
     import winreg

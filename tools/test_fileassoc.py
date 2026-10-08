@@ -34,4 +34,23 @@ if sys.platform == "win32":
     finally:
         for root in (r"Software\photag-test-fa",):
             fileassoc._delete_tree(root)
+# ---- on by default, off when the user switched it off; the picture named on the command line (older launcher) ----
+import os, subprocess, tempfile
+from PIL import Image
+tmp = Path(tempfile.mkdtemp(prefix="photag_fa_"))
+pic = tmp / "x.jpg"; Image.new("RGB", (8, 8)).save(pic)
+env = {**os.environ, "APPDATA": str(tmp / "a"), "LOCALAPPDATA": str(tmp / "l"), "HOME": str(tmp / "h"), "USERPROFILE": str(tmp / "h"), "PYTHONIOENCODING": "utf-8"}
+env.pop("PHOTAG_FILEASSOC_EXE", None)
+def run(code, argv=()):
+    r = subprocess.run([sys.executable, "-c", "import sys; sys.argv=['photag.exe']+sys.argv[1:]\n" + code, *argv], cwd=str(Path(__file__).resolve().parent.parent), env=env, capture_output=True, text=True)
+    return r.stdout.strip()
+check("ensure does nothing when not packaged", run("from app import fileassoc; print(fileassoc.ensure())") == "False")
+check("opt-out marker is remembered", run("from app import fileassoc as f; f.set_opted_out(True); print(f.opted_out())") == "True")
+check("opt-out can be cleared", run("from app import fileassoc as f; f.set_opted_out(False); print(f.opted_out())") == "False")
+check("ensure respects the opt-out", run("import os; os.environ['PHOTAG_FILEASSOC_EXE']=r'C:\\p\\photag.exe'\nfrom app import fileassoc as f; f.set_opted_out(True); f.register=lambda *a, **k: 1/0; print(f.ensure())") == "False")
+check("started with a picture: a token once, then none", run("from app import viewer; a=viewer.startup_token(); b=viewer.startup_token(); print(bool(a), b)", [str(pic)]) == "True None")
+check("started without a picture: none", run("from app import viewer; print(viewer.startup_token())") == "None")
+check("a text file on the command line is ignored", run("from app import viewer; print(viewer.startup_token())", [str(tmp / "n.txt")]) == "None")
+import shutil; shutil.rmtree(tmp, ignore_errors=True)
+
 n = res.count(False); print(f"\n{len(res)-n}/{len(res)} passed"); sys.exit(1 if n else 0)

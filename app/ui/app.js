@@ -3749,6 +3749,7 @@ function oneDriveNotice(force){
 
 // ---------- boot ----------
 (async function boot(){
+  try{ const v = await api('/api/viewer/startup'); if(v && v.token){ location.replace('viewer.html?t=' + encodeURIComponent(v.token)); return; } }catch(e){}   // started by "Open with" of an older launcher: show that picture
   await Promise.all([loadCatalog(), loadSide()]);
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();

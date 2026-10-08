@@ -9,6 +9,7 @@ Adding a picture to the library is a separate, explicit button (server.py: /api/
 import hashlib
 import os
 import re
+import sys
 import tempfile
 import threading
 import time
@@ -167,3 +168,33 @@ class SeenMiddleware:
             elif path.startswith("/api/"):
                 seen("main")
         return await self.app(scope, receive, send)
+
+
+# A program started by "Open with photag" of an older photag.exe (whose launcher does not know pictures; only the `app` package is
+# updated by a code update) still opens its main window: the page then asks for the picture named on the command line.
+_STARTUP: list[str] = []
+
+
+def _read_startup(args) -> None:
+    for a in args:
+        if a.startswith("-"):
+            continue
+        try:
+            p = Path(a)
+            if p.is_file() and is_picture(p):
+                _STARTUP.append(str(p.resolve()))
+        except OSError:
+            pass
+
+
+_read_startup(sys.argv[1:])
+
+
+def startup_token() -> str | None:
+    """The token of the picture this program was started with, once (None when there is none or it was already taken)."""
+    while _STARTUP:
+        try:
+            return open_path(_STARTUP.pop(0))
+        except NotAPicture:
+            continue
+    return None

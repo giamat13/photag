@@ -148,6 +148,10 @@ def _start_trash_purge():
     except Exception:
         pass
     threading.Thread(target=_trash_purge_loop, daemon=True).start()
+    try:
+        fileassoc.ensure()    # "Open with photag" is on by default (Windows, the packaged program); Preferences can switch it off
+    except Exception:
+        pass
 
 
 def _start(name, target, *args):
@@ -1374,6 +1378,7 @@ def fileassoc_set(body: FileAssocIn):
         raise err(400, "Windows could not be changed")
     try:
         fileassoc.register() if body.on else fileassoc.unregister()
+        fileassoc.set_opted_out(not body.on)
     except OSError:
         raise err(500, "Windows could not be changed")
     return {"supported": True, "on": fileassoc.is_registered()}
@@ -1405,6 +1410,11 @@ def viewer_open(body: ViewerOpenIn):
         return {"token": viewer.open_path(body.path)}
     except viewer.NotAPicture:
         raise err(400, "This file is not a picture photag can show")
+
+
+@app.get("/api/viewer/startup")
+def viewer_startup():
+    return {"token": viewer.startup_token()}
 
 
 @app.get("/api/viewer/ping")
