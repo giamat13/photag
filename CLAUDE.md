@@ -30,9 +30,11 @@ push straight to `main`.
   (`updater.merge_notes`). `tools/test_release_notes.py` checks the file of the current version.
 - Each release has a `docs/release-notes-v<version>.md` file; its contents become the GitHub Release
   body (and what the in-app "What's new" dialog shows, fetched live from the GitHub release).
-- CI (`.github/workflows/tests.yml`) runs automatically on every push to `main` (Windows runner:
-  server/import/backup/update/library tests, then UI smoke tests). Always check it went green on
-  the commit you're about to release — don't release on top of a red run.
+- CI (`.github/workflows/tests.yml`) runs automatically on every push to `main` that changes more than text (docs / READMEs are
+  skipped), with the Windows tests split into parallel jobs (two halves + the browser tests). The release workflow ALSO runs the same
+  tests (as a reusable workflow, in parallel with the builds) and its `publish` job needs them: nothing is published if they fail.
+  So you can dispatch the release right after pushing, without waiting for the push's own test run — but never release on top of a
+  run you already know is red.
 - Releasing is **not** done by pushing a git tag (`git push origin refs/tags/vX.Y.Z` reliably fails
   in this sandbox with a disconnect). Instead, trigger `.github/workflows/release.yml` by hand via
   `workflow_dispatch` (e.g. `mcp__github__actions_run_trigger` with `method: run_workflow`,
