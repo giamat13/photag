@@ -14,12 +14,13 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
 
 app = FastAPI(title="photag")
+app.add_middleware(viewer.SeenMiddleware)
 app.add_middleware(LocalOnlyMiddleware)       # only photag's own window may use this server (see app/security.py)
 
 
@@ -1354,6 +1355,100 @@ def reveal(pid: int):
         raise HTTPException(404)
     opener.reveal(PATHS.media / r["rel_path"])
     return {"ok": True}
+
+
+# ---- Windows: photag in the "Open with" menu of pictures (app/fileassoc.py) ----------------------------------------------
+class FileAssocIn(BaseModel):
+    on: bool
+
+
+@app.get("/api/fileassoc")
+def fileassoc_status():
+    sup = fileassoc.supported()
+    return {"supported": sup, "on": bool(sup and fileassoc.is_registered())}
+
+
+@app.post("/api/fileassoc")
+def fileassoc_set(body: FileAssocIn):
+    if not fileassoc.supported():
+        raise err(400, "Windows could not be changed")
+    try:
+        fileassoc.register() if body.on else fileassoc.unregister()
+    except OSError:
+        raise err(500, "Windows could not be changed")
+    return {"supported": True, "on": fileassoc.is_registered()}
+
+
+@app.post("/api/fileassoc/default-apps")
+def fileassoc_default_apps():
+    if not fileassoc.supported():
+        raise err(400, "Windows could not be changed")
+    fileassoc.open_default_apps()
+    return {"ok": True}
+
+
+# ---- the picture viewer: "Open with photag" (app/viewer.py). Reads files, never writes to the catalog ----------------
+class ViewerOpenIn(BaseModel):
+    path: str
+
+
+def _viewer_path(token: str) -> Path:
+    try:
+        return viewer.path_of(token)
+    except KeyError:
+        raise HTTPException(404)
+
+
+@app.post("/api/viewer/open")
+def viewer_open(body: ViewerOpenIn):
+    try:
+        return {"token": viewer.open_path(body.path)}
+    except viewer.NotAPicture:
+        raise err(400, "This file is not a picture photag can show")
+
+
+@app.get("/api/viewer/ping")
+def viewer_ping():
+    return {"ok": True}
+
+
+@app.get("/api/viewer/{token}/info")
+def viewer_info(token: str):
+    _viewer_path(token)
+    try:
+        return viewer.info(token)
+    except FileNotFoundError:
+        raise err(404, "The picture is no longer there")
+
+
+@app.get("/api/viewer/{token}/image")
+def viewer_image(token: str):
+    _viewer_path(token)
+    try:
+        path, mime = viewer.image_file(token)
+    except FileNotFoundError:
+        raise err(404, "The picture is no longer there")
+    except Exception:
+        raise err(415, "This file is not a picture photag can show")
+    return FileResponse(path, media_type=mime, headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/viewer/{token}/reveal")
+def viewer_reveal(token: str):
+    opener.reveal(_viewer_path(token))
+    return {"ok": True}
+
+
+@app.post("/api/viewer/{token}/import")
+def viewer_import(token: str):
+    """The one place where a viewed picture may enter the library, and only when the user asks for it."""
+    p = _viewer_path(token)
+    if not p.is_file():
+        raise err(404, "The picture is no longer there")
+    con = db.connect()
+    pid, added = importer._ingest_file(con, p)
+    con.commit()
+    return {"id": pid, "added": bool(added)}
 
 
 @app.get("/original/{pid}")

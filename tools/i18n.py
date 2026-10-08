@@ -27,7 +27,7 @@ BACKEND_FILES = ("server.py", "importer.py", "faces.py", "aitag.py", "compress.p
 
 def _js_keys() -> set[str]:
     """First argument of every t('...') / t("...") call in app.js."""
-    src = (UI / "app.js").read_text("utf-8")
+    src = (UI / "app.js").read_text("utf-8") + "\n" + (UI / "viewer.js").read_text("utf-8")
     keys = set()
     for m in re.finditer(r"""\bt\(\s*(["'])((?:\\.|(?!\1).)*)\1""", src):
         quote, body = m.group(1), m.group(2)
@@ -66,9 +66,12 @@ class _Static(HTMLParser):
 
 
 def _html_keys() -> set[str]:
-    p = _Static()
-    p.feed((UI / "index.html").read_text("utf-8"))
-    return p.keys
+    keys = set()
+    for page in ("index.html", "viewer.html"):
+        p = _Static()
+        p.feed((UI / page).read_text("utf-8"))
+        keys |= p.keys
+    return keys
 
 
 def _py_keys() -> set[str]:

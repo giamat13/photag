@@ -143,6 +143,9 @@ photag is not code-signed yet (a signing certificate costs money; the applicatio
 Smart App Control can still block the portable EXE itself the first time it runs on a given PC; there is no installer-vs-portable difference
 there, only signing fixes that for good.
 
+## Use photag as your picture viewer
+Right-click a picture > **Open with > photag** shows it in a fast viewer (zoom, pan, next/previous picture in the folder, rotate, full screen) **without adding it to your library**. A button in the viewer adds it if you want. The installer offers this as an option, and Preferences > *Picture viewer* switches it on or off for the portable version. To replace the Windows Photos app, press *Choose in Windows settings* there and pick photag for each picture type (Windows does not allow a program to make itself the default).
+
 ## Portable version
 No installation, no admin rights, nothing written to this PC: download `photag-<version>-portable.zip` from the
 [releases page](https://github.com/giamat13/photag/releases), extract it anywhere (a USB stick, a folder, a synced drive) and run `photag.exe`

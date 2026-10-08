@@ -1818,7 +1818,7 @@ async function storageBreakdown(){
   </div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
 }
 async function preferences(){
-  const [s, ai, rf0, beta, cat] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta'), api('/api/catalog-edits')]);
+  const [s, ai, rf0, beta, cat, fa] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta'), api('/api/catalog-edits'), api('/api/fileassoc')]);
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
@@ -1826,6 +1826,10 @@ async function preferences(){
     <label class="chkrow"><input type="checkbox" id="pf-beta" ${beta.on ? 'checked' : ''}> ${t('Tester mode: also offer pre-release versions')}</label>
     <label class="chkrow"><input type="checkbox" id="pf-cat" ${cat.on ? 'checked' : ''}> ${t('Keep edits and EXIF in the catalog database, never in the photo file')}</label>
     <div class="hint" style="padding:0">${t('On: edits are saved as settings in the catalog and the photo file is never changed; the EXIF shown comes from the catalog. Off: edits are written into the photo file (a copy of the original is kept) and the EXIF is read from the file.')}</div>
+    ${fa.supported ? `<div class="lbl-sub" style="padding:0">${t('Picture viewer')}</div>
+    <label class="chkrow"><input type="checkbox" id="fa-on" ${fa.on ? 'checked' : ''}> ${t('Offer photag in the “Open with” menu for pictures')}</label>
+    <div class="bk-path"><button id="fa-default">${t('Choose default apps…')}</button></div>
+    <div class="hint" style="padding:0">${t('A picture opened with photag is shown without being added to the catalog. To open pictures with a double click, choose photag for each picture type in Windows’ Default apps.')}</div>` : ''}
     <div class="lbl-sub" style="padding:0">${t('Automatic import')}</div>
     <label class="chkrow"><input type="checkbox" id="ai-on"> ${t('Import new photos automatically from a folder')}</label>
     <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
@@ -1841,6 +1845,10 @@ async function preferences(){
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
   $('#pf-beta').onchange=e=>send('POST', '/api/update/beta', {on: e.target.checked});
   $('#pf-cat').onchange=e=>send('POST', '/api/catalog-edits', {on: e.target.checked}).then(()=>toast(e.target.checked ? t('Edits and EXIF are kept in the catalog') : t('Edits will be written into the photo files')));
+  if ($('#fa-on')) {
+    $('#fa-on').onchange=e=>send('POST', '/api/fileassoc', {on: e.target.checked}).then(()=>toast(e.target.checked ? t('photag is now in the “Open with” menu') : t('photag was removed from the “Open with” menu'))).catch(()=>{ e.target.checked = !e.target.checked; });
+    $('#fa-default').onclick=()=>send('POST', '/api/fileassoc/default-apps', {});
+  }
   $('#pf-ai').onclick=()=>{ closeModal(); aiSettings(); };
   $('#pf-faces').onclick=()=>{ closeModal(); runJob('/api/faces','faces',t('Face Detection')); };
   let cur = ai;

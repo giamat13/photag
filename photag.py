@@ -88,6 +88,24 @@ except Exception as e:
     _fatal("photag could not load its components", f"{type(e).__name__}: {e}")
 _log("components loaded")
 
+def _view_files(args) -> list[str]:
+    """Pictures named on the command line ("Open with photag", photag.exe "C:\\pictures\\a.jpg"): shown in the viewer, not imported."""
+    from app import viewer
+    out = []
+    for a in args:
+        if a.startswith("-"):
+            continue
+        try:
+            p = Path(a)
+            if p.is_file() and viewer.is_picture(p):
+                out.append(str(p.resolve()))
+        except OSError:
+            pass
+    return out
+
+
+VIEW_FILES = _view_files(sys.argv[1:])
+
 HOST = "127.0.0.1"
 BASE_PORT = int(os.environ.get("PHOTAG_BASE_PORT", 8756))
 
@@ -178,12 +196,41 @@ def _own_taskbar_identity():
         pass
 
 
-def _browser_mode():
+def _viewer_url() -> str | None:
+    """The address of the viewer page for the first picture on the command line (the server makes a token for it), or None."""
+    if not VIEW_FILES:
+        return None
+    import json
+    import urllib.request
+    try:
+        req = urllib.request.Request(f"{URL}/api/viewer/open", data=json.dumps({"path": VIEW_FILES[0]}).encode(),
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return f"{URL}/viewer.html?t={json.loads(r.read())['token']}"
+    except Exception as e:
+        _log(f"could not open {VIEW_FILES[0]} in the viewer: {e!r}")
+        return None
+
+
+def _linger():
+    """This program started the server for a picture: stay until the last viewer window is gone (other viewer windows may be using it),
+    and, if the main window of photag was opened on it meanwhile, until that is idle too."""
+    from app import viewer
+    time.sleep(1)
+    while True:
+        v, m = viewer.idle_seconds()
+        if v > 12 and m > 150:
+            return
+        time.sleep(2)
+
+
+def _browser_mode(target: str | None = None):
     """No native window: open photag's page in the default browser and keep the server running until Ctrl+C."""
     import webbrowser
-    print(f"photag is running at {URL}  (press Ctrl+C to stop)", flush=True)
+    target = target or URL
+    print(f"photag is running at {target}  (press Ctrl+C to stop)", flush=True)
     try:
-        webbrowser.open(URL)
+        webbrowser.open(target)
     except Exception:
         pass
     try:
@@ -207,15 +254,21 @@ def main():
     if not ALREADY_RUNNING and not _wait_up(60):                         # a cold first start unpacks and loads a lot: allow a minute
         _fatal("photag could not start its local server",
                f"Nothing answered on port {PORT}. Another program may be using it, or antivirus is blocking photag.")
+    view_url = _viewer_url()
     try:
         import webview
-        webview.create_window("photag", URL, width=1280, height=860)
+        if view_url:
+            webview.create_window(f"{Path(VIEW_FILES[0]).name} - photag", view_url, width=1100, height=780)
+        else:
+            webview.create_window("photag", URL, width=1280, height=860)
         _log("opening the window")
         webview.start(icon=str(ICON) if ICON.exists() else None)
+        if view_url and not ALREADY_RUNNING:
+            _linger()
     except Exception as e:
         if sys.platform != "win32":                    # Linux / macOS without a usable window toolkit (GTK / Qt): use the browser
-            _log(f"no window ({type(e).__name__}: {e}); opening {URL} in the default browser instead")
-            _browser_mode()
+            _log(f"no window ({type(e).__name__}: {e}); opening {view_url or URL} in the default browser instead")
+            _browser_mode(view_url)
             return
         _fatal("photag could not open its window", f"{type(e).__name__}: {e} (is the Microsoft Edge WebView2 runtime installed?)")
     _log("window closed, exiting")

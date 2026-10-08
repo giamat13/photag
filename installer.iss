@@ -27,11 +27,13 @@ SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=app\ui\icon.ico
 LicenseFile=LICENSE
+ChangesAssociations=yes
 UninstallDisplayName=photag
 UninstallDisplayIcon={app}\photag.exe
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
+Name: "openwith"; Description: "Add photag to the Open with menu of pictures (shows a picture without adding it to the library)"; GroupDescription: "Pictures:"
 
 [Files]
 Source: "dist\photag\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -51,6 +53,78 @@ Type: filesandordirs; Name: "{app}\code.bad"
 [Icons]
 Name: "{autoprograms}\photag"; Filename: "{app}\photag.exe"
 Name: "{autodesktop}\photag"; Filename: "{app}\photag.exe"; Tasks: desktopicon
+
+[Registry]
+; same keys as app/fileassoc.py (current user only); removed again on uninstall
+Root: HKCU; Subkey: "Software\Classes\photag.Image"; ValueType: string; ValueData: "Picture"; Flags: uninsdeletekey; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\photag.Image\DefaultIcon"; ValueType: string; ValueData: """{app}\photag.exe"",0"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\photag.Image\shell\open"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "photag"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\photag.Image\shell\open\command"; ValueType: string; ValueData: """{app}\photag.exe"" ""%1"""; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "photag"; Flags: uninsdeletekey; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\shell\open\command"; ValueType: string; ValueData: """{app}\photag.exe"" ""%1"""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "photag"; Flags: uninsdeletekey; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "Photo manager and picture viewer: shows a picture without adding it to the catalog"; Tasks: openwith
+Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "photag"; ValueData: "Software\photag\Capabilities"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.jpg\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".jpg"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".jpg"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.jpeg\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".jpeg"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".jpeg"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.jpe\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".jpe"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".jpe"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.jfif\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".jfif"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".jfif"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.png\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".png"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".png"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.gif\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".gif"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".gif"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.webp\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".webp"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".webp"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.bmp\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".bmp"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".bmp"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.tif\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".tif"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".tif"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.tiff\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".tiff"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".tiff"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.heic\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".heic"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".heic"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.heif\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".heif"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".heif"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.avif\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".avif"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".avif"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.dng\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".dng"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".dng"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.cr2\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".cr2"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".cr2"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.cr3\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".cr3"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".cr3"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.nef\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".nef"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".nef"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.arw\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".arw"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".arw"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.orf\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".orf"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".orf"; ValueData: "photag.Image"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\.rw2\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".rw2"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".rw2"; ValueData: "photag.Image"; Tasks: openwith
 
 [UninstallRun]
 ; the app's backup task (created by the app itself) goes away with it; photos and backups are NOT touched
