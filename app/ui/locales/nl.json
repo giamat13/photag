@@ -1242,5 +1242,21 @@
  "Rename…": "Hernoemen…",
  "That name is not allowed": "Deze naam is niet toegestaan",
  "The file could not be moved": "Het bestand kon niet worden verplaatst",
- "The folder was not found": "De map is niet gevonden"
+ "The folder was not found": "De map is niet gevonden",
+ "Colour": "Kleur",
+ "Copied to the clipboard": "Gekopieerd naar het klembord",
+ "Copy picture": "Afbeelding kopiëren",
+ "Could not copy the picture": "De afbeelding kan niet worden gekopieerd",
+ "Free": "Vrij",
+ "Improve automatically": "Automatisch verbeteren",
+ "On battery, wait for the charger with heavy background work": "Op batterij wachten op de oplader met zware achtergrondtaken",
+ "Original": "Origineel",
+ "Passport 35 × 45 mm": "Pasfoto 35 × 45 mm",
+ "Set as desktop background": "Instellen als bureaubladachtergrond",
+ "Straighten and crop": "Rechtzetten en bijsnijden",
+ "Swap width and height": "Breedte en hoogte omwisselen",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "De automatische back-up, het aanvullen van EXIF en het scannen van je eigen map wachten tot de computer aan het stroomnet hangt (een back-up wacht nooit langer dan 3 dagen). “Nu back-uppen” en alles wat je zelf start, werkt altijd.",
+ "The desktop background was changed": "De bureaubladachtergrond is gewijzigd",
+ "This video cannot be played here": "Deze video kan hier niet worden afgespeeld",
+ "Thumbnail strip (T)": "Miniaturenstrook (T)"
 }

@@ -1242,5 +1242,21 @@
  "Rename…": "重命名…",
  "That name is not allowed": "不允许使用此名称",
  "The file could not be moved": "无法移动文件",
- "The folder was not found": "找不到该文件夹"
+ "The folder was not found": "找不到该文件夹",
+ "Colour": "颜色",
+ "Copied to the clipboard": "已复制到剪贴板",
+ "Copy picture": "复制图片",
+ "Could not copy the picture": "无法复制图片",
+ "Free": "自由",
+ "Improve automatically": "自动优化",
+ "On battery, wait for the charger with heavy background work": "使用电池时，繁重的后台工作等到接通电源后再进行",
+ "Original": "原始比例",
+ "Passport 35 × 45 mm": "证件照 35 × 45 毫米",
+ "Set as desktop background": "设为桌面背景",
+ "Straighten and crop": "校正并裁剪",
+ "Swap width and height": "交换宽度和高度",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "自动备份、补全 EXIF 和扫描您自己的文件夹会等到电脑接通电源后再进行（备份最多等待 3 天）。“立即备份”和您自己发起的操作始终会运行。",
+ "The desktop background was changed": "桌面背景已更改",
+ "This video cannot be played here": "此视频无法在此播放",
+ "Thumbnail strip (T)": "缩略图条 (T)"
 }

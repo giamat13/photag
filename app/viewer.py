@@ -15,13 +15,16 @@ import threading
 import time
 from pathlib import Path
 
-from . import images
+from . import config, images
 
 WEB_EXT = {".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".gif", ".webp", ".bmp", ".avif"}       # the window shows these as they are
 CONVERT_EXT = {".heic", ".heif", ".avifs", ".tif", ".tiff"} | images.RAW_EXT                    # shown as a JPEG made from the file
 MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".jpe": "image/jpeg", ".jfif": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
         ".webp": "image/webp", ".bmp": "image/bmp", ".avif": "image/avif"}
-SUPPORTED = WEB_EXT | CONVERT_EXT
+VIDEO_EXT = {".mp4", ".m4v", ".mov", ".webm", ".mkv", ".avi", ".wmv", ".mpg", ".mpeg", ".3gp"}       # (not .ts / .flv: too many other files use them)
+VIDEO_MIME = {".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm", ".mkv": "video/x-matroska",
+              ".avi": "video/x-msvideo", ".wmv": "video/x-ms-wmv", ".mpg": "video/mpeg", ".mpeg": "video/mpeg", ".3gp": "video/3gpp"}
+SUPPORTED = WEB_EXT | CONVERT_EXT | VIDEO_EXT
 MAX_TOKENS = 20000
 
 
@@ -35,7 +38,12 @@ _TOKEN_OF: dict[str, str] = {}
 
 
 def is_picture(path: Path) -> bool:
+    """A picture or a video photag can show in the viewer."""
     return path.suffix.lower() in SUPPORTED
+
+
+def is_video(path: Path) -> bool:
+    return path.suffix.lower() in VIDEO_EXT
 
 
 def token_for(path: Path) -> str:
@@ -99,7 +107,7 @@ def info(token: str) -> dict:
     except ValueError:                                       # renamed / just created: still show it, first in the list
         sib, idx = [p] + sib, 0
     st = p.stat()
-    w, h = images.dimensions(p)
+    w, h = (None, None) if is_video(p) else images.dimensions(p)
 
     def tok(i):
         return token_for(sib[i]) if 0 <= i < len(sib) else None
@@ -107,7 +115,8 @@ def info(token: str) -> dict:
     return {"token": token, "name": p.name, "folder": str(p.parent), "bytes": st.st_size, "modified": int(st.st_mtime),
             "width": w, "height": h, "index": idx + 1, "count": len(sib),
             "prev": tok(idx - 1) if idx > 0 else None, "next": tok(idx + 1) if idx + 1 < len(sib) else None,
-            "first": tok(0), "last": tok(len(sib) - 1), "converted": p.suffix.lower() in CONVERT_EXT}
+            "first": tok(0), "last": tok(len(sib) - 1), "converted": p.suffix.lower() in CONVERT_EXT,
+            "video": is_video(p), "can_wallpaper": sys.platform == "win32" and not is_video(p)}
 
 
 def _cache_dir() -> Path:
@@ -130,6 +139,8 @@ def image_file(token: str) -> tuple[Path, str]:
     p = path_of(token)
     if not p.is_file():
         raise FileNotFoundError(str(p))
+    if is_video(p):
+        return p, VIDEO_MIME.get(p.suffix.lower(), "application/octet-stream")
     if p.suffix.lower() in WEB_EXT:
         return p, MIME.get(p.suffix.lower(), "application/octet-stream")
     st = p.stat()
@@ -204,14 +215,14 @@ def _clamp(v, lo, hi, default=1.0):
 
 
 def save_edit(token: str, ops: dict) -> dict:
-    """Saves the picture with simple edits (brightness, contrast, saturation, black and white, rotation) as a NEW file next to it
-    ("name (edited).jpg"); the original is never touched. Returns {"token", "name"} of the copy."""
+    """Saves the picture with the edits of the viewer's editor (see clean_ops) as a NEW file next to it ("name (edited).jpg");
+    the original is never touched. Returns {"token", "name"} of the copy."""
     p = path_of(token)
     if not p.is_file():
         raise FileNotFoundError(str(p))
-    rot = int(_clamp(ops.get("rotate", 0), -360, 360, 0)) // 90 * 90 % 360
-    clean = {"brightness": _clamp(ops.get("brightness"), 0.2, 2.0), "contrast": _clamp(ops.get("contrast"), 0.2, 2.0),
-             "saturation": _clamp(ops.get("saturation"), 0.0, 2.5), "grayscale": bool(ops.get("grayscale")), "rotate": rot}
+    if is_video(p):
+        raise NotAPicture(str(p))
+    clean = clean_ops(ops)
     ext = ".png" if p.suffix.lower() == ".png" else ".jpg"
     n, dst = 1, p.with_name(f"{p.stem} (edited){ext}")
     while dst.exists():
@@ -220,6 +231,103 @@ def save_edit(token: str, ops: dict) -> dict:
     images.apply_edit(p, clean, dst)
     images.embed_exif(dst, p, upright=True)               # the copy keeps the camera data (JPEG only)
     return {"token": token_for(dst), "name": dst.name}
+
+
+# ---- the strip of thumbnails, the clipboard / wallpaper helpers, the editor ----
+def listing(token: str, limit: int = 3000) -> dict:
+    """Every picture of the folder (token, name, video?) for the strip of thumbnails; the window around the current one when there are very many."""
+    p = path_of(token)
+    sib = siblings(p)
+    try:
+        i = sib.index(p)
+    except ValueError:
+        i = 0
+    lo = max(0, min(i - limit // 2, len(sib) - limit)) if len(sib) > limit else 0
+    part = sib[lo:lo + limit]
+    return {"index": i - lo, "total": len(sib), "items": [{"token": token_for(q), "name": q.name, "video": is_video(q)} for q in part]}
+
+
+def thumb_file(token: str, size: int = 200) -> Path | None:
+    """A small JPEG of the picture (cached in the temp folder); None for a video (the page draws an icon)."""
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    if is_video(p):
+        return None
+    st = p.stat()
+    out = _cache_dir() / ("t-" + hashlib.sha1(f"{p}|{st.st_size}|{st.st_mtime_ns}|{size}".encode()).hexdigest()[:22] + ".jpg")
+    if not out.exists():
+        im = images.open_image(p)
+        im.thumbnail((size, size))
+        im.convert("RGB").save(out, "JPEG", quality=75)
+        _prune(out.parent, 600)
+    return out
+
+
+def _set_wallpaper(path: str) -> bool:
+    import ctypes
+    return bool(ctypes.windll.user32.SystemParametersInfoW(20, 0, path, 3))       # SPI_SETDESKWALLPAPER, update the profile and tell everyone
+
+
+def wallpaper(token: str) -> bool:
+    """Makes the picture the desktop background (Windows). A picture a browser cannot show is converted first, into photag's own folder."""
+    p = path_of(token)
+    if sys.platform != "win32" or is_video(p):
+        raise OSError("not supported")
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    src, _ = image_file(token)
+    if src != p:                                             # converted copy (HEIC, TIFF, RAW): keep it, the temp folder is pruned
+        keep = config.settings_dir() / "wallpaper.jpg"
+        keep.parent.mkdir(parents=True, exist_ok=True)
+        keep.write_bytes(src.read_bytes())
+        src = keep
+    return _set_wallpaper(str(src))
+
+
+TONE_RANGES = {"exposure": (-4.0, 4.0), "highlights": (-100, 100), "shadows": (-100, 100), "temperature": (-100, 100), "tint": (-100, 100),
+               "vibrance": (-100, 100), "sharpness": (0, 100), "vignette": (-100, 100), "clarity": (-100, 100)}
+
+
+def clean_ops(ops: dict) -> dict:
+    """The edit settings of the viewer's editor, every number kept inside its range (nothing the page sends is trusted)."""
+    out = {}
+    for k, (lo, hi) in TONE_RANGES.items():
+        v = ops.get(k)
+        v = _clamp(v, lo, hi, 0.0) if v not in (None, 0, 0.0) else 0.0
+        if v:
+            out[k] = v
+    for k, lo, hi in (("brightness", 0.2, 2.0), ("contrast", 0.2, 2.0), ("saturation", 0.0, 2.5)):
+        v = _clamp(ops.get(k), lo, hi)
+        if abs(v - 1.0) > 1e-6:
+            out[k] = v
+    if ops.get("grayscale"):
+        out["grayscale"] = True
+    rot = _clamp(ops.get("rotate", 0), -360, 360, 0.0)
+    if abs(rot) > 1e-6:
+        out["rotate"] = round(rot, 2)
+    c = ops.get("crop")
+    if isinstance(c, (list, tuple)) and len(c) == 4:
+        x1, y1, x2, y2 = (_clamp(v, 0.0, 1.0, 0.0) for v in c)
+        if x2 - x1 >= 0.01 and y2 - y1 >= 0.01 and (x1, y1, x2, y2) != (0.0, 0.0, 1.0, 1.0):
+            out["crop"] = [x1, y1, x2, y2]
+    return out
+
+
+def tone_preview(token: str, ops: dict) -> bytes:
+    """The picture with only the tone settings applied (what CSS cannot draw), at most 1600 px: the live preview of the sliders."""
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    return images.preview_tone(p, clean_ops(ops), 1600)
+
+
+def auto_settings(token: str) -> dict:
+    """What "improve automatically" would set for this picture (the same algorithm as the Develop module)."""
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    return images.auto_ops(p)
 
 
 class NameNotAllowed(Exception):

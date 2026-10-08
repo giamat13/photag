@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, background as bgmode
+from . import db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -52,7 +52,7 @@ def _backup_loop():
     while True:
         try:
             # catches up on a missed day right after start-up; after a failure it retries every 30 minutes
-            if backup.auto_due() is None and not _other_job_running():
+            if backup.auto_due() is None and not _other_job_running():      # (auto_due holds back on battery)
                 _start("backup", backup.run_backup, "auto")
             elif not _other_job_running():
                 backup.verify_if_due("app")           # once a week: is the newest backup still intact?
@@ -89,7 +89,7 @@ def _ref_loop():
     while True:
         try:
             st = refmode.get(db.connect())
-            if st["enabled"] and st["folder"] and Path(st["folder"]).is_dir() and not _other_job_running():
+            if st["enabled"] and st["folder"] and Path(st["folder"]).is_dir() and not _other_job_running() and not power.should_wait():
                 _start("refscan", refmode.run_scan)
         except Exception:
             pass
@@ -103,6 +103,9 @@ def _exif_loop():
     after = 0
     while True:
         try:
+            if power.should_wait():                    # on battery: later (a few minutes), not in a tight loop
+                time.sleep(float(os.environ.get("PHOTAG_BATTERY_WAIT", 300)))
+                continue
             if not _other_job_running():
                 _, last = exifindex.backfill_batch(db.connect(), after, 50)
                 if last == after:                       # nothing left beyond the cursor: look again from the start later
@@ -122,6 +125,9 @@ def _edit_migrate_loop():
     skip: set = set()
     while True:
         try:
+            if power.should_wait():
+                time.sleep(float(os.environ.get("PHOTAG_BATTERY_WAIT", 300)))
+                continue
             if config.get_catalog_edits() and not _other_job_running():
                 ok, bad = render.migrate_batch(db.connect(), skip, 20)
                 if ok + bad:
@@ -1402,6 +1408,21 @@ class BackgroundIn(BaseModel):
     autostart: bool | None = None
 
 
+class PowerIn(BaseModel):
+    pause_on_battery: bool
+
+
+@app.get("/api/power")
+def power_status():
+    return {"pause_on_battery": power.enabled(), "on_battery": power.on_battery()}
+
+
+@app.post("/api/power")
+def power_set(body: PowerIn):
+    power.set_enabled(body.pause_on_battery)
+    return power_status()
+
+
 @app.get("/api/tray")
 def tray_status():
     d = bgmode.status()
@@ -1511,7 +1532,67 @@ class ViewerEditIn(BaseModel):
     contrast: float = 1.0
     saturation: float = 1.0
     grayscale: bool = False
-    rotate: int = 0
+    rotate: float = 0.0
+    crop: list[float] | None = None
+    exposure: float = 0.0
+    highlights: float = 0.0
+    shadows: float = 0.0
+    temperature: float = 0.0
+    tint: float = 0.0
+    vibrance: float = 0.0
+    sharpness: float = 0.0
+    vignette: float = 0.0
+    clarity: float = 0.0
+
+
+@app.get("/api/viewer/{token}/list")
+def viewer_list(token: str):
+    try:
+        return viewer.listing(token)
+    except KeyError:
+        raise HTTPException(404)
+
+
+@app.get("/api/viewer/{token}/thumb")
+def viewer_thumb(token: str):
+    try:
+        f = viewer.thumb_file(token)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+    except Exception:
+        raise HTTPException(415)
+    if f is None:
+        raise HTTPException(204)
+    return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
+
+
+@app.post("/api/viewer/{token}/preview")
+def viewer_preview(token: str, body: ViewerEditIn):
+    try:
+        return Response(viewer.tone_preview(token, body.model_dump()), media_type="image/jpeg")
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+
+
+@app.post("/api/viewer/{token}/auto")
+def viewer_auto(token: str):
+    try:
+        return viewer.auto_settings(token)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+
+
+@app.post("/api/viewer/{token}/wallpaper")
+def viewer_wallpaper(token: str):
+    try:
+        ok = viewer.wallpaper(token)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+    except OSError:
+        raise err(400, "Windows could not be changed")
+    if not ok:
+        raise err(500, "Windows could not be changed")
+    return {"ok": True}
 
 
 @app.post("/api/viewer/{token}/trash")
@@ -1527,7 +1608,7 @@ def viewer_trash(token: str):
 @app.post("/api/viewer/{token}/edit")
 def viewer_edit(token: str, body: ViewerEditIn):
     try:
-        return viewer.save_edit(token, body.model_dump() if hasattr(body, "model_dump") else body.dict())
+        return viewer.save_edit(token, body.model_dump())
     except (KeyError, FileNotFoundError):
         raise HTTPException(404)
     except Exception:

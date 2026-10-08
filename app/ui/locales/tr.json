@@ -1242,5 +1242,21 @@
  "Rename…": "Yeniden adlandır…",
  "That name is not allowed": "Bu ada izin verilmiyor",
  "The file could not be moved": "Dosya taşınamadı",
- "The folder was not found": "Klasör bulunamadı"
+ "The folder was not found": "Klasör bulunamadı",
+ "Colour": "Renk",
+ "Copied to the clipboard": "Panoya kopyalandı",
+ "Copy picture": "Resmi kopyala",
+ "Could not copy the picture": "Resim kopyalanamadı",
+ "Free": "Serbest",
+ "Improve automatically": "Otomatik iyileştir",
+ "On battery, wait for the charger with heavy background work": "Pildeyken ağır arka plan işleri için şarj cihazını bekle",
+ "Original": "Orijinal",
+ "Passport 35 × 45 mm": "Vesikalık 35 × 45 mm",
+ "Set as desktop background": "Masaüstü arka planı yap",
+ "Straighten and crop": "Düzelt ve kırp",
+ "Swap width and height": "Genişlik ile yüksekliği değiştir",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "Otomatik yedekleme, EXIF doldurma ve kendi klasörünüzün taranması bilgisayar prize takılana kadar bekler (bir yedekleme 3 günden fazla beklemez). “Şimdi yedekle” ve kendi başlattığınız her şey her zaman çalışır.",
+ "The desktop background was changed": "Masaüstü arka planı değiştirildi",
+ "This video cannot be played here": "Bu video burada oynatılamıyor",
+ "Thumbnail strip (T)": "Küçük resim şeridi (T)"
 }

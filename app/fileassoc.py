@@ -16,7 +16,8 @@ from pathlib import Path
 
 PROGID = "photag.Image"
 EXTS = [".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif", ".avif",
-        ".dng", ".cr2", ".cr3", ".nef", ".arw", ".orf", ".rw2"]
+        ".dng", ".cr2", ".cr3", ".nef", ".arw", ".orf", ".rw2",
+        ".mp4", ".m4v", ".mov", ".webm", ".mkv", ".avi", ".wmv", ".mpg", ".mpeg", ".3gp"]          # videos too: the viewer plays them
 CLASSES = r"Software\Classes"
 SOFTWARE = r"Software"
 

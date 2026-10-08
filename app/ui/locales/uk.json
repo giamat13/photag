@@ -1242,5 +1242,21 @@
  "Rename…": "Перейменувати…",
  "That name is not allowed": "Ця назва недопустима",
  "The file could not be moved": "Не вдалося перемістити файл",
- "The folder was not found": "Папку не знайдено"
+ "The folder was not found": "Папку не знайдено",
+ "Colour": "Колір",
+ "Copied to the clipboard": "Скопійовано в буфер обміну",
+ "Copy picture": "Копіювати зображення",
+ "Could not copy the picture": "Не вдалося скопіювати зображення",
+ "Free": "Вільно",
+ "Improve automatically": "Покращити автоматично",
+ "On battery, wait for the charger with heavy background work": "Під час роботи від батареї чекати на зарядку перед важкими фоновими завданнями",
+ "Original": "Початкове",
+ "Passport 35 × 45 mm": "Фото на паспорт 35 × 45 мм",
+ "Set as desktop background": "Зробити тлом робочого столу",
+ "Straighten and crop": "Вирівняти й обрізати",
+ "Swap width and height": "Поміняти ширину та висоту",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "Автоматичне резервне копіювання, доповнення EXIF і сканування вашої папки чекають, поки комп’ютер підключать до живлення (копія ніколи не чекає довше 3 днів). «Створити копію зараз» і все, що ви запускаєте самі, виконується завжди.",
+ "The desktop background was changed": "Тло робочого столу змінено",
+ "This video cannot be played here": "Це відео не можна відтворити тут",
+ "Thumbnail strip (T)": "Смуга мініатюр (T)"
 }

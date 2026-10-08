@@ -1242,5 +1242,21 @@
  "Rename…": "שנה שם…",
  "That name is not allowed": "השם הזה לא מותר",
  "The file could not be moved": "לא ניתן היה להעביר את הקובץ",
- "The folder was not found": "התיקייה לא נמצאה"
+ "The folder was not found": "התיקייה לא נמצאה",
+ "Colour": "צבע",
+ "Copied to the clipboard": "הועתק ללוח",
+ "Copy picture": "העתק תמונה",
+ "Could not copy the picture": "לא ניתן להעתיק את התמונה",
+ "Free": "חופשי",
+ "Improve automatically": "שפר אוטומטית",
+ "On battery, wait for the charger with heavy background work": "כשהמחשב על סוללה, להמתין לחשמל לפני עבודות רקע כבדות",
+ "Original": "מקורי",
+ "Passport 35 × 45 mm": "תמונת פספורט 35 × 45 מ\"מ",
+ "Set as desktop background": "הגדר כרקע שולחן העבודה",
+ "Straighten and crop": "יישור וחיתוך",
+ "Swap width and height": "החלף בין רוחב לגובה",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "הגיבוי האוטומטי, השלמת EXIF וסריקת התיקייה שלך ממתינים עד שהמחשב מחובר לחשמל (גיבוי לא ממתין יותר מ-3 ימים). \"גבה עכשיו\" וכל מה שאתה מפעיל בעצמך תמיד רצים.",
+ "The desktop background was changed": "רקע שולחן העבודה שונה",
+ "This video cannot be played here": "לא ניתן לנגן את הסרטון הזה כאן",
+ "Thumbnail strip (T)": "רצועת תמונות ממוזערות (T)"
 }

@@ -1242,5 +1242,21 @@
  "Rename…": "Переименовать…",
  "That name is not allowed": "Это имя недопустимо",
  "The file could not be moved": "Не удалось переместить файл",
- "The folder was not found": "Папка не найдена"
+ "The folder was not found": "Папка не найдена",
+ "Colour": "Цвет",
+ "Copied to the clipboard": "Скопировано в буфер обмена",
+ "Copy picture": "Копировать изображение",
+ "Could not copy the picture": "Не удалось скопировать изображение",
+ "Free": "Свободно",
+ "Improve automatically": "Улучшить автоматически",
+ "On battery, wait for the charger with heavy background work": "При работе от батареи ждать зарядки перед тяжёлыми фоновыми задачами",
+ "Original": "Исходное",
+ "Passport 35 × 45 mm": "Фото на паспорт 35 × 45 мм",
+ "Set as desktop background": "Сделать фоном рабочего стола",
+ "Straighten and crop": "Выровнять и обрезать",
+ "Swap width and height": "Поменять ширину и высоту",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "Автоматическое резервное копирование, дополнение EXIF и сканирование вашей папки ждут, пока компьютер подключат к питанию (копия никогда не ждёт дольше 3 дней). «Создать копию сейчас» и всё, что вы запускаете сами, выполняется всегда.",
+ "The desktop background was changed": "Фон рабочего стола изменён",
+ "This video cannot be played here": "Это видео нельзя воспроизвести здесь",
+ "Thumbnail strip (T)": "Полоса миниатюр (T)"
 }

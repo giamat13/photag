@@ -1242,5 +1242,21 @@
  "Rename…": "إعادة تسمية…",
  "That name is not allowed": "هذا الاسم غير مسموح",
  "The file could not be moved": "تعذّر نقل الملف",
- "The folder was not found": "لم يتم العثور على المجلد"
+ "The folder was not found": "لم يتم العثور على المجلد",
+ "Colour": "اللون",
+ "Copied to the clipboard": "تم النسخ إلى الحافظة",
+ "Copy picture": "نسخ الصورة",
+ "Could not copy the picture": "تعذّر نسخ الصورة",
+ "Free": "حر",
+ "Improve automatically": "تحسين تلقائي",
+ "On battery, wait for the charger with heavy background work": "عند العمل على البطارية، انتظر الشاحن قبل أعمال الخلفية الثقيلة",
+ "Original": "الأصلي",
+ "Passport 35 × 45 mm": "صورة جواز سفر 35 × 45 مم",
+ "Set as desktop background": "تعيين كخلفية لسطح المكتب",
+ "Straighten and crop": "تقويم وقص",
+ "Swap width and height": "تبديل العرض والارتفاع",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "يتم تأجيل النسخ الاحتياطي التلقائي واستكمال EXIF وفحص مجلدك حتى يتصل الكمبيوتر بالكهرباء (لا ينتظر النسخ الاحتياطي أكثر من 3 أيام). يعمل «نسخ احتياطي الآن» وكل ما تبدأه بنفسك دائمًا.",
+ "The desktop background was changed": "تم تغيير خلفية سطح المكتب",
+ "This video cannot be played here": "لا يمكن تشغيل هذا الفيديو هنا",
+ "Thumbnail strip (T)": "شريط الصور المصغرة (T)"
 }

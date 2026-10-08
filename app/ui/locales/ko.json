@@ -1242,5 +1242,21 @@
  "Rename…": "이름 바꾸기…",
  "That name is not allowed": "사용할 수 없는 이름입니다",
  "The file could not be moved": "파일을 이동할 수 없습니다",
- "The folder was not found": "폴더를 찾을 수 없습니다"
+ "The folder was not found": "폴더를 찾을 수 없습니다",
+ "Colour": "색상",
+ "Copied to the clipboard": "클립보드에 복사했습니다",
+ "Copy picture": "사진 복사",
+ "Could not copy the picture": "사진을 복사할 수 없습니다",
+ "Free": "자유",
+ "Improve automatically": "자동 보정",
+ "On battery, wait for the charger with heavy background work": "배터리 사용 중에는 무거운 백그라운드 작업을 충전기 연결 때까지 대기",
+ "Original": "원본",
+ "Passport 35 × 45 mm": "여권 사진 35 × 45 mm",
+ "Set as desktop background": "바탕 화면으로 설정",
+ "Straighten and crop": "수평 맞춤 및 자르기",
+ "Swap width and height": "가로와 세로 바꾸기",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "자동 백업, EXIF 채우기, 내 폴더 검색은 컴퓨터가 전원에 연결될 때까지 대기합니다(백업은 3일 이상 기다리지 않습니다). “지금 백업”과 직접 시작한 작업은 항상 실행됩니다.",
+ "The desktop background was changed": "바탕 화면을 변경했습니다",
+ "This video cannot be played here": "이 동영상은 여기서 재생할 수 없습니다",
+ "Thumbnail strip (T)": "썸네일 막대 (T)"
 }

@@ -1242,5 +1242,21 @@
  "Rename…": "नाम बदलें…",
  "That name is not allowed": "यह नाम मान्य नहीं है",
  "The file could not be moved": "फ़ाइल को ले जाया नहीं जा सका",
- "The folder was not found": "फ़ोल्डर नहीं मिला"
+ "The folder was not found": "फ़ोल्डर नहीं मिला",
+ "Colour": "रंग",
+ "Copied to the clipboard": "क्लिपबोर्ड पर कॉपी किया गया",
+ "Copy picture": "तस्वीर कॉपी करें",
+ "Could not copy the picture": "तस्वीर कॉपी नहीं हो सकी",
+ "Free": "मुक्त",
+ "Improve automatically": "अपने-आप सुधारें",
+ "On battery, wait for the charger with heavy background work": "बैटरी पर होने पर भारी बैकग्राउंड कामों के लिए चार्जर का इंतज़ार करें",
+ "Original": "मूल",
+ "Passport 35 × 45 mm": "पासपोर्ट फ़ोटो 35 × 45 मिमी",
+ "Set as desktop background": "डेस्कटॉप पृष्ठभूमि बनाएँ",
+ "Straighten and crop": "सीधा करें और क्रॉप करें",
+ "Swap width and height": "चौड़ाई और ऊँचाई बदलें",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "स्वचालित बैकअप, EXIF भरना और आपके अपने फ़ोल्डर की स्कैनिंग तब तक रुकते हैं जब तक कंप्यूटर बिजली से न जुड़ जाए (बैकअप 3 दिन से ज़्यादा नहीं रुकता)। “अभी बैकअप लें” और जो आप खुद शुरू करते हैं वह हमेशा चलता है।",
+ "The desktop background was changed": "डेस्कटॉप पृष्ठभूमि बदल दी गई",
+ "This video cannot be played here": "यह वीडियो यहाँ नहीं चल सकता",
+ "Thumbnail strip (T)": "थंबनेल पट्टी (T)"
 }

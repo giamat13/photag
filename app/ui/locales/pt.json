@@ -1242,5 +1242,21 @@
  "Rename…": "Mudar o nome…",
  "That name is not allowed": "Esse nome não é permitido",
  "The file could not be moved": "Não foi possível mover o ficheiro",
- "The folder was not found": "A pasta não foi encontrada"
+ "The folder was not found": "A pasta não foi encontrada",
+ "Colour": "Cor",
+ "Copied to the clipboard": "Copiado para a área de transferência",
+ "Copy picture": "Copiar imagem",
+ "Could not copy the picture": "Não foi possível copiar a imagem",
+ "Free": "Livre",
+ "Improve automatically": "Melhorar automaticamente",
+ "On battery, wait for the charger with heavy background work": "Na bateria, aguardar o carregador para tarefas pesadas em segundo plano",
+ "Original": "Original",
+ "Passport 35 × 45 mm": "Foto de passaporte 35 × 45 mm",
+ "Set as desktop background": "Definir como plano de fundo da área de trabalho",
+ "Straighten and crop": "Endireitar e recortar",
+ "Swap width and height": "Trocar largura e altura",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "O backup automático, o preenchimento de EXIF e a verificação da sua própria pasta aguardam até o computador estar ligado à tomada (um backup nunca espera mais de 3 dias). “Fazer backup agora” e tudo o que você iniciar sempre são executados.",
+ "The desktop background was changed": "O plano de fundo da área de trabalho foi alterado",
+ "This video cannot be played here": "Este vídeo não pode ser reproduzido aqui",
+ "Thumbnail strip (T)": "Faixa de miniaturas (T)"
 }

@@ -488,6 +488,30 @@ def _lock() -> Path:
     raise BusyError()
 
 
+def _move_dir(src: Path, dst: Path):
+    """Renames the finished photo folder. On Windows a folder cannot be renamed while anything (an antivirus scanning the many new
+    files, the search indexer, OneDrive) holds a file inside it open -- "[WinError 5] Access is denied" -- and that can take minutes. After
+    the usual waiting the folder is built under its final name instead, from links (or copies) of the files; the old one is removed
+    now, or at the next backup (leftover .part folders are cleaned there)."""
+    try:
+        return cloud.replace(src, dst)
+    except PermissionError:
+        pass
+    shutil.rmtree(dst, ignore_errors=True)
+    try:
+        for f in [x for x in src.rglob("*") if x.is_file()]:
+            out = dst / f.relative_to(src)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                os.link(f, out)
+            except OSError:
+                shutil.copy2(f, out)
+    except BaseException:
+        shutil.rmtree(dst, ignore_errors=True)
+        raise
+    shutil.rmtree(src, ignore_errors=True)
+
+
 def create_snapshot(reason: str = "manual", progress=None, force_media: bool = False) -> dict:
     lock = _lock()
     try:
@@ -516,6 +540,11 @@ def auto_due(now: float | None = None) -> str | None:
         return "disabled"
     if not is_due(now):
         return "not due"
+    from . import power
+    if power.should_wait():                     # on battery: wait for the charger, but never for more than 3 days (or two intervals)
+        last = last_backup_time()
+        if last is not None and now - last < max(power.MAX_WAIT, 2 * _interval_seconds(get_settings())):
+            return "on battery"
     st = get_state()
     if st.get("last_error") and now - st.get("last_attempt", 0) < RETRY_AFTER:
         return "retry later"
@@ -607,7 +636,7 @@ def _create_snapshot(reason: str = "manual", progress=None, force_media: bool = 
             if z.testzip() is not None:
                 raise RuntimeError("zip verification failed")
         if mpart is not None:
-            cloud.replace(mpart, d / mdir)                    # the photo set appears only when complete
+            _move_dir(mpart, d / mdir)                        # the photo set appears only when complete
         cloud.replace(part, final)                               # appears only when complete and verified
     finally:
         shutil.rmtree(work, ignore_errors=True)

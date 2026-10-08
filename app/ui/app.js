@@ -1603,6 +1603,15 @@ function renderDevPanels(){
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
 }
+// Straightening leaves empty corners: while the crop is untouched (full, or the one made here) it follows the largest rectangle that fits inside the turned picture
+function devAutoCrop(deg){
+  const img=$('#dev-img'), o=DEV.ops, c=o.crop, full=c.every((x,i)=>Math.abs(x-[0,0,1,1][i])<1e-3);
+  if(!img.naturalWidth || !(full || (DEV.autoCrop && DEV.autoCrop.every((x,i)=>Math.abs(x-c[i])<1e-6)))) return;
+  const a=Math.abs(deg)*Math.PI/180, turn=Math.round(o.rot/90)%2!==0, w=turn?img.naturalHeight:img.naturalWidth, h=turn?img.naturalWidth:img.naturalHeight;
+  if(!a){ o.crop=[0,0,1,1]; DEV.autoCrop=null; return; }
+  const k=1/(Math.cos(a)+Math.sin(a)*Math.max(w/h,h/w)), W=w*Math.cos(a)+h*Math.sin(a), H=w*Math.sin(a)+h*Math.cos(a), fx=w*k/W, fy=h*k/H;
+  o.crop=[.5-fx/2,.5-fy/2,.5+fx/2,.5+fy/2]; DEV.autoCrop=[...o.crop];
+}
 const dfmt = (k,v)=>k==='exp' ? (v>0?'+':'')+(v/100).toFixed(2) : (v>0?'+':'')+v;
 const DLABEL = {bri:t('Brightness'), con:t('Contrast'), sat:t('Saturation'), exp:t('Exposure'), hi:t('Highlights'), sh:t('Shadows'), temp:t('Temperature'), tint:t('Tint'), vib:t('Vibrance'), cla:t('Clarity'), shp:t('Sharpness'), blr:t('Blur'), vig:t('Vignette'), sep:t('Sepia')};
 $('#right').addEventListener('input', e=>{
@@ -1616,6 +1625,7 @@ $('#right').addEventListener('input', e=>{
 $('#right').addEventListener('change', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
+  if(k==='straight') devAutoCrop(v);
   devSet({}, k==='straight' ? `${t("Straighten")} ${v>0?'+':''}${v}°` : `${DLABEL[k]} ${dfmt(k,v)}`);
 });
 $('#right').addEventListener('dblclick', e=>{
@@ -1818,7 +1828,7 @@ async function storageBreakdown(){
   </div><div class="mf"><button class="primary" onclick="closeModal()">${t('Close')}</button></div>`);
 }
 async function preferences(){
-  const [s, ai, rf0, beta, cat, fa, bg] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta'), api('/api/catalog-edits'), api('/api/fileassoc'), api('/api/tray').catch(()=>({supported:false}))]);
+  const [s, ai, rf0, beta, cat, fa, bg, pw] = await Promise.all([api('/api/status'), api('/api/auto-import'), api('/api/ref'), api('/api/update/beta'), api('/api/catalog-edits'), api('/api/fileassoc'), api('/api/tray').catch(()=>({supported:false})), api('/api/power').catch(()=>null)]);
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
@@ -1834,6 +1844,8 @@ async function preferences(){
     <label class="chkrow"><input type="checkbox" id="bg-keep" ${bg.keep ? 'checked' : ''}> ${t('Keep photag running after the window is closed (an icon next to the clock)')}</label>
     <label class="chkrow"><input type="checkbox" id="bg-auto" ${bg.autostart ? 'checked' : ''}> ${t('Start photag in the background when I sign in to Windows')}</label>
     <div class="hint" style="padding:0">${t('In the background photag keeps importing and backing up, and tells you with a notification when the backup drive is not connected or no backup was made for several days. Use the icon next to the clock to open photag or to exit.')}</div>` : ''}
+    ${pw ? `<label class="chkrow"><input type="checkbox" id="pw-on" ${pw.pause_on_battery ? 'checked' : ''}> ${t('On battery, wait for the charger with heavy background work')}</label>
+    <div class="hint" style="padding:0">${t('The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.')}</div>` : ''}
     <div class="lbl-sub" style="padding:0">${t('Automatic import')}</div>
     <label class="chkrow"><input type="checkbox" id="ai-on"> ${t('Import new photos automatically from a folder')}</label>
     <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
@@ -1849,6 +1861,7 @@ async function preferences(){
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
   $('#pf-beta').onchange=e=>send('POST', '/api/update/beta', {on: e.target.checked});
   $('#pf-cat').onchange=e=>send('POST', '/api/catalog-edits', {on: e.target.checked}).then(()=>toast(e.target.checked ? t('Edits and EXIF are kept in the catalog') : t('Edits will be written into the photo files')));
+  if ($('#pw-on')) $('#pw-on').onchange=e=>send('POST', '/api/power', {pause_on_battery: e.target.checked}).catch(()=>{ e.target.checked = !e.target.checked; });
   if ($('#bg-keep')) {
     const sync = d => { $('#bg-keep').checked = d.keep; $('#bg-auto').checked = d.autostart; };
     $('#bg-keep').onchange=e=>send('POST', '/api/tray', {keep: e.target.checked, ...(e.target.checked ? {} : {autostart: false})}).then(sync).catch(()=>{ e.target.checked = !e.target.checked; });

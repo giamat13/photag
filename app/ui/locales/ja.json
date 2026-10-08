@@ -1242,5 +1242,21 @@
  "Rename…": "名前の変更…",
  "That name is not allowed": "この名前は使用できません",
  "The file could not be moved": "ファイルを移動できませんでした",
- "The folder was not found": "フォルダーが見つかりません"
+ "The folder was not found": "フォルダーが見つかりません",
+ "Colour": "色",
+ "Copied to the clipboard": "クリップボードにコピーしました",
+ "Copy picture": "画像をコピー",
+ "Could not copy the picture": "画像をコピーできませんでした",
+ "Free": "自由",
+ "Improve automatically": "自動で補正",
+ "On battery, wait for the charger with heavy background work": "バッテリー駆動中は、負荷の高いバックグラウンド処理を電源接続まで待つ",
+ "Original": "元の比率",
+ "Passport 35 × 45 mm": "証明写真 35 × 45 mm",
+ "Set as desktop background": "デスクトップの背景に設定",
+ "Straighten and crop": "傾き補正とトリミング",
+ "Swap width and height": "幅と高さを入れ替え",
+ "The automatic backup, filling in EXIF and scanning your own folder wait until the computer is plugged in (a backup never waits more than 3 days). “Back up now” and anything you start yourself always run.": "自動バックアップ、EXIF の補完、ご自身のフォルダーのスキャンは、パソコンが電源に接続されるまで待機します（バックアップは最長3日以上は待ちません）。「今すぐバックアップ」と、ご自身で開始した操作は常に実行されます。",
+ "The desktop background was changed": "デスクトップの背景を変更しました",
+ "This video cannot be played here": "この動画はここでは再生できません",
+ "Thumbnail strip (T)": "サムネイルバー (T)"
 }
