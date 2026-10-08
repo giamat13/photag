@@ -136,8 +136,9 @@ def main(argv: list[str]) -> int:
     src.write_text(wxs(sources()), "utf-8")
     out = ROOT / "dist" / f"photag-{__version__}.msi"
     out.unlink(missing_ok=True)
-    # -sval: no ICE validation (it wants a registry key path for every file of a per-user install, which only matters for repair)
-    subprocess.run([wix, "build", str(src), "-arch", "x64", "-sval", "-o", str(out)], check=True)
+    # `wix build` does not run the ICE validation (that is `wix msi validate`, which would want a registry key path for every file of a
+    # per-user install -- only relevant for repairs)
+    subprocess.run([wix, "build", str(src), "-arch", "x64", "-o", str(out)], check=True)
     print(f"{out}  {out.stat().st_size / 1048576:.1f} MB")
     return 0
 
