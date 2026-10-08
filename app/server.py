@@ -1412,6 +1412,42 @@ def viewer_open(body: ViewerOpenIn):
         raise err(400, "This file is not a picture photag can show")
 
 
+@app.get("/api/viewer/{token}/exif")
+def viewer_exif(token: str):
+    try:
+        return viewer.exif(token)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+
+
+class ViewerEditIn(BaseModel):
+    brightness: float = 1.0
+    contrast: float = 1.0
+    saturation: float = 1.0
+    grayscale: bool = False
+    rotate: int = 0
+
+
+@app.post("/api/viewer/{token}/trash")
+def viewer_trash(token: str):
+    try:
+        return viewer.trash(token)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+    except OSError:
+        raise err(500, "The file could not be moved to the Recycle Bin")
+
+
+@app.post("/api/viewer/{token}/edit")
+def viewer_edit(token: str, body: ViewerEditIn):
+    try:
+        return viewer.save_edit(token, body.model_dump() if hasattr(body, "model_dump") else body.dict())
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+    except Exception:
+        raise err(500, "The picture could not be saved")
+
+
 @app.get("/api/viewer/startup")
 def viewer_startup():
     return {"token": viewer.startup_token()}

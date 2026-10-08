@@ -1191,5 +1191,16 @@
  "Zoom out": "축소",
  "photag is now in the “Open with” menu": "photag가 이제 \"연결 프로그램\" 메뉴에 있습니다",
  "photag was removed from the “Open with” menu": "photag를 \"연결 프로그램\" 메뉴에서 제거했습니다",
- "{n} of {total}": "{n} / {total}"
+ "{n} of {total}": "{n} / {total}",
+ "Black and white": "흑백",
+ "Move this picture to the Recycle Bin?": "이 사진을 휴지통으로 이동할까요?",
+ "Move to the Recycle Bin": "휴지통으로 이동",
+ "Moved to the Recycle Bin": "휴지통으로 이동했습니다",
+ "Save a copy": "사본 저장",
+ "Saved as {name}": "{name}(으)로 저장했습니다",
+ "Show information (EXIF)": "정보 표시 (EXIF)",
+ "Show on the map": "지도에 표시",
+ "The file could not be moved to the Recycle Bin": "파일을 휴지통으로 이동할 수 없습니다",
+ "The picture could not be saved": "사진을 저장할 수 없습니다",
+ "This picture has no location": "이 사진에는 위치 정보가 없습니다"
 }

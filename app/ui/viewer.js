@@ -8,6 +8,7 @@ let tok = new URLSearchParams(location.search).get('t');
 let cur = null;                         // info of the picture on screen
 let st = { s: 1, x: 0, y: 0, rot: 0, fit: true };
 let nat = { w: 0, h: 0 };
+const edit = { on: false, bri: 100, con: 100, sat: 100, bw: false };
 const cache = {};                       // token -> preloaded Image
 
 function say(text, ms = 1800) {
@@ -37,6 +38,7 @@ function clamp() {
 }
 function apply() {
   if (st.fit) { st.s = fitScale(); st.x = 0; st.y = 0; } else clamp();
+  pic.style.filter = edit.on ? filterCss() : '';
   pic.style.transform = `translate(-50%,-50%) translate(${st.x}px,${st.y}px) rotate(${st.rot}deg) scale(${st.s})`;
 }
 function zoomAt(factor, cx, cy) {
@@ -66,6 +68,8 @@ async function show(token) {
     $('#msg').classList.add('hidden');
     preload(d.next); preload(d.prev);
     history.replaceState(null, '', `?t=${token}`);
+    resetEdit();
+    if (panelKind === 'info') loadInfo(); else if (panelKind === 'map') loadMap();
   } catch (e) { say(t(e.message), 0); }
 }
 function sizeText(b) { return b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`; }
@@ -82,6 +86,79 @@ $('#b-add').onclick = async () => {
   try { const r = await api(`/api/viewer/${tok}/import`, { method: 'POST' }); say(r.added ? t('Added to the library') : t('Already in the library')); }
   catch (e) { say(t(e.message)); }
 };
+
+// ---- side panel: information (EXIF), location (map), edit ----
+let vmap = null, panelKind = null;
+const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function filterCss() {
+  return `brightness(${edit.bri / 100}) contrast(${edit.con / 100}) saturate(${edit.sat / 100})${edit.bw ? ' grayscale(1)' : ''}`;
+}
+function resetEdit() {
+  Object.assign(edit, { bri: 100, con: 100, sat: 100, bw: false });
+  $('#e-bri').value = 100; $('#e-con').value = 100; $('#e-sat').value = 100; $('#e-bw').checked = false; apply();
+}
+function closePanel() {
+  panelKind = null; edit.on = false; $('#panel').classList.add('hidden'); apply();
+  ['#b-edit', '#b-info', '#b-map'].forEach(b => $(b).classList.remove('on'));
+  setTimeout(apply, 30);
+}
+async function openPanel(kind) {
+  if (panelKind === kind) { closePanel(); return; }
+  panelKind = kind; edit.on = kind === 'edit';
+  const P = $('#panel'); P.dataset.k = kind; P.classList.remove('hidden');
+  $('#ptitle').textContent = { info: t('All EXIF tags'), map: t('Location'), edit: t('Edit') }[kind];
+  $('#b-edit').classList.toggle('on', kind === 'edit'); $('#b-info').classList.toggle('on', kind === 'info'); $('#b-map').classList.toggle('on', kind === 'map');
+  if (kind === 'info') await loadInfo(); else if (kind === 'map') await loadMap();
+  apply(); setTimeout(apply, 30);
+}
+let exifCache = { tok: null, data: null };
+async function exifOf() {
+  if (exifCache.tok !== tok) exifCache = { tok, data: await api(`/api/viewer/${tok}/exif`) };
+  return exifCache.data;
+}
+async function loadInfo() {
+  const box = $('#p-info'); box.textContent = '';
+  try {
+    const d = (await exifOf()).exif || {};
+    const groups = Object.keys(d);
+    if (!groups.length) { box.innerHTML = `<div class="none">${esc(t('No EXIF information available'))}</div>`; return; }
+    box.innerHTML = groups.map(g => `<h4>${esc(g)}</h4>` + Object.entries(d[g]).map(([k, v]) =>
+      `<div class="kv"><span>${esc(k)}</span><b>${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</b></div>`).join('')).join('');
+  } catch (e) { box.innerHTML = `<div class="none">${esc(t(e.message))}</div>`; }
+}
+async function loadMap() {
+  const c = $('#coords'); c.textContent = '';
+  let g = null;
+  try { g = (await exifOf()).gps; } catch {}
+  if (vmap) { vmap.remove(); vmap = null; }
+  $('#vmap').style.display = g ? '' : 'none';
+  if (!g) { c.textContent = t('This picture has no location'); return; }
+  vmap = L.map('vmap', { zoomControl: true }).setView([g.lat, g.lng], 14);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(vmap);
+  L.circleMarker([g.lat, g.lng], { radius: 9, color: '#fff', weight: 2, fillColor: '#e8590c', fillOpacity: 1 }).addTo(vmap);
+  c.textContent = `${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`;
+  setTimeout(() => vmap && vmap.invalidateSize(), 60);
+}
+async function trash() {
+  if (!cur) return;
+  if (!confirm(t('Move this picture to the Recycle Bin?') + '\n' + cur.name)) return;
+  try {
+    const r = await api(`/api/viewer/${tok}/trash`, { method: 'POST' });
+    say(t('Moved to the Recycle Bin'));
+    if (r.next) show(r.next); else { pic.removeAttribute('src'); $('#name').textContent = ''; $('#meta').textContent = ''; say(t('Moved to the Recycle Bin'), 0); }
+  } catch (e) { say(t(e.message)); }
+}
+async function saveCopy() {
+  try {
+    const r = await api(`/api/viewer/${tok}/edit`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brightness: edit.bri / 100, contrast: edit.con / 100, saturation: edit.sat / 100, grayscale: edit.bw, rotate: st.rot }) });
+    closePanel(); await show(r.token); say(t('Saved as {name}', { name: r.name }));
+  } catch (e) { say(t(e.message)); }
+}
+$('#b-edit').onclick = () => openPanel('edit'); $('#b-info').onclick = () => openPanel('info'); $('#b-map').onclick = () => openPanel('map');
+$('#b-del').onclick = trash; $('#pclose').onclick = closePanel; $('#e-save').onclick = saveCopy; $('#e-reset').onclick = resetEdit;
+$('#e-bri').oninput = e => { edit.bri = +e.target.value; apply(); }; $('#e-con').oninput = e => { edit.con = +e.target.value; apply(); };
+$('#e-sat').oninput = e => { edit.sat = +e.target.value; apply(); }; $('#e-bw').onchange = e => { edit.bw = e.target.checked; apply(); };
 stage.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - stage.getBoundingClientRect().left, e.clientY - stage.getBoundingClientRect().top); }, { passive: false });
 stage.addEventListener('dblclick', e => { if (st.fit && fitScale() < 1) actual(); else fit(); });
 let drag = null;
@@ -98,6 +175,9 @@ window.addEventListener('keydown', e => {
   else if (k === '0') fit(); else if (k === '1') actual();
   else if (k === 'r' || k === 'R') rotate(e.shiftKey ? -90 : 90);
   else if (k === 'f' || k === 'F' || k === 'F11') full();
+  else if (k === 'Delete') trash();
+  else if (k === 'i' || k === 'I') openPanel('info');
+  else if (k === 'Escape' && panelKind) closePanel();
   else return;
   e.preventDefault();
 });

@@ -1191,5 +1191,16 @@
  "Zoom out": "缩小",
  "photag is now in the “Open with” menu": "photag 现在已在“打开方式”菜单中",
  "photag was removed from the “Open with” menu": "photag 已从“打开方式”菜单中移除",
- "{n} of {total}": "第 {n} 张，共 {total} 张"
+ "{n} of {total}": "第 {n} 张，共 {total} 张",
+ "Black and white": "黑白",
+ "Move this picture to the Recycle Bin?": "要将此图片移到回收站吗？",
+ "Move to the Recycle Bin": "移到回收站",
+ "Moved to the Recycle Bin": "已移到回收站",
+ "Save a copy": "保存副本",
+ "Saved as {name}": "已另存为 {name}",
+ "Show information (EXIF)": "显示信息 (EXIF)",
+ "Show on the map": "在地图上显示",
+ "The file could not be moved to the Recycle Bin": "无法将文件移到回收站",
+ "The picture could not be saved": "无法保存图片",
+ "This picture has no location": "此图片没有位置信息"
 }

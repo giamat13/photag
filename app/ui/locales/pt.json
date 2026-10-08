@@ -1191,5 +1191,16 @@
  "Zoom out": "Reduzir",
  "photag is now in the “Open with” menu": "O photag está agora no menu «Abrir com»",
  "photag was removed from the “Open with” menu": "O photag foi removido do menu «Abrir com»",
- "{n} of {total}": "{n} de {total}"
+ "{n} of {total}": "{n} de {total}",
+ "Black and white": "Preto e branco",
+ "Move this picture to the Recycle Bin?": "Mover esta imagem para a Reciclagem?",
+ "Move to the Recycle Bin": "Mover para a Reciclagem",
+ "Moved to the Recycle Bin": "Movida para a Reciclagem",
+ "Save a copy": "Guardar uma cópia",
+ "Saved as {name}": "Guardada como {name}",
+ "Show information (EXIF)": "Mostrar informações (EXIF)",
+ "Show on the map": "Mostrar no mapa",
+ "The file could not be moved to the Recycle Bin": "Não foi possível mover o ficheiro para a Reciclagem",
+ "The picture could not be saved": "Não foi possível guardar a imagem",
+ "This picture has no location": "Esta imagem não tem localização"
 }

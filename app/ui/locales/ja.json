@@ -1191,5 +1191,16 @@
  "Zoom out": "縮小",
  "photag is now in the “Open with” menu": "photag を「プログラムから開く」メニューに追加しました",
  "photag was removed from the “Open with” menu": "photag を「プログラムから開く」メニューから削除しました",
- "{n} of {total}": "{n} / {total}"
+ "{n} of {total}": "{n} / {total}",
+ "Black and white": "白黒",
+ "Move this picture to the Recycle Bin?": "この画像をごみ箱に移動しますか？",
+ "Move to the Recycle Bin": "ごみ箱に移動",
+ "Moved to the Recycle Bin": "ごみ箱に移動しました",
+ "Save a copy": "コピーを保存",
+ "Saved as {name}": "{name} として保存しました",
+ "Show information (EXIF)": "情報を表示 (EXIF)",
+ "Show on the map": "地図で表示",
+ "The file could not be moved to the Recycle Bin": "ファイルをごみ箱に移動できませんでした",
+ "The picture could not be saved": "画像を保存できませんでした",
+ "This picture has no location": "この画像には位置情報がありません"
 }

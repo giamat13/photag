@@ -10,6 +10,7 @@ html,body{margin:0;height:100%;background:#282828;color:#e6e6e6;font:13px/1.4 He
 #meta{color:#939393;white-space:nowrap}
 #bar button{width:32px;height:30px;border:0;border-radius:3px;background:transparent;cursor:pointer;display:grid;place-items:center}
 #bar button:hover{background:#3a3a3a}
+#bar button.on{background:#3a3a3a}
 #bar button:disabled{opacity:.3;cursor:default;background:transparent}
 #bar svg{width:20px;height:20px;fill:none;stroke:#c2c2c2;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 [dir=rtl] #b-prev svg,[dir=rtl] #b-next svg{transform:scaleX(-1)}
@@ -18,3 +19,27 @@ html,body{margin:0;height:100%;background:#282828;color:#e6e6e6;font:13px/1.4 He
 body.fs #bar{opacity:0;transition:opacity .25s}
 body.fs:hover #bar{opacity:1}
 body.fs #stage{inset:0}
+
+#panel{position:absolute;inset-inline-end:0;top:0;bottom:40px;width:min(340px,92vw);background:#202020;border-inline-start:1px solid #111;display:flex;flex-direction:column;z-index:5;user-select:text}
+#panel.hidden{display:none}
+#panel .ph{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 8px 14px;border-bottom:1px solid #111}
+#panel .ph button{width:28px;height:28px;border:0;border-radius:3px;background:transparent;cursor:pointer;display:grid;place-items:center}
+#panel .ph button:hover{background:#3a3a3a}
+#panel .ph svg{width:18px;height:18px;fill:none;stroke:#c2c2c2;stroke-width:1.6;stroke-linecap:round}
+#panel .pb{display:none;flex:1;overflow:auto;padding:10px 14px}
+#panel[data-k=info] #p-info,#panel[data-k=map] #p-map,#panel[data-k=edit] #p-edit{display:block}
+#p-info h4{margin:12px 0 4px;color:#e08a3c;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+#p-info .kv{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid #2a2a2a;font-size:12px}
+#p-info .kv span{flex:0 0 42%;color:#939393;overflow-wrap:anywhere}
+#p-info .kv b{flex:1;font-weight:400;overflow-wrap:anywhere}
+#p-info .none,#coords{color:#939393;padding-top:8px}
+#vmap{height:260px;border-radius:4px;background:#111}
+#p-edit label{display:block;margin:12px 0}
+#p-edit label span{display:block;color:#b0b0b0;margin-bottom:4px}
+#p-edit label.chk span{display:inline}
+#p-edit input[type=range]{width:100%}
+#p-edit .row{display:flex;gap:8px;margin-top:18px}
+#p-edit .row button{flex:1;padding:8px;border:1px solid #444;border-radius:4px;background:#2c2c2c;color:#e6e6e6;cursor:pointer;font:inherit}
+#p-edit .row button.primary{background:#e8590c;border-color:#e8590c;color:#fff}
+#p-edit .row button:hover{filter:brightness(1.12)}
+body.fs #panel{bottom:0}

@@ -1191,5 +1191,16 @@
  "Zoom out": "ज़ूम आउट",
  "photag is now in the “Open with” menu": "photag अब \"इसके साथ खोलें\" मेनू में है",
  "photag was removed from the “Open with” menu": "photag को \"इसके साथ खोलें\" मेनू से हटा दिया गया",
- "{n} of {total}": "{n} / {total}"
+ "{n} of {total}": "{n} / {total}",
+ "Black and white": "श्वेत-श्याम",
+ "Move this picture to the Recycle Bin?": "इस चित्र को रीसायकल बिन में ले जाएँ?",
+ "Move to the Recycle Bin": "रीसायकल बिन में ले जाएँ",
+ "Moved to the Recycle Bin": "रीसायकल बिन में ले जाया गया",
+ "Save a copy": "प्रति सहेजें",
+ "Saved as {name}": "{name} के रूप में सहेजा गया",
+ "Show information (EXIF)": "जानकारी दिखाएँ (EXIF)",
+ "Show on the map": "मानचित्र पर दिखाएँ",
+ "The file could not be moved to the Recycle Bin": "फ़ाइल को रीसायकल बिन में नहीं ले जाया जा सका",
+ "The picture could not be saved": "चित्र सहेजा नहीं जा सका",
+ "This picture has no location": "इस चित्र में कोई स्थान नहीं है"
 }

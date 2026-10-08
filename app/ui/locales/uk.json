@@ -1191,5 +1191,16 @@
  "Zoom out": "Зменшити",
  "photag is now in the “Open with” menu": "photag тепер є в меню «Відкрити за допомогою»",
  "photag was removed from the “Open with” menu": "photag видалено з меню «Відкрити за допомогою»",
- "{n} of {total}": "{n} з {total}"
+ "{n} of {total}": "{n} з {total}",
+ "Black and white": "Чорно-біле",
+ "Move this picture to the Recycle Bin?": "Перемістити це зображення до кошика?",
+ "Move to the Recycle Bin": "Перемістити до кошика",
+ "Moved to the Recycle Bin": "Переміщено до кошика",
+ "Save a copy": "Зберегти копію",
+ "Saved as {name}": "Збережено як {name}",
+ "Show information (EXIF)": "Показати інформацію (EXIF)",
+ "Show on the map": "Показати на карті",
+ "The file could not be moved to the Recycle Bin": "Не вдалося перемістити файл до кошика",
+ "The picture could not be saved": "Не вдалося зберегти зображення",
+ "This picture has no location": "Це зображення не має місцезнаходження"
 }

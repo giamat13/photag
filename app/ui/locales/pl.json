@@ -1191,5 +1191,16 @@
  "Zoom out": "Pomniejsz",
  "photag is now in the “Open with” menu": "photag jest teraz w menu „Otwórz za pomocą”",
  "photag was removed from the “Open with” menu": "photag usunięto z menu „Otwórz za pomocą”",
- "{n} of {total}": "{n} z {total}"
+ "{n} of {total}": "{n} z {total}",
+ "Black and white": "Czarno-białe",
+ "Move this picture to the Recycle Bin?": "Przenieść ten obraz do Kosza?",
+ "Move to the Recycle Bin": "Przenieś do Kosza",
+ "Moved to the Recycle Bin": "Przeniesiono do Kosza",
+ "Save a copy": "Zapisz kopię",
+ "Saved as {name}": "Zapisano jako {name}",
+ "Show information (EXIF)": "Pokaż informacje (EXIF)",
+ "Show on the map": "Pokaż na mapie",
+ "The file could not be moved to the Recycle Bin": "Nie można przenieść pliku do Kosza",
+ "The picture could not be saved": "Nie można zapisać obrazu",
+ "This picture has no location": "Ten obraz nie ma lokalizacji"
 }

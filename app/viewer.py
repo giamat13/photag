@@ -170,6 +170,58 @@ class SeenMiddleware:
         return await self.app(scope, receive, send)
 
 
+def exif(token: str) -> dict:
+    """The picture's EXIF as {"Image": {...}, "Exif": {...}, "GPS": {...}} plus its location ({"lat", "lng"} or None). Read from the file; nothing is stored."""
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    _, lat, lng, _cam = images.exif_info(p)
+    return {"exif": images.exif_full(p), "gps": {"lat": lat, "lng": lng} if lat is not None and lng is not None else None}
+
+
+def trash(token: str) -> dict:
+    """Sends the file to the Recycle Bin (Windows) / Trash. Returns the token to show next (the next picture, else the previous one) or None.
+    The catalog is not involved: the file was never in it. Raises OSError when the file could not be moved (it is then left where it is)."""
+    from . import refmode
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    i = info(token)
+    nxt = i["next"] or i["prev"]
+    if not refmode.recycle(str(p)):
+        raise OSError("not moved")
+    with _LOCK:
+        _PATH_OF.pop(token, None)
+        _TOKEN_OF.pop(str(p), None)
+    return {"next": nxt}
+
+
+def _clamp(v, lo, hi, default=1.0):
+    try:
+        return max(lo, min(hi, float(v)))
+    except (TypeError, ValueError):
+        return default
+
+
+def save_edit(token: str, ops: dict) -> dict:
+    """Saves the picture with simple edits (brightness, contrast, saturation, black and white, rotation) as a NEW file next to it
+    ("name (edited).jpg"); the original is never touched. Returns {"token", "name"} of the copy."""
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    rot = int(_clamp(ops.get("rotate", 0), -360, 360, 0)) // 90 * 90 % 360
+    clean = {"brightness": _clamp(ops.get("brightness"), 0.2, 2.0), "contrast": _clamp(ops.get("contrast"), 0.2, 2.0),
+             "saturation": _clamp(ops.get("saturation"), 0.0, 2.5), "grayscale": bool(ops.get("grayscale")), "rotate": rot}
+    ext = ".png" if p.suffix.lower() == ".png" else ".jpg"
+    n, dst = 1, p.with_name(f"{p.stem} (edited){ext}")
+    while dst.exists():
+        n += 1
+        dst = p.with_name(f"{p.stem} (edited {n}){ext}")
+    images.apply_edit(p, clean, dst)
+    images.embed_exif(dst, p, upright=True)               # the copy keeps the camera data (JPEG only)
+    return {"token": token_for(dst), "name": dst.name}
+
+
 # A program started by "Open with photag" of an older photag.exe (whose launcher does not know pictures; only the `app` package is
 # updated by a code update) still opens its main window: the page then asks for the picture named on the command line.
 _STARTUP: list[str] = []

@@ -1191,5 +1191,16 @@
  "Zoom out": "הקטן",
  "photag is now in the “Open with” menu": "photag נמצא עכשיו בתפריט \"פתח באמצעות\"",
  "photag was removed from the “Open with” menu": "photag הוסר מתפריט \"פתח באמצעות\"",
- "{n} of {total}": "{n} מתוך {total}"
+ "{n} of {total}": "{n} מתוך {total}",
+ "Black and white": "שחור לבן",
+ "Move this picture to the Recycle Bin?": "להעביר את התמונה לסל המחזור?",
+ "Move to the Recycle Bin": "העבר לסל המחזור",
+ "Moved to the Recycle Bin": "הועבר לסל המחזור",
+ "Save a copy": "שמור עותק",
+ "Saved as {name}": "נשמר בשם {name}",
+ "Show information (EXIF)": "הצג מידע (EXIF)",
+ "Show on the map": "הצג במפה",
+ "The file could not be moved to the Recycle Bin": "לא ניתן היה להעביר את הקובץ לסל המחזור",
+ "The picture could not be saved": "לא ניתן היה לשמור את התמונה",
+ "This picture has no location": "לתמונה הזו אין מיקום"
 }

@@ -1191,5 +1191,16 @@
  "Zoom out": "Uitzoomen",
  "photag is now in the “Open with” menu": "photag staat nu in het menu ‘Openen met’",
  "photag was removed from the “Open with” menu": "photag is uit het menu ‘Openen met’ verwijderd",
- "{n} of {total}": "{n} van {total}"
+ "{n} of {total}": "{n} van {total}",
+ "Black and white": "Zwart-wit",
+ "Move this picture to the Recycle Bin?": "Deze afbeelding naar de prullenbak verplaatsen?",
+ "Move to the Recycle Bin": "Naar de prullenbak verplaatsen",
+ "Moved to the Recycle Bin": "Naar de prullenbak verplaatst",
+ "Save a copy": "Kopie opslaan",
+ "Saved as {name}": "Opgeslagen als {name}",
+ "Show information (EXIF)": "Informatie tonen (EXIF)",
+ "Show on the map": "Tonen op de kaart",
+ "The file could not be moved to the Recycle Bin": "Het bestand kon niet naar de prullenbak worden verplaatst",
+ "The picture could not be saved": "De afbeelding kon niet worden opgeslagen",
+ "This picture has no location": "Deze afbeelding heeft geen locatie"
 }

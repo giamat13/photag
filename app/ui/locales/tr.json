@@ -1191,5 +1191,16 @@
  "Zoom out": "Uzaklaştır",
  "photag is now in the “Open with” menu": "photag artık “Birlikte aç” menüsünde",
  "photag was removed from the “Open with” menu": "photag “Birlikte aç” menüsünden kaldırıldı",
- "{n} of {total}": "{n} / {total}"
+ "{n} of {total}": "{n} / {total}",
+ "Black and white": "Siyah beyaz",
+ "Move this picture to the Recycle Bin?": "Bu resim Geri Dönüşüm Kutusu’na taşınsın mı?",
+ "Move to the Recycle Bin": "Geri Dönüşüm Kutusu’na taşı",
+ "Moved to the Recycle Bin": "Geri Dönüşüm Kutusu’na taşındı",
+ "Save a copy": "Kopya kaydet",
+ "Saved as {name}": "{name} olarak kaydedildi",
+ "Show information (EXIF)": "Bilgileri göster (EXIF)",
+ "Show on the map": "Haritada göster",
+ "The file could not be moved to the Recycle Bin": "Dosya Geri Dönüşüm Kutusu’na taşınamadı",
+ "The picture could not be saved": "Resim kaydedilemedi",
+ "This picture has no location": "Bu resmin konumu yok"
 }

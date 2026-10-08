@@ -119,6 +119,36 @@ try:
     check("after all that viewing the catalog has no new photo", photos_in_catalog() == before_n, (before_n, photos_in_catalog()))
     check("...and no file was copied into the library", library_files() == before_files, library_files())
 
+
+    # ---- EXIF, location, edit (as a copy) and the Recycle Bin: still nothing goes into the catalog
+    sys.path.insert(0, str(ROOT))
+    from app import images as _im
+    gps_jpg = pics / "geo.jpg"
+    Image.new("RGB", (80, 60), (120, 120, 120)).save(gps_jpg, "JPEG")
+    _im.embed_exif(gps_jpg, None, description="hello", lat=31.77, lng=35.21)
+    gtok = call("POST", "/api/viewer/open", {"path": str(gps_jpg)})[1]["token"]
+    code, ex, _ = call("GET", f"/api/viewer/{gtok}/exif")
+    check("exif: the tags of the file and its location", code == 200 and ex["gps"] and abs(ex["gps"]["lat"] - 31.77) < 0.01 and abs(ex["gps"]["lng"] - 35.21) < 0.01 and "Image" in ex["exif"], ex)
+    code, ex2, _ = call("GET", f"/api/viewer/{tok}/exif")
+    check("exif: a picture without any has no location and no error", code == 200 and ex2["gps"] is None, ex2)
+    check("exif: unknown token is 404", call("GET", "/api/viewer/0123456789abcdef/exif")[0] == 404)
+    code, ed, _ = call("POST", f"/api/viewer/{gtok}/edit", {"brightness": 1.3, "contrast": 1.1, "saturation": 0.0, "grayscale": False, "rotate": 90})
+    cp = pics / "geo (edited).jpg"
+    check("edit: saved as a new file next to the original", code == 200 and cp.is_file() and ed["name"] == "geo (edited).jpg", ed)
+    check("edit: the original is untouched", gps_jpg.stat().st_size > 0 and Image.open(gps_jpg).size == (80, 60))
+    check("edit: rotated by 90 and the camera data / location carried over", Image.open(cp).size == (60, 80) and call("GET", f"/api/viewer/{ed['token']}/exif")[1]["gps"] is not None)
+    code, ed2, _ = call("POST", f"/api/viewer/{gtok}/edit", {"brightness": 0.8})
+    check("edit: a second copy gets its own name, never overwrites", code == 200 and ed2["name"] == "geo (edited 2).jpg" and (pics / "geo (edited 2).jpg").is_file(), ed2)
+    code, ed3, _ = call("POST", f"/api/viewer/{gtok}/edit", {"brightness": 99, "contrast": -5, "rotate": 37})
+    check("edit: absurd values are clamped, not trusted", code == 200 and (pics / "geo (edited 3).jpg").is_file())
+    check("edit: an unknown token is 404", call("POST", "/api/viewer/0123456789abcdef/edit", {})[0] == 404)
+    ttok = call("POST", "/api/viewer/open", {"path": str(pics / "geo (edited 3).jpg")})[1]["token"]
+    code, tr, _ = call("POST", f"/api/viewer/{ttok}/trash")
+    check("trash: the file leaves the folder (to the Recycle Bin) and the answer names the picture to show next", code == 200 and not (pics / "geo (edited 3).jpg").exists() and (tr["next"] is None or isinstance(tr["next"], str)), tr)
+    check("trash: the token is gone", call("GET", f"/api/viewer/{ttok}/info")[0] == 404)
+    check("trash: an unknown token is 404", call("POST", "/api/viewer/0123456789abcdef/trash")[0] == 404)
+    check("none of this touched the catalog or the library", photos_in_catalog() == before_n and library_files() == before_files)
+
     # ---- only the explicit button adds it
     code, r, _ = call("POST", f"/api/viewer/{tok}/import")
     check("'Add to the library' adds the picture", code == 200 and r["added"] is True and photos_in_catalog() == before_n + 1, r)

@@ -1191,5 +1191,16 @@
  "Zoom out": "تصغير",
  "photag is now in the “Open with” menu": "أصبح photag الآن في قائمة «فتح باستخدام»",
  "photag was removed from the “Open with” menu": "أُزيل photag من قائمة «فتح باستخدام»",
- "{n} of {total}": "{n} من {total}"
+ "{n} of {total}": "{n} من {total}",
+ "Black and white": "أبيض وأسود",
+ "Move this picture to the Recycle Bin?": "نقل هذه الصورة إلى سلة المحذوفات؟",
+ "Move to the Recycle Bin": "نقل إلى سلة المحذوفات",
+ "Moved to the Recycle Bin": "تم النقل إلى سلة المحذوفات",
+ "Save a copy": "حفظ نسخة",
+ "Saved as {name}": "تم الحفظ باسم {name}",
+ "Show information (EXIF)": "عرض المعلومات (EXIF)",
+ "Show on the map": "عرض على الخريطة",
+ "The file could not be moved to the Recycle Bin": "تعذّر نقل الملف إلى سلة المحذوفات",
+ "The picture could not be saved": "تعذّر حفظ الصورة",
+ "This picture has no location": "ليس لهذه الصورة موقع"
 }
