@@ -100,7 +100,7 @@ def _register(con, path: str, size: int, mtime_ns: int, sha: str) -> int:
         "camera_make,camera_model,lens,focal_length,focal_length_35mm) "
         "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (sha, Path(path).name, path, Path(path).suffix.lower().lstrip("."), 0, w, h, size,
-         taken or int(mtime_ns // 1_000_000_000), now, lat, lng, now,
+         taken or images.date_from_filename(Path(path).name) or int(mtime_ns // 1_000_000_000), now, lat, lng, now,
          cam["make"], cam["model"], cam["lens"], cam["focal_length"], cam["focal_length_35mm"])).lastrowid
     try:
         images.make_thumb(Path(path), sha)

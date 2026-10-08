@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} 分",
  "{0} photos have no place; {1} places found.": "{0} 枚に場所がありません。{1} か所見つかりました。",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} 枚の写真が、表示されている順番で1つの MP4 動画になり、誰にでも送れます。",
- "{0} seconds": "{0} 秒"
+ "{0} seconds": "{0} 秒",
+ "Copy path": "パスをコピー",
+ "Send (small copy)": "送信(小さいコピー)",
+ "Path copied": "パスをコピーしました",
+ "Preparing...": "準備中...",
+ "{0} pictures copied. Paste them with Ctrl+V": "{0} 枚の画像をコピーしました。Ctrl+V で貼り付けられます",
+ "The small copies are in the opened folder": "小さいコピーは開いたフォルダにあります",
+ "Nothing selected": "何も選択されていません",
+ "Could not prepare the pictures": "画像を準備できませんでした"
 }

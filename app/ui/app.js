@@ -1461,6 +1461,23 @@ async function saveMetaToFile(){
   toast(/\.jpe?g$/i.test(d.filename) ? t('Metadata written to file') : t('Writing to file is supported for JPG only'));
 }
 async function reveal(){ const p=actPhoto(); if(p) await send('POST', `/api/photo/${p.id}/reveal`); }
+async function copyPath(){
+  const p=actPhoto(); if(!p) return;
+  try{
+    const r=await api(`/api/photo/${p.id}/path`);
+    try{ await navigator.clipboard.writeText(r.path); }
+    catch{ const ta=document.createElement('textarea'); ta.value=r.path; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    toast(t('Path copied'));
+  }catch(e){ toast(esc(e.message)); }
+}
+async function sendSmall(){
+  const ids=targets(); if(!ids.length) return;
+  toast(t('Preparing...'), 20000);
+  try{
+    const r=await send('POST', '/api/send', {ids});
+    toast(r.copied ? t('{0} pictures copied. Paste them with Ctrl+V', [num(r.count)]) : t('The small copies are in the opened folder'));
+  }catch(e){ toast(esc(e.message)); }
+}
 $('#btn-sync-meta').onclick = async ()=>{
   const ids=targets(), d=DETAIL; if(ids.length<2 || !d) return toast(t('Select several photos; the values will be copied from the active photo'));
   await send('PATCH','/api/photos',{ids, description:d.description||'', rating:d.rating||0, label:d.label||''});
@@ -3054,6 +3071,8 @@ const MENUS = [
     [t('Add to Quick Collection'), 'B', toggleQuick],
     [t('Add to Collection'), '', collectionItems],
     [t('Show in Explorer'), 'Ctrl+R', reveal],
+    [t('Copy path'), '', copyPath],
+    [t('Send (small copy)'), '', sendSmall],
     sep,
     [t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)],
     [t('Rotate Right'), 'Ctrl+]', ()=>rotateSel(90)],
@@ -3149,6 +3168,8 @@ function photoMenuItems(){
     [t('Add to Quick Collection'), 'B', toggleQuick],
     [t('Add to Collection'), '', collectionItems],
     [t('Show in Explorer'), 'Ctrl+R', reveal],
+    [t('Copy path'), '', copyPath],
+    [t('Send (small copy)'), '', sendSmall],
     sep,
     ...(photos ? [[t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)], [t('Rotate Right'), 'Ctrl+]', ()=>rotateSel(90)], sep] : []),
     [t('Flag: Pick'), 'P', ()=>setFlag(1)],

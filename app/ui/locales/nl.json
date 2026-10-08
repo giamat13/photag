@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} minuten",
  "{0} photos have no place; {1} places found.": "{0} foto’s hebben geen plaats; {1} plaatsen gevonden.",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} afbeeldingen worden, in de volgorde die je ziet, één MP4-video die je naar iedereen kunt sturen.",
- "{0} seconds": "{0} seconden"
+ "{0} seconds": "{0} seconden",
+ "Copy path": "Pad kopiëren",
+ "Send (small copy)": "Verzenden (kleine kopie)",
+ "Path copied": "Pad gekopieerd",
+ "Preparing...": "Voorbereiden...",
+ "{0} pictures copied. Paste them with Ctrl+V": "{0} afbeeldingen gekopieerd. Plak met Ctrl+V",
+ "The small copies are in the opened folder": "De kleine kopieën staan in de geopende map",
+ "Nothing selected": "Niets geselecteerd",
+ "Could not prepare the pictures": "De afbeeldingen konden niet worden voorbereid"
 }

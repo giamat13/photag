@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} dakika",
  "{0} photos have no place; {1} places found.": "{0} fotoğrafın yeri yok; {1} yer bulundu.",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} resim, gördüğünüz sırayla, herkese gönderebileceğiniz tek bir MP4 videosu olur.",
- "{0} seconds": "{0} saniye"
+ "{0} seconds": "{0} saniye",
+ "Copy path": "Yolu kopyala",
+ "Send (small copy)": "Gönder (küçük kopya)",
+ "Path copied": "Yol kopyalandı",
+ "Preparing...": "Hazırlanıyor...",
+ "{0} pictures copied. Paste them with Ctrl+V": "{0} resim kopyalandı. Ctrl+V ile yapıştırın",
+ "The small copies are in the opened folder": "Küçük kopyalar açılan klasörde",
+ "Nothing selected": "Hiçbir şey seçilmedi",
+ "Could not prepare the pictures": "Resimler hazırlanamadı"
 }

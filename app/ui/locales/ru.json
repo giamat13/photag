@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} мин",
  "{0} photos have no place; {1} places found.": "У {0} фото нет места; найдено мест: {1}.",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} изображений в том порядке, как вы их видите, превращаются в одно видео MP4, которое можно отправить кому угодно.",
- "{0} seconds": "{0} с"
+ "{0} seconds": "{0} с",
+ "Copy path": "Копировать путь",
+ "Send (small copy)": "Отправить (малая копия)",
+ "Path copied": "Путь скопирован",
+ "Preparing...": "Подготовка...",
+ "{0} pictures copied. Paste them with Ctrl+V": "Скопировано изображений: {0}. Вставьте через Ctrl+V",
+ "The small copies are in the opened folder": "Малые копии лежат в открытой папке",
+ "Nothing selected": "Ничего не выбрано",
+ "Could not prepare the pictures": "Не удалось подготовить изображения"
 }

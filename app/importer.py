@@ -466,7 +466,7 @@ def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, b
     if row:
         return row["id"], False
     e_taken, e_lat, e_lng, cam = images.exif_info(src)
-    taken = taken or e_taken or int(src.stat().st_mtime)
+    taken = taken or e_taken or images.date_from_filename(src.name) or int(src.stat().st_mtime)
     if lat is None or lng is None:
         lat, lng = e_lat, e_lng
     sub = PATHS.media / str(time.gmtime(taken).tm_year)
@@ -546,7 +546,7 @@ def _ingest_zip_media(con, zf, entry: str, caption, taken) -> tuple[str, int]:
         tmp.unlink(missing_ok=True)
         return "duplicate", size
     e_taken, e_lat, e_lng, cam = images.exif_info(tmp)
-    taken = taken or e_taken or int(time.time())
+    taken = taken or e_taken or images.date_from_filename(name) or int(time.time())
     sub = PATHS.media / str(time.gmtime(taken).tm_year)
     sub.mkdir(parents=True, exist_ok=True)
     dest = _unique_dest(sub / _safe_component(name))

@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} Minuten",
  "{0} photos have no place; {1} places found.": "{0} Fotos haben keinen Ort; {1} Orte gefunden.",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} Bilder werden in der angezeigten Reihenfolge zu einem MP4-Video, das Sie an jeden senden können.",
- "{0} seconds": "{0} Sekunden"
+ "{0} seconds": "{0} Sekunden",
+ "Copy path": "Pfad kopieren",
+ "Send (small copy)": "Senden (kleine Kopie)",
+ "Path copied": "Pfad kopiert",
+ "Preparing...": "Wird vorbereitet...",
+ "{0} pictures copied. Paste them with Ctrl+V": "{0} Bilder kopiert. Mit Strg+V einfügen",
+ "The small copies are in the opened folder": "Die kleinen Kopien liegen im geöffneten Ordner",
+ "Nothing selected": "Nichts ausgewählt",
+ "Could not prepare the pictures": "Die Bilder konnten nicht vorbereitet werden"
 }

@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} मिनट",
  "{0} photos have no place; {1} places found.": "{0} तस्वीरों में जगह नहीं है; {1} जगहें मिलीं।",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} तस्वीरें, उसी क्रम में जैसा आप देखते हैं, एक MP4 वीडियो बन जाती हैं जिसे आप किसी को भी भेज सकते हैं।",
- "{0} seconds": "{0} सेकंड"
+ "{0} seconds": "{0} सेकंड",
+ "Copy path": "पथ कॉपी करें",
+ "Send (small copy)": "भेजें (छोटी कॉपी)",
+ "Path copied": "पथ कॉपी हो गया",
+ "Preparing...": "तैयार हो रहा है...",
+ "{0} pictures copied. Paste them with Ctrl+V": "{0} तस्वीरें कॉपी हुईं। Ctrl+V से चिपकाएँ",
+ "The small copies are in the opened folder": "छोटी कॉपियाँ खुले फ़ोल्डर में हैं",
+ "Nothing selected": "कुछ चुना नहीं गया",
+ "Could not prepare the pictures": "तस्वीरें तैयार नहीं हो सकीं"
 }

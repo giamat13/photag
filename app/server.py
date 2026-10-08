@@ -1436,6 +1436,69 @@ def reveal(pid: int):
     return {"ok": True}
 
 
+@app.get("/api/photo/{pid}/path")
+def photo_path(pid: int):
+    """The full path of the file on disk, for "Copy path"."""
+    r = db.connect().execute("SELECT rel_path FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r:
+        raise HTTPException(404)
+    return {"path": str(PATHS.media / r["rel_path"])}
+
+
+class SendIn(BaseModel):
+    ids: list[int]
+    long_edge: int = 1600
+
+
+@app.post("/api/send")
+def send_small(body: SendIn):
+    """"Send": a small JPEG copy of each picture (long edge 1600 px by default, no GPS or other EXIF), put on the clipboard as
+    files so Ctrl+V pastes them into WhatsApp / mail. Videos are copied as they are. Where the clipboard can't be set, the
+    folder with the copies is shown instead."""
+    import tempfile
+    ids = body.ids[:50]
+    if not ids:
+        raise err(400, "Nothing selected")
+    out = Path(tempfile.gettempdir()) / "photag-send"
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True, exist_ok=True)
+    con = db.connect()
+    files = []
+    for pid in ids:
+        r = con.execute("SELECT rel_path, filename, is_video FROM photos WHERE id=?", (pid,)).fetchone()
+        if not r:
+            continue
+        src = PATHS.media / r["rel_path"]
+        stem = Path(r["filename"]).stem
+        try:
+            if r["is_video"]:
+                dst = out / r["filename"]
+                shutil.copy2(src, dst)
+            else:
+                dst = out / (stem + ".jpg")
+                n = 1
+                while dst.exists():
+                    n += 1; dst = out / f"{stem}-{n}.jpg"
+                images.export_resized(src, dst, max(200, min(body.long_edge, 8000)), 85)
+            files.append(dst)
+        except Exception:
+            continue
+    if not files:
+        raise err(500, "Could not prepare the pictures")
+    copied = False
+    if sys.platform == "win32":
+        lst = ",".join("'" + str(f).replace("'", "''") + "'" for f in files)
+        try:
+            subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", f"Set-Clipboard -LiteralPath {lst}"],
+                           check=True, timeout=20, creationflags=0x08000000)
+            copied = True
+        except Exception:
+            copied = False
+    if not copied:
+        opener.reveal(files[0])
+    return {"count": len(files), "copied": copied}
+
+
 # ---- Windows: photag in the "Open with" menu of pictures (app/fileassoc.py) ----------------------------------------------
 class FileAssocIn(BaseModel):
     on: bool

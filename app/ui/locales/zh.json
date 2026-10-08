@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} 分钟",
  "{0} photos have no place; {1} places found.": "{0} 张照片没有地点；找到 {1} 个地点。",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} 张图片按您看到的顺序变成一个 MP4 视频，可以发送给任何人。",
- "{0} seconds": "{0} 秒"
+ "{0} seconds": "{0} 秒",
+ "Copy path": "复制路径",
+ "Send (small copy)": "发送(小副本)",
+ "Path copied": "路径已复制",
+ "Preparing...": "正在准备...",
+ "{0} pictures copied. Paste them with Ctrl+V": "已复制 {0} 张图片。按 Ctrl+V 粘贴",
+ "The small copies are in the opened folder": "小副本在已打开的文件夹中",
+ "Nothing selected": "未选择任何内容",
+ "Could not prepare the pictures": "无法准备图片"
 }

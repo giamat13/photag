@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} דקות",
  "{0} photos have no place; {1} places found.": "ל-{0} תמונות אין מקום; נמצאו {1} מקומות.",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "{0} תמונות, לפי הסדר שאתה רואה, הופכות לסרטון MP4 אחד שאפשר לשלוח לכל אחד.",
- "{0} seconds": "{0} שניות"
+ "{0} seconds": "{0} שניות",
+ "Copy path": "העתק נתיב",
+ "Send (small copy)": "שלח (עותק קטן)",
+ "Path copied": "הנתיב הועתק",
+ "Preparing...": "מכין...",
+ "{0} pictures copied. Paste them with Ctrl+V": "{0} תמונות הועתקו. הדבק עם Ctrl+V",
+ "The small copies are in the opened folder": "העותקים הקטנים נמצאים בתיקייה שנפתחה",
+ "Nothing selected": "לא נבחר דבר",
+ "Could not prepare the pictures": "לא ניתן היה להכין את התמונות"
 }

@@ -1306,5 +1306,13 @@
  "{0} minutes": "{0} دقيقة",
  "{0} photos have no place; {1} places found.": "{0} صورة بلا مكان؛ تم العثور على {1} مكانًا.",
  "{0} pictures, in the order you see them, become one MP4 video you can send to anyone.": "تتحول {0} صورة، بالترتيب الذي تراه، إلى فيديو MP4 واحد يمكنك إرساله لأي شخص.",
- "{0} seconds": "{0} ثانية"
+ "{0} seconds": "{0} ثانية",
+ "Copy path": "نسخ المسار",
+ "Send (small copy)": "إرسال (نسخة صغيرة)",
+ "Path copied": "تم نسخ المسار",
+ "Preparing...": "جارٍ التحضير...",
+ "{0} pictures copied. Paste them with Ctrl+V": "تم نسخ {0} صور. الصقها بـ Ctrl+V",
+ "The small copies are in the opened folder": "النسخ الصغيرة في المجلد المفتوح",
+ "Nothing selected": "لم يتم تحديد شيء",
+ "Could not prepare the pictures": "تعذر تحضير الصور"
 }

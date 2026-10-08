@@ -187,7 +187,31 @@ def exif_info(path: Path):
     return taken, lat, lng, cam
 
 
-_EXIF_BLOB_MAX = 64          # bytes longer than this (MakerNote, thumbnails, ICC...) are noted by size, not stored
+_NAME_DATE = None
+
+
+def date_from_filename(name: str) -> int | None:
+    """Unix seconds (wall-clock-as-UTC, like exif_info) from a date in a file name such as IMG-20240501-WA0003.jpg,
+    PXL_20240501_101530123.jpg, 2024-05-01 10.15.30.png or Screenshot_2024-05-01-10-15-30.png; None when there is none.
+    Only years 1990..current+1 are believed, so a long number (a phone number, a counter) is not read as a date."""
+    global _NAME_DATE
+    import calendar, datetime, re
+    if _NAME_DATE is None:
+        _NAME_DATE = re.compile(r"(?<!\d)(19[89]\d|20\d\d)[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])"
+                                r"(?:[-_. T]?([01]\d|2[0-3])[-_.:]?([0-5]\d)[-_.:]?([0-5]\d))?(?!\d{3})")
+    m = _NAME_DATE.search(Path(name).stem)
+    if not m:
+        return None
+    y, mo, d, hh, mi, ss = (int(g) if g else 0 for g in m.groups())
+    if y < 1990 or y > datetime.date.today().year + 1:
+        return None
+    try:
+        return calendar.timegm(datetime.datetime(y, mo, d, hh, mi, ss).timetuple())
+    except ValueError:
+        return None
+
+
+_EXIF_BLOB_MAX = 64         # bytes longer than this (MakerNote, thumbnails, ICC...) are noted by size, not stored
 
 
 def _exif_value(v, depth=0):
