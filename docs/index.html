@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>photag — a private photo manager that lives on your computer</title>
+<meta name="description" content="photag is a free photo and video manager in the spirit of Lightroom Classic: catalog, face recognition, search by meaning, non-destructive editing, automatic backup. Everything stays on your computer.">
+<meta property="og:title" content="photag — your photos, on your computer">
+<meta property="og:description" content="Free, open source photo manager: Lightroom-style library, faces, search by meaning, backups, and a fast picture viewer that replaces Windows Photos.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://raw.githubusercontent.com/giamat13/photag/main/app/ui/icon.png">
+<link rel="icon" href="https://raw.githubusercontent.com/giamat13/photag/main/app/ui/icon.png">
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#ffffff; --ink:#1b1d21; --muted:#5d6470; --line:#e3e4e0;
+  --accent:#e8590c; --accent-ink:#ffffff; --accent-soft:#fff0e6; --code:#f0f0ec; --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121316; --panel:#1b1d22; --ink:#ececee; --muted:#9aa1ad; --line:#2a2d34;
+    --accent:#ff8a3d; --accent-ink:#1a1206; --accent-soft:#2b1d12; --code:#23262c; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121316; --panel:#1b1d22; --ink:#ececee; --muted:#9aa1ad; --line:#2a2d34;
+  --accent:#ff8a3d; --accent-ink:#1a1206; --accent-soft:#2b1d12; --code:#23262c; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:14px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;text-decoration:none}
+.brand img{width:30px;height:30px;border-radius:7px}
+nav{margin-inline-start:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+nav a.l{padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--muted);font-size:.95rem}
+nav a.l:hover{background:var(--accent-soft);color:var(--ink)}
+.pill{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:999px;font:inherit;font-size:.9rem;cursor:pointer}
+.pill:hover{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-ink);padding:12px 22px;border-radius:12px;font-weight:650;text-decoration:none;border:0;cursor:pointer;font-size:1rem;box-shadow:var(--shadow)}
+.btn:hover{filter:brightness(1.06)}
+.btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn.ghost:hover{border-color:var(--accent)}
+.hero{padding:72px 0 48px;text-align:center}
+.hero h1{font-size:clamp(2rem,5.2vw,3.6rem);line-height:1.1;margin:0 0 16px;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p.lead{max-width:680px;margin:0 auto 28px;color:var(--muted);font-size:1.15rem}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.meta{margin-top:14px;color:var(--muted);font-size:.9rem}
+.badges{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.badge{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.88rem;color:var(--muted)}
+section{padding:56px 0}
+section h2{font-size:clamp(1.5rem,3.2vw,2.1rem);margin:0 0 8px;letter-spacing:-.01em}
+section .sub{color:var(--muted);margin:0 0 28px;max-width:720px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.card .ic{font-size:1.6rem;line-height:1;margin-bottom:10px}
+.card h3{margin:0 0 6px;font-size:1.05rem}
+.card p{margin:0;color:var(--muted);font-size:.96rem}
+.band{background:var(--panel);border-block:1px solid var(--line)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
+@media(max-width:760px){.split{grid-template-columns:1fr}.hero{padding-top:44px}nav a.l{display:none}}
+.mock{background:#0f1012;border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.mock .bar{display:flex;gap:6px;padding:10px 12px;background:#1a1b1f}
+.mock .bar i{width:10px;height:10px;border-radius:50%;background:#3a3c42;display:block}
+.mock .stage{aspect-ratio:16/10;background:
+  radial-gradient(120% 90% at 30% 20%,#ffb86b 0,#ff7b54 28%,transparent 55%),
+  radial-gradient(90% 70% at 80% 90%,#2b5876 0,#16222e 60%),
+  linear-gradient(#1c2a3a,#0f1218);position:relative}
+.mock .tools{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;background:rgba(0,0,0,.55);padding:6px 10px;border-radius:12px;color:#fff;font-size:.85rem;backdrop-filter:blur(6px)}
+.mock .tools span{padding:2px 8px;border-radius:7px;background:rgba(255,255,255,.1)}
+ul.tick{list-style:none;padding:0;margin:0}
+ul.tick li{padding-inline-start:28px;position:relative;margin:10px 0}
+ul.tick li::before{content:"✓";position:absolute;inset-inline-start:0;color:var(--accent);font-weight:800}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.dl .card{display:flex;flex-direction:column;gap:10px}
+.dl .card .btn{margin-top:auto;justify-content:center}
+.dl .size{color:var(--muted);font-size:.88rem}
+.tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:650;width:max-content}
+pre,code{background:var(--code);border-radius:8px;font:.88rem ui-monospace,Consolas,monospace}
+code{padding:1px 6px}
+pre{padding:12px 14px;overflow:auto;white-space:pre-wrap;word-break:break-all;direction:ltr;text-align:left;margin:10px 0 0}
+details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin:12px 0}
+summary{cursor:pointer;font-weight:650}
+details p,details ol{color:var(--muted);margin:10px 0 0}
+footer{padding:36px 0 60px;color:var(--muted);font-size:.92rem;border-top:1px solid var(--line)}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+footer a{color:var(--muted)}
+[lang-only]{display:none}
+html[lang="en"] [lang-only="en"],html[lang="he"] [lang-only="he"]{display:revert}
+.langs{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.langs span{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px 10px;font-size:.9rem}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="https://raw.githubusercontent.com/giamat13/photag/main/app/ui/icon.png" alt="" width="30" height="30">photag</a>
+    <nav>
+      <a class="l" href="#features" data-t="nav_features">Features</a>
+      <a class="l" href="#viewer" data-t="nav_viewer">Picture viewer</a>
+      <a class="l" href="#download" data-t="nav_download">Download</a>
+      <a class="l" href="https://github.com/giamat13/photag" data-t="nav_github">GitHub</a>
+      <button class="pill" id="lang" type="button" aria-label="Language">עברית</button>
+      <button class="pill" id="theme" type="button" aria-label="Theme">◐</button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap">
+  <div class="hero">
+    <h1 data-t-html="h1">Your photos. <em>On your computer.</em> Nowhere else.</h1>
+    <p class="lead" data-t="lead">photag is a free photo and video manager in the spirit of Lightroom Classic — library, collections, face recognition, search by meaning, non-destructive editing and automatic backups. It works offline and never uploads your pictures.</p>
+    <div class="cta">
+      <a class="btn" id="hero-dl" href="#download"><span data-t="dl_btn">Download for Windows</span> <span id="hero-ver"></span></a>
+      <a class="btn ghost" href="#features" data-t="see">See what it does</a>
+    </div>
+    <div class="meta" id="hero-meta" data-t="hero_meta">Free and open source · Windows, Linux and macOS</div>
+    <div class="badges">
+      <span class="badge" data-t="b1">17 languages</span>
+      <span class="badge" data-t="b2">Originals are never changed</span>
+      <span class="badge" data-t="b3">No account, no cloud</span>
+      <span class="badge" data-t="b4">GPL-3.0</span>
+    </div>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <h2 data-t="f_h">Everything for a photo library that is really yours</h2>
+    <p class="sub" data-t="f_sub">Import from anywhere, find any picture in seconds, and keep it safe — without handing it to a service.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">🗂️</div><h3 data-t="f1h">Lightroom-style library</h3><p data-t="f1p">Grid, loupe, compare and survey views, ratings, flags, colour labels, keywords, collections and smart collections.</p></div>
+      <div class="card"><div class="ic">🧑‍🤝‍🧑</div><h3 data-t="f2h">Faces and people</h3><p data-t="f2p">Face recognition that runs on your PC groups the same person across years. Name them once.</p></div>
+      <div class="card"><div class="ic">🔎</div><h3 data-t="f3h">Search by meaning</h3><p data-t="f3p">Type “beach at sunset” and find it. A local AI model — nothing is sent anywhere.</p></div>
+      <div class="card"><div class="ic">🛡️</div><h3 data-t="f4h">Automatic backup</h3><p data-t="f4p">A verified daily backup of the catalog, settings and photos, with a one-click restore that can itself be undone.</p></div>
+      <div class="card"><div class="ic">📥</div><h3 data-t="f5h">Import everything</h3><p data-t="f5p">Folders and memory cards, RAW files, Lightroom catalogs, digiKam, and Google Takeout straight from the ZIP files.</p></div>
+      <div class="card"><div class="ic">🎛️</div><h3 data-t="f6h">Non-destructive editing</h3><p data-t="f6p">Exposure, tone, colour, crop and an Auto button. The original is always kept and can be restored.</p></div>
+      <div class="card"><div class="ic">🧹</div><h3 data-t="f7h">Duplicates and cleanup</h3><p data-t="f7p">Find copies and similar shots, pick the best of a series, and clear screenshots and blurry frames in bulk.</p></div>
+      <div class="card"><div class="ic">🎞️</div><h3 data-t="f8h">Video, too</h3><p data-t="f8p">A full player and HandBrake compression that verifies the result before replacing anything.</p></div>
+      <div class="card"><div class="ic">🗺️</div><h3 data-t="f9h">Map, timeline, On This Day</h3><p data-t="f9p">See where a photo was taken, jump to any month, and get a quiet reminder of what you shot years ago.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="viewer" class="band">
+  <div class="wrap split">
+    <div>
+      <span class="tag" data-t="new">New in 11</span>
+      <h2 data-t="v_h" style="margin-top:10px">Open any picture — without adding it to anything</h2>
+      <p class="sub" data-t="v_sub" style="margin-bottom:16px">Right-click a picture → Open with → photag. It opens instantly in a clean viewer and your library stays exactly as it was.</p>
+      <ul class="tick">
+        <li data-t="v1">Zoom, pan, rotate, full screen and next / previous picture in the folder</li>
+        <li data-t="v2">JPEG, PNG, GIF, WebP, BMP, TIFF, HEIC, AVIF and RAW</li>
+        <li data-t="v3">An optional “Add to library” button — only when you want it</li>
+        <li data-t="v4">Make it your default and replace the Windows Photos app</li>
+      </ul>
+    </div>
+    <div class="mock" aria-hidden="true">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <div class="stage"><div class="tools"><span>−</span><span>Fit</span><span>+</span><span>⟳</span><span>⛶</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <h2 data-t="d_h">Download</h2>
+    <p class="sub"><span data-t="d_sub">The newest version is always listed here.</span> <strong id="dl-ver"></strong></p>
+    <div class="dl" id="dl-grid">
+      <div class="card"><span class="tag" data-t="rec">Recommended</span><h3 data-t="d_win">Windows installer</h3><p data-t="d_win_p">Installs photag, adds it to “Open with” and updates itself.</p><span class="size" id="s-setup"></span><a class="btn" id="a-setup" href="https://github.com/giamat13/photag/releases/latest" data-t="get">Download</a></div>
+      <div class="card"><h3 data-t="d_port">Windows portable</h3><p data-t="d_port_p">A ZIP you unpack anywhere. Nothing is installed.</p><span class="size" id="s-port"></span><a class="btn ghost" id="a-port" href="https://github.com/giamat13/photag/releases/latest" data-t="get">Download</a></div>
+      <div class="card"><h3>Linux</h3><p data-t="d_lin_p">x64 package: unpack and run <code>photag</code>.</p><span class="size" id="s-lin"></span><a class="btn ghost" id="a-lin" href="https://github.com/giamat13/photag/releases/latest" data-t="get">Download</a></div>
+      <div class="card"><h3>macOS</h3><p data-t="d_mac_p">Apple silicon. Unsigned — see the note below.</p><span class="size" id="s-mac"></span><a class="btn ghost" id="a-mac" href="https://github.com/giamat13/photag/releases/latest" data-t="get">Download</a></div>
+    </div>
+
+    <details>
+      <summary data-t="sac_h">Windows says the installer is blocked (Smart App Control)?</summary>
+      <p data-t="sac_p">photag is not code-signed yet, and Smart App Control blocks every unsigned program. Use the install script below: Windows asks “Run / Cancel” instead of blocking, and nothing it unpacks is marked as downloaded from the internet. Or turn Smart App Control off in Windows Security.</p>
+      <p><a class="btn ghost" href="https://github.com/giamat13/photag/releases/latest/download/photag-install.bat" data-t="sac_bat">Download photag-install.bat</a></p>
+      <p data-t="sac_p2">If the .bat is blocked too, paste this into PowerShell:</p>
+      <pre>[Net.ServicePointManager]::SecurityProtocol='Tls12'; $w=New-Object Net.WebClient; $w.Encoding=[Text.Encoding]::UTF8; &amp; ([scriptblock]::Create($w.DownloadString('https://github.com/giamat13/photag/releases/latest/download/photag-install.ps1').TrimStart([char]0xFEFF)))</pre>
+    </details>
+    <details>
+      <summary data-t="mac_h">macOS and Linux notes</summary>
+      <p data-t="mac_p">The macOS build is not notarized, so the first time use right-click → Open. On Linux you need a desktop with GTK or Qt WebKit; without one photag opens in your browser. Details: <a href="https://github.com/giamat13/photag/blob/main/docs/LINUX_MACOS.md">docs/LINUX_MACOS.md</a>.</p>
+    </details>
+  </div>
+</section>
+
+<section class="band" id="privacy">
+  <div class="wrap split">
+    <div>
+      <h2 data-t="p_h">Private by design</h2>
+      <p class="sub" data-t="p_sub" style="margin-bottom:0">photag runs a small server that listens only on your own computer. Your pictures, faces and catalog never leave it. The only things that touch the internet are ones you choose: checking for updates, optional AI tagging with your own key (a small thumbnail only), and map tiles.</p>
+    </div>
+    <div>
+      <h3 style="margin:0 0 6px" data-t="l_h">17 languages</h3>
+      <div class="langs"><span>English</span><span>עברית</span><span>العربية</span><span>Русский</span><span>Español</span><span>Français</span><span>Deutsch</span><span>Italiano</span><span>Português</span><span>Nederlands</span><span>Polski</span><span>Українська</span><span>Türkçe</span><span>中文</span><span>日本語</span><span>한국어</span><span>हिन्दी</span></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>photag · GPL-3.0</span>
+    <a href="https://github.com/giamat13/photag" data-t="nav_github">GitHub</a>
+    <a href="https://github.com/giamat13/photag/releases" data-t="f_rel">All releases</a>
+    <a href="https://github.com/giamat13/photag/issues" data-t="f_iss">Report a problem</a>
+    <a href="https://github.com/giamat13/photag/blob/main/docs/PRIVACY.md" data-t="f_priv">Privacy</a>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var T = {
+    en:{nav_features:"Features",nav_viewer:"Picture viewer",nav_download:"Download",nav_github:"GitHub",
+      h1:"Your photos. <em>On your computer.</em> Nowhere else.",
+      lead:"photag is a free photo and video manager in the spirit of Lightroom Classic — library, collections, face recognition, search by meaning, non-destructive editing and automatic backups. It works offline and never uploads your pictures.",
+      dl_btn:"Download for Windows",see:"See what it does",hero_meta:"Free and open source · Windows, Linux and macOS",
+      b1:"17 languages",b2:"Originals are never changed",b3:"No account, no cloud",b4:"GPL-3.0",
+      f_h:"Everything for a photo library that is really yours",f_sub:"Import from anywhere, find any picture in seconds, and keep it safe — without handing it to a service.",
+      f1h:"Lightroom-style library",f1p:"Grid, loupe, compare and survey views, ratings, flags, colour labels, keywords, collections and smart collections.",
+      f2h:"Faces and people",f2p:"Face recognition that runs on your PC groups the same person across years. Name them once.",
+      f3h:"Search by meaning",f3p:"Type “beach at sunset” and find it. A local AI model — nothing is sent anywhere.",
+      f4h:"Automatic backup",f4p:"A verified daily backup of the catalog, settings and photos, with a one-click restore that can itself be undone.",
+      f5h:"Import everything",f5p:"Folders and memory cards, RAW files, Lightroom catalogs, digiKam, and Google Takeout straight from the ZIP files.",
+      f6h:"Non-destructive editing",f6p:"Exposure, tone, colour, crop and an Auto button. The original is always kept and can be restored.",
+      f7h:"Duplicates and cleanup",f7p:"Find copies and similar shots, pick the best of a series, and clear screenshots and blurry frames in bulk.",
+      f8h:"Video, too",f8p:"A full player and HandBrake compression that verifies the result before replacing anything.",
+      f9h:"Map, timeline, On This Day",f9p:"See where a photo was taken, jump to any month, and get a quiet reminder of what you shot years ago.",
+      "new":"New in 11",v_h:"Open any picture — without adding it to anything",v_sub:"Right-click a picture → Open with → photag. It opens instantly in a clean viewer and your library stays exactly as it was.",
+      v1:"Zoom, pan, rotate, full screen and next / previous picture in the folder",v2:"JPEG, PNG, GIF, WebP, BMP, TIFF, HEIC, AVIF and RAW",v3:"An optional “Add to library” button — only when you want it",v4:"Make it your default and replace the Windows Photos app",
+      d_h:"Download",d_sub:"The newest version is always listed here.",rec:"Recommended",d_win:"Windows installer",d_win_p:"Installs photag, adds it to “Open with” and updates itself.",
+      d_port:"Windows portable",d_port_p:"A ZIP you unpack anywhere. Nothing is installed.",d_lin_p:"x64 package: unpack and run photag.",d_mac_p:"Apple silicon. Unsigned — see the note below.",get:"Download",
+      sac_h:"Windows says the installer is blocked (Smart App Control)?",sac_p:"photag is not code-signed yet, and Smart App Control blocks every unsigned program. Use the install script below: Windows asks “Run / Cancel” instead of blocking, and nothing it unpacks is marked as downloaded from the internet. Or turn Smart App Control off in Windows Security.",sac_bat:"Download photag-install.bat",sac_p2:"If the .bat is blocked too, paste this into PowerShell:",
+      mac_h:"macOS and Linux notes",mac_p:"The macOS build is not notarized, so the first time use right-click → Open. On Linux you need a desktop with GTK or Qt WebKit; without one photag opens in your browser. Details: docs/LINUX_MACOS.md on GitHub.",
+      p_h:"Private by design",p_sub:"photag runs a small server that listens only on your own computer. Your pictures, faces and catalog never leave it. The only things that touch the internet are ones you choose: checking for updates, optional AI tagging with your own key (a small thumbnail only), and map tiles.",l_h:"17 languages",
+      f_rel:"All releases",f_iss:"Report a problem",f_priv:"Privacy",ver:"Version",mb:"MB"},
+    he:{nav_features:"יכולות",nav_viewer:"מציג תמונות",nav_download:"הורדה",nav_github:"GitHub",
+      h1:"התמונות שלך. <em>על המחשב שלך.</em> לא בשום מקום אחר.",
+      lead:"photag הוא מנהל תמונות וסרטונים חינמי בהשראת Lightroom Classic — ספרייה, אוספים, זיהוי פנים, חיפוש לפי משמעות, עריכה לא הורסת וגיבוי אוטומטי. הוא עובד בלי אינטרנט ולא מעלה את התמונות שלך לשום מקום.",
+      dl_btn:"הורדה ל-Windows",see:"מה הוא יודע לעשות",hero_meta:"חינמי ופתוח · Windows, Linux ו-macOS",
+      b1:"17 שפות",b2:"המקור אף פעם לא משתנה",b3:"בלי חשבון, בלי ענן",b4:"GPL-3.0",
+      f_h:"הכול בשביל ספריית תמונות שבאמת שלך",f_sub:"מייבאים מכל מקום, מוצאים כל תמונה בשניות ושומרים עליה — בלי למסור אותה לשירות.",
+      f1h:"ספרייה בסגנון Lightroom",f1p:"תצוגות רשת, הגדלה, השוואה וסקר, דירוגים, דגלים, תוויות צבע, מילות מפתח, אוספים ואוספים חכמים.",
+      f2h:"פנים ואנשים",f2p:"זיהוי פנים שרץ על המחשב שלך מקבץ את אותו אדם לאורך שנים. נותנים שם פעם אחת.",
+      f3h:"חיפוש לפי משמעות",f3p:"כותבים ״חוף בשקיעה״ ומוצאים. מודל בינה מלאכותית מקומי — שום דבר לא נשלח החוצה.",
+      f4h:"גיבוי אוטומטי",f4p:"גיבוי יומי מאומת של הקטלוג, ההגדרות והתמונות, עם שחזור בלחיצה שגם אותו אפשר לבטל.",
+      f5h:"מייבאים הכול",f5p:"תיקיות וכרטיסי זיכרון, קובצי RAW, קטלוגי Lightroom, digiKam ו-Google Takeout ישר מקובצי ה-ZIP.",
+      f6h:"עריכה לא הורסת",f6p:"חשיפה, גוון, צבע, חיתוך וכפתור אוטומטי. המקור תמיד נשמר ואפשר לשחזר אותו.",
+      f7h:"כפילויות וניקוי",f7p:"מוצאים עותקים ותמונות דומות, בוחרים את הטובה בסדרה ומנקים צילומי מסך ותמונות מטושטשות בבת אחת.",
+      f8h:"גם וידאו",f8p:"נגן מלא ודחיסה עם HandBrake שבודקת את התוצאה לפני שמחליפים משהו.",
+      f9h:"מפה, ציר זמן ו״ביום הזה״",f9p:"רואים איפה צולמה תמונה, קופצים לכל חודש ומקבלים תזכורת שקטה למה שצילמת לפני שנים.",
+      "new":"חדש בגרסה 11",v_h:"פותחים כל תמונה — בלי להוסיף אותה לשום דבר",v_sub:"לחיצה ימנית על תמונה ← פתח באמצעות ← photag. היא נפתחת מיד במציג נקי והספרייה נשארת בדיוק כמו שהייתה.",
+      v1:"זום, גרירה, סיבוב, מסך מלא ותמונה הבאה / קודמת בתיקייה",v2:"JPEG, PNG, GIF, WebP, BMP, TIFF, HEIC, AVIF ו-RAW",v3:"כפתור ״הוסף לספרייה״ אופציונלי — רק כשרוצים",v4:"אפשר להפוך אותו לברירת מחדל ולהחליף את אפליקציית התמונות של Windows",
+      d_h:"הורדה",d_sub:"הגרסה החדשה ביותר תמיד מופיעה כאן.",rec:"מומלץ",d_win:"מתקין ל-Windows",d_win_p:"מתקין את photag, מוסיף אותו ל״פתח באמצעות״ ומתעדכן לבד.",
+      d_port:"גרסה ניידת ל-Windows",d_port_p:"קובץ ZIP שפותחים בכל מקום. שום דבר לא מותקן.",d_lin_p:"חבילת x64: פותחים ומריצים photag.",d_mac_p:"Apple silicon. לא חתום — ראה הערה למטה.",get:"הורדה",
+      sac_h:"Windows אומר שהמתקין חסום (Smart App Control)?",sac_p:"photag עדיין לא חתום דיגיטלית, ו-Smart App Control חוסם כל תוכנה לא חתומה. השתמשו בסקריפט ההתקנה: Windows שואל ״הפעל / ביטול״ במקום לחסום, ושום דבר שהוא פורס לא מסומן כמורד מהאינטרנט. או לכבות את Smart App Control באבטחת Windows.",sac_bat:"הורדת photag-install.bat",sac_p2:"אם גם ה-bat חסום, הדביקו את זה ב-PowerShell:",
+      mac_h:"הערות ל-macOS ול-Linux",mac_p:"גרסת macOS אינה מאושרת (notarized), ולכן בפעם הראשונה פותחים בלחיצה ימנית ← פתח. ב-Linux צריך שולחן עבודה עם GTK או Qt WebKit; בלעדיו photag נפתח בדפדפן. פרטים: docs/LINUX_MACOS.md ב-GitHub.",
+      p_h:"פרטי מההתחלה",p_sub:"photag מפעיל שרת קטן שמקשיב רק במחשב שלך. התמונות, הפנים והקטלוג לא יוצאים ממנו. הדברים היחידים שפונים לאינטרנט הם אלה שבחרת: בדיקת עדכונים, תיוג בינה מלאכותית אופציונלי עם מפתח משלך (תמונה ממוזערת בלבד) ואריחי מפה.",l_h:"17 שפות",
+      f_rel:"כל הגרסאות",f_iss:"דיווח על בעיה",f_priv:"פרטיות",ver:"גרסה",mb:"MB"}
+  };
+  var root = document.documentElement, lang = "en";
+  try{ var s = localStorage.getItem("lang"); if(s==="he"||s==="en") lang = s; else if((navigator.language||"").toLowerCase().indexOf("he")===0) lang = "he"; }catch(e){ if((navigator.language||"").toLowerCase().indexOf("he")===0) lang = "he"; }
+  function apply(){
+    root.lang = lang; root.dir = lang==="he" ? "rtl" : "ltr";
+    var d = T[lang];
+    document.querySelectorAll("[data-t]").forEach(function(el){ var k = el.getAttribute("data-t"); if(d[k]!=null) el.textContent = d[k]; });
+    document.querySelectorAll("[data-t-html]").forEach(function(el){ var k = el.getAttribute("data-t-html"); if(d[k]!=null) el.innerHTML = d[k]; });
+    document.getElementById("lang").textContent = lang==="he" ? "English" : "עברית";
+    document.title = lang==="he" ? "photag — מנהל תמונות פרטי שחי על המחשב שלך" : "photag — a private photo manager that lives on your computer";
+    if(window.__rel) paintRelease(window.__rel);
+  }
+  document.getElementById("lang").onclick = function(){ lang = lang==="he" ? "en" : "he"; try{ localStorage.setItem("lang", lang); }catch(e){} apply(); };
+  var th = document.getElementById("theme");
+  th.onclick = function(){
+    var cur = root.getAttribute("data-theme");
+    var dark = cur ? cur==="dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark"; root.setAttribute("data-theme", next);
+    try{ localStorage.setItem("theme", next); }catch(e){}
+  };
+  try{ var tv = localStorage.getItem("theme"); if(tv==="light"||tv==="dark") root.setAttribute("data-theme", tv); }catch(e){}
+
+  function pick(assets, re){ for(var i=0;i<assets.length;i++) if(re.test(assets[i].name)) return assets[i]; return null; }
+  function mb(a){ return a ? (Math.round(a.size/1048576) + " " + T[lang].mb) : ""; }
+  function paintRelease(r){
+    var a = r.assets || [];
+    var map = {setup:/^photagSetup\.exe$/, port:/portable\.zip$/, lin:/linux-x64\.tar\.gz$/, mac:/macos-arm64\.zip$/};
+    Object.keys(map).forEach(function(k){
+      var asset = pick(a, map[k]); var btn = document.getElementById("a-"+k), sz = document.getElementById("s-"+k);
+      if(asset){ btn.href = asset.browser_download_url; sz.textContent = mb(asset); }
+    });
+    var v = (r.tag_name||"").replace(/^v/,"");
+    document.getElementById("dl-ver").textContent = v ? (T[lang].ver + " " + v) : "";
+    document.getElementById("hero-ver").textContent = v ? ("· " + v) : "";
+    var s = pick(a, map.setup); if(s) document.getElementById("hero-dl").href = s.browser_download_url;
+  }
+  apply();
+  fetch("https://api.github.com/repos/giamat13/photag/releases/latest", {headers:{Accept:"application/vnd.github+json"}})
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+    .then(function(r){ window.__rel = r; paintRelease(r); })
+    .catch(function(){});
+})();
+</script>
+</body>
+</html>
