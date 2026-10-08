@@ -149,6 +149,33 @@ try:
     check("trash: an unknown token is 404", call("POST", "/api/viewer/0123456789abcdef/trash")[0] == 404)
     check("none of this touched the catalog or the library", photos_in_catalog() == before_n and library_files() == before_files)
 
+
+    # ---- rename, copy and move (from the viewer): the original is only ever renamed / moved by the user's own click, never replaced
+    rp = pics / "ren"; rp.mkdir()
+    for n in ("one.jpg", "two.jpg"):
+        Image.new("RGB", (30, 20), (1, 2, 3)).save(rp / n, "JPEG")
+    t1 = call("POST", "/api/viewer/open", {"path": str(rp / "one.jpg")})[1]["token"]
+    code, r, _ = call("POST", f"/api/viewer/{t1}/rename", {"name": "holiday"})
+    check("rename: a bare name keeps the extension", code == 200 and r["name"] == "holiday.jpg" and (rp / "holiday.jpg").is_file() and not (rp / "one.jpg").exists(), r)
+    check("rename: the new token shows the renamed file, the old one is gone", call("GET", f"/api/viewer/{r['token']}/info")[1]["name"] == "holiday.jpg" and call("GET", f"/api/viewer/{t1}/info")[0] == 404)
+    t1 = r["token"]
+    check("rename: an existing name is refused (409) and nothing changes", call("POST", f"/api/viewer/{t1}/rename", {"name": "two.jpg"})[0] == 409 and (rp / "holiday.jpg").is_file() and (rp / "two.jpg").is_file())
+    for bad in ("a/b", "..\\x", "CON", "x:y", "", "photo.png"):
+        check(f"rename: {bad!r} is refused (400)", call("POST", f"/api/viewer/{t1}/rename", {"name": bad})[0] == 400)
+    check("rename: only the case of the name can change", call("POST", f"/api/viewer/{t1}/rename", {"name": "Holiday.jpg"})[0] == 200 and any(p.name == "Holiday.jpg" for p in rp.iterdir()))
+    t1 = call("POST", "/api/viewer/open", {"path": str(rp / "Holiday.jpg")})[1]["token"]
+    dest = tmp / "dest"; dest.mkdir()
+    code, r, _ = call("POST", f"/api/viewer/{t1}/copy", {"folder": str(dest)})
+    check("copy: a copy lands in the chosen folder, the original stays", code == 200 and (dest / "Holiday.jpg").is_file() and (rp / "Holiday.jpg").is_file(), r)
+    code, r, _ = call("POST", f"/api/viewer/{t1}/copy", {"folder": str(dest)})
+    check("copy: again gives 'name (2).jpg', never replaces", code == 200 and r["name"] == "Holiday (2).jpg" and (dest / "Holiday (2).jpg").is_file())
+    check("copy / move: a folder that does not exist is refused (400)", call("POST", f"/api/viewer/{t1}/copy", {"folder": str(tmp / "nope")})[0] == 400 and call("POST", f"/api/viewer/{t1}/move", {"folder": ""})[0] == 400)
+    code, r, _ = call("POST", f"/api/viewer/{t1}/move", {"folder": str(dest)})
+    check("move: the file leaves its folder (never over one with the same name) and the answer names the next picture", code == 200 and not (rp / "Holiday.jpg").exists() and (dest / "Holiday (3).jpg").is_file() and r["name"] == "Holiday (3).jpg" and r["next"], r)
+    check("move: the old token is gone", call("GET", f"/api/viewer/{t1}/info")[0] == 404)
+    check("rename / copy / move: unknown tokens are 404", all(call("POST", f"/api/viewer/0123456789abcdef/{a}", b)[0] == 404 for a, b in (("rename", {"name": "x"}), ("copy", {"folder": str(dest)}), ("move", {"folder": str(dest)}))))
+    check("none of this touched the catalog or the library", photos_in_catalog() == before_n and library_files() == before_files)
+
     # ---- only the explicit button adds it
     code, r, _ = call("POST", f"/api/viewer/{tok}/import")
     check("'Add to the library' adds the picture", code == 200 and r["added"] is True and photos_in_catalog() == before_n + 1, r)

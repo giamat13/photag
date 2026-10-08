@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "是，将 photag 设为我的图片查看器",
  "You can keep working; photag tells you when it is done.": "你可以继续工作；完成后 photag 会通知你。",
  "photag could not finish the last backups. Open photag to see why.": "photag 无法完成最近的备份。打开 photag 查看原因。",
- "photag is still running": "photag 仍在运行"
+ "photag is still running": "photag 仍在运行",
+ "A file with that name already exists": "已存在同名文件",
+ "Choose the folder to copy the picture to": "选择要将图片复制到的文件夹",
+ "Choose the folder to move the picture to": "选择要将图片移动到的文件夹",
+ "Copied to {folder}": "已复制到 {folder}",
+ "Copy to folder…": "复制到文件夹…",
+ "Every {n} seconds": "每 {n} 秒",
+ "More": "更多",
+ "Move to folder…": "移动到文件夹…",
+ "Moved to {folder}": "已移动到 {folder}",
+ "Print…": "打印…",
+ "Rename the picture": "重命名图片",
+ "Renamed to {name}": "已重命名为 {name}",
+ "Rename…": "重命名…",
+ "That name is not allowed": "不允许使用此名称",
+ "The file could not be moved": "无法移动文件",
+ "The folder was not found": "找不到该文件夹"
 }

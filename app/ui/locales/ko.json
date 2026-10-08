@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "예, photag를 사진 뷰어로 사용",
  "You can keep working; photag tells you when it is done.": "계속 작업하셔도 됩니다. 완료되면 photag가 알려 드립니다.",
  "photag could not finish the last backups. Open photag to see why.": "photag가 최근 백업을 완료하지 못했습니다. 이유는 photag를 열어 확인하세요.",
- "photag is still running": "photag가 계속 실행 중입니다"
+ "photag is still running": "photag가 계속 실행 중입니다",
+ "A file with that name already exists": "같은 이름의 파일이 이미 있습니다",
+ "Choose the folder to copy the picture to": "사진을 복사할 폴더를 선택하세요",
+ "Choose the folder to move the picture to": "사진을 이동할 폴더를 선택하세요",
+ "Copied to {folder}": "{folder}(으)로 복사했습니다",
+ "Copy to folder…": "폴더로 복사…",
+ "Every {n} seconds": "{n}초마다",
+ "More": "더 보기",
+ "Move to folder…": "폴더로 이동…",
+ "Moved to {folder}": "{folder}(으)로 이동했습니다",
+ "Print…": "인쇄…",
+ "Rename the picture": "사진 이름 바꾸기",
+ "Renamed to {name}": "{name}(으)로 이름을 바꿨습니다",
+ "Rename…": "이름 바꾸기…",
+ "That name is not allowed": "사용할 수 없는 이름입니다",
+ "The file could not be moved": "파일을 이동할 수 없습니다",
+ "The folder was not found": "폴더를 찾을 수 없습니다"
 }

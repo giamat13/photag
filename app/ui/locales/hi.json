@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "हाँ, photag को मेरा चित्र दर्शक बनाएँ",
  "You can keep working; photag tells you when it is done.": "आप काम जारी रख सकते हैं; पूरा होने पर photag बताएगा।",
  "photag could not finish the last backups. Open photag to see why.": "photag पिछले बैकअप पूरे नहीं कर सका। कारण देखने के लिए photag खोलें।",
- "photag is still running": "photag अभी भी चल रहा है"
+ "photag is still running": "photag अभी भी चल रहा है",
+ "A file with that name already exists": "इस नाम की फ़ाइल पहले से मौजूद है",
+ "Choose the folder to copy the picture to": "वह फ़ोल्डर चुनें जिसमें चित्र की प्रतिलिपि बनानी है",
+ "Choose the folder to move the picture to": "वह फ़ोल्डर चुनें जिसमें चित्र ले जाना है",
+ "Copied to {folder}": "{folder} में कॉपी किया गया",
+ "Copy to folder…": "फ़ोल्डर में कॉपी करें…",
+ "Every {n} seconds": "हर {n} सेकंड",
+ "More": "और",
+ "Move to folder…": "फ़ोल्डर में ले जाएँ…",
+ "Moved to {folder}": "{folder} में ले जाया गया",
+ "Print…": "प्रिंट करें…",
+ "Rename the picture": "चित्र का नाम बदलें",
+ "Renamed to {name}": "नाम बदलकर {name} किया गया",
+ "Rename…": "नाम बदलें…",
+ "That name is not allowed": "यह नाम मान्य नहीं है",
+ "The file could not be moved": "फ़ाइल को ले जाया नहीं जा सका",
+ "The folder was not found": "फ़ोल्डर नहीं मिला"
 }

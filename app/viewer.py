@@ -222,6 +222,97 @@ def save_edit(token: str, ops: dict) -> dict:
     return {"token": token_for(dst), "name": dst.name}
 
 
+class NameNotAllowed(Exception):
+    pass
+
+
+class AlreadyExists(Exception):
+    pass
+
+
+class NoFolder(Exception):
+    pass
+
+
+_BAD_CHARS = set('<>:"/\\|?*')
+_RESERVED = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
+
+
+def clean_name(name: str, old_suffix: str) -> str:
+    """The new file name for a rename: no path, no characters Windows refuses, the extension of the file kept (typing a bare name is fine)."""
+    n = (name or "").strip().rstrip(". ")
+    if not n or any(c in _BAD_CHARS or ord(c) < 32 for c in n) or n in (".", "..") or Path(n).stem.upper() in _RESERVED or len(n) > 200:
+        raise NameNotAllowed(name)
+    suf = Path(n).suffix.lower()
+    if suf in SUPPORTED and suf != old_suffix.lower():
+        raise NameNotAllowed(name)                          # a rename does not convert the picture to another format
+    if suf != old_suffix.lower():
+        n += old_suffix
+    return n
+
+
+def _forget(token: str, path: Path):
+    with _LOCK:
+        _PATH_OF.pop(token, None)
+        _TOKEN_OF.pop(str(path), None)
+
+
+def rename(token: str, name: str) -> dict:
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    new = p.with_name(clean_name(name, p.suffix))
+    if new != p:
+        if new.exists() and not (new.name.lower() == p.name.lower() and os.path.samefile(new, p)):
+            raise AlreadyExists(new.name)
+        os.rename(p, new)
+        _forget(token, p)
+    return {"token": token_for(new), "name": new.name}
+
+
+def _free_name(folder: Path, name: str) -> Path:
+    """folder/name, or folder/name (2).ext ... when that exists: a copy never replaces a file."""
+    out = folder / name
+    n = 1
+    while out.exists():
+        n += 1
+        out = folder / f"{Path(name).stem} ({n}){Path(name).suffix}"
+    return out
+
+
+def _dest(folder: str) -> Path:
+    d = Path(folder or "")
+    if not folder or not d.is_dir():
+        raise NoFolder(folder)
+    return d
+
+
+def copy_to(token: str, folder: str) -> dict:
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    import shutil
+    out = _free_name(_dest(folder), p.name)
+    shutil.copy2(p, out)
+    return {"name": out.name, "folder": str(out.parent)}
+
+
+def move_to(token: str, folder: str) -> dict:
+    """Moves the file to another folder (never over a file there). Returns the token to show next, like trash()."""
+    p = path_of(token)
+    if not p.is_file():
+        raise FileNotFoundError(str(p))
+    import shutil
+    d = _dest(folder)
+    i = info(token)
+    nxt = i["next"] or i["prev"]
+    out = _free_name(d, p.name) if d.resolve() != p.parent.resolve() else p
+    if out != p:
+        shutil.move(str(p), str(out))
+        _forget(token, p)
+    return {"next": nxt if out != p else token, "name": out.name, "folder": str(d)}
+
+
 # A program started by "Open with photag" of an older photag.exe (whose launcher does not know pictures; only the `app` package is
 # updated by a code update) still opens its main window: the page then asks for the picture named on the command line.
 _STARTUP: list[str] = []

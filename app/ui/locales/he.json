@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "כן, להפוך את photag למציג התמונות שלי",
  "You can keep working; photag tells you when it is done.": "אפשר להמשיך לעבוד; photag תודיע כשזה יסתיים.",
  "photag could not finish the last backups. Open photag to see why.": "photag לא הצליחה לסיים את הגיבויים האחרונים. פתח את photag כדי לראות למה.",
- "photag is still running": "photag עדיין פועלת"
+ "photag is still running": "photag עדיין פועלת",
+ "A file with that name already exists": "כבר קיים קובץ בשם הזה",
+ "Choose the folder to copy the picture to": "בחר את התיקייה שאליה להעתיק את התמונה",
+ "Choose the folder to move the picture to": "בחר את התיקייה שאליה להעביר את התמונה",
+ "Copied to {folder}": "הועתק אל {folder}",
+ "Copy to folder…": "העתק לתיקייה…",
+ "Every {n} seconds": "כל {n} שניות",
+ "More": "עוד",
+ "Move to folder…": "העבר לתיקייה…",
+ "Moved to {folder}": "הועבר אל {folder}",
+ "Print…": "הדפס…",
+ "Rename the picture": "שינוי שם התמונה",
+ "Renamed to {name}": "השם שונה ל-{name}",
+ "Rename…": "שנה שם…",
+ "That name is not allowed": "השם הזה לא מותר",
+ "The file could not be moved": "לא ניתן היה להעביר את הקובץ",
+ "The folder was not found": "התיקייה לא נמצאה"
 }

@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "Sí, convertir photag en mi visor de imágenes",
  "You can keep working; photag tells you when it is done.": "Puedes seguir trabajando; photag te avisará cuando termine.",
  "photag could not finish the last backups. Open photag to see why.": "photag no pudo terminar las últimas copias de seguridad. Abre photag para ver el motivo.",
- "photag is still running": "photag sigue en ejecución"
+ "photag is still running": "photag sigue en ejecución",
+ "A file with that name already exists": "Ya existe un archivo con ese nombre",
+ "Choose the folder to copy the picture to": "Elige la carpeta a la que copiar la imagen",
+ "Choose the folder to move the picture to": "Elige la carpeta a la que mover la imagen",
+ "Copied to {folder}": "Copiada a {folder}",
+ "Copy to folder…": "Copiar a una carpeta…",
+ "Every {n} seconds": "Cada {n} segundos",
+ "More": "Más",
+ "Move to folder…": "Mover a una carpeta…",
+ "Moved to {folder}": "Movida a {folder}",
+ "Print…": "Imprimir…",
+ "Rename the picture": "Cambiar el nombre de la imagen",
+ "Renamed to {name}": "Renombrada como {name}",
+ "Rename…": "Cambiar nombre…",
+ "That name is not allowed": "Ese nombre no está permitido",
+ "The file could not be moved": "No se pudo mover el archivo",
+ "The folder was not found": "No se encontró la carpeta"
 }

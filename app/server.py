@@ -1460,6 +1460,52 @@ def viewer_exif(token: str):
         raise HTTPException(404)
 
 
+class ViewerNameIn(BaseModel):
+    name: str
+
+
+class ViewerFolderIn(BaseModel):
+    folder: str
+
+
+@app.post("/api/viewer/{token}/rename")
+def viewer_rename(token: str, body: ViewerNameIn):
+    try:
+        return viewer.rename(token, body.name)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+    except viewer.NameNotAllowed:
+        raise err(400, "That name is not allowed")
+    except viewer.AlreadyExists:
+        raise err(409, "A file with that name already exists")
+    except OSError:
+        raise err(500, "The file could not be moved")
+
+
+@app.post("/api/viewer/{token}/copy")
+def viewer_copy(token: str, body: ViewerFolderIn):
+    try:
+        return viewer.copy_to(token, body.folder)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+    except viewer.NoFolder:
+        raise err(400, "The folder was not found")
+    except OSError:
+        raise err(500, "The file could not be moved")
+
+
+@app.post("/api/viewer/{token}/move")
+def viewer_move(token: str, body: ViewerFolderIn):
+    try:
+        return viewer.move_to(token, body.folder)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404)
+    except viewer.NoFolder:
+        raise err(400, "The folder was not found")
+    except OSError:
+        raise err(500, "The file could not be moved")
+
+
 class ViewerEditIn(BaseModel):
     brightness: float = 1.0
     contrast: float = 1.0

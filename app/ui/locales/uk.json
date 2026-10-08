@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "Так, зробити photag моєю програмою перегляду",
  "You can keep working; photag tells you when it is done.": "Можна продовжувати роботу; photag повідомить, коли закінчить.",
  "photag could not finish the last backups. Open photag to see why.": "photag не зміг завершити останні резервні копії. Відкрийте photag, щоб дізнатися причину.",
- "photag is still running": "photag і далі працює"
+ "photag is still running": "photag і далі працює",
+ "A file with that name already exists": "Файл із такою назвою вже існує",
+ "Choose the folder to copy the picture to": "Виберіть папку, до якої скопіювати зображення",
+ "Choose the folder to move the picture to": "Виберіть папку, до якої перемістити зображення",
+ "Copied to {folder}": "Скопійовано до {folder}",
+ "Copy to folder…": "Копіювати до папки…",
+ "Every {n} seconds": "Кожні {n} с",
+ "More": "Ще",
+ "Move to folder…": "Перемістити до папки…",
+ "Moved to {folder}": "Переміщено до {folder}",
+ "Print…": "Друк…",
+ "Rename the picture": "Перейменувати зображення",
+ "Renamed to {name}": "Перейменовано на {name}",
+ "Rename…": "Перейменувати…",
+ "That name is not allowed": "Ця назва недопустима",
+ "The file could not be moved": "Не вдалося перемістити файл",
+ "The folder was not found": "Папку не знайдено"
 }

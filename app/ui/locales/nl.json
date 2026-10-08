@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "Ja, maak photag mijn afbeeldingsviewer",
  "You can keep working; photag tells you when it is done.": "Je kunt doorwerken; photag laat het weten als het klaar is.",
  "photag could not finish the last backups. Open photag to see why.": "photag kon de laatste back-ups niet voltooien. Open photag om te zien waarom.",
- "photag is still running": "photag draait nog"
+ "photag is still running": "photag draait nog",
+ "A file with that name already exists": "Er bestaat al een bestand met die naam",
+ "Choose the folder to copy the picture to": "Kies de map waarnaar de afbeelding moet worden gekopieerd",
+ "Choose the folder to move the picture to": "Kies de map waarnaar de afbeelding moet worden verplaatst",
+ "Copied to {folder}": "Gekopieerd naar {folder}",
+ "Copy to folder…": "Kopiëren naar map…",
+ "Every {n} seconds": "Elke {n} seconden",
+ "More": "Meer",
+ "Move to folder…": "Verplaatsen naar map…",
+ "Moved to {folder}": "Verplaatst naar {folder}",
+ "Print…": "Afdrukken…",
+ "Rename the picture": "Afbeelding hernoemen",
+ "Renamed to {name}": "Hernoemd naar {name}",
+ "Rename…": "Hernoemen…",
+ "That name is not allowed": "Deze naam is niet toegestaan",
+ "The file could not be moved": "Het bestand kon niet worden verplaatst",
+ "The folder was not found": "De map is niet gevonden"
 }

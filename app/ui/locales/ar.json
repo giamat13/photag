@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "نعم، اجعل photag عارض الصور لديّ",
  "You can keep working; photag tells you when it is done.": "يمكنك متابعة العمل؛ سيخبرك photag عند الانتهاء.",
  "photag could not finish the last backups. Open photag to see why.": "لم يتمكن photag من إنهاء آخر النسخ الاحتياطية. افتح photag لمعرفة السبب.",
- "photag is still running": "photag ما زال قيد التشغيل"
+ "photag is still running": "photag ما زال قيد التشغيل",
+ "A file with that name already exists": "يوجد ملف بهذا الاسم بالفعل",
+ "Choose the folder to copy the picture to": "اختر المجلد الذي تنسخ إليه الصورة",
+ "Choose the folder to move the picture to": "اختر المجلد الذي تنقل إليه الصورة",
+ "Copied to {folder}": "تم النسخ إلى {folder}",
+ "Copy to folder…": "نسخ إلى مجلد…",
+ "Every {n} seconds": "كل {n} ثوانٍ",
+ "More": "المزيد",
+ "Move to folder…": "نقل إلى مجلد…",
+ "Moved to {folder}": "تم النقل إلى {folder}",
+ "Print…": "طباعة…",
+ "Rename the picture": "إعادة تسمية الصورة",
+ "Renamed to {name}": "تمت إعادة التسمية إلى {name}",
+ "Rename…": "إعادة تسمية…",
+ "That name is not allowed": "هذا الاسم غير مسموح",
+ "The file could not be moved": "تعذّر نقل الملف",
+ "The folder was not found": "لم يتم العثور على المجلد"
 }

@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "Evet, photag’ı resim görüntüleyicim yap",
  "You can keep working; photag tells you when it is done.": "Çalışmaya devam edebilirsiniz; bitince photag size haber verir.",
  "photag could not finish the last backups. Open photag to see why.": "photag son yedeklemeleri tamamlayamadı. Nedenini görmek için photag’ı açın.",
- "photag is still running": "photag hâlâ çalışıyor"
+ "photag is still running": "photag hâlâ çalışıyor",
+ "A file with that name already exists": "Bu adda bir dosya zaten var",
+ "Choose the folder to copy the picture to": "Resmin kopyalanacağı klasörü seçin",
+ "Choose the folder to move the picture to": "Resmin taşınacağı klasörü seçin",
+ "Copied to {folder}": "{folder} klasörüne kopyalandı",
+ "Copy to folder…": "Klasöre kopyala…",
+ "Every {n} seconds": "Her {n} saniyede bir",
+ "More": "Daha fazla",
+ "Move to folder…": "Klasöre taşı…",
+ "Moved to {folder}": "{folder} klasörüne taşındı",
+ "Print…": "Yazdır…",
+ "Rename the picture": "Resmi yeniden adlandır",
+ "Renamed to {name}": "{name} olarak yeniden adlandırıldı",
+ "Rename…": "Yeniden adlandır…",
+ "That name is not allowed": "Bu ada izin verilmiyor",
+ "The file could not be moved": "Dosya taşınamadı",
+ "The folder was not found": "Klasör bulunamadı"
 }

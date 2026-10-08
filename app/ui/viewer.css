@@ -43,3 +43,26 @@ body.fs #stage{inset:0}
 #p-edit .row button.primary{background:#e8590c;border-color:#e8590c;color:#fff}
 #p-edit .row button:hover{filter:brightness(1.12)}
 body.fs #panel{bottom:0}
+
+#menu{position:absolute;inset-inline-end:8px;bottom:44px;min-width:210px;background:#202020;border:1px solid #111;border-radius:6px;padding:4px;z-index:8;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#menu.hidden{display:none}
+#menu button{display:block;width:100%;text-align:start;padding:8px 12px;border:0;border-radius:4px;background:transparent;color:#e6e6e6;font:inherit;cursor:pointer;height:auto}
+#menu button:hover{background:#3a3a3a}
+#menu .head{padding:6px 12px 4px;color:#939393;font-size:12px}
+#dlg{position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:9}
+#dlg.hidden{display:none}
+#dlg .box{background:#202020;border:1px solid #111;border-radius:8px;padding:16px;width:min(420px,92vw);user-select:text}
+#dlg input{width:100%;margin:12px 0;padding:8px;border:1px solid #444;border-radius:4px;background:#161616;color:#fff;font:inherit}
+#dlg .row{display:flex;gap:8px;justify-content:flex-end}
+#dlg .row button{padding:7px 16px;border:1px solid #444;border-radius:4px;background:#2c2c2c;color:#e6e6e6;font:inherit;cursor:pointer;width:auto;height:auto}
+#dlg .row button.primary{background:#e8590c;border-color:#e8590c;color:#fff}
+body.show #bar{opacity:0;transition:opacity .25s}
+body.show:hover #bar{opacity:1}
+#printbox{display:none}
+@media print{
+  html,body{background:#fff !important;overflow:visible;height:auto}
+  body > *:not(#printbox){display:none !important}
+  #printbox{display:block !important;text-align:center}
+  #printbox img{max-width:100%;max-height:96vh;object-fit:contain}
+  @page{margin:8mm}
+}

@@ -159,6 +159,74 @@ $('#b-edit').onclick = () => openPanel('edit'); $('#b-info').onclick = () => ope
 $('#b-del').onclick = trash; $('#pclose').onclick = closePanel; $('#e-save').onclick = saveCopy; $('#e-reset').onclick = resetEdit;
 $('#e-bri').oninput = e => { edit.bri = +e.target.value; apply(); }; $('#e-con').oninput = e => { edit.con = +e.target.value; apply(); };
 $('#e-sat').oninput = e => { edit.sat = +e.target.value; apply(); }; $('#e-bw').onchange = e => { edit.bw = e.target.checked; apply(); };
+
+// ---- the "more" menu: rename, copy, move, print; the slideshow ----
+function closeMenu() { $('#menu').classList.add('hidden'); }
+function openMenu(items, head) {
+  const m = $('#menu');
+  m.innerHTML = (head ? `<div class="head">${head}</div>` : '') + items.map((it, i) => `<button data-i="${i}">${it[0]}</button>`).join('');
+  m.querySelectorAll('button').forEach(b => b.onclick = () => { closeMenu(); items[+b.dataset.i][1](); });
+  m.classList.remove('hidden');
+}
+function toggleMenu(items, head) { if (!$('#menu').classList.contains('hidden')) closeMenu(); else openMenu(items, head); }
+function askName(title, value, ok) {
+  $('#dlg-title').textContent = title; const inp = $('#dlg-input'); inp.value = value;
+  $('#dlg').classList.remove('hidden'); inp.focus();
+  const dot = value.lastIndexOf('.'); inp.setSelectionRange(0, dot > 0 ? dot : value.length);
+  const done = v => { inp.blur(); $('#dlg').classList.add('hidden'); if (v != null) ok(v); };
+  $('#dlg-ok').onclick = () => done(inp.value); $('#dlg-cancel').onclick = () => done(null);
+  inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') done(inp.value); else if (e.key === 'Escape') done(null); };
+}
+async function renameIt() {
+  if (!cur) return;
+  askName(t('Rename the picture'), cur.name, async name => {
+    try { const r = await api(`/api/viewer/${tok}/rename`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); await show(r.token); say(t('Renamed to {name}', { name: r.name })); }
+    catch (e) { say(t(e.message)); }
+  });
+}
+async function pickFolder(title) { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(title)); return r.path || null; }
+async function copyIt() {
+  if (!cur) return;
+  const f = await pickFolder(t('Choose the folder to copy the picture to')).catch(e => { say(t(e.message)); return null; });
+  if (!f) return;
+  try { const r = await api(`/api/viewer/${tok}/copy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: f }) }); say(t('Copied to {folder}', { folder: r.folder })); }
+  catch (e) { say(t(e.message)); }
+}
+async function moveIt() {
+  if (!cur) return;
+  const f = await pickFolder(t('Choose the folder to move the picture to')).catch(e => { say(t(e.message)); return null; });
+  if (!f) return;
+  try {
+    const r = await api(`/api/viewer/${tok}/move`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: f }) });
+    say(t('Moved to {folder}', { folder: r.folder }));
+    if (r.next && r.next !== tok) show(r.next); else if (!r.next) { pic.removeAttribute('src'); $('#name').textContent = ''; $('#meta').textContent = ''; }
+  } catch (e) { say(t(e.message)); }
+}
+// Print: the picture as it is on screen (turned, and with the edit sliders) drawn on a canvas, so the printed page matches what you see.
+function printIt() {
+  if (!cur || !pic.naturalWidth) return;
+  const turn = st.rot % 180 !== 0, w = pic.naturalWidth, h = pic.naturalHeight;
+  const c = document.createElement('canvas'); c.width = turn ? h : w; c.height = turn ? w : h;
+  const g = c.getContext('2d');
+  if (edit.on) g.filter = filterCss();
+  g.translate(c.width / 2, c.height / 2); g.rotate(st.rot * Math.PI / 180); g.drawImage(pic, -w / 2, -h / 2);
+  $('#printimg').src = c.toDataURL('image/jpeg', 0.95);
+  setTimeout(() => window.print(), 50);
+}
+// Slideshow: full screen, a new picture every few seconds, around the folder again and again; Esc, S or a click on the button ends it.
+let slide = null;
+function slideStop() { if (slide) { clearInterval(slide); slide = null; } document.body.classList.remove('show'); $('#b-show').classList.remove('on'); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+function slideStart(sec) {
+  slideStop(); closePanel(); document.body.classList.add('show'); $('#b-show').classList.add('on');
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+  slide = setInterval(() => { if (!cur) return; if (cur.next) show(cur.next); else if (cur.first && cur.first !== tok) show(cur.first); }, sec * 1000);
+}
+const slideMenu = () => toggleMenu([2, 4, 8, 15].map(n => [t('Every {n} seconds', { n }), () => slideStart(n)]), t('Slideshow'));
+const moreMenu = () => toggleMenu([[t('Rename…'), renameIt], [t('Copy to folder…'), copyIt], [t('Move to folder…'), moveIt], [t('Print…'), printIt]]);
+$('#b-more').onclick = e => { e.stopPropagation(); moreMenu(); };
+$('#b-show').onclick = e => { e.stopPropagation(); if (slide) slideStop(); else slideMenu(); };
+document.addEventListener('click', () => closeMenu());
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && slide) slideStop(); });
 stage.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - stage.getBoundingClientRect().left, e.clientY - stage.getBoundingClientRect().top); }, { passive: false });
 stage.addEventListener('dblclick', e => { if (st.fit && fitScale() < 1) actual(); else fit(); });
 let drag = null;
@@ -176,7 +244,12 @@ window.addEventListener('keydown', e => {
   else if (k === 'r' || k === 'R') rotate(e.shiftKey ? -90 : 90);
   else if (k === 'f' || k === 'F' || k === 'F11') full();
   else if (k === 'Delete') trash();
+  else if (k === 'F2') renameIt();
+  else if ((k === 'p' || k === 'P') && (e.ctrlKey || e.metaKey)) printIt();
+  else if (k === 's' || k === 'S') { if (slide) slideStop(); else slideMenu(); }
   else if (k === 'i' || k === 'I') openPanel('info');
+  else if (k === 'Escape' && slide) slideStop();
+  else if (k === 'Escape' && !$('#menu').classList.contains('hidden')) closeMenu();
   else if (k === 'Escape' && panelKind) closePanel();
   else return;
   e.preventDefault();

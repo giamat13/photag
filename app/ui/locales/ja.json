@@ -1226,5 +1226,21 @@
  "Yes, make photag my picture viewer": "はい、photag を画像ビューアーにする",
  "You can keep working; photag tells you when it is done.": "作業を続けても大丈夫です。完了したら photag がお知らせします。",
  "photag could not finish the last backups. Open photag to see why.": "photag は直近のバックアップを完了できませんでした。理由は photag を開いて確認してください。",
- "photag is still running": "photag は実行中です"
+ "photag is still running": "photag は実行中です",
+ "A file with that name already exists": "同じ名前のファイルがすでにあります",
+ "Choose the folder to copy the picture to": "画像をコピーするフォルダーを選んでください",
+ "Choose the folder to move the picture to": "画像を移動するフォルダーを選んでください",
+ "Copied to {folder}": "{folder} にコピーしました",
+ "Copy to folder…": "フォルダーにコピー…",
+ "Every {n} seconds": "{n} 秒ごと",
+ "More": "その他",
+ "Move to folder…": "フォルダーに移動…",
+ "Moved to {folder}": "{folder} に移動しました",
+ "Print…": "印刷…",
+ "Rename the picture": "画像の名前を変更",
+ "Renamed to {name}": "{name} に名前を変更しました",
+ "Rename…": "名前の変更…",
+ "That name is not allowed": "この名前は使用できません",
+ "The file could not be moved": "ファイルを移動できませんでした",
+ "The folder was not found": "フォルダーが見つかりません"
 }
