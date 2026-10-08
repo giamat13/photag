@@ -1202,5 +1202,8 @@
  "Show on the map": "मानचित्र पर दिखाएँ",
  "The file could not be moved to the Recycle Bin": "फ़ाइल को रीसायकल बिन में नहीं ले जाया जा सका",
  "The picture could not be saved": "चित्र सहेजा नहीं जा सका",
- "This picture has no location": "इस चित्र में कोई स्थान नहीं है"
+ "This picture has no location": "इस चित्र में कोई स्थान नहीं है",
+ "Features": "सुविधाएँ",
+ "Fixes": "सुधार",
+ "Small fixes": "छोटे सुधार"
 }

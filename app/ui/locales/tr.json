@@ -1202,5 +1202,8 @@
  "Show on the map": "Haritada göster",
  "The file could not be moved to the Recycle Bin": "Dosya Geri Dönüşüm Kutusu’na taşınamadı",
  "The picture could not be saved": "Resim kaydedilemedi",
- "This picture has no location": "Bu resmin konumu yok"
+ "This picture has no location": "Bu resmin konumu yok",
+ "Features": "Özellikler",
+ "Fixes": "Düzeltmeler",
+ "Small fixes": "Küçük düzeltmeler"
 }

@@ -172,9 +172,45 @@ def _newest_pre(newer_than: str) -> dict | None:
     return None
 
 
+SECTIONS = ("Features", "Fixes", "Small fixes")          # the order of a release's notes: what changes things for the user first
+
+
+def split_notes(body: str) -> tuple[dict, str]:
+    """({section: text} for the standard '## Features' / '## Fixes' / '## Small fixes' headings, the rest of the text before / around them).
+    A release written before this structure has no standard heading: everything is 'the rest'."""
+    sections, rest, cur = {}, [], None
+    for line in (body or "").splitlines():
+        m = re.match(r"^#{1,6}\s+(.*?)\s*$", line)
+        if m and m.group(1) in SECTIONS:
+            cur = m.group(1)
+            sections.setdefault(cur, [])
+            continue
+        if m and cur:                                           # another heading ends the section
+            cur = None
+        (sections[cur] if cur else rest).append(line)
+    return {k: "\n".join(v).strip() for k, v in sections.items() if "\n".join(v).strip()}, "\n".join(rest).strip()
+
+
+def merge_notes(releases: list[tuple[str, str]]) -> str:
+    """Notes of several releases (newest first) as ONE text: all the features, then all the fixes, then all the small fixes.
+    A release that does not use the sections (older ones) follows under its version number."""
+    merged = {k: [] for k in SECTIONS}
+    old = []
+    for tag, body in releases:
+        sec, rest = split_notes(body)
+        for k, v in sec.items():
+            merged[k].append(v)
+        if not sec and rest:
+            old.append(f"## {tag}\n\n{rest}")
+        elif rest:
+            pass                                                         # text above the sections of a structured release (a title) is dropped
+    parts = [f"## {k}\n\n" + "\n".join(v) for k, v in merged.items() if v] + old
+    return "\n\n".join(parts)
+
+
 def _notes_since(current: str) -> str:
     """Release notes of every version newer than `current`, newest first, so updating across several versions at once
-    shows everything that changed, not just the last release's notes."""
+    shows everything that changed, not just the last release's notes. With several versions the notes are merged by section."""
     try:
         rels = json.loads(_get(f"{API}/repos/{REPO}/releases?per_page=20"))
     except Exception:
@@ -182,7 +218,7 @@ def _notes_since(current: str) -> str:
     newer = [r for r in rels if is_newer(r.get("tag_name") or "", current)]
     if len(newer) <= 1:
         return newer[0].get("body") or "" if newer else ""
-    return "\n\n---\n\n".join(f"## {r.get('tag_name', '')}\n\n{r.get('body') or ''}" for r in newer)
+    return merge_notes([(r.get("tag_name", ""), r.get("body") or "") for r in newer])
 
 
 def skip(version: str):

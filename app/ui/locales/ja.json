@@ -1202,5 +1202,8 @@
  "Show on the map": "地図で表示",
  "The file could not be moved to the Recycle Bin": "ファイルをごみ箱に移動できませんでした",
  "The picture could not be saved": "画像を保存できませんでした",
- "This picture has no location": "この画像には位置情報がありません"
+ "This picture has no location": "この画像には位置情報がありません",
+ "Features": "機能",
+ "Fixes": "修正",
+ "Small fixes": "細かな修正"
 }

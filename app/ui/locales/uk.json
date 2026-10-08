@@ -1202,5 +1202,8 @@
  "Show on the map": "Показати на карті",
  "The file could not be moved to the Recycle Bin": "Не вдалося перемістити файл до кошика",
  "The picture could not be saved": "Не вдалося зберегти зображення",
- "This picture has no location": "Це зображення не має місцезнаходження"
+ "This picture has no location": "Це зображення не має місцезнаходження",
+ "Features": "Можливості",
+ "Fixes": "Виправлення",
+ "Small fixes": "Дрібні виправлення"
 }

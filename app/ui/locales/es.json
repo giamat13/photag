@@ -1202,5 +1202,8 @@
  "Show on the map": "Mostrar en el mapa",
  "The file could not be moved to the Recycle Bin": "No se pudo mover el archivo a la papelera de reciclaje",
  "The picture could not be saved": "No se pudo guardar la imagen",
- "This picture has no location": "Esta imagen no tiene ubicación"
+ "This picture has no location": "Esta imagen no tiene ubicación",
+ "Features": "Funciones",
+ "Fixes": "Correcciones",
+ "Small fixes": "Correcciones menores"
 }

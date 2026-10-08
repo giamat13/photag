@@ -1202,5 +1202,8 @@
  "Show on the map": "Auf der Karte anzeigen",
  "The file could not be moved to the Recycle Bin": "Die Datei konnte nicht in den Papierkorb verschoben werden",
  "The picture could not be saved": "Das Bild konnte nicht gespeichert werden",
- "This picture has no location": "Dieses Bild hat keinen Standort"
+ "This picture has no location": "Dieses Bild hat keinen Standort",
+ "Features": "Funktionen",
+ "Fixes": "Korrekturen",
+ "Small fixes": "Kleine Korrekturen"
 }

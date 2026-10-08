@@ -1202,5 +1202,8 @@
  "Show on the map": "Pokaż na mapie",
  "The file could not be moved to the Recycle Bin": "Nie można przenieść pliku do Kosza",
  "The picture could not be saved": "Nie można zapisać obrazu",
- "This picture has no location": "Ten obraz nie ma lokalizacji"
+ "This picture has no location": "Ten obraz nie ma lokalizacji",
+ "Features": "Funkcje",
+ "Fixes": "Poprawki",
+ "Small fixes": "Drobne poprawki"
 }

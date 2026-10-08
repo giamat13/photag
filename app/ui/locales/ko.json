@@ -1202,5 +1202,8 @@
  "Show on the map": "지도에 표시",
  "The file could not be moved to the Recycle Bin": "파일을 휴지통으로 이동할 수 없습니다",
  "The picture could not be saved": "사진을 저장할 수 없습니다",
- "This picture has no location": "이 사진에는 위치 정보가 없습니다"
+ "This picture has no location": "이 사진에는 위치 정보가 없습니다",
+ "Features": "기능",
+ "Fixes": "수정",
+ "Small fixes": "사소한 수정"
 }

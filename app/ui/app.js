@@ -2546,6 +2546,8 @@ function compressBatchReport(r){
 
 // ---------- updates from GitHub releases ----------
 // Release notes are Markdown; show the common subset (headings, bullets, **bold**, `code`) -- escaped first, so it is always safe.
+// the three standard headings of release notes (docs/release-checklist.md) are shown in the user's language
+const noteHead = h => ({ 'Features': () => t('Features'), 'Fixes': () => t('Fixes'), 'Small fixes': () => t('Small fixes') }[h] || (() => h))();
 function mdLite(md){
   const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
   const out = []; let list = false;
@@ -2553,7 +2555,7 @@ function mdLite(md){
     const line = raw.trimEnd(), li = /^\s*[-*]\s+(.*)$/.exec(line), h = /^#{1,6}\s+(.*)$/.exec(line);
     if(li){ if(!list){ out.push('<ul>'); list = true; } out.push('<li>' + inline(li[1]) + '</li>'); continue; }
     if(list){ out.push('</ul>'); list = false; }
-    if(h) out.push('<h4>' + inline(h[1]) + '</h4>'); else if(line.trim()) out.push('<p>' + inline(line) + '</p>');
+    if(h) out.push('<h4>' + inline(noteHead(h[1])) + '</h4>'); else if(line.trim()) out.push('<p>' + inline(line) + '</p>');
   }
   if(list) out.push('</ul>');
   return out.join('');

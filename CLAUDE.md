@@ -22,6 +22,12 @@ push straight to `main`.
   are read as the same version (`updater.parse_version`), but only the three-part form is ever written. The tag is
   `v<version>` and the notes file is `docs/release-notes-v<version>.md`, both exactly as written in
   `app/version.py`.
+- **Structure of the release notes (decided with the user, from 12.1.0):** a title line (`# photag X.Y.Z`) and then only these sections,
+  in this order, leaving out the ones with nothing in them: `## Features` (things that really change something for the user, first),
+  `## Fixes` (bugs a user could notice) and `## Small fixes` (minor things, wording, looks, internals). It matches the version number:
+  a feature release has `## Features`, a fixes-only release has `## Fixes`, a small-fixes release only `## Small fixes`. The in-app
+  "What's new" dialog shows the three headings in the user's language and, when several versions are skipped, merges them by section
+  (`updater.merge_notes`). `tools/test_release_notes.py` checks the file of the current version.
 - Each release has a `docs/release-notes-v<version>.md` file; its contents become the GitHub Release
   body (and what the in-app "What's new" dialog shows, fetched live from the GitHub release).
 - CI (`.github/workflows/tests.yml`) runs automatically on every push to `main` (Windows runner:

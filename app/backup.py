@@ -225,6 +225,44 @@ def _previous_media_dir(reduced: bool = False) -> Path | None:
     return old if (old.is_dir() and not reduced) else None
 
 
+EXT_DIR = "_external"      # inside a media set: the photos of the user's own folder ("photos stay in my folder"), below _external/<drive>/...
+
+
+def _ext_rel(p: Path) -> Path:
+    """Where a photo that lives OUTSIDE the library (its catalog path is absolute) goes inside a media set: _external/<drive>/<path below it>."""
+    drive = re.sub(r"[^A-Za-z0-9_]", "_", p.drive) or "root"
+    return Path(EXT_DIR, drive, *p.parts[1:])
+
+
+def _rel_of(p: Path) -> Path:
+    try:
+        return p.relative_to(PATHS.media)
+    except ValueError:
+        return _ext_rel(p)
+
+
+def _external_files() -> list[Path]:
+    """The photo / video files the catalog knows that are outside the library folder and can be read right now (a drive that is
+    unplugged, a missing file or a OneDrive file that is only online is left out: it is neither an error nor downloaded)."""
+    con = db.connect()
+    try:
+        rows = [r[0] for r in con.execute("SELECT rel_path FROM photos")]
+    finally:
+        con.close()
+    out, seen = [], set()
+    for r in rows:
+        if not r or not Path(r).is_absolute() or r in seen:
+            continue
+        seen.add(r)
+        p = Path(r)
+        try:
+            if p.is_file() and not cloud.is_online_only(p):
+                out.append(p)
+        except OSError:
+            pass
+    return out
+
+
 def _media_files(root: Path):
     """The photo / video files of a media folder (not the temporary .part files, not our own index)."""
     return [p for p in root.rglob("*") if p.is_file() and not p.name.endswith(".part") and p.name != INDEX]
@@ -238,9 +276,10 @@ def _same(a: Path, st) -> bool:
         return False
 
 
-def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
+def _mirror_media(dst: Path, progress=None, reduce: dict | None = None, external: bool = False) -> dict:
     """Build a complete copy of the photo files in dst (a new folder): hard-link what the previous set already has,
-    copy the rest. With `reduce` ({quality, max_side, include_videos}) photos are re-encoded smaller instead of copied."""
+    copy the rest. With `reduce` ({quality, max_side, include_videos}) photos are re-encoded smaller instead of copied.
+    `external`: also the photos that live outside the library ("photos stay in my folder"), for regular backups only."""
     reduced = reduce is not None
     if reduced:
         from . import compress        # pulls in PIL (via app.images) -- only needed for reduced/re-encoded backups
@@ -253,13 +292,13 @@ def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
         except (OSError, ValueError):
             pidx = {}
     q, ms = (reduce["quality"], reduce["max_side"]) if reduced else (0, 0)
-    files = [p for p in PATHS.media.rglob("*") if p.is_file() and ".compress_tmp" not in p.parts]
+    files = [p for p in PATHS.media.rglob("*") if p.is_file() and ".compress_tmp" not in p.parts] + (_external_files() if external else [])
     if reduced and not reduce.get("include_videos", True):
         from . import images             # PIL -- only needed for reduced (re-encoded) backups, see photag_backup.spec
         files = [p for p in files if p.suffix.lower() not in images.VIDEO_EXT]
     plan, need, est = [], 0, 0           # plan item: (src, out, old file to link or None, "encode" | "copy", stat)
     for src in files:
-        rel = src.relative_to(PATHS.media)
+        rel = _rel_of(src)
         st = src.stat()
         old = prev / rel if prev else None
         encode = reduced and src.suffix.lower() in compress.IMAGE_OK
@@ -308,7 +347,7 @@ def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
             os.link(old, out)
             stats["linked"] += 1
             if how == "encode":
-                index[src.relative_to(PATHS.media).as_posix()] = {"s": st.st_size, "m": int(st.st_mtime), "q": q, "x": ms}
+                index[_rel_of(src).as_posix()] = {"s": st.st_size, "m": int(st.st_mtime), "q": q, "x": ms}
         except OSError:
             todo.append((src, out, None, how, st))        # no hard links here: copy / encode instead
     ex = cf.ThreadPoolExecutor(2 if reduced else 1)
@@ -319,7 +358,7 @@ def _mirror_media(dst: Path, progress=None, reduce: dict | None = None) -> dict:
             stats["bytes_copied"] += out.stat().st_size
             stats["done"] += st.st_size
             if how == "encode":
-                index[src.relative_to(PATHS.media).as_posix()] = {"s": st.st_size, "m": int(st.st_mtime), "q": q, "x": ms}
+                index[_rel_of(src).as_posix()] = {"s": st.st_size, "m": int(st.st_mtime), "q": q, "x": ms}
             if progress:
                 progress.done = stats["done"]
                 progress.say("Copying photo and video files… {done} of {total} files", done=stats["copied"] + stats["encoded"], total=len(todo))
@@ -556,7 +595,7 @@ def _create_snapshot(reason: str = "manual", progress=None, force_media: bool = 
             # exist to undo it, so they must hold the real files
             reduce = ({"quality": s["compress_quality"], "max_side": s["compress_max_side"], "include_videos": s["include_videos"]}
                       if s["compress_media"] and reason in ("auto", "manual") and not force_media else None)
-            media = _mirror_media(mpart, progress, reduce)
+            media = _mirror_media(mpart, progress, reduce, external=reason in ("auto", "manual") and not force_media)       # safety snapshots hold only what photag itself may change
         manifest = {"created": now, "reason": reason, "app_version": __version__, "includes_media": bool(media),
                     "media": media, "media_dir": mdir, "media_compressed": bool(media and media.get("reduced")), **counts}
         part = final.with_name(final.name + ".part")
@@ -658,7 +697,7 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
         copied = 0
         mirror = backup_dir() / (manifest.get("media_dir") or MIRROR)
         if restore_media and mirror.is_dir():
-            files = _media_files(mirror)
+            files = [f for f in _media_files(mirror) if f.relative_to(mirror).parts[0] != EXT_DIR]
             if progress: progress.total = len(files); progress.done = 0
             for i, src in enumerate(files):
                 out = PATHS.media / src.relative_to(mirror)
@@ -674,6 +713,19 @@ def restore_snapshot(name: str, restore_media: bool = False, restore_settings: b
             rels = [r[0] for r in con.execute("SELECT rel_path FROM photos")]
         finally:
             con.close()
+        if restore_media and mirror.is_dir():
+            # photos of the user's own folder: only put back what is missing (that folder is never overwritten), to the path the catalog has
+            for r in rels:
+                if not r or not Path(r).is_absolute() or Path(r).exists():
+                    continue
+                src = mirror / _ext_rel(Path(r))
+                if src.is_file():
+                    try:
+                        Path(r).parent.mkdir(parents=True, exist_ok=True)
+                        tmp = Path(r).with_name(Path(r).name + ".part")
+                        shutil.copy2(src, tmp); cloud.replace(tmp, Path(r)); copied += 1
+                    except OSError:
+                        pass
         missing = sum(1 for r in rels if not (PATHS.media / r).exists())
         return {"photos": manifest.get("photos"), "media_copied": copied, "missing_files": missing,
                 "safety": safety["name"], "created": manifest["created"]}

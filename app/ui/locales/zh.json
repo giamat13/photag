@@ -1202,5 +1202,8 @@
  "Show on the map": "在地图上显示",
  "The file could not be moved to the Recycle Bin": "无法将文件移到回收站",
  "The picture could not be saved": "无法保存图片",
- "This picture has no location": "此图片没有位置信息"
+ "This picture has no location": "此图片没有位置信息",
+ "Features": "功能",
+ "Fixes": "修复",
+ "Small fixes": "小修复"
 }

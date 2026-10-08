@@ -1202,5 +1202,8 @@
  "Show on the map": "Показать на карте",
  "The file could not be moved to the Recycle Bin": "Не удалось переместить файл в корзину",
  "The picture could not be saved": "Не удалось сохранить изображение",
- "This picture has no location": "У этого изображения нет местоположения"
+ "This picture has no location": "У этого изображения нет местоположения",
+ "Features": "Возможности",
+ "Fixes": "Исправления",
+ "Small fixes": "Мелкие исправления"
 }

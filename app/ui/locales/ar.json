@@ -1202,5 +1202,8 @@
  "Show on the map": "عرض على الخريطة",
  "The file could not be moved to the Recycle Bin": "تعذّر نقل الملف إلى سلة المحذوفات",
  "The picture could not be saved": "تعذّر حفظ الصورة",
- "This picture has no location": "ليس لهذه الصورة موقع"
+ "This picture has no location": "ليس لهذه الصورة موقع",
+ "Features": "الميزات",
+ "Fixes": "الإصلاحات",
+ "Small fixes": "إصلاحات صغيرة"
 }
