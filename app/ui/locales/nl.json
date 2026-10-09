@@ -1392,5 +1392,14 @@
  "Vignette roundness": "Rondheid van de vignettering",
  "White Balance": "Witbalans",
  "White balance preset": "Witbalans-voorinstelling",
- "Whites": "Witten"
+ "Whites": "Witten",
+ "Color noise reduction": "Kleurruisreductie",
+ "Luminance noise reduction": "Luminantieruisreductie",
+ "Masking": "Maskering",
+ "Noise Reduction": "Ruisreductie",
+ "Noise reduction detail": "Detail van de ruisreductie",
+ "Radius": "Straal",
+ "Sharpening detail": "Detail van de verscherping",
+ "Sharpening masking": "Maskering van de verscherping",
+ "Sharpening radius": "Straal van de verscherping"
 }

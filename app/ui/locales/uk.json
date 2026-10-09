@@ -1392,5 +1392,14 @@
  "Vignette roundness": "Округлість віньєтки",
  "White Balance": "Баланс білого",
  "White balance preset": "Пресет балансу білого",
- "Whites": "Білі"
+ "Whites": "Білі",
+ "Color noise reduction": "Зменшення колірного шуму",
+ "Luminance noise reduction": "Зменшення яскравісного шуму",
+ "Masking": "Маскування",
+ "Noise Reduction": "Зменшення шуму",
+ "Noise reduction detail": "Деталі зменшення шуму",
+ "Radius": "Радіус",
+ "Sharpening detail": "Деталі різкості",
+ "Sharpening masking": "Маскування різкості",
+ "Sharpening radius": "Радіус різкості"
 }

@@ -1392,5 +1392,14 @@
  "Vignette roundness": "Zaokrąglenie winiety",
  "White Balance": "Balans bieli",
  "White balance preset": "Ustawienie wstępne balansu bieli",
- "Whites": "Biele"
+ "Whites": "Biele",
+ "Color noise reduction": "Redukcja szumu kolorów",
+ "Luminance noise reduction": "Redukcja szumu luminancji",
+ "Masking": "Maskowanie",
+ "Noise Reduction": "Redukcja szumu",
+ "Noise reduction detail": "Szczegóły redukcji szumu",
+ "Radius": "Promień",
+ "Sharpening detail": "Szczegóły wyostrzania",
+ "Sharpening masking": "Maskowanie wyostrzania",
+ "Sharpening radius": "Promień wyostrzania"
 }

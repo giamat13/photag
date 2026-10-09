@@ -1392,5 +1392,14 @@
  "Vignette roundness": "Rundheit der Vignette",
  "White Balance": "Weißabgleich",
  "White balance preset": "Weißabgleich-Voreinstellung",
- "Whites": "Weiß"
+ "Whites": "Weiß",
+ "Color noise reduction": "Farbrauschen reduzieren",
+ "Luminance noise reduction": "Luminanzrauschen reduzieren",
+ "Masking": "Maskierung",
+ "Noise Reduction": "Rauschreduzierung",
+ "Noise reduction detail": "Detail der Rauschreduzierung",
+ "Radius": "Radius",
+ "Sharpening detail": "Detail der Schärfung",
+ "Sharpening masking": "Maskierung der Schärfung",
+ "Sharpening radius": "Radius der Schärfung"
 }

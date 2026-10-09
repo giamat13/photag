@@ -317,6 +317,7 @@ TONE_KEYS = ("exposure", "highlights", "shadows", "temperature", "tint", "vibran
              # the extra tools (develop_ops.py)
              "whites", "blacks", "texture", "dehaze", "grain", "grain_size", "grain_rough",
              "vignette_mid", "vignette_feather", "vignette_round", "vignette_hl",
+             "sharp_radius", "sharp_detail", "sharp_mask", "nr_lum", "nr_color", "nr_detail",
              "curve", "curve_p", "mixer", "bwmix", "grading", "calib")
 FLIP_KEYS = ("flip_h", "flip_v")
 
@@ -345,6 +346,11 @@ def _from_unit(a):
     return Image.fromarray((np.clip(a, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8), "RGB")
 
 
+def _opt(ops: dict, key: str, default: float) -> float:
+    v = ops.get(key)
+    return default if v is None else float(v)
+
+
 def apply_tone(im, ops: dict):
     """Stage 1: exposure (EV), highlights, shadows, temperature, tint, vibrance, clarity, sharpness, blur, vignette,
     sepia. All amounts are -100..100 (0..100 where only one direction exists) except exposure, which is in stops.
@@ -357,12 +363,14 @@ def apply_tone(im, ops: dict):
     im = im.convert("RGB")
     size = max(im.size)
     g = lambda k: float(ops.get(k) or 0)
+    if g("nr_lum") or g("nr_color"):                               # noise reduction comes first: sharpening must not make the noise crisp
+        im = develop_ops.denoise(im, g("nr_lum"), g("nr_color"), _opt(ops, "nr_detail", 50.0), size)
     if g("blur"):
         im = im.filter(ImageFilter.GaussianBlur(radius=g("blur") / 100.0 * 0.012 * size))
     if g("clarity"):
         im = im.filter(ImageFilter.UnsharpMask(radius=max(2.0, size / 60.0), percent=int(g("clarity") * 1.2), threshold=0))
     if g("sharpness"):
-        im = im.filter(ImageFilter.UnsharpMask(radius=max(0.6, size / 1800.0), percent=int(g("sharpness") * 2.5), threshold=2))
+        im = develop_ops.sharpen(im, g("sharpness"), size, _opt(ops, "sharp_radius", 50.0), _opt(ops, "sharp_detail", 25.0), g("sharp_mask"))
     a = _unit(im)
     if g("exposure"):                                              # gain in linear light
         lin = np.power(a, 2.2) * (2.0 ** g("exposure"))

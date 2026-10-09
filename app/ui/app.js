@@ -1511,12 +1511,14 @@ const DEV = {id:null, ops:null, saved:null, hist:[], crop:false, before:false, d
 const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1],
   exp:0, hi:0, sh:0, temp:0, tint:0, vib:0, cla:0, shp:0, blr:0, vig:0, sep:0, fh:false, fv:false,
   wht:0, blk:0, tex:0, dhz:0, grn:0, grs:25, grr:50, vgm:50, vgf:50, vgr:0, vgh:0,
+  shr:50, shd:25, shm:0, nrl:0, nrc:0, nrd:50,
   crv:{}, crp:[0,0,0,0], mix:{}, bwm:{}, grd:{}, cal:{}});
 // slider key -> develop-setting name, for the settings that change the picture itself (the server draws their preview)
 const TONEK = {exp:'exposure', hi:'highlights', sh:'shadows', temp:'temperature', tint:'tint', vib:'vibrance', cla:'clarity', shp:'sharpness', blr:'blur', vig:'vignette', sep:'sepia',
-  wht:'whites', blk:'blacks', tex:'texture', dhz:'dehaze', grn:'grain', grs:'grain_size', grr:'grain_rough', vgm:'vignette_mid', vgf:'vignette_feather', vgr:'vignette_round', vgh:'vignette_hl'};
-const STYLE_OF = {grs:'grn', grr:'grn', vgm:'vig', vgf:'vig', vgr:'vig', vgh:'vig'};
-const TONE_DEFAULT = {grs:25, grr:50, vgm:50, vgf:50};                 // the sliders whose resting place is not 0
+  wht:'whites', blk:'blacks', tex:'texture', dhz:'dehaze', grn:'grain', grs:'grain_size', grr:'grain_rough', vgm:'vignette_mid', vgf:'vignette_feather', vgr:'vignette_round', vgh:'vignette_hl',
+  shr:'sharp_radius', shd:'sharp_detail', shm:'sharp_mask', nrl:'nr_lum', nrc:'nr_color', nrd:'nr_detail'};
+const STYLE_OF = {grs:'grn', grr:'grn', vgm:'vig', vgf:'vig', vgr:'vig', vgh:'vig', shr:'shp', shd:'shp', shm:'shp', nrd:['nrl','nrc']};
+const TONE_DEFAULT = {grs:25, grr:50, vgm:50, vgf:50, shr:50, shd:25, nrd:50};                 // the sliders whose resting place is not 0
 // nested settings: key in DEV.ops -> name in the develop settings. They are replaced as a whole (never changed in place), so History keeps its copies.
 const NESTK = {crv:'curve', crp:'curve_p', mix:'mixer', bwm:'bwmix', grd:'grading', cal:'calib'};
 const BANDS = ['red','orange','yellow','green','aqua','blue','purple','magenta'];
@@ -1533,7 +1535,7 @@ const toneApi = o => {
   const r={};
   for(const [k,n] of Object.entries(TONEK)){
     const d=TONE_DEFAULT[k]||0, master = STYLE_OF[k];
-    if(master && !o[master]) continue;                                  // grain size / vignette handles mean nothing while their amount is 0
+    if(master && ![].concat(master).some(m=>o[m])) continue;                                  // grain size / vignette handles mean nothing while their amount is 0
     if(o[k]!=null && o[k]!==d) r[n] = k==='exp' ? o[k]/100 : o[k];
   }
   for(const [k,n] of Object.entries(NESTK)) if(nestedActive(k, o[k])) r[n] = o[k];
@@ -1637,7 +1639,9 @@ function renderDevPanels(){
     <div class="wbrow"><select data-wb ${dis} title="${t('White balance preset')}">${WB_PRESET_LIST.map(([n],i)=>`<option value="${i}">${n}</option>`).join('')}</select><button data-t="wbpick" class="${DEV.pick?'on':''}" ${dis} title="${t('Click a neutral grey area of the photo to set the white balance')}">${I('pick')} ${t('Pick')}</button></div>
     ${sl('temp',t('Temperature'),'temp')}${sl('tint',t('Tint'),'tint')}${sl('vib',t('Vibrance'),'sat')}${sl('sat',t('Saturation'),'sat')}
     <div class="dsec">${t("Detail")}</div>
-    ${sl('cla',t('Clarity'),'',0,100)}${sl('tex',t('Texture'),'')}${sl('dhz',t('Dehaze'),'')}${sl('shp',t('Sharpness'),'',0,100)}${sl('blr',t('Blur'),'',0,100)}
+    ${sl('cla',t('Clarity'),'',0,100)}${sl('tex',t('Texture'),'')}${sl('dhz',t('Dehaze'),'')}${sl('shp',t('Sharpness'),'',0,100)}${sl('shr',t('Radius'),'',0,100)}${sl('shd',t('Detail'),'',0,100)}${sl('shm',t('Masking'),'',0,100)}${sl('blr',t('Blur'),'',0,100)}
+    <div class="dsec">${t("Noise Reduction")}</div>
+    ${sl('nrl',t('Luminance'),'',0,100)}${sl('nrc',t('Color'),'',0,100)}${sl('nrd',t('Detail'),'',0,100)}
     <div class="dsec">${t("Effects")}</div>
     ${sl('vig',t('Vignette'),'exp')}${sl('vgm',t('Midpoint'),'',0,100)}${sl('vgf',t('Feather'),'',0,100)}${sl('vgr',t('Roundness'),'')}${sl('vgh',t('Highlights'),'',0,100)}
     ${sl('sep',t('Sepia'),'',0,100)}
@@ -1802,7 +1806,8 @@ function devAutoCrop(deg){
 }
 const dfmt = (k,v)=>k==='exp' ? (v>0?'+':'')+(v/100).toFixed(2) : (v>0?'+':'')+v;
 const DLABEL = {bri:t('Brightness'), con:t('Contrast'), sat:t('Saturation'), exp:t('Exposure'), hi:t('Highlights'), sh:t('Shadows'), temp:t('Temperature'), tint:t('Tint'), vib:t('Vibrance'), cla:t('Clarity'), shp:t('Sharpness'), blr:t('Blur'), vig:t('Vignette'), sep:t('Sepia'),
-  wht:t('Whites'), blk:t('Blacks'), tex:t('Texture'), dhz:t('Dehaze'), grn:t('Grain'), grs:t('Grain size'), grr:t('Grain roughness'), vgm:t('Vignette midpoint'), vgf:t('Vignette feather'), vgr:t('Vignette roundness'), vgh:t('Vignette highlights')};
+  wht:t('Whites'), blk:t('Blacks'), tex:t('Texture'), dhz:t('Dehaze'), grn:t('Grain'), grs:t('Grain size'), grr:t('Grain roughness'), vgm:t('Vignette midpoint'), vgf:t('Vignette feather'), vgr:t('Vignette roundness'), vgh:t('Vignette highlights'),
+  shr:t('Sharpening radius'), shd:t('Sharpening detail'), shm:t('Sharpening masking'), nrl:t('Luminance noise reduction'), nrc:t('Color noise reduction'), nrd:t('Noise reduction detail')};
 $('#right').addEventListener('input', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;

@@ -107,7 +107,7 @@ check("no tone settings -> has_tone is False", not images.has_tone({}) and not i
 check("...and apply_tone returns the picture itself", images.apply_tone(Image.new("RGB", (4, 4)), {"rotate": 5}) is not None)
 check("an edit with only zeros reproduces the picture (within JPEG-free PNG: exactly)",
       np.abs(edit(SC, {"exposure": 0, "highlights": 0, "shadows": 0, "temperature": 0, "blur": 0}) - S0).max() == 0)
-NOT_ALONE = {"grain_size", "grain_rough", "vignette_mid", "vignette_feather", "vignette_round", "vignette_hl"}      # styles of grain / vignette: nothing by themselves
+NOT_ALONE = {"grain_size", "grain_rough", "vignette_mid", "vignette_feather", "vignette_round", "vignette_hl", "sharp_radius", "sharp_detail", "sharp_mask", "nr_detail"}      # styles of grain / vignette: nothing by themselves
 NESTED_ON = {"curve": {"rgb": [[0.5, 0.7]]}, "curve_p": [0, 0, 0, 20], "mixer": {"red": [0, -50, 0]}, "bwmix": {"red": 30},
              "grading": {"shadows": [200, 40, 0]}, "calib": {"shadow_tint": 20}}
 for k in images.TONE_KEYS:

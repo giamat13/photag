@@ -1392,5 +1392,14 @@
  "Vignette roundness": "Vinyet yuvarlaklığı",
  "White Balance": "Beyaz dengesi",
  "White balance preset": "Beyaz dengesi ön ayarı",
- "Whites": "Beyazlar"
+ "Whites": "Beyazlar",
+ "Color noise reduction": "Renk gürültüsü azaltma",
+ "Luminance noise reduction": "Parlaklık gürültüsü azaltma",
+ "Masking": "Maskeleme",
+ "Noise Reduction": "Gürültü azaltma",
+ "Noise reduction detail": "Gürültü azaltma ayrıntısı",
+ "Radius": "Yarıçap",
+ "Sharpening detail": "Keskinleştirme ayrıntısı",
+ "Sharpening masking": "Keskinleştirme maskeleme",
+ "Sharpening radius": "Keskinleştirme yarıçapı"
 }

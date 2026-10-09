@@ -1392,5 +1392,14 @@
  "Vignette roundness": "周辺光量の丸み",
  "White Balance": "ホワイトバランス",
  "White balance preset": "ホワイトバランスのプリセット",
- "Whites": "白レベル"
+ "Whites": "白レベル",
+ "Color noise reduction": "カラーノイズ軽減",
+ "Luminance noise reduction": "輝度ノイズ軽減",
+ "Masking": "マスク",
+ "Noise Reduction": "ノイズ軽減",
+ "Noise reduction detail": "ノイズ軽減のディテール",
+ "Radius": "半径",
+ "Sharpening detail": "シャープのディテール",
+ "Sharpening masking": "シャープのマスク",
+ "Sharpening radius": "シャープの半径"
 }

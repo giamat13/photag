@@ -1392,5 +1392,14 @@
  "Vignette roundness": "विनेट की गोलाई",
  "White Balance": "व्हाइट बैलेंस",
  "White balance preset": "व्हाइट बैलेंस प्रीसेट",
- "Whites": "सफ़ेद"
+ "Whites": "सफ़ेद",
+ "Color noise reduction": "रंग शोर में कमी",
+ "Luminance noise reduction": "ल्यूमिनेंस शोर में कमी",
+ "Masking": "मास्किंग",
+ "Noise Reduction": "शोर में कमी",
+ "Noise reduction detail": "शोर कमी का विवरण",
+ "Radius": "त्रिज्या",
+ "Sharpening detail": "शार्पनिंग का विवरण",
+ "Sharpening masking": "शार्पनिंग की मास्किंग",
+ "Sharpening radius": "शार्पनिंग की त्रिज्या"
 }

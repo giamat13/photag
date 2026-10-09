@@ -1392,5 +1392,14 @@
  "Vignette roundness": "עגלגלות הוויניטה",
  "White Balance": "איזון לבן",
  "White balance preset": "הגדרת איזון לבן",
- "Whites": "לבנים"
+ "Whites": "לבנים",
+ "Color noise reduction": "הפחתת רעש צבע",
+ "Luminance noise reduction": "הפחתת רעש בהירות",
+ "Masking": "מיסוך",
+ "Noise Reduction": "הפחתת רעש",
+ "Noise reduction detail": "פירוט הפחתת הרעש",
+ "Radius": "רדיוס",
+ "Sharpening detail": "פירוט החדדה",
+ "Sharpening masking": "מיסוך החדדה",
+ "Sharpening radius": "רדיוס החדדה"
 }

@@ -3,6 +3,8 @@ black & white mix, colour grading and calibration. All of them work on a float R
 images.apply_tone() in a fixed order. Radii scale with the picture size, so a small preview looks like the full render.
 
 Settings (all optional; a missing or zero value does nothing):
+  sharp_radius 0..100 (50), sharp_detail 0..100 (25), sharp_mask 0..100 (0): how "sharpness" is applied (see sharpen())
+  nr_lum 0..100, nr_color 0..100, nr_detail 0..100 (50): noise reduction (see denoise())
   whites, blacks, texture, dehaze        -100..100
   grain 0..100, grain_size 0..100 (default 25), grain_rough 0..100 (default 50)
   vignette (amount, -100..100, existing) + vignette_mid 0..100 (50), vignette_feather 0..100 (50), vignette_round -100..100 (0), vignette_hl 0..100
@@ -17,9 +19,10 @@ import numpy as np
 
 BANDS = ("red", "orange", "yellow", "green", "aqua", "blue", "purple", "magenta")
 CENTERS = (0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 270.0, 300.0)
-SCALAR_KEYS = ("whites", "blacks", "texture", "dehaze", "grain")
+SCALAR_KEYS = ("whites", "blacks", "texture", "dehaze", "grain", "nr_lum", "nr_color")
 VIGNETTE_STYLE = {"vignette_mid": 50.0, "vignette_feather": 50.0, "vignette_round": 0.0, "vignette_hl": 0.0}
 GRAIN_DEFAULTS = {"grain_size": 25.0, "grain_rough": 50.0}
+SHARP_DEFAULTS = {"sharp_radius": 50.0, "sharp_detail": 25.0, "sharp_mask": 0.0, "nr_detail": 50.0}
 NESTED_KEYS = ("curve", "curve_p", "mixer", "bwmix", "grading", "calib")
 
 
@@ -180,6 +183,47 @@ def grain(a, amount, size, rough):
     lum = _lum(a)
     mid = 0.35 + 0.65 * (4.0 * lum * (1.0 - lum))
     return a + (n[..., None] * (amount / 100.0) * 0.16) * mid
+
+
+def sharpen(im, amount, size, radius=50.0, detail=25.0, mask=0.0):
+    """Sharpening of a PIL RGB image. amount 0..100 (the old "sharpness"), radius / detail / mask 0..100: with the resting values
+    (50 / 25 / 0) the result is exactly the sharpening photag always had. A bigger radius sharpens coarser structures, detail
+    lets the finest ones through (a lower value ignores faint noise), masking limits the effect to the edges."""
+    from PIL import ImageFilter
+    rad = max(0.6, size / 1800.0) * (0.4 + 1.2 * float(radius) / 100.0) / 1.0
+    rad *= 1.0 / 1.0
+    thr = int(max(0, round(2 + (25.0 - float(detail)) / 6.0)))
+    out = im.filter(ImageFilter.UnsharpMask(radius=rad, percent=int(amount * 2.5), threshold=thr))
+    if mask:
+        lum = np.asarray(im.convert("L"), dtype=np.float32) / 255.0
+        gy, gx = np.gradient(lum)
+        g = np.sqrt(gx * gx + gy * gy)
+        g = np.asarray(__import__("PIL.Image", fromlist=["Image"]).fromarray((np.clip(g / max(float(np.percentile(g, 99)), 1e-4), 0, 1) * 255).astype(np.uint8), "L")
+                       .filter(ImageFilter.GaussianBlur(radius=max(0.8, size / 1500.0))), dtype=np.float32) / 255.0
+        m = float(mask) / 100.0
+        w = ((1.0 - m) + m * np.clip(g * 2.0, 0.0, 1.0))[..., None]
+        a0, a1 = np.asarray(im, dtype=np.float32), np.asarray(out, dtype=np.float32)
+        out = __import__("PIL.Image", fromlist=["Image"]).fromarray(np.clip(a0 + (a1 - a0) * w + 0.5, 0, 255).astype(np.uint8), "RGB")
+    return out
+
+
+def denoise(im, lum_amount, color_amount, detail, size):
+    """Noise reduction of a PIL RGB image: the colour noise (blotches of wrong colour) is smoothed in the chroma channels, the
+    luminance noise (grain) by an edge-aware blend with a blurred copy -- `detail` (0..100) decides how strong an edge must be to be kept."""
+    from PIL import Image, ImageFilter
+    y, cb, cr = im.convert("YCbCr").split()
+    if color_amount:
+        r = max(0.8, size / 500.0) * (0.3 + float(color_amount) / 50.0)
+        cb, cr = cb.filter(ImageFilter.GaussianBlur(radius=r)), cr.filter(ImageFilter.GaussianBlur(radius=r))
+    if lum_amount:
+        ya = np.asarray(y, dtype=np.float32) / 255.0
+        r = max(1.2, size / 700.0) * (0.6 + float(lum_amount) / 35.0)
+        yb = np.asarray(y.filter(ImageFilter.GaussianBlur(radius=r)), dtype=np.float32) / 255.0
+        thr = 0.02 + 0.16 * (1.0 - float(detail) / 100.0)
+        wt = np.exp(-(((ya - yb) / thr) ** 2))
+        k = min(1.0, float(lum_amount) / 100.0 * 1.05)
+        y = Image.fromarray((np.clip(ya + (yb - ya) * k * wt, 0, 1) * 255.0 + 0.5).astype(np.uint8), "L")
+    return Image.merge("YCbCr", (y, cb, cr)).convert("RGB")
 
 
 def vignette(a, amount, mid, feather, rnd, hl):
@@ -381,7 +425,8 @@ def apply(a, ops, size):
 
 # ---------------------------------------------------------------- what the server accepts
 _RANGES = {"whites": (-100, 100), "blacks": (-100, 100), "texture": (-100, 100), "dehaze": (-100, 100), "grain": (0, 100), "grain_size": (0, 100),
-           "grain_rough": (0, 100), "vignette_mid": (0, 100), "vignette_feather": (0, 100), "vignette_round": (-100, 100), "vignette_hl": (0, 100)}
+           "grain_rough": (0, 100), "vignette_mid": (0, 100), "vignette_feather": (0, 100), "vignette_round": (-100, 100), "vignette_hl": (0, 100),
+           "sharp_radius": (0, 100), "sharp_detail": (0, 100), "sharp_mask": (0, 100), "nr_lum": (0, 100), "nr_color": (0, 100), "nr_detail": (0, 100)}
 
 
 def _num(v, lo, hi, default=0.0):

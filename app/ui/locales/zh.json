@@ -1392,5 +1392,14 @@
  "Vignette roundness": "暗角圆度",
  "White Balance": "白平衡",
  "White balance preset": "白平衡预设",
- "Whites": "白色色阶"
+ "Whites": "白色色阶",
+ "Color noise reduction": "减少色彩噪点",
+ "Luminance noise reduction": "减少明度噪点",
+ "Masking": "蒙版",
+ "Noise Reduction": "降噪",
+ "Noise reduction detail": "降噪细节",
+ "Radius": "半径",
+ "Sharpening detail": "锐化细节",
+ "Sharpening masking": "锐化蒙版",
+ "Sharpening radius": "锐化半径"
 }

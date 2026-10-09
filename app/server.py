@@ -1198,6 +1198,12 @@ class EditIn(BaseModel):
     vignette_feather: float | None = None
     vignette_round: float | None = None
     vignette_hl: float | None = None
+    sharp_radius: float | None = None
+    sharp_detail: float | None = None
+    sharp_mask: float | None = None
+    nr_lum: float | None = None
+    nr_color: float | None = None
+    nr_detail: float | None = None
     curve: dict | None = None
     curve_p: list[float] | None = None
     mixer: dict | None = None

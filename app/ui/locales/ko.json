@@ -1392,5 +1392,14 @@
  "Vignette roundness": "비네팅 둥글기",
  "White Balance": "화이트 밸런스",
  "White balance preset": "화이트 밸런스 프리셋",
- "Whites": "흰색"
+ "Whites": "흰색",
+ "Color noise reduction": "색상 노이즈 감소",
+ "Luminance noise reduction": "휘도 노이즈 감소",
+ "Masking": "마스킹",
+ "Noise Reduction": "노이즈 감소",
+ "Noise reduction detail": "노이즈 감소 디테일",
+ "Radius": "반경",
+ "Sharpening detail": "선명도 디테일",
+ "Sharpening masking": "선명도 마스킹",
+ "Sharpening radius": "선명도 반경"
 }

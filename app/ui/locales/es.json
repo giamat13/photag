@@ -1392,5 +1392,14 @@
  "Vignette roundness": "Redondez de la viñeta",
  "White Balance": "Balance de blancos",
  "White balance preset": "Ajuste preestablecido de balance de blancos",
- "Whites": "Blancos"
+ "Whites": "Blancos",
+ "Color noise reduction": "Reducción de ruido de color",
+ "Luminance noise reduction": "Reducción de ruido de luminancia",
+ "Masking": "Enmascarado",
+ "Noise Reduction": "Reducción de ruido",
+ "Noise reduction detail": "Detalle de la reducción de ruido",
+ "Radius": "Radio",
+ "Sharpening detail": "Detalle del enfoque",
+ "Sharpening masking": "Enmascarado del enfoque",
+ "Sharpening radius": "Radio del enfoque"
 }

@@ -1392,5 +1392,14 @@
  "Vignette roundness": "استدارة التظليل",
  "White Balance": "توازن اللون الأبيض",
  "White balance preset": "إعداد مسبق لتوازن اللون الأبيض",
- "Whites": "البياض"
+ "Whites": "البياض",
+ "Color noise reduction": "تقليل ضوضاء اللون",
+ "Luminance noise reduction": "تقليل ضوضاء السطوع",
+ "Masking": "القناع",
+ "Noise Reduction": "تقليل الضوضاء",
+ "Noise reduction detail": "تفاصيل تقليل الضوضاء",
+ "Radius": "نصف القطر",
+ "Sharpening detail": "تفاصيل الشحذ",
+ "Sharpening masking": "قناع الشحذ",
+ "Sharpening radius": "نصف قطر الشحذ"
 }
