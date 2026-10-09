@@ -317,7 +317,11 @@ TONE_KEYS = ("exposure", "highlights", "shadows", "temperature", "tint", "vibran
              # the extra tools (develop_ops.py)
              "whites", "blacks", "texture", "dehaze", "grain", "grain_size", "grain_rough",
              "vignette_mid", "vignette_feather", "vignette_round", "vignette_hl",
-             "curve", "curve_p", "mixer", "bwmix", "grading", "calib")
+             "sharp_radius", "sharp_detail", "sharp_mask", "nr_lum", "nr_color", "nr_detail",
+             "curve", "curve_p", "mixer", "bwmix", "grading", "calib",
+             # places and shapes (develop_local.py)
+             "lens_dist", "lens_vig", "ca_r", "ca_b", "ca_auto", "defringe", "persp_v", "persp_h", "geo_aspect", "geo_scale", "geo_x", "geo_y",
+             "spots", "redeye", "lut", "masks")
 FLIP_KEYS = ("flip_h", "flip_v")
 
 
@@ -345,25 +349,73 @@ def _from_unit(a):
     return Image.fromarray((np.clip(a, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8), "RGB")
 
 
+def _opt(ops: dict, key: str, default: float) -> float:
+    v = ops.get(key)
+    return default if v is None else float(v)
+
+
+_LOCAL_MAP = {"temp": "temperature", "tint": "tint", "exposure": "exposure", "highlights": "highlights", "shadows": "shadows", "whites": "whites",
+              "blacks": "blacks", "texture": "texture", "clarity": "clarity", "dehaze": "dehaze"}
+
+
+def _local_adjust(a, adj: dict, size: int):
+    """The picture (float array) with the adjustments of one local mask applied to all of it; the mask decides where they show."""
+    import numpy as np
+    from . import develop_ops
+    ops = {_LOCAL_MAP[k]: v for k, v in adj.items() if k in _LOCAL_MAP and v}
+    sh, nz = float(adj.get("sharpness") or 0), float(adj.get("noise") or 0)
+    if sh > 0:
+        ops["sharpness"] = sh
+    elif sh < 0:
+        ops["blur"] = -sh * 0.4
+    if nz > 0:
+        ops["nr_lum"] = nz
+    out = _unit(apply_tone(_from_unit(a), ops)) if ops else a
+    con, sat, hue = float(adj.get("contrast") or 0), float(adj.get("saturation") or 0), float(adj.get("hue") or 0)
+    if con:
+        out = (out - 0.5) * (1 + con / 100.0 * 0.8) + 0.5
+    if sat:
+        gray = out.mean(axis=2, keepdims=True)
+        out = gray + (out - gray) * (1 + sat / 100.0)
+    if hue:
+        h, s, v = develop_ops.rgb_to_hsv(np.clip(out, 0, 1))
+        out = develop_ops.hsv_to_rgb(h + hue / 100.0 * 60.0, s, v)
+    return out
+
+
 def apply_tone(im, ops: dict):
     """Stage 1: exposure (EV), highlights, shadows, temperature, tint, vibrance, clarity, sharpness, blur, vignette,
     sepia. All amounts are -100..100 (0..100 where only one direction exists) except exposure, which is in stops.
     Radii scale with the picture size, so a small preview looks like the full-size render."""
     import numpy as np
     from PIL import ImageFilter
-    from . import develop_ops
+    from . import develop_ops, develop_local
     if not has_tone(ops):
         return im
     im = im.convert("RGB")
     size = max(im.size)
     g = lambda k: float(ops.get(k) or 0)
+    im = develop_local.optics(im, ops)                             # lens distortion and chromatic aberration come first
+    if ops.get("spots") or ops.get("redeye"):
+        a0 = _unit(im)
+        if ops.get("spots"):
+            a0 = develop_local.spots(a0, ops["spots"])
+        if ops.get("redeye"):
+            a0 = develop_local.redeye(a0, ops["redeye"])
+        im = _from_unit(a0)
+    if g("nr_lum") or g("nr_color"):                               # noise reduction comes first: sharpening must not make the noise crisp
+        im = develop_ops.denoise(im, g("nr_lum"), g("nr_color"), _opt(ops, "nr_detail", 50.0), size)
     if g("blur"):
         im = im.filter(ImageFilter.GaussianBlur(radius=g("blur") / 100.0 * 0.012 * size))
     if g("clarity"):
         im = im.filter(ImageFilter.UnsharpMask(radius=max(2.0, size / 60.0), percent=int(g("clarity") * 1.2), threshold=0))
     if g("sharpness"):
-        im = im.filter(ImageFilter.UnsharpMask(radius=max(0.6, size / 1800.0), percent=int(g("sharpness") * 2.5), threshold=2))
+        im = develop_ops.sharpen(im, g("sharpness"), size, _opt(ops, "sharp_radius", 50.0), _opt(ops, "sharp_detail", 25.0), g("sharp_mask"))
     a = _unit(im)
+    if g("lens_vig"):
+        a = develop_local.vignette_gain(a, g("lens_vig"))
+    if g("defringe"):
+        a = develop_local.defringe(a, g("defringe"))
     if g("exposure"):                                              # gain in linear light
         lin = np.power(a, 2.2) * (2.0 ** g("exposure"))
         a = np.power(np.clip(lin, 0.0, 1.0), 1 / 2.2)
@@ -382,6 +434,8 @@ def apply_tone(im, ops: dict):
         gray = a.mean(axis=2, keepdims=True)
         a = gray + (a - gray) * f
     a = develop_ops.apply(a, ops, size)                            # texture, dehaze, whites / blacks, curves, colour mixer, grading...
+    if ops.get("lut"):
+        a = develop_local.lut(a, ops["lut"])
     if g("vignette"):
         a = develop_ops.vignette(a, g("vignette"), float(ops.get("vignette_mid", 50) if ops.get("vignette_mid") is not None else 50),
                                  float(ops.get("vignette_feather", 50) if ops.get("vignette_feather") is not None else 50),
@@ -389,10 +443,12 @@ def apply_tone(im, ops: dict):
     if g("sepia"):
         k = np.array([[0.393, 0.769, 0.189], [0.349, 0.686, 0.168], [0.272, 0.534, 0.131]], dtype=np.float32)
         a = a + (np.clip(a @ k.T, 0.0, 1.0) - a) * (g("sepia") / 100.0)
+    if ops.get("masks"):
+        a = develop_local.apply_masks(a, ops["masks"], lambda arr, adj: _local_adjust(arr, adj, size))
     if g("grain"):
         a = develop_ops.grain(a, g("grain"), float(ops.get("grain_size", 25) if ops.get("grain_size") is not None else 25),
                               float(ops.get("grain_rough", 50) if ops.get("grain_rough") is not None else 50))
-    return _from_unit(a)
+    return develop_local.geometry(_from_unit(a), ops)                # perspective / aspect / scale / offset last, so everything above lines up
 
 
 def apply_edit(src: Path, ops: dict, dst: Path):

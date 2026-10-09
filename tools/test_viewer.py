@@ -214,6 +214,11 @@ finally:
     except Exception:
         srv.kill()
 
+sys.path.insert(0, str(ROOT))
+from app import viewer as _viewer  # noqa: E402
+_c = _viewer.clean_ops({"whites": 50, "blacks": -20, "texture": 300, "dehaze": 10, "grain": 30, "nr_lum": 40, "nr_color": 20, "clarity": 15, "evil": 9})
+check("the viewer's editor takes the simple new tools (whites, blacks, texture, dehaze, grain, noise reduction, clarity), clamped, nothing else",
+      _c == {"whites": 50.0, "blacks": -20.0, "texture": 100.0, "dehaze": 10.0, "grain": 30.0, "nr_lum": 40.0, "nr_color": 20.0, "clarity": 15.0}, _c)
 shutil.rmtree(tmp, ignore_errors=True)
 n = res.count(False)
 print(f"\n{len(res) - n}/{len(res)} passed")

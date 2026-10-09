@@ -9,9 +9,9 @@ let cur = null;                         // info of the picture on screen
 let st = { s: 1, x: 0, y: 0, rot: 0, fit: true };
 let nat = { w: 0, h: 0 };
 const NEUTRAL = () => ({ exposure: 0, highlights: 0, shadows: 0, contrast: 100, brightness: 100, saturation: 100, temperature: 0, tint: 0,
-  vibrance: 0, sharpness: 0, vignette: 0, bw: false, angle: 0, crop: [0, 0, 1, 1], cropOn: false, cropAuto: true, aspect: 'free' });
+  vibrance: 0, sharpness: 0, vignette: 0, clarity: 0, whites: 0, blacks: 0, texture: 0, dehaze: 0, grain: 0, nr_lum: 0, nr_color: 0, bw: false, angle: 0, crop: [0, 0, 1, 1], cropOn: false, cropAuto: true, aspect: 'free' });
 const edit = { on: false, ...NEUTRAL() };
-const TONE = ['exposure', 'highlights', 'shadows', 'temperature', 'tint', 'vibrance', 'sharpness', 'vignette'];   // drawn by the server (CSS cannot)
+const TONE = ['exposure', 'highlights', 'shadows', 'temperature', 'tint', 'vibrance', 'sharpness', 'vignette', 'clarity', 'whites', 'blacks', 'texture', 'dehaze', 'grain', 'nr_lum', 'nr_color'];   // drawn by the server (CSS cannot)
 let stripDirty = true, stripKey = null;
 const cache = {};                       // token -> preloaded Image
 
@@ -129,9 +129,12 @@ function filterCss() {
 // ---- the editor ----
 const SLIDERS = [   // [key, label, min, max, step, group]
   ['exposure', t('Exposure'), -3, 3, 0.05, 'light'], ['highlights', t('Highlights'), -100, 100, 1, 'light'], ['shadows', t('Shadows'), -100, 100, 1, 'light'],
+  ['whites', t('Whites'), -100, 100, 1, 'light'], ['blacks', t('Blacks'), -100, 100, 1, 'light'],
   ['contrast', t('Contrast'), 50, 150, 1, 'light'], ['brightness', t('Brightness'), 50, 150, 1, 'light'],
   ['temperature', t('Temperature'), -100, 100, 1, 'colour'], ['tint', t('Tint'), -100, 100, 1, 'colour'], ['vibrance', t('Vibrance'), -100, 100, 1, 'colour'],
-  ['saturation', t('Saturation'), 0, 200, 1, 'colour'], ['sharpness', t('Sharpness'), 0, 100, 1, 'detail'], ['vignette', t('Vignette'), -100, 100, 1, 'detail'],
+  ['saturation', t('Saturation'), 0, 200, 1, 'colour'], ['clarity', t('Clarity'), -100, 100, 1, 'detail'], ['texture', t('Texture'), -100, 100, 1, 'detail'], ['dehaze', t('Dehaze'), -100, 100, 1, 'detail'],
+  ['sharpness', t('Sharpness'), 0, 100, 1, 'detail'], ['nr_lum', t('Luminance noise reduction'), 0, 100, 1, 'detail'], ['nr_color', t('Color noise reduction'), 0, 100, 1, 'detail'],
+  ['vignette', t('Vignette'), -100, 100, 1, 'detail'], ['grain', t('Grain'), 0, 100, 1, 'detail'],
 ];
 const NEUTRAL_OF = k => ({ contrast: 100, brightness: 100, saturation: 100 }[k] ?? 0);
 const ASPECTS = [['free', t('Free')], ['orig', t('Original')], ['1:1', '1 : 1'], ['4:3', '4 : 3'], ['3:2', '3 : 2'], ['16:9', '16 : 9'], ['5:4', '5 : 4'], ['10x15', '10 × 15 cm'], ['13x18', '13 × 18 cm'], ['35x45', t('Passport 35 × 45 mm')]];

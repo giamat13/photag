@@ -1231,7 +1231,7 @@ function tbAttrs(){
 function renderToolbar(){
   const tb=$('#toolbar');
   if(S.mod==='develop'){ const p=actPhoto();
-    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="${t("Before/After (\\)")}">${t("Before / After")}</button><span class="tb-sep"></span>
+    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="${t("Before/After (\\)")}">${t("Before / After")}</button><button class="tb-btn ${DEV.view==='side'?'on':''}" data-t="viewside" title="${t('Before and after, side by side (Y)')}">${t('Side by side')}</button><button class="tb-btn ${DEV.view==='split'?'on':''}" data-t="viewsplit" title="${t('Before and after, split (Shift+Y)')}">${t('Split')}</button><span class="tb-sep"></span>
       <button class="tb-btn ${DEV.crop?'on':''}" data-t="crop" title="${t("Crop (R)")}">${I('crop')}</button><span class="spacer"></span>
       <span class="tb-info">${p?`<bdi>${esc(p.filename)}</bdi>`:''}${DEV.dirty?t(' · unapplied changes'):''}</span>`; return; }
   let h = tbViews() + '<span class="tb-sep"></span>';
@@ -1260,7 +1260,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
   else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
   else if(tg==='rank') rankSelected(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
-  else if(tg==='before') devBefore(); else if(tg==='crop') devCropToggle();
+  else if(tg==='before') devBefore(); else if(tg==='viewside') devView('side'); else if(tg==='viewsplit') devView('split'); else if(tg==='crop') devCropToggle();
   else if(tg==='flythrough') mapFlythrough();
 });
 $('#toolbar').addEventListener('change', e=>{ if(e.target.dataset.t==='sort'){ S.sort=e.target.value; S.asc=SORT_ASC_FIRST.has(S.sort); pref.set('sort',S.sort); pref.set('asc',S.asc); applyFilter(); renderToolbar(); } });
@@ -1511,20 +1511,26 @@ const DEV = {id:null, ops:null, saved:null, hist:[], crop:false, before:false, d
 const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1],
   exp:0, hi:0, sh:0, temp:0, tint:0, vib:0, cla:0, shp:0, blr:0, vig:0, sep:0, fh:false, fv:false,
   wht:0, blk:0, tex:0, dhz:0, grn:0, grs:25, grr:50, vgm:50, vgf:50, vgr:0, vgh:0,
-  crv:{}, crp:[0,0,0,0], mix:{}, bwm:{}, grd:{}, cal:{}});
+  shr:50, shd:25, shm:0, nrl:0, nrc:0, nrd:50,
+  lnd:0, lnv:0, car:0, cab:0, caa:false, dfr:0, pv:0, ph:0, gas:0, gsc:100, gx:0, gy:0,
+  crv:{}, crp:[0,0,0,0], mix:{}, bwm:{}, grd:{}, cal:{}, sp:[], rey:[], lut:{}, mk:[]});
 // slider key -> develop-setting name, for the settings that change the picture itself (the server draws their preview)
 const TONEK = {exp:'exposure', hi:'highlights', sh:'shadows', temp:'temperature', tint:'tint', vib:'vibrance', cla:'clarity', shp:'sharpness', blr:'blur', vig:'vignette', sep:'sepia',
-  wht:'whites', blk:'blacks', tex:'texture', dhz:'dehaze', grn:'grain', grs:'grain_size', grr:'grain_rough', vgm:'vignette_mid', vgf:'vignette_feather', vgr:'vignette_round', vgh:'vignette_hl'};
-const STYLE_OF = {grs:'grn', grr:'grn', vgm:'vig', vgf:'vig', vgr:'vig', vgh:'vig'};
-const TONE_DEFAULT = {grs:25, grr:50, vgm:50, vgf:50};                 // the sliders whose resting place is not 0
+  wht:'whites', blk:'blacks', tex:'texture', dhz:'dehaze', grn:'grain', grs:'grain_size', grr:'grain_rough', vgm:'vignette_mid', vgf:'vignette_feather', vgr:'vignette_round', vgh:'vignette_hl',
+  shr:'sharp_radius', shd:'sharp_detail', shm:'sharp_mask', nrl:'nr_lum', nrc:'nr_color', nrd:'nr_detail',
+  lnd:'lens_dist', lnv:'lens_vig', car:'ca_r', cab:'ca_b', caa:'ca_auto', dfr:'defringe', pv:'persp_v', ph:'persp_h', gas:'geo_aspect', gsc:'geo_scale', gx:'geo_x', gy:'geo_y'};
+const STYLE_OF = {grs:'grn', grr:'grn', vgm:'vig', vgf:'vig', vgr:'vig', vgh:'vig', shr:'shp', shd:'shp', shm:'shp', nrd:['nrl','nrc']};
+const TONE_DEFAULT = {grs:25, grr:50, vgm:50, vgf:50, shr:50, shd:25, nrd:50, gsc:100};                 // the sliders whose resting place is not 0
 // nested settings: key in DEV.ops -> name in the develop settings. They are replaced as a whole (never changed in place), so History keeps its copies.
-const NESTK = {crv:'curve', crp:'curve_p', mix:'mixer', bwm:'bwmix', grd:'grading', cal:'calib'};
+const NESTK = {crv:'curve', crp:'curve_p', mix:'mixer', bwm:'bwmix', grd:'grading', cal:'calib', sp:'spots', rey:'redeye', lut:'lut', mk:'masks'};
 const BANDS = ['red','orange','yellow','green','aqua','blue','purple','magenta'];
 const BAND_RGB = ['#e0453a','#e8943a','#e6d43a','#4fbf4f','#3ac4c4','#3a6fe0','#8a4fd9','#d94fb8'];
 const BAND_NAME = {red:t('Red'), orange:t('Orange'), yellow:t('Yellow'), green:t('Green'), aqua:t('Aqua'), blue:t('Blue'), purple:t('Purple'), magenta:t('Magenta')};
 const nestedActive = (k, v) => {
   if(!v) return false;
   if(k==='crp') return v.some(x=>x);
+  if(k==='sp' || k==='rey' || k==='mk') return v.length>0;
+  if(k==='lut') return !!v.name;
   if(k==='crv') return Object.values(v).some(pts=>pts && pts.some(p=>Math.abs(p[0]-p[1])>1e-4));
   if(k==='grd') return ['shadows','mid','high'].some(r=>v[r] && (v[r][1] || v[r][2]));
   return Object.values(v).some(x=>Array.isArray(x) ? x.some(y=>y) : x);
@@ -1533,8 +1539,8 @@ const toneApi = o => {
   const r={};
   for(const [k,n] of Object.entries(TONEK)){
     const d=TONE_DEFAULT[k]||0, master = STYLE_OF[k];
-    if(master && !o[master]) continue;                                  // grain size / vignette handles mean nothing while their amount is 0
-    if(o[k]!=null && o[k]!==d) r[n] = k==='exp' ? o[k]/100 : o[k];
+    if(master && ![].concat(master).some(m=>o[m])) continue;                                  // grain size / vignette handles mean nothing while their amount is 0
+    if(o[k]!=null && o[k]!==d && o[k]!==false) r[n] = k==='exp' ? o[k]/100 : o[k];
   }
   for(const [k,n] of Object.entries(NESTK)) if(nestedActive(k, o[k])) r[n] = o[k];
   return r;
@@ -1557,7 +1563,7 @@ const PRESETS = [
 ];
 async function devOpen(){
   const p=actPhoto();
-  DEV.crop=false; DEV.before=false; DEV.dirty=false;
+  DEV.crop=false; DEV.before=false; DEV.dirty=false; DEV.mi=null; DEV.mc=0; DEV.si=null; DEV.tool=null; DEV.origImg=null;
   if(!p){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); return; }
   if(p.is_video){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); toast(t('Editing is available for photos only')); return; }
   DEV.id=p.id;
@@ -1568,38 +1574,88 @@ async function devOpen(){
   for(const [k,n] of Object.entries(TONEK)) if(o[n]!=null) DEV.ops[k] = k==='exp' ? Math.round(o[n]*100) : o[n];
   for(const [k,n] of Object.entries(NESTK)) if(o[n]!=null) DEV.ops[k] = JSON.parse(JSON.stringify(o[n]));
   DEV.pvKey = null;
+  DEV.preBase = null; DEV.preIdx = null; loadSnaps(); if(!DEV.userPresets) loadDevLists();
   DEV.saved = JSON.stringify(DEV.ops);
   DEV.hist=[{t:d.edited?t('Saved Settings'):t('Import'), ops:{...DEV.ops}}];
-  const img=$('#dev-img'); img.onload=()=>{ layoutDev(); drawHisto(img); };
+  const img=$('#dev-img'); img.onload=()=>{ layoutDev(); drawHisto(img); devClipping(); };
   img.src = DEV.orig = `/original/${p.id}${VER[p.id]?'?v='+VER[p.id]:''}`;
   devPreview();
   renderDevPanels(); renderToolbar(); updateNavigator();
 }
 async function devLeave(){ if(DEV.id!=null && DEV.dirty) await devApply(true); }
+// where a picture of w x h, turned by rot and cut to the crop c, goes inside the box [x0, x0+SW] x [pad, pad+SH]
+function fitCanvas(w, h, rot, c, SW, SH, x0, pad){
+  const th=rot*Math.PI/180, C=Math.abs(Math.cos(th)), Sn=Math.abs(Math.sin(th)), BW=w*C+h*Sn, BH=w*Sn+h*C;
+  const s=Math.min(SW/((c[2]-c[0])*BW), SH/((c[3]-c[1])*BH)), cw=BW*s, ch=BH*s;
+  return {s, cw, ch, left:x0+SW/2-(c[0]+c[2])/2*cw, top:pad+SH/2-(c[1]+c[3])/2*ch};
+}
+function styleCanvas(cv, img, w, h, f, rot, c, filter, flipT, clip){
+  Object.assign(cv.style, {left:f.left+'px', top:f.top+'px', width:f.cw+'px', height:f.ch+'px', clipPath: clip || `inset(${c[1]*100}% ${(1-c[2])*100}% ${(1-c[3])*100}% ${c[0]*100}%)`});
+  Object.assign(img.style, {width:w*f.s+'px', height:h*f.s+'px', left:(f.cw-w*f.s)/2+'px', top:(f.ch-h*f.s)/2+'px', transform:`rotate(${rot}deg)`, filter});
+  cv.style.transformOrigin = `${(c[0]+c[2])/2*f.cw}px ${(c[1]+c[3])/2*f.ch}px`;
+  cv.style.transform = flipT || '';
+}
 function layoutDev(){
   const img=$('#dev-img'), cv=$('#dev-canvas'), st=$('#v-develop');
   if(!img.naturalWidth || DEV.id==null) return;
-  const pad=24, SW=st.clientWidth-2*pad, SH=st.clientHeight-2*pad;
+  const pad=24, SWfull=st.clientWidth-2*pad, SH=st.clientHeight-2*pad;
   const o=DEV.ops, w=img.naturalWidth, h=img.naturalHeight;
-  const th = (DEV.before?0:o.rot)*Math.PI/180, C=Math.abs(Math.cos(th)), Sn=Math.abs(Math.sin(th));
-  const BW=w*C+h*Sn, BH=w*Sn+h*C;
-  const c = (DEV.crop||DEV.before) ? [0,0,1,1] : o.crop;
-  const s = Math.min(SW/((c[2]-c[0])*BW), SH/((c[3]-c[1])*BH));
-  const cw=BW*s, ch=BH*s;
-  const left = pad + SW/2 - (c[0]+c[2])/2*cw, top = pad + SH/2 - (c[1]+c[3])/2*ch;
-  Object.assign(cv.style, {left:left+'px', top:top+'px', width:cw+'px', height:ch+'px',
-    clipPath:`inset(${c[1]*100}% ${(1-c[2])*100}% ${(1-c[3])*100}% ${c[0]*100}%)`});
-  Object.assign(img.style, {width:w*s+'px', height:h*s+'px', left:(cw-w*s)/2+'px', top:(ch-h*s)/2+'px',
-    transform:`rotate(${DEV.before?0:o.rot}deg)`,
-    filter: DEV.before ? '' : `brightness(${fac(o.bri,.3)}) contrast(${fac(o.con,.3)}) saturate(${fac(o.sat,0)})${o.gray?' grayscale(1)':''}`});
+  const view = (DEV.crop || DEV.before) ? 'after' : (DEV.view || 'after');
+  const side = view==='side', SW = side ? (SWfull-pad)/2 : SWfull;
+  const rot = DEV.before?0:o.rot, c = (DEV.crop||DEV.before) ? [0,0,1,1] : o.crop;
+  const f = fitCanvas(w, h, rot, c, SW, SH, side ? pad+SW+pad : pad, pad);
+  const filter = DEV.before ? '' : `brightness(${fac(o.bri,.3)}) contrast(${fac(o.con,.3)}) saturate(${fac(o.sat,0)})${o.gray?' grayscale(1)':''}`;
   const flip = !DEV.before && !DEV.crop && (o.fh || o.fv);                 // flips are applied last: mirror the picture around the visible centre
-  cv.style.transformOrigin = `${(c[0]+c[2])/2*cw}px ${(c[1]+c[3])/2*ch}px`;
-  cv.style.transform = flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '';
+  styleCanvas(cv, img, w, h, f, rot, c, filter, flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '');
+  // the original beside the edited picture ("side") or under half of it ("split")
+  const cv0=$('#dev-canvas0'), img0=$('#dev-img0'), bar=$('#split-bar');
+  cv0.classList.toggle('hidden', view==='after'); bar.classList.toggle('hidden', view!=='split');
+  $('#lbl-before').classList.toggle('hidden', view==='after'); $('#lbl-after').classList.toggle('hidden', view!=='side');
+  if(view!=='after'){
+    if(!img0.src.endsWith(DEV.orig||'?')) img0.src = DEV.orig;
+    if(side){
+      const f0 = fitCanvas(w, h, 0, [0,0,1,1], SW, SH, pad, pad);
+      styleCanvas(cv0, img0, w, h, f0, 0, [0,0,1,1], '', '');
+      Object.assign($('#lbl-before').style, {left:pad+'px'}); Object.assign($('#lbl-after').style, {left:(pad+SW+pad)+'px'});
+    } else {
+      const pos = DEV.split ?? .5, sx = c[0]*f.cw + (c[2]-c[0])*f.cw*pos;
+      styleCanvas(cv0, img0, w, h, f, rot, c, '', flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '', `inset(${c[1]*100}% ${f.cw-sx}px ${(1-c[3])*100}% ${c[0]*100}%)`);
+      bar.style.left = (f.left + sx) + 'px'; Object.assign($('#lbl-before').style, {left:(f.left+c[0]*f.cw+8)+'px'});
+      bar._geo = {left:f.left + c[0]*f.cw, width:(c[2]-c[0])*f.cw};
+    }
+  }
+  const tint=$('#mask-tint'); if(tint){ Object.assign(tint.style, {width:img.style.width, height:img.style.height, left:img.style.left, top:img.style.top, transform:img.style.transform}); }
+  const cc=$('#clip-cv'); if(cc){ Object.assign(cc.style, {width:img.style.width, height:img.style.height, left:img.style.left, top:img.style.top, transform:img.style.transform}); }
+  toolDraw(); if(DEV.clipOn) devClipping();
   $('#dev-badge').classList.toggle('hidden', !DEV.before);
-  const ov=$('#crop-ov'); ov.classList.toggle('hidden', !DEV.crop);
+  const left=f.left, top=f.top, cw=f.cw, ch=f.ch;
+  const ov=$('#crop-ov'); ov.classList.toggle('hidden', !DEV.crop); ov.dataset.ovl = DEV.ovl || pref.get('cropOverlay','thirds');
   if(DEV.crop){ const k=o.crop; Object.assign(ov.style, {left:left+k[0]*cw+'px', top:top+k[1]*ch+'px', width:(k[2]-k[0])*cw+'px', height:(k[3]-k[1])*ch+'px'});
     ov._box={left, top, cw, ch}; if(!ov.children.length) ov.innerHTML=['nw','n','ne','e','se','s','sw','w'].map(h=>`<i data-h="${h}"></i>`).join(''); }
 }
+// before / after views: Y = side by side, Shift+Y = split with a draggable line, again = back to one picture
+function devView(v){
+  if(DEV.id==null) return; DEV.view = DEV.view===v ? 'after' : v; if(DEV.crop){ DEV.crop=false; renderDevPanels(); }
+  layoutDev(); renderToolbar(); if(DEV.view!=='after') toast(DEV.view==='side' ? t('Before and after, side by side (Y)') : t('Before and after, split (Shift+Y)'), 1400);
+}
+$('#split-bar').addEventListener('mousedown', e=>{
+  e.preventDefault(); const g=$('#split-bar')._geo; if(!g) return;
+  const mv=ev=>{ const r=$('#v-develop').getBoundingClientRect(); DEV.split = clamp((ev.clientX-r.left-g.left)/g.width, .02, .98); layoutDev(); };
+  const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); };
+  addEventListener('mousemove',mv); addEventListener('mouseup',up);
+});
+// clipping warnings (J): blown highlights red, crushed shadows blue, drawn from the picture on screen
+function devClipping(){
+  const cc=$('#clip-cv'), img=$('#dev-img'); if(!cc) return;
+  if(!DEV.clipOn || !img.naturalWidth){ cc.classList.add('hidden'); return; }
+  const k=Math.min(1, 360/Math.max(img.naturalWidth, img.naturalHeight)), W=Math.max(2,Math.round(img.naturalWidth*k)), H=Math.max(2,Math.round(img.naturalHeight*k));
+  const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H; const x=tmp.getContext('2d'); x.filter=img.style.filter||'none'; x.drawImage(img,0,0,W,H);
+  let d; try{ d=x.getImageData(0,0,W,H); }catch(e){ return; }
+  const px=d.data; for(let i=0;i<px.length;i+=4){ const r=px[i],g=px[i+1],b=px[i+2], mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+    if(mn>=250){ px[i]=255; px[i+1]=40; px[i+2]=40; px[i+3]=200; } else if(mx<=4){ px[i]=40; px[i+1]=90; px[i+2]=255; px[i+3]=200; } else px[i+3]=0; }
+  cc.width=W; cc.height=H; cc.getContext('2d').putImageData(d,0,0); cc.classList.remove('hidden');
+}
+function devClipToggle(){ if(DEV.id==null) return; DEV.clipOn=!DEV.clipOn; devClipping(); toast(DEV.clipOn ? t('Clipping warnings on (J): red = blown highlights, blue = crushed shadows') : t('Clipping warnings off'), 1800); }
 function devSet(changes, label){
   if(DEV.id==null) return;
   Object.assign(DEV.ops, changes);
@@ -1625,6 +1681,38 @@ async function devPreview(force){
 }
 let _pvTimer=null;
 const devPreviewSoon = ()=>{ clearTimeout(_pvTimer); _pvTimer=setTimeout(devPreview, 160); };
+const ASPECTS = [['free',t('Free')],['original',t('Original')],['1:1','1:1'],['4:5','4:5'],['5:7','5:7'],['2:3','2:3'],['3:2','3:2'],['4:3','4:3'],['3:4','3:4'],['16:9','16:9'],['16:10','16:10']];
+const OVERLAYS = [['thirds',t('Rule of thirds')],['grid',t('Grid')],['golden',t('Golden ratio')],['none',t('No guide')]];
+// size of the turned picture in its own pixels (what the crop fractions are fractions of)
+function devBoxDims(){
+  const img=$('#dev-img'), th=(DEV.ops?.rot||0)*Math.PI/180, C=Math.abs(Math.cos(th)), Sn=Math.abs(Math.sin(th)), w=img.naturalWidth||1, h=img.naturalHeight||1;
+  return [w*C+h*Sn, w*Sn+h*C];
+}
+function aspectRatio(){
+  const a=DEV.aspect; if(!a || a==='free') return 0;
+  if(a==='original'){ const img=$('#dev-img'); return (img.naturalWidth||1)/(img.naturalHeight||1); }
+  const [x,y]=a.split(':').map(Number); return x/y;
+}
+// the biggest crop of this ratio, centred on the middle of the present crop and inside the picture
+function devFitAspect(){
+  const r=aspectRatio(); if(!r || DEV.id==null) return;
+  const [BW,BH]=devBoxDims(), c=DEV.ops.crop; let cx=(c[0]+c[2])/2, cy=(c[1]+c[3])/2;
+  let w=c[2]-c[0], h=w*BW/r/BH; if(h>c[3]-c[1]){ h=c[3]-c[1]; w=h*BH*r/BW; }
+  w=Math.min(w,1); h=Math.min(h,1); cx=clamp(cx,w/2,1-w/2); cy=clamp(cy,h/2,1-h/2);
+  devSet({crop:[cx-w/2,cy-h/2,cx+w/2,cy+h/2]}, `${t('Crop')} ${DEV.aspect==='original'?t('Original'):DEV.aspect}`);
+}
+// keeps the ratio while a handle is dragged: h = the handle, c = [x1,y1,x2,y2] already moved
+function enforceAspect(h, c){
+  const r=aspectRatio(); if(!r) return c; const [BW,BH]=devBoxDims();
+  let [x1,y1,x2,y2]=c; const horiz=h.includes('e')||h.includes('w'), vert=h.includes('n')||h.includes('s');
+  if(horiz){ const hh=(x2-x1)*BW/r/BH; if(h.includes('n')) y1=y2-hh; else if(h.includes('s')) y2=y1+hh; else { const m=(y1+y2)/2; y1=m-hh/2; y2=m+hh/2; } }
+  else if(vert){ const ww=(y2-y1)*BH*r/BW, m=(x1+x2)/2; x1=m-ww/2; x2=m+ww/2; }
+  // inside the picture: shrink about the corner that stays put
+  const ax = h.includes('w')?x2:h.includes('e')?x1:(x1+x2)/2, ay = h.includes('n')?y2:h.includes('s')?y1:(y1+y2)/2;
+  let k=1; for(const [v,a_,lim] of [[x1,ax,0],[x2,ax,1],[y1,ay,0],[y2,ay,1]]){ if((lim===0 && v<0) || (lim===1 && v>1)){ const d=v-a_; if(d) k=Math.min(k,(lim-a_)/d); } }
+  if(k<1){ x1=ax+(x1-ax)*k; x2=ax+(x2-ax)*k; y1=ay+(y1-ay)*k; y2=ay+(y2-ay)*k; }
+  return [x1,y1,x2,y2];
+}
 function renderDevPanels(){
   const o=DEV.ops || NEUTRAL(), dis = DEV.id==null ? 'disabled' : '';
   const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="${t("Double-click to reset")}"><output>${dfmt(k,o[k])}</output></div>`;
@@ -1637,7 +1725,9 @@ function renderDevPanels(){
     <div class="wbrow"><select data-wb ${dis} title="${t('White balance preset')}">${WB_PRESET_LIST.map(([n],i)=>`<option value="${i}">${n}</option>`).join('')}</select><button data-t="wbpick" class="${DEV.pick?'on':''}" ${dis} title="${t('Click a neutral grey area of the photo to set the white balance')}">${I('pick')} ${t('Pick')}</button></div>
     ${sl('temp',t('Temperature'),'temp')}${sl('tint',t('Tint'),'tint')}${sl('vib',t('Vibrance'),'sat')}${sl('sat',t('Saturation'),'sat')}
     <div class="dsec">${t("Detail")}</div>
-    ${sl('cla',t('Clarity'),'',0,100)}${sl('tex',t('Texture'),'')}${sl('dhz',t('Dehaze'),'')}${sl('shp',t('Sharpness'),'',0,100)}${sl('blr',t('Blur'),'',0,100)}
+    ${sl('cla',t('Clarity'),'',0,100)}${sl('tex',t('Texture'),'')}${sl('dhz',t('Dehaze'),'')}${sl('shp',t('Sharpness'),'',0,100)}${sl('shr',t('Radius'),'',0,100)}${sl('shd',t('Detail'),'',0,100)}${sl('shm',t('Masking'),'',0,100)}${sl('blr',t('Blur'),'',0,100)}
+    <div class="dsec">${t("Noise Reduction")}</div>
+    ${sl('nrl',t('Luminance'),'',0,100)}${sl('nrc',t('Color'),'',0,100)}${sl('nrd',t('Detail'),'',0,100)}
     <div class="dsec">${t("Effects")}</div>
     ${sl('vig',t('Vignette'),'exp')}${sl('vgm',t('Midpoint'),'',0,100)}${sl('vgf',t('Feather'),'',0,100)}${sl('vgr',t('Roundness'),'')}${sl('vgh',t('Highlights'),'',0,100)}
     ${sl('sep',t('Sepia'),'',0,100)}
@@ -1649,28 +1739,35 @@ function renderDevPanels(){
     <div class="dsl"><label for="d-straight">${t("Straighten")}</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
     <div class="btnrow90"><button data-rot="-90" ${dis}>${I('rotl')} 90°</button><button data-rot="90" ${dis}>90° ${I('rotr')}</button></div>
     <div class="btnrow90"><button data-flip="h" class="${o.fh?'on':''}" ${dis}>${t("Flip horizontally")}</button><button data-flip="v" class="${o.fv?'on':''}" ${dis}>${t("Flip vertically")}</button></div>
-    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('Done Cropping (Enter)'):t('Crop (R)')}</button><button data-t="cropreset" ${dis}>${t("Reset Crop")}</button></div>`;
-  $('#p-presets').innerHTML = PRESETS.map(([n],i)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${n}</span></div>`).join('');
+    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('Done Cropping (Enter)'):t('Crop (R)')}</button><button data-t="cropreset" ${dis}>${t("Reset Crop")}</button></div>
+    <div class="btnrow90"><select data-aspect ${dis} title="${t('Aspect ratio of the crop')}">${ASPECTS.map(([k,n])=>`<option value="${k}" ${DEV.aspect===k?'selected':''}>${n}</option>`).join('')}</select>
+      <select data-overlay ${dis} title="${t('Crop guide')}">${OVERLAYS.map(([k,n])=>`<option value="${k}" ${(DEV.ovl||pref.get('cropOverlay','thirds'))===k?'selected':''}>${n}</option>`).join('')}</select></div>`;
+  renderPresetsPanel(); renderSnapsPanel();
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
 }
 // ---- the advanced panels: tone curve, colour mixer / black & white mix, colour grading, calibration (issue #6) + white balance helpers
 const WB_PRESET_LIST = [[t('As Shot'),0,0],[t('Cloudy'),18,6],[t('Shade'),32,8],[t('Tungsten'),-45,6],[t('Fluorescent'),-12,24],[t('Flash'),6,2]];
 const nGet = (path, d) => { let v=DEV.ops; for(const k of path){ v = v==null ? v : v[k]; } return v==null ? d : v; };
-const nDefault = path => path[0]==='grd' && path[1]==='blend' ? 50 : 0;
+const nDefault = path => (path[0]==='grd' && path[1]==='blend') || (path[0]==='mk' && path[path.length-1]==='amount') ? (path[0]==='mk' ? 100 : 50) : (path[0]==='mk' && path[path.length-1]==='smooth') ? 40 : (path[0]==='mk' && path[path.length-1]==='tol') ? 40 : (path[0]==='mk' && path[path.length-1]==='feather') ? 50 : (path[0]==='mk' && path[path.length-1]==='hi') ? 1 : 0;
 // replaces DEV.ops[path[0]] by an edited copy (History keeps the old objects)
 function nPut(path, val){
   const root = JSON.parse(JSON.stringify(DEV.ops[path[0]])); let node = root;
   for(let i=1;i<path.length-1;i++){
-    if(node[path[i]]==null) node[path[i]] = (path[0]==='cal' ? [0,0] : [0,0,0]);
+    if(node[path[i]]==null) node[path[i]] = path[0]==='mk' ? (typeof path[i+1]==='number' ? [] : {}) : (path[0]==='cal' ? [0,0] : [0,0,0]);
     node = node[path[i]];
   }
   node[path[path.length-1]] = val; DEV.ops[path[0]] = root;
 }
 const nfmt = (v, hue) => hue ? v+'°' : (v>0?'+':'')+v;
+// a slider for a nested setting: path = ['mk', 0, 'adj', 'exposure']; opt.sc = the page shows value*sc (stored value = shown / sc)
+const mkNsl = dis => (path, label, min, max, opt={}) => {
+  const sc = opt.sc || 1, raw = nGet(path, nDefault(path)), v = Math.round(raw*sc), id = 'n-'+path.join('-');
+  const out = opt.dec ? ((v>0?'+':'')+(v/sc).toFixed(opt.dec)) : opt.plain ? v : nfmt(v, opt.hue);
+  return `<div class="dsl ${opt.cls||''}" ${opt.track?`style="--track:${opt.track}"`:''}><label for="${id}" title="${label}">${label}</label><input id="${id}" data-n="${path.join('.')}" data-l="${esc(opt.lab||label)}" ${opt.hue?'data-hue="1"':''} ${opt.plain?'data-plain="1"':''} ${sc!==1?`data-sc="${sc}"`:''} ${opt.dec?`data-dec="${opt.dec}"`:''} type="range" min="${min}" max="${max}" step="1" value="${v}" ${dis} title="${t('Double-click to reset')}"><output>${out}</output></div>`;
+};
 function renderAdvPanels(o, dis, sl){
-  const nsl = (path, label, min, max, opt={}) => { const v = nGet(path, nDefault(path)), id = 'n-'+path.join('-');
-    return `<div class="dsl ${opt.cls||''}" ${opt.track?`style="--track:${opt.track}"`:''}><label for="${id}" title="${label}">${label}</label><input id="${id}" data-n="${path.join('.')}" data-l="${esc(opt.lab||label)}" ${opt.hue?'data-hue="1"':''} type="range" min="${min}" max="${max}" step="1" value="${v}" ${dis} title="${t('Double-click to reset')}"><output>${opt.plain?v:nfmt(v, opt.hue)}</output></div>`; };
+  const nsl = mkNsl(dis);
   // tone curve
   const ch = DEV.curveCh || 'rgb', crp = o.crp || [0,0,0,0];
   $('#p-curve').innerHTML = `<div class="treat curve-ch">${[['rgb',t('RGB')],['r',t('Red')],['g',t('Green')],['b',t('Blue')]].map(([k,n])=>`<a data-cch="${k}" class="${ch===k?'on':''}">${n}</a>`).join('')}</div>
@@ -1692,10 +1789,21 @@ function renderAdvPanels(o, dis, sl){
   const reg = (key, name) => `<div class="dsec">${name}</div>` + nsl(['grd',key,0], t('Hue'), 0, 360, {track:hueTrack, hue:1, lab:`${name} · ${t('Hue')}`}) + nsl(['grd',key,1], t('Saturation'), 0, 100, {plain:1, lab:`${name} · ${t('Saturation')}`}) + nsl(['grd',key,2], t('Luminance'), -100, 100, {cls:'exp', lab:`${name} · ${t('Luminance')}`});
   $('#p-grading').innerHTML = reg('shadows', t('Shadows')) + reg('mid', t('Midtones')) + reg('high', t('Highlights')) +
     `<div class="dsec">${t('Blend and balance')}</div>` + nsl(['grd','blend'], t('Blend'), 0, 100, {plain:1}) + nsl(['grd','balance'], t('Balance'), -100, 100);
+  // lens corrections, geometry
+  $('#p-lens').innerHTML = `${sl('lnd',t('Distortion'),'')}${sl('lnv',t('Lens vignetting'),'exp')}
+    <div class="dsec">${t('Chromatic aberration')}</div>
+    <label class="chk"><input type="checkbox" data-chk="caa" ${o.caa?'checked':''} ${dis}> ${t('Remove automatically')}</label>
+    ${sl('car',t('Red / cyan fringe'),'')}${sl('cab',t('Blue / yellow fringe'),'')}${sl('dfr',t('Defringe'),'',0,100)}`;
+  $('#p-geo').innerHTML = `<div class="dsec">${t('Upright')}</div>
+    <div class="btnrow90"><button data-up="auto" ${dis}>${t('Auto')}</button><button data-up="level" ${dis}>${t('Level')}</button></div>
+    <div class="btnrow90"><button data-up="vertical" ${dis}>${t('Vertical')}</button><button data-up="full" ${dis}>${t('Full')}</button></div>
+    <div class="dsec">${t('Manual')}</div>
+    ${sl('pv',t('Vertical'),'')}${sl('ph',t('Horizontal'),'')}${sl('gas',t('Aspect'),'')}${sl('gsc',t('Scale'),'',100,200)}${sl('gx',t('X offset'),'')}${sl('gy',t('Y offset'),'')}`;
   // calibration
   const cs = (key, name, c) => `<div class="dsec">${name}</div>` + nsl(['cal',key,0], t('Hue'), -100, 100, {lab:`${name} · ${t('Hue')}`}) + nsl(['cal',key,1], t('Saturation'), -100, 100, {track:`linear-gradient(90deg,#808080,${c})`, lab:`${name} · ${t('Saturation')}`});
   $('#p-calib').innerHTML = `<div class="dsec">${t('Shadows')}</div>` + nsl(['cal','shadow_tint'], t('Tint'), -100, 100, {cls:'tint'}) +
     cs('red', t('Red primary'), '#e0453a') + cs('green', t('Green primary'), '#4fbf4f') + cs('blue', t('Blue primary'), '#3a6fe0');
+  renderToolPanels(o, dis, sl, nsl);
 }
 // the curve editor: the same monotone curve the server draws (Fritsch-Carlson), points are dragged with the mouse, double-click removes one
 function pchipJs(xs, ys, x){
@@ -1747,9 +1855,9 @@ document.addEventListener('dblclick', e=>{
 const nPath = el => el.dataset.n.split('.').map(x=>/^\d+$/.test(x) ? +x : x);
 $('#right').addEventListener('input', e=>{
   const n = e.target.dataset.n; if(!n || DEV.id==null) return;
-  const path = nPath(e.target), v = +e.target.value; nPut(path, v);
-  e.target.nextElementSibling.textContent = e.target.dataset.hue ? v+'°' : /^grd\.(\w+\.1|blend)$/.test(n) ? v : nfmt(v);
-  DEV.dirty = true; devPreviewSoon();
+  const path = nPath(e.target), v = +e.target.value, sc = +e.target.dataset.sc || 1; nPut(path, v / sc);
+  e.target.nextElementSibling.textContent = e.target.dataset.dec ? (v>0?'+':'')+(v/sc).toFixed(+e.target.dataset.dec) : e.target.dataset.hue ? v+'°' : (e.target.dataset.plain || /^grd\.(\w+\.1|blend)$/.test(n)) ? v : nfmt(v);
+  DEV.dirty = true; devPreviewSoon(); if(path[0]==='mk') maskTintSoon();
 });
 $('#right').addEventListener('change', e=>{ if(e.target.dataset.n && DEV.id!=null) devSet({}, `${e.target.dataset.l} ${e.target.value}`); });
 $('#right').addEventListener('dblclick', e=>{
@@ -1760,12 +1868,28 @@ $('#right').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
   const cc = e.target.closest('[data-cch]'); if(cc){ DEV.curveCh = cc.dataset.cch; renderDevPanels(); return; }
   const mx = e.target.closest('[data-mix]'); if(mx){ DEV.mixTab = +mx.dataset.mix; renderDevPanels(); return; }
+  const up = e.target.closest('[data-up]'); if(up){ devUpright(up.dataset.up); return; }
   if(e.target.closest('[data-t="curvereset"]')) devSet({crv:{}, crp:[0,0,0,0]}, t('Reset Curve'));
   if(e.target.closest('[data-t="wbpick"]')) wbPickToggle();
 });
 $('#right').addEventListener('change', e=>{
+  if(e.target.dataset.aspect != null && DEV.id!=null){ DEV.aspect = e.target.value; devFitAspect(); return; }
+  if(e.target.dataset.overlay != null){ DEV.ovl = e.target.value; pref.set('cropOverlay', DEV.ovl); layoutDev(); return; }
+});
+$('#right').addEventListener('change', e=>{
   if(e.target.dataset.wb == null || DEV.id==null) return;
   const [n, tp, ti] = WB_PRESET_LIST[+e.target.value]; devSet({temp:tp, tint:ti}, `${t('White Balance')}: ${n}`);
+});
+async function devUpright(mode){
+  if(DEV.id==null) return;
+  toast(t('Looking for straight lines…'), 1500);
+  let r; try{ r = await api(`/api/photo/${DEV.id}/upright?mode=${mode}`); }catch(e){ return; }
+  devSet({...(mode==='level' ? {} : {pv:r.persp_v||0, ph:mode==='full'||mode==='auto' ? (r.persp_h||0) : DEV.ops.ph}), rot:Math.round(DEV.ops.rot/90)*90 + (r.rotate||0)}, `${t('Upright')}: ${({auto:t('Auto'), level:t('Level'), vertical:t('Vertical'), full:t('Full')})[mode]}`);
+  if(!r.persp_v && !r.persp_h && !r.rotate) toast(t('The lines are already straight'));
+}
+document.addEventListener('change', e=>{
+  const k = e.target.dataset && e.target.dataset.chk; if(!k || DEV.id==null) return;
+  devSet({[k]: e.target.checked}, `${t('Chromatic aberration')}: ${e.target.checked ? t('On') : t('Off')}`);
 });
 // white balance eyedropper: the colour under the click (read from the original file) is made neutral grey -- same formula as the server's wb_from_neutral
 function wbPickToggle(){
@@ -1791,6 +1915,380 @@ $('#v-develop').addEventListener('click', e=>{
   DEV.pick = false; $('#v-develop').classList.remove('picking');
   devSet({temp:clamp(Math.round(tp*100), -100, 100), tint:clamp(Math.round(ti*100), -100, 100)}, t('White Balance'));
 }, true);
+// ---- local adjustments (masks), spot removal and red eye: panels, the drawing on the photo and the mouse (issue #6)
+const MK_KINDS = [['brush',t('Brush')],['linear',t('Linear gradient')],['radial',t('Radial gradient')],['luminance',t('Luminance range')],['color',t('Color range')],['sky',t('Sky')],['subject',t('Subject')],['background',t('Background')]];
+const MK_NAME = Object.fromEntries(MK_KINDS);
+const MK_DEFAULT = {
+  brush:{strokes:[]}, linear:{x1:.3,y1:.5,x2:.7,y2:.5}, radial:{cx:.5,cy:.5,rx:.25,ry:.2,rot:0,feather:50}, luminance:{lo:.6,hi:1,smooth:40}, color:{color:[128,128,128],tol:40}, sky:{}, subject:{}, background:{}};
+// the local adjustments: [key, label, min, max, scale]
+const MK_ADJ = [['exposure',t('Exposure'),-400,400,100],['temp',t('Temperature'),-100,100,1],['tint',t('Tint'),-100,100,1],['contrast',t('Contrast'),-100,100,1],['highlights',t('Highlights'),-100,100,1],
+  ['shadows',t('Shadows'),-100,100,1],['whites',t('Whites'),-100,100,1],['blacks',t('Blacks'),-100,100,1],['texture',t('Texture'),-100,100,1],['clarity',t('Clarity'),-100,100,1],['dehaze',t('Dehaze'),-100,100,1],
+  ['hue',t('Hue'),-100,100,1],['saturation',t('Saturation'),-100,100,1],['sharpness',t('Sharpness'),-100,100,1],['noise',t('Noise'),0,100,1]];
+if(!DEV.brush) DEV.brush = {size:.06, feather:50, flow:100, erase:false, ...pref.get('brush', {})};
+const mkOf = () => DEV.ops && DEV.ops.mk ? DEV.ops.mk[DEV.mi] : null;
+const mcOf = () => { const m = mkOf(); return m ? m.comps[DEV.mc] : null; };
+function mkCommit(mk, label){ devSet({mk}, label); }
+function mkClone(){ return JSON.parse(JSON.stringify(DEV.ops.mk)); }
+function mkAdd(kind){
+  const mk = mkClone(); if(mk.length >= 8) return toast(t('At most 8 masks'));
+  mk.push({name:`${MK_NAME[kind]} ${mk.length+1}`, amount:100, adj:{}, comps:[{kind, op:'add', invert:false, ...JSON.parse(JSON.stringify(MK_DEFAULT[kind]))}]});
+  DEV.mi = mk.length-1; DEV.mc = 0; DEV.tool = 'mask'; mkCommit(mk, `${t('Mask')}: ${MK_NAME[kind]}`);
+}
+function mkAddComp(kind){
+  const mk = mkClone(), m = mk[DEV.mi]; if(!m) return; if(m.comps.length >= 6) return toast(t('At most 6 components'));
+  m.comps.push({kind, op:'add', invert:false, ...JSON.parse(JSON.stringify(MK_DEFAULT[kind]))}); DEV.mc = m.comps.length-1; mkCommit(mk, `${t('Mask')}: ${MK_NAME[kind]}`);
+}
+function renderToolPanels(o, dis, sl, nsl){
+  const mk = o.mk || [], m = mk[DEV.mi] || null;
+  if(DEV.mi >= mk.length){ DEV.mi = mk.length ? mk.length-1 : null; DEV.mc = 0; }
+  const kinds = fn => MK_KINDS.map(([k,n])=>`<button ${fn}="${k}" ${dis}>+ ${n}</button>`).join('');
+  let h = `<div class="mkadd">${kinds('data-mkadd')}</div>`;
+  h += `<div class="rows mkl">${mk.map((x,i)=>`<div class="row ${i===DEV.mi?'on':''}" data-mk="${i}"><span class="nm">${esc(x.name || `${t('Mask')} ${i+1}`)}</span><button data-mkdel="${i}" title="${t('Delete')}">✕</button></div>`).join('')}</div>`;
+  const me = (DEV.mi!=null && m) ? DEV.mi : null;
+  if(m){
+    const c = m.comps[DEV.mc] || m.comps[0], ci = m.comps.indexOf(c);
+    h += `<div class="dsec">${t('Components')}</div><div class="rows mkl">${m.comps.map((cc,j)=>`<div class="row ${j===ci?'on':''}" data-mc="${j}"><span class="nm">${MK_NAME[cc.kind]}</span>${j?`<select data-mcop="${j}"><option value="add" ${cc.op==='add'?'selected':''}>${t('Add')}</option><option value="subtract" ${cc.op==='subtract'?'selected':''}>${t('Subtract')}</option><option value="intersect" ${cc.op==='intersect'?'selected':''}>${t('Intersect')}</option></select>`:''}<label title="${t('Invert')}"><input type="checkbox" data-mcinv="${j}" ${cc.invert?'checked':''}> ${t('Invert')}</label>${m.comps.length>1?`<button data-mcdel="${j}" title="${t('Delete')}">✕</button>`:''}</div>`).join('')}</div>
+      <div class="btnrow90"><select data-mcadd ${dis}><option value="">${t('Add a component…')}</option>${MK_KINDS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select></div>`;
+    const P = k => ['mk', DEV.mi, 'comps', ci, k];
+    if(c.kind==='brush') h += `<div class="dsec">${t('Brush')}</div>${brushSliders(dis)}<div class="btnrow90"><button data-brush="erase" class="${DEV.brush.erase?'on':''}" ${dis}>${t('Erase')}</button><button data-brush="clear" ${dis}>${t('Clear strokes')}</button></div>`;
+    else if(c.kind==='radial') h += nsl(P('feather'), t('Feather'), 0, 100, {plain:1}) + nsl(P('rot'), t('Rotate'), -180, 180);
+    else if(c.kind==='luminance') h += nsl(P('lo'), t('From'), 0, 100, {sc:100, plain:1, cls:'exp'}) + nsl(P('hi'), t('To'), 0, 100, {sc:100, plain:1, cls:'exp'}) + nsl(P('smooth'), t('Smoothness'), 0, 100, {plain:1});
+    else if(c.kind==='color') h += `<div class="btnrow90"><button data-t="mkpick" class="${DEV.pickMk?'on':''}" ${dis}>${I('pick')} ${t('Pick a color')}</button><span class="swatch" style="background:rgb(${c.color.map(Math.round).join(',')})"></span></div>` + nsl(P('tol'), t('Range'), 0, 100, {plain:1});
+    h += `<div class="dsec">${t('Adjustments')}</div>` + nsl(['mk', DEV.mi, 'amount'], t('Amount'), 0, 100, {plain:1});
+    h += MK_ADJ.map(([k,n,lo,hi,sc])=>nsl(['mk', DEV.mi, 'adj', k], n, lo, hi, sc===100 ? {sc:100, dec:2, cls:'exp', lab:`${n} (${m.name})`} : {cls:k==='temp'?'temp':k==='tint'?'tint':k==='saturation'||k==='hue'?'sat':'', lab:`${n} (${m.name})`})).join('');
+    h += `<label class="chk"><input type="checkbox" data-mkshow ${DEV.showMask!==false?'checked':''}> ${t('Show the mask')}</label><div class="btnrow90"><button data-t="tooldone" ${dis}>${DEV.tool==='mask'?t('Done'):t('Edit on the photo')}</button></div>`;
+  }
+  $('#p-mask').innerHTML = h;
+  // spot removal and red eye
+  const sp = o.sp || [], re_ = o.rey || [], S = DEV.spot || (DEV.spot = {mode:'heal', r:.025, feather:50, opacity:100});
+  $('#p-spot').innerHTML = `<div class="btnrow90"><button data-tool="spot" class="${DEV.tool==='spot'?'on':''}" ${dis}>${t('Spot removal')}</button><button data-tool="redeye" class="${DEV.tool==='redeye'?'on':''}" ${dis}>${t('Red eye')}</button></div>
+    <div class="btnrow90"><select data-spotmode ${dis}><option value="heal" ${S.mode==='heal'?'selected':''}>${t('Heal')}</option><option value="clone" ${S.mode==='clone'?'selected':''}>${t('Clone')}</option></select></div>
+    <div class="dsl"><label for="sp-r">${t('Size')}</label><input id="sp-r" data-spot="r" type="range" min="3" max="120" value="${Math.round(S.r*1000)}" ${dis}><output>${Math.round(S.r*1000)}</output></div>
+    <div class="dsl"><label for="sp-f">${t('Feather')}</label><input id="sp-f" data-spot="feather" type="range" min="0" max="100" value="${S.feather}" ${dis}><output>${S.feather}</output></div>
+    <div class="dsl"><label for="sp-o">${t('Opacity')}</label><input id="sp-o" data-spot="opacity" type="range" min="0" max="100" value="${S.opacity}" ${dis}><output>${S.opacity}</output></div>
+    <div class="rows mkl">${sp.map((x,i)=>`<div class="row ${i===DEV.si?'on':''}" data-sp="${i}"><span class="nm">${x.mode==='clone'?t('Clone'):t('Heal')} ${i+1}</span><button data-spdel="${i}" title="${t('Delete')}">✕</button></div>`).join('')}${re_.map((x,i)=>`<div class="row"><span class="nm">${t('Red eye')} ${i+1}</span><button data-redel="${i}" title="${t('Delete')}">✕</button></div>`).join('')}</div>
+    <div class="hint" style="padding:2px 12px">${t('Click the photo to remove a spot; drag the dotted circle to choose where it is copied from.')}</div>`;
+  toolDraw(); maskTintSoon();
+}
+function brushSliders(dis){
+  const b = DEV.brush;
+  return `<div class="dsl"><label for="br-s">${t('Size')}</label><input id="br-s" data-brs="size" type="range" min="1" max="300" value="${Math.round(b.size*1000)}" ${dis}><output>${Math.round(b.size*1000)}</output></div>
+    <div class="dsl"><label for="br-f">${t('Feather')}</label><input id="br-f" data-brs="feather" type="range" min="0" max="100" value="${b.feather}" ${dis}><output>${b.feather}</output></div>
+    <div class="dsl"><label for="br-fl">${t('Flow')}</label><input id="br-fl" data-brs="flow" type="range" min="1" max="100" value="${b.flow}" ${dis}><output>${b.flow}</output></div>`;
+}
+// ---- maps between the picture (0..1) and the editing area (pixels inside #v-develop), through the same turn / mirror the picture is shown with
+function devGeom(){
+  const img=$('#dev-img'), cv=$('#dev-canvas'), o=DEV.ops; if(!img.naturalWidth || !o) return null;
+  const c=o.crop, cw=parseFloat(cv.style.width), ch=parseFloat(cv.style.height);
+  return {iw:parseFloat(img.style.width), ih:parseFloat(img.style.height), cx:parseFloat(img.style.left)+parseFloat(img.style.width)/2, cy:parseFloat(img.style.top)+parseFloat(img.style.height)/2,
+    ox:parseFloat(cv.style.left), oy:parseFloat(cv.style.top), cw, ch, c, a:(DEV.before?0:o.rot)*Math.PI/180, fh:o.fh, fv:o.fv};
+}
+function imgToStage(u, v, g){
+  g = g || devGeom(); if(!g) return [0,0];
+  const x=(u-.5)*g.iw, y=(v-.5)*g.ih, cs=Math.cos(g.a), sn=Math.sin(g.a);
+  let px=g.cx + x*cs - y*sn, py=g.cy + x*sn + y*cs;
+  if(g.fh && !DEV.crop) px=(g.c[0]+g.c[2])*g.cw - px; if(g.fv && !DEV.crop) py=(g.c[1]+g.c[3])*g.ch - py;
+  return [g.ox+px, g.oy+py];
+}
+function stageToImg(sx, sy, g){
+  g = g || devGeom(); if(!g) return [0,0];
+  let px=sx-g.ox, py=sy-g.oy;
+  if(g.fh && !DEV.crop) px=(g.c[0]+g.c[2])*g.cw - px; if(g.fv && !DEV.crop) py=(g.c[1]+g.c[3])*g.ch - py;
+  const dx=px-g.cx, dy=py-g.cy, cs=Math.cos(g.a), sn=Math.sin(g.a);
+  return [((dx*cs + dy*sn)+g.iw/2)/g.iw, ((-dx*sn + dy*cs)+g.ih/2)/g.ih];
+}
+const stagePt = e => { const r=$('#v-develop').getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+const imgPt = e => { const [x,y]=stagePt(e); return stageToImg(x,y); };
+// ---- what is drawn on the photo
+function toolDraw(){
+  const svg=$('#tool-ov'); if(!svg) return;
+  const g=devGeom(), live = !!(DEV.tool && g && DEV.id!=null && !DEV.crop);
+  svg.classList.toggle('hidden', !live); svg.classList.toggle('live', live && (DEV.tool!=='mask' || (mcOf()&&['brush','linear','radial','color'].includes(mcOf().kind))));
+  if(!live){ svg.innerHTML=''; return; }
+  const P=(u,v)=>imgToStage(u,v,g).map(x=>x.toFixed(1)).join(','), big=Math.max(g.iw,g.ih);
+  let h='';
+  if(DEV.tool==='mask'){
+    const c=mcOf();
+    if(c && c.kind==='linear'){
+      const [x1,y1]=imgToStage(c.x1,c.y1,g), [x2,y2]=imgToStage(c.x2,c.y2,g), dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1, nx=-dy/L*9999, ny=dx/L*9999;
+      h+=`<line class="tl" x1="${x1-nx}" y1="${y1-ny}" x2="${x1+nx}" y2="${y1+ny}"/><line class="tg" x1="${x2-nx}" y1="${y2-ny}" x2="${x2+nx}" y2="${y2+ny}"/>
+        <circle class="th" data-h="p1" cx="${x1}" cy="${y1}" r="6"/><circle class="th" data-h="p2" cx="${x2}" cy="${y2}" r="6"/>`;
+    } else if(c && c.kind==='radial'){
+      const [cx,cy]=imgToStage(c.cx,c.cy,g), rx=c.rx*big, ry=c.ry*big, th=(c.rot||0)+DEV.ops.rot;
+      h+=`<g transform="rotate(${th} ${cx} ${cy})"><ellipse class="tl" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/><ellipse class="tg" cx="${cx}" cy="${cy}" rx="${rx*(1-(c.feather||50)/100*.9)}" ry="${ry*(1-(c.feather||50)/100*.9)}"/>
+        <circle class="th" data-h="move" cx="${cx}" cy="${cy}" r="6"/><circle class="th" data-h="rx" cx="${cx+rx}" cy="${cy}" r="5"/><circle class="th" data-h="ry" cx="${cx}" cy="${cy+ry}" r="5"/></g>`;
+    } else if(c && c.kind==='brush'){
+      h+=`<circle class="tb" id="brush-cur" cx="-50" cy="-50" r="${DEV.brush.size*big/2}"/>`;
+    }
+  } else if(DEV.tool==='spot' || DEV.tool==='redeye' || (DEV.ops.sp.length||DEV.ops.rey.length)){
+    (DEV.ops.sp||[]).forEach((s,i)=>{
+      const [x,y]=imgToStage(s.x,s.y,g), r=s.r*big;
+      h+=`<circle class="ts ${i===DEV.si?'sel':''}" data-sp="${i}" cx="${x}" cy="${y}" r="${r}"/>`;
+      if(i===DEV.si){ const src = s.sx!=null ? [s.sx,s.sy] : (DEV.spotSrc && DEV.spotSrc[i]); if(src){ const [a,b]=imgToStage(src[0],src[1],g); h+=`<line class="tg" x1="${x}" y1="${y}" x2="${a}" y2="${b}"/><circle class="ts" data-h="src" data-sp="${i}" stroke-dasharray="4 3" cx="${a}" cy="${b}" r="${r}"/>`; } }
+    });
+    (DEV.ops.rey||[]).forEach(s=>{ const [x,y]=imgToStage(s.x,s.y,g); h+=`<circle class="ts" cx="${x}" cy="${y}" r="${s.r*big}" stroke="#ff5a5a"/>`; });
+  }
+  svg.innerHTML=h;
+}
+// the red picture of the selected mask
+let _tintTimer=null, _tintSeq=0;
+const maskTintSoon = () => { clearTimeout(_tintTimer); _tintTimer=setTimeout(maskTint, 220); };
+async function maskTint(){
+  const im=$('#mask-tint'); if(!im) return;
+  const m=mkOf(), show = DEV.id!=null && DEV.tool==='mask' && m && m.comps.length && DEV.showMask!==false;
+  if(!show){ im.classList.add('hidden'); return; }
+  const seq=++_tintSeq, id=DEV.id;
+  try{
+    const r=await fetch(`/api/photo/${id}/mask-overlay`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({masks:DEV.ops.mk, index:DEV.mi})});
+    if(!r.ok || seq!==_tintSeq || DEV.id!==id) return;
+    const url=URL.createObjectURL(await r.blob()); if(DEV.tintUrl) URL.revokeObjectURL(DEV.tintUrl); DEV.tintUrl=url; im.src=url; im.classList.remove('hidden'); layoutDev();
+  }catch(e){}
+}
+// ---- panel clicks
+document.addEventListener('click', e=>{
+  if(S.mod!=='develop' || DEV.id==null || !e.target.closest('#right')) return;
+  const t_=e.target;
+  let q;
+  if((q=t_.closest('[data-mkadd]'))){ mkAdd(q.dataset.mkadd); return; }
+  if((q=t_.closest('[data-mkdel]'))){ const mk=mkClone(); mk.splice(+q.dataset.mkdel,1); DEV.mi = mk.length ? Math.min(DEV.mi, mk.length-1) : null; if(!mk.length) DEV.tool=null; mkCommit(mk, t('Delete mask')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-mk]')) && !t_.closest('button')){ DEV.mi=+q.dataset.mk; DEV.mc=0; DEV.tool='mask'; renderDevPanels(); return; }
+  if((q=t_.closest('[data-mcdel]'))){ const mk=mkClone(); mk[DEV.mi].comps.splice(+q.dataset.mcdel,1); DEV.mc=0; mkCommit(mk, t('Delete component')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-mc]')) && !t_.closest('button,select,input,label')){ DEV.mc=+q.dataset.mc; renderDevPanels(); return; }
+  if((q=t_.closest('[data-mcinv]'))){ const mk=mkClone(); mk[DEV.mi].comps[+q.dataset.mcinv].invert=q.checked; mkCommit(mk, t('Invert')); return; }
+  if(t_.closest('[data-t="tooldone"]')){ DEV.tool = DEV.tool==='mask' ? null : 'mask'; renderDevPanels(); return; }
+  if((q=t_.closest('[data-brush]'))){
+    if(q.dataset.brush==='erase'){ DEV.brush.erase=!DEV.brush.erase; pref.set('brush', DEV.brush); renderDevPanels(); }
+    else { const mk=mkClone(), c=mk[DEV.mi].comps[DEV.mc]; if(c && c.kind==='brush'){ c.strokes=[]; mkCommit(mk, t('Clear strokes')); } }
+    return;
+  }
+  if(t_.closest('[data-t="mkpick"]')){ DEV.pickMk=!DEV.pickMk; renderDevPanels(); return; }
+  if((q=t_.closest('[data-tool]'))){ const k=q.dataset.tool; DEV.tool = DEV.tool===k ? null : k; renderDevPanels(); return; }
+  if((q=t_.closest('[data-spdel]'))){ const sp=JSON.parse(JSON.stringify(DEV.ops.sp)); sp.splice(+q.dataset.spdel,1); DEV.si=null; devSet({sp}, t('Delete spot')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-redel]'))){ const r=JSON.parse(JSON.stringify(DEV.ops.rey)); r.splice(+q.dataset.redel,1); devSet({rey:r}, t('Delete red eye')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-sp]')) && !t_.closest('button')){ DEV.si=+q.dataset.sp; DEV.tool=DEV.tool||'spot'; renderDevPanels(); return; }
+});
+document.addEventListener('change', e=>{
+  if(DEV.id==null) return; const d=e.target.dataset||{};
+  if(d.mcop!=null){ const mk=mkClone(); mk[DEV.mi].comps[+d.mcop].op=e.target.value; mkCommit(mk, t('Mask')); }
+  else if(d.mcadd!=null && e.target.value){ mkAddComp(e.target.value); }
+  else if(d.mkshow!=null){ DEV.showMask = e.target.checked; maskTint(); }
+  else if(d.spotmode!=null){ DEV.spot.mode=e.target.value; }
+});
+$('#right').addEventListener('input', e=>{
+  const d=e.target.dataset||{}; const v=+e.target.value;
+  if(d.brs){ DEV.brush[d.brs]= d.brs==='size' ? v/1000 : v; pref.set('brush', DEV.brush); e.target.nextElementSibling.textContent=v; toolDraw(); }
+  if(d.spot){ DEV.spot[d.spot]= d.spot==='r' ? v/1000 : v; e.target.nextElementSibling.textContent=v; }
+});
+// ---- the mouse on the photo
+function mkSetComp(fn, live){ const mk = DEV.ops.mk.map(x=>x); const m = JSON.parse(JSON.stringify(mk[DEV.mi])); fn(m.comps[DEV.mc]); mk[DEV.mi]=m; DEV.ops.mk=mk; DEV.dirty=true; if(live){ toolDraw(); maskTintSoon(); devPreviewSoon(); } }
+$('#tool-ov').addEventListener('mousedown', e=>{
+  if(DEV.id==null || e.button) return; e.preventDefault();
+  const g=devGeom(), [u,v]=imgPt(e), big=Math.max(g.iw,g.ih), dh=e.target.dataset?.h;
+  const done = label => { devSet({}, label); };
+  const track = (mv, up) => { const m_=ev=>mv(ev), u_=ev=>{ removeEventListener('mousemove',m_); removeEventListener('mouseup',u_); up(ev); }; addEventListener('mousemove',m_); addEventListener('mouseup',u_); };
+  if(DEV.tool==='mask'){
+    const c=mcOf(); if(!c) return;
+    if(c.kind==='color' && DEV.pickMk){ pickColorAt(e, col=>{ mkSetComp(cc=>{ cc.color=col; }); DEV.pickMk=false; done(t('Color range')); }); return; }
+    if(c.kind==='brush'){
+      const pts=[[u,v]]; const st={pts, size:DEV.brush.size, feather:DEV.brush.feather, flow:DEV.brush.flow, erase:!!DEV.brush.erase};
+      mkSetComp(cc=>{ cc.strokes.push(st); }, false);
+      track(ev=>{ const [a,b]=imgPt(ev); if(pts.length<400) pts.push([+a.toFixed(4),+b.toFixed(4)]); const mk=DEV.ops.mk.map(x=>x), m=JSON.parse(JSON.stringify(mk[DEV.mi])); m.comps[DEV.mc].strokes[m.comps[DEV.mc].strokes.length-1].pts=pts.map(p=>[...p]); mk[DEV.mi]=m; DEV.ops.mk=mk; maskTintSoon(); },
+            ()=>done(t('Brush')));
+      return;
+    }
+    if(c.kind==='linear'){
+      const nu = dh==='p2' ? null : dh==='p1' ? null : [u,v];
+      if(nu) mkSetComp(cc=>{ cc.x1=u; cc.y1=v; cc.x2=u; cc.y2=v; }, true);
+      track(ev=>{ const [a,b]=imgPt(ev); mkSetComp(cc=>{ if(dh==='p1'){ cc.x1=a; cc.y1=b; } else { cc.x2=a; cc.y2=b; } }, true); }, ()=>done(t('Linear gradient')));
+      return;
+    }
+    if(c.kind==='radial'){
+      const create = !dh;
+      if(create) mkSetComp(cc=>{ cc.cx=u; cc.cy=v; cc.rx=.01; cc.ry=.01; }, true);
+      const sx=u, sy=v;
+      track(ev=>{ const [a,b]=imgPt(ev); mkSetComp(cc=>{
+          if(dh==='move'){ cc.cx=a; cc.cy=b; }
+          else if(dh==='rx') cc.rx=Math.max(.01, Math.hypot((a-cc.cx)*g.iw,(b-cc.cy)*g.ih)/big);
+          else if(dh==='ry') cc.ry=Math.max(.01, Math.hypot((a-cc.cx)*g.iw,(b-cc.cy)*g.ih)/big);
+          else { cc.rx=Math.max(.01, Math.abs(a-sx)*g.iw/big); cc.ry=Math.max(.01, Math.abs(b-sy)*g.ih/big); } }, true); }, ()=>done(t('Radial gradient')));
+      return;
+    }
+  }
+  if(DEV.tool==='spot'){
+    const sp=e.target.closest && e.target.closest('[data-sp]');
+    if(sp){                                                                        // drag a spot or its source
+      const i=+sp.dataset.sp; DEV.si=i;
+      track(ev=>{ const [a,b]=imgPt(ev); const arr=JSON.parse(JSON.stringify(DEV.ops.sp)); if(dh==='src'){ arr[i].sx=a; arr[i].sy=b; } else { arr[i].x=a; arr[i].y=b; } DEV.ops.sp=arr; DEV.dirty=true; toolDraw(); devPreviewSoon(); }, ()=>done(t('Spot removal')));
+      return;
+    }
+    const arr=JSON.parse(JSON.stringify(DEV.ops.sp)); if(arr.length>=60) return toast(t('At most 60 spots'));
+    arr.push({x:+u.toFixed(4), y:+v.toFixed(4), r:DEV.spot.r, mode:DEV.spot.mode, feather:DEV.spot.feather, opacity:DEV.spot.opacity}); DEV.si=arr.length-1;
+    devSet({sp:arr}, t('Spot removal')); return;
+  }
+  if(DEV.tool==='redeye'){
+    const arr=JSON.parse(JSON.stringify(DEV.ops.rey)); arr.push({x:+u.toFixed(4), y:+v.toFixed(4), r:DEV.spot.r, amount:100});
+    devSet({rey:arr}, t('Red eye')); return;
+  }
+});
+$('#tool-ov').addEventListener('mousemove', e=>{
+  const c=$('#brush-cur'); if(c){ const [x,y]=stagePt(e); c.setAttribute('cx',x); c.setAttribute('cy',y); }
+});
+// the colour under a click, read from the original file (for the colour range)
+function pickColorAt(e, cb){
+  const g=devGeom(), [u,v]=imgPt(e);
+  const take = im => { const cvs=document.createElement('canvas'); cvs.width=cvs.height=7; const x=cvs.getContext('2d');
+    x.drawImage(im, Math.round(u*im.naturalWidth)-3, Math.round(v*im.naturalHeight)-3, 7, 7, 0, 0, 7, 7); const d=x.getImageData(0,0,7,7).data; let r=0,gg=0,b=0,n=0; for(let i=0;i<d.length;i+=4){ r+=d[i]; gg+=d[i+1]; b+=d[i+2]; n++; } cb([Math.round(r/n),Math.round(gg/n),Math.round(b/n)]); };
+  if(DEV.origImg) take(DEV.origImg); else { const im=new Image(); im.onload=()=>{ DEV.origImg=im; take(im); }; im.src=DEV.orig; }
+}
+// ---- presets (built in, your own, from files), look-up tables, snapshots, copy / paste / sync of settings (issue #6)
+const PRESETS2 = [
+  [t('Golden Hour'), {temp:25, vib:20, hi:-20, sh:15, vig:-15, grd:{shadows:[28,25,0], high:[42,30,5], blend:50, balance:0}}],
+  [t('Teal & Orange'), {con:15, vib:10, grd:{shadows:[190,35,0], high:[30,35,0], blend:60, balance:10}}],
+  [t('Faded Matte'), {sat:-15, con:-5, crv:{rgb:[[0.08,0.15],[0.92,0.88]]}}],
+  [t('Selenium Tone'), {gray:true, con:15, grd:{shadows:[265,18,0], high:[38,12,0], blend:50, balance:0}}],
+  [t('Crisp Landscape'), {cla:25, dhz:15, tex:20, vib:25, shp:35, hi:-25, sh:20}],
+  [t('Soft Portrait'), {tex:-25, cla:-10, shp:15, sh:15, vib:8, hi:-10}],
+  [t('Cinematic'), {con:10, grn:12, vig:-20, crv:{rgb:[[0.25,0.2],[0.75,0.8]]}, grd:{shadows:[205,30,0], high:[35,25,0], blend:50, balance:0}}],
+  [t('Film Grain Black & White'), {gray:true, con:20, grn:40, vig:-20, tex:10}],
+  [t('Vintage'), {temp:15, sat:-20, grn:20, vig:-30, crv:{rgb:[[0.06,0.12],[0.94,0.9]]}}],
+];
+const PRESET_KEEP = ['rot','crop','fh','fv','lnd','lnv','car','cab','caa','dfr','pv','ph','gas','gsc','gx','gy','sp','rey','mk'];     // what a preset leaves alone: geometry, lens and the local work
+const allPresets = () => [...PRESETS, ...PRESETS2, ...(DEV.userPresets||[]).map(x=>[x.name, x.ops, true])];
+// a preset at some amount: every number moves from its resting place by that share (0 = nothing, 1 = as made, 2 = double)
+function scaleOps(p, k){
+  const r={}, lim = key=>key==='exp' ? 300 : 100, num = (key,v)=>{ const d=TONE_DEFAULT[key]||0; return clamp(Math.round(d+(v-d)*k), key==='gsc'?100:-lim(key), lim(key)); };
+  const arr = (a,n=3)=>a.map((x,i)=>i<n?Math.round(x*k):x);
+  for(const [key,val] of Object.entries(p)){
+    if(typeof val==='number') r[key]=num(key,val);
+    else if(key==='crp') r[key]=val.map(x=>clamp(Math.round(x*k),-100,100));
+    else if(key==='crv') r[key]=Object.fromEntries(Object.entries(val).map(([ch,pts])=>[ch,pts.map(([x,y])=>[x, clamp(x+(y-x)*k,0,1)])]));
+    else if(key==='mix') r[key]=Object.fromEntries(Object.entries(val).map(([b,a])=>[b,a.map(x=>clamp(Math.round(x*k),-100,100))]));
+    else if(key==='bwm') r[key]=Object.fromEntries(Object.entries(val).map(([b,x])=>[b,clamp(Math.round(x*k),-100,100)]));
+    else if(key==='cal') r[key]=Object.fromEntries(Object.entries(val).map(([b,x])=>[b,Array.isArray(x)?x.map(y=>clamp(Math.round(y*k),-100,100)):clamp(Math.round(x*k),-100,100)]));
+    else if(key==='grd') r[key]=Object.fromEntries(Object.entries(val).map(([b,x])=>[b,Array.isArray(x)?[x[0],clamp(Math.round(x[1]*k),0,100),clamp(Math.round(x[2]*k),-100,100)]:x]));
+    else if(key==='lut') r[key]={...val, amount:clamp(Math.round((val.amount??100)*k),0,100)};
+    else r[key]=val;
+  }
+  return r;
+}
+function devPreset(i, reuseBase){
+  if(DEV.id==null) return; const [n, o] = allPresets()[i]; if(!o) return;
+  const base = reuseBase && DEV.preBase ? DEV.preBase : cloneOps(DEV.ops); DEV.preBase = base; DEV.preIdx = i;
+  const keep = Object.fromEntries(PRESET_KEEP.map(key=>[key, base[key]]));
+  devSet({...NEUTRAL(), ...keep, ...JSON.parse(JSON.stringify(scaleOps(o, (DEV.preAmt ?? 100)/100)))}, `${t('Preset: ')}${n}${(DEV.preAmt ?? 100)!==100 ? ' '+DEV.preAmt+'%' : ''}`);
+}
+async function loadDevLists(){
+  try{ DEV.userPresets = (await api('/api/dev-presets')).presets || []; }catch(e){ DEV.userPresets = []; }
+  try{ DEV.luts = (await api('/api/luts')).luts || []; }catch(e){ DEV.luts = []; }
+  renderPresetsPanel();
+}
+function renderPresetsPanel(){
+  const el=$('#p-presets'); if(!el) return;
+  const dis = DEV.id==null ? 'disabled' : '', amt = DEV.preAmt ?? 100, user = DEV.userPresets || [], n0 = PRESETS.length + PRESETS2.length;
+  const row = (nm,i,del)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${esc(nm)}</span>${del?`<button class="xbtn" data-presetdel="${esc(del)}" title="${t('Delete')}">✕</button>`:''}</div>`;
+  const lut = DEV.ops && DEV.ops.lut && DEV.ops.lut.name ? DEV.ops.lut : null;
+  el.innerHTML = `<div class="dsl"><label for="pre-amt">${t('Amount')}</label><input id="pre-amt" data-preamt type="range" min="0" max="200" value="${amt}" ${dis} title="${t('How strongly the next preset is applied (100 = as made)')}"><output>${amt}</output></div>`
+    + [...PRESETS, ...PRESETS2].map(([n],i)=>row(n,i)).join('')
+    + (user.length ? `<div class="dsec">${t('My presets')}</div>` + user.map((x,j)=>row(x.name, n0+j, x.name)).join('') : '')
+    + `<div class="btnrow90"><button data-t="presave" ${dis}>${t('Save preset…')}</button><button data-t="preexport" ${dis}>${t('Export…')}</button><button data-t="preimport" ${dis}>${t('Import…')}</button></div><input type="file" id="pre-file" accept=".json" class="hidden">`
+    + `<div class="dsec">${t('Looks (LUT)')}</div>` + (DEV.luts||[]).map(nm=>`<div class="row ${lut&&lut.name===nm?'on':''}" data-lut="${esc(nm)}">${I('dev')}<span class="nm">${esc(nm.replace(/\.cube$/i,''))}</span><button class="xbtn" data-lutdel="${esc(nm)}" title="${t('Delete')}">✕</button></div>`).join('')
+    + (lut ? `<div class="dsl"><label for="lut-amt">${t('Amount')}</label><input id="lut-amt" data-lutamt type="range" min="0" max="100" value="${lut.amount ?? 100}" ${dis}><output>${lut.amount ?? 100}</output></div>` : '')
+    + `<div class="btnrow90"><button data-t="lutimport" ${dis}>${t('Import a look (.cube)…')}</button></div><input type="file" id="lut-file" accept=".cube,.txt" class="hidden">`;
+}
+function renderSnapsPanel(){
+  const el=$('#p-snaps'); if(!el) return; const sn = DEV.snaps || [];
+  el.innerHTML = sn.map((x,i)=>`<div class="row" data-snap="${i}">${I('dev')}<span class="nm">${esc(x.name)}</span><button class="xbtn" data-snapdel="${i}" title="${t('Delete')}">✕</button></div>`).join('') || `<div class="hint">${t('No snapshots yet')}</div>`;
+}
+async function loadSnaps(){ if(DEV.id==null){ DEV.snaps=[]; return renderSnapsPanel(); } try{ DEV.snaps = (await api(`/api/photo/${DEV.id}/snapshots`)).snapshots || []; }catch(e){ DEV.snaps=[]; } renderSnapsPanel(); }
+const presetOps = o => { const r=JSON.parse(JSON.stringify(o)); ['rot','crop','fh','fv'].forEach(k=>delete r[k]); return r; };
+$('#snap-add').onclick = async ()=>{
+  if(DEV.id==null) return; const name = await promptBox(t('Snapshot name'), new Date().toLocaleString()); if(!name) return;
+  await send('POST', `/api/photo/${DEV.id}/snapshots`, {name, ops:JSON.parse(JSON.stringify(DEV.ops))}); await loadSnaps(); toast(t('Snapshot saved'));
+};
+$('#left').addEventListener('click', async e=>{
+  if(S.mod!=='develop' || DEV.id==null) return; let q;
+  if((q=e.target.closest('[data-presetdel]'))){ await send('DELETE', '/api/dev-presets/'+encodeURIComponent(q.dataset.presetdel)); await loadDevLists(); e.stopPropagation(); return; }
+  if((q=e.target.closest('[data-preset]'))){ devPreset(+q.dataset.preset); return; }
+  if((q=e.target.closest('[data-lutdel]'))){ await send('DELETE', '/api/luts/'+encodeURIComponent(q.dataset.lutdel)); if(DEV.ops.lut.name===q.dataset.lutdel) devSet({lut:{}}, t('Look removed')); await loadDevLists(); e.stopPropagation(); return; }
+  if((q=e.target.closest('[data-lut]'))){ const same = DEV.ops.lut && DEV.ops.lut.name===q.dataset.lut; devSet({lut: same ? {} : {name:q.dataset.lut, amount:100}}, same ? t('Look removed') : `${t('Look')}: ${q.dataset.lut.replace(/\.cube$/i,'')}`); renderPresetsPanel(); return; }
+  if((q=e.target.closest('[data-snapdel]'))){ await send('DELETE', `/api/photo/${DEV.id}/snapshots/${q.dataset.snapdel}`); await loadSnaps(); e.stopPropagation(); return; }
+  if((q=e.target.closest('[data-snap]'))){ const x=DEV.snaps[+q.dataset.snap]; if(x) devSet({...NEUTRAL(), ...JSON.parse(JSON.stringify(x.ops))}, `${t('Snapshot')}: ${x.name}`); return; }
+  if(e.target.closest('[data-t="presave"]')){
+    const name = await promptBox(t('Preset name')); if(!name) return;
+    await send('POST', '/api/dev-presets', {name, ops:presetOps(DEV.ops)}); await loadDevLists(); toast(t('Preset saved')); return;
+  }
+  if(e.target.closest('[data-t="preexport"]')){
+    const a=document.createElement('a'); a.download='photag-preset.json';
+    a.href=URL.createObjectURL(new Blob([JSON.stringify({'photag-preset':1, name:DEV.preIdx!=null ? allPresets()[DEV.preIdx][0] : 'Preset', ops:presetOps(DEV.ops)}, null, 1)], {type:'application/json'})); a.click(); return;
+  }
+  if(e.target.closest('[data-t="preimport"]')){ $('#pre-file').click(); return; }
+  if(e.target.closest('[data-t="lutimport"]')){ $('#lut-file').click(); return; }
+});
+$('#left').addEventListener('change', async e=>{
+  if(e.target.id==='pre-file' && e.target.files[0]){
+    let o; try{ o = JSON.parse(await e.target.files[0].text()); }catch(err){ return toast(t('This is not a photag preset file')); }
+    e.target.value='';
+    if(!o || o['photag-preset']!==1 || typeof o.ops!=='object') return toast(t('This is not a photag preset file'));
+    const N=NEUTRAL(), ops={}; for(const k of Object.keys(N)) if(o.ops[k]!==undefined && typeof o.ops[k]===typeof N[k]) ops[k]=o.ops[k];
+    await send('POST', '/api/dev-presets', {name:String(o.name||'Preset').slice(0,60), ops}); await loadDevLists(); toast(t('Preset imported')); return;
+  }
+  if(e.target.id==='lut-file' && e.target.files[0]){
+    const f=e.target.files[0], text=await f.text(); e.target.value='';
+    try{ const r=await send('POST', '/api/luts', {name:f.name, text}); await loadDevLists(); devSet({lut:{name:r.name, amount:100}}, `${t('Look')}: ${r.name.replace(/\.cube$/i,'')}`); toast(t('Look imported')); }catch(err){ /* send() already showed the message */ }
+    return;
+  }
+  if(e.target.dataset.preamt!=null){ DEV.preAmt=+e.target.value; if(DEV.preIdx!=null && DEV.preBase) devPreset(DEV.preIdx, true); else renderPresetsPanel(); return; }
+  if(e.target.dataset.lutamt!=null){ devSet({lut:{...DEV.ops.lut, amount:+e.target.value}}, `${t('Look')} ${e.target.value}%`); }
+});
+$('#left').addEventListener('input', e=>{
+  if(e.target.dataset.preamt!=null) e.target.nextElementSibling.textContent=e.target.value;
+  if(e.target.dataset.lutamt!=null){ e.target.nextElementSibling.textContent=e.target.value; DEV.ops.lut={...DEV.ops.lut, amount:+e.target.value}; DEV.dirty=true; devPreviewSoon(); }
+});
+// ---- copy, paste and sync settings between photos
+const COPY_GROUPS = [
+  ['basic', t('Light'), ['exposure','highlights','shadows','whites','blacks','brightness','contrast'], true],
+  ['color', t('Color'), ['temperature','tint','vibrance','saturation','grayscale','mixer','bwmix','grading','calib','lut'], true],
+  ['curve', t('Tone Curve'), ['curve','curve_p'], true],
+  ['detail', t('Detail'), ['clarity','texture','dehaze','sharpness','sharp_radius','sharp_detail','sharp_mask','blur','nr_lum','nr_color','nr_detail'], true],
+  ['effects', t('Effects'), ['vignette','vignette_mid','vignette_feather','vignette_round','vignette_hl','grain','grain_size','grain_rough','sepia'], true],
+  ['lens', t('Lens Corrections'), ['lens_dist','lens_vig','ca_r','ca_b','ca_auto','defringe'], true],
+  ['geometry', t('Geometry'), ['persp_v','persp_h','geo_aspect','geo_scale','geo_x','geo_y'], false],
+  ['crop', t('Crop and rotation'), ['rotate','crop','flip_h','flip_v'], false],
+  ['local', t('Masks and spots'), ['masks','spots','redeye'], false],
+];
+async function settingsOf(id){
+  if(S.mod==='develop' && DEV.id===id){ const o=devOpsToApi(DEV.ops), r={}; for(const [k,v] of Object.entries(o)) if(v!=null && v!==false) r[k]=v; return r; }
+  const d=await api('/api/photo/'+id); return d.edit_ops ? JSON.parse(d.edit_ops) : {};
+}
+// mode: 'copy' (keep for Paste) or 'sync' (copy from the active photo and paste to the selected ones at once)
+async function copySettings(mode){
+  const id=S.act; if(id==null) return toast(t('Select a photo first'));
+  const chosen = pref.get('copyGroups', Object.fromEntries(COPY_GROUPS.map(g=>[g[0], g[3]])));
+  modal(`<h3>${mode==='sync' ? t('Synchronize settings') : t('Copy settings')}</h3><div class="mb">${COPY_GROUPS.map(([k,n])=>`<label class="chk"><input type="checkbox" data-cg="${k}" ${chosen[k]?'checked':''}> ${n}</label>`).join('')}</div>
+    <div class="mf"><button id="cg-no">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="cg-ok">${mode==='sync' ? t('Synchronize') : t('Copy')}</button></div>`);
+  $('#cg-no').onclick=closeModal;
+  $('#cg-ok').onclick=async ()=>{
+    const sel={}; $$('#modal-box [data-cg]').forEach(c=>sel[c.dataset.cg]=c.checked); pref.set('copyGroups', sel); closeModal();
+    const keys = COPY_GROUPS.filter(g=>sel[g[0]]).flatMap(g=>g[2]); if(!keys.length) return;
+    const src = await settingsOf(id), ops = {}; for(const k of keys) if(src[k]!==undefined) ops[k]=src[k];
+    DEV.clip = {keys, ops, id}; toast(t('Settings copied'));
+    if(mode==='sync') await pasteSettings(targets().filter(x=>x!==id));
+  };
+}
+async function pasteSettings(ids){
+  const c=DEV.clip; if(!c) return toast(t('Copy the settings of a photo first (Ctrl+Shift+C)'));
+  ids = (ids || targets()).filter(x=>x!==c.id); if(!ids.length) return toast(t('Select the photos to paste to'));
+  toast(t('Pasting the settings…'), 1500);
+  for(const id of ids){
+    const d=await api('/api/photo/'+id); if(d.is_video) continue;
+    const base = d.edit_ops ? JSON.parse(d.edit_ops) : {}; for(const k of c.keys) delete base[k]; Object.assign(base, JSON.parse(JSON.stringify(c.ops)));
+    try{ await send('POST', `/api/photo/${id}/edit`, base); }catch(e){ continue; }
+    VER[id]=Date.now(); const dd=await api('/api/photo/'+id), p=S.byId.get(id); if(p) Object.assign(p, {width:dd.width, height:dd.height, edited:dd.edited, bytes:dd.bytes});
+    G.cells.forEach(cl=>{ if(+cl.dataset.id===id){ const im=cl.querySelector('img'); if(im) im.src=thumbUrl(id); } });
+  }
+  renderFilm(true); renderColls(); if(S.mod==='develop') devOpen();
+  toast(t('Settings pasted to {0} photos', [ids.length]));
+}
 // Straightening leaves empty corners: while the crop is untouched (full, or the one made here) it follows the largest rectangle that fits inside the turned picture
 function devAutoCrop(deg){
   const img=$('#dev-img'), o=DEV.ops, c=o.crop, full=c.every((x,i)=>Math.abs(x-[0,0,1,1][i])<1e-3);
@@ -1802,7 +2300,9 @@ function devAutoCrop(deg){
 }
 const dfmt = (k,v)=>k==='exp' ? (v>0?'+':'')+(v/100).toFixed(2) : (v>0?'+':'')+v;
 const DLABEL = {bri:t('Brightness'), con:t('Contrast'), sat:t('Saturation'), exp:t('Exposure'), hi:t('Highlights'), sh:t('Shadows'), temp:t('Temperature'), tint:t('Tint'), vib:t('Vibrance'), cla:t('Clarity'), shp:t('Sharpness'), blr:t('Blur'), vig:t('Vignette'), sep:t('Sepia'),
-  wht:t('Whites'), blk:t('Blacks'), tex:t('Texture'), dhz:t('Dehaze'), grn:t('Grain'), grs:t('Grain size'), grr:t('Grain roughness'), vgm:t('Vignette midpoint'), vgf:t('Vignette feather'), vgr:t('Vignette roundness'), vgh:t('Vignette highlights')};
+  wht:t('Whites'), blk:t('Blacks'), tex:t('Texture'), dhz:t('Dehaze'), grn:t('Grain'), grs:t('Grain size'), grr:t('Grain roughness'), vgm:t('Vignette midpoint'), vgf:t('Vignette feather'), vgr:t('Vignette roundness'), vgh:t('Vignette highlights'),
+  lnd:t('Distortion'), lnv:t('Lens vignetting'), car:t('Red / cyan fringe'), cab:t('Blue / yellow fringe'), dfr:t('Defringe'), pv:t('Vertical'), ph:t('Horizontal'), gas:t('Aspect'), gsc:t('Scale'), gx:t('X offset'), gy:t('Y offset'),
+  shr:t('Sharpening radius'), shd:t('Sharpening detail'), shm:t('Sharpening masking'), nrl:t('Luminance noise reduction'), nrc:t('Color noise reduction'), nrd:t('Noise reduction detail')};
 $('#right').addEventListener('input', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
@@ -1834,7 +2334,6 @@ $('#right').addEventListener('click', e=>{
 });
 $('#left').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
-  const pr=e.target.closest('[data-preset]'); if(pr){ const [n,o]=PRESETS[+pr.dataset.preset]; devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, ...o}, t('Preset: ')+n); return; }
   const h=e.target.closest('[data-hist]'); if(h){ const s=DEV.hist[+h.dataset.hist]; devSet({...s.ops, crop:[...s.ops.crop]}); }
 });
 function devCropToggle(){ if(DEV.id==null) return; DEV.crop=!DEV.crop; if(!DEV.crop) devSet({}, t('Crop')); else { layoutDev(); renderDevPanels(); renderToolbar(); } }
@@ -1847,7 +2346,7 @@ $('#crop-ov').addEventListener('mousedown', e=>{
     if(h==='move'){ const w=x2-x1, hh=y2-y1; x1=clamp(x1+dx,0,1-w); y1=clamp(y1+dy,0,1-hh); x2=x1+w; y2=y1+hh; }
     else { if(h.includes('w')) x1=clamp(x1+dx,0,x2-MIN); if(h.includes('e')) x2=clamp(x2+dx,x1+MIN,1);
            if(h.includes('n')) y1=clamp(y1+dy,0,y2-MIN); if(h.includes('s')) y2=clamp(y2+dy,y1+MIN,1); }
-    DEV.ops.crop=[x1,y1,x2,y2]; DEV.dirty=true; layoutDev();
+    DEV.ops.crop = h==='move' ? [x1,y1,x2,y2] : enforceAspect(h, [x1,y1,x2,y2]); DEV.dirty=true; layoutDev();
   };
   const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); renderToolbar(); };
   addEventListener('mousemove',mv); addEventListener('mouseup',up);
@@ -3204,6 +3703,10 @@ $('#import').addEventListener('change', e=>{
 });
 
 // ---------- background jobs (activity indicator in the identity plate) ----------
+async function mergePhotos(kind){
+  const ids = targets(); if(ids.length < 2) return toast(t('Choose at least two photos to merge'));
+  runJob('/api/merge', 'merge', kind==='hdr' ? t('Merge to HDR') : t('Merge to panorama'), {ids, kind});
+}
 async function runJob(url, name, label, body){ await send('POST', url, body); pollJob(name, label); }
 async function pollJob(name, label){
   let p; try{ p=await api('/api/job/'+name); }catch{ return; }
@@ -3222,8 +3725,9 @@ async function pollJob(name, label){
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
-    if(['import','faces','aitag','compress','backup','refscan','analysis'].includes(name)){
+    if(['import','faces','aitag','compress','backup','refscan','analysis','merge'].includes(name)){
       await reloadAll();
+      if(name==='merge' && p.state==='done' && p.result) selectOnly(p.result.id);
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
       if(S.view==='people') renderPeople();
       if(name==='aitag' || name==='backup') renderRight();
@@ -3311,6 +3815,13 @@ const MENUS = [
     [t('No Label'), '', ()=>setAttr({label:''})],
     sep,
     [t('Rank Selected Photos'), '', rankSelected],
+    sep,
+    [t('Merge to HDR…'), '', ()=>mergePhotos('hdr')],
+    [t('Merge to panorama…'), '', ()=>mergePhotos('pano')],
+    sep,
+    [t('Copy settings…'), 'Ctrl+Shift+C', ()=>copySettings('copy')],
+    [t('Paste settings'), 'Ctrl+Shift+V', ()=>pasteSettings()],
+    [t('Synchronize settings…'), 'Ctrl+Shift+S', ()=>copySettings('sync')],
     sep,
     [t('Compress selected files...'), '', ()=>compressDialog(targets())],
     [t('Stop compression'), '', ()=>send('POST','/api/compress/cancel')],
@@ -3492,6 +4003,9 @@ document.addEventListener('keydown', e=>{
       BracketLeft: ()=>rotateSel(-90), BracketRight: ()=>rotateSel(90),
       Slash: shortcuts, Enter: ssStart, Comma: preferences,
     };
+    if(shift && code==='KeyC'){ e.preventDefault(); copySettings('copy'); return; }
+    if(shift && code==='KeyV'){ e.preventDefault(); pasteSettings(); return; }
+    if(shift && code==='KeyS'){ e.preventDefault(); copySettings('sync'); return; }
     if(shift && code==='KeyI'){ e.preventDefault(); openImport('folder'); return; }
     if(shift && code==='KeyM'){ e.preventDefault(); semanticDialog(); return; }
     if(shift && code==='KeyF'){ e.preventDefault(); advancedSearch(); return; }
@@ -3513,7 +4027,8 @@ document.addEventListener('keydown', e=>{
     case 'KeyU': setFlag(0, adv); return;
     case 'Backquote': toggleFlag(); return;
     case 'KeyB': toggleQuick(); return;
-    case 'KeyJ': cycleCellStyle(); return;
+    case 'KeyJ': if(S.mod==='develop') devClipToggle(); else cycleCellStyle(); return;
+    case 'KeyY': if(S.mod==='develop') devView(shift ? 'split' : 'side'); return;
     case 'KeyI': S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); return;
     case 'KeyL': cycleLights(); return;
     case 'KeyT': togglePanel('tool'); return;
@@ -3532,7 +4047,7 @@ document.addEventListener('keydown', e=>{
     case 'Enter': if(S.mod==='develop' && DEV.crop){ devCropToggle(); return; } if(S.view==='grid' && S.act!=null) setView('loupe'); return;
     case 'Escape':
       if(MENU_OPEN!=null){ closeMenu(); return; }
-      if(S.mod==='develop'){ if(DEV.crop){ devCropToggle(); return; } setModule('library'); return; }
+      if(S.mod==='develop'){ if(DEV.crop){ devCropToggle(); return; } if(DEV.tool){ DEV.tool=null; renderDevPanels(); return; } if(DEV.view && DEV.view!=='after'){ devView(DEV.view); return; } setModule('library'); return; }
       if(S.lights){ S.lights=2; cycleLights(); return; }
       if(S.view!=='grid') setView('grid'); return;
   }

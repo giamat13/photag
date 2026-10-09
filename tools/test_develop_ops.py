@@ -109,6 +109,41 @@ adj = np.array(warm) * np.array([1 + 0.3 * t / 100, 1 - 0.2 * ti / 100, 1 - 0.3 
 check("the eyedropper: the picked warm colour comes out neutral", max(adj) - min(adj) < 0.04 and t < 0, (round(t, 1), round(ti, 1), adj.round(3).tolist()))
 check("white-balance presets: tungsten cools, cloudy warms", D.WB_PRESETS["tungsten"][0] < 0 < D.WB_PRESETS["cloudy"][0])
 
+# ---- sharpening detail and noise reduction (batch 2)
+def pil(a):
+    return Image.fromarray(np.clip(a * 255 + 0.5, 0, 255).astype(np.uint8))
+
+
+edge = np.zeros((120, 160, 3), dtype=np.float32)
+edge[:, 80:] = 0.7
+edge = np.clip(edge + 0.15, 0, 1)
+ei = pil(edge)
+base_sharp = np.asarray(images.apply_tone(ei, {"sharpness": 40}), dtype=int)
+check("sharpening with the resting radius / detail / masking is exactly the old sharpening",
+      np.array_equal(base_sharp, np.asarray(images.apply_tone(ei, {"sharpness": 40, "sharp_radius": 50, "sharp_detail": 25, "sharp_mask": 0}), dtype=int)))
+check("the sharpening styles alone change nothing", neutral({"sharp_radius": 80, "sharp_detail": 90, "sharp_mask": 70, "nr_detail": 10}))
+wide = np.asarray(images.apply_tone(ei, {"sharpness": 60, "sharp_radius": 100}), dtype=int)
+narrow = np.asarray(images.apply_tone(ei, {"sharpness": 60, "sharp_radius": 0}), dtype=int)
+check("a different radius sharpens differently", np.abs(wide - narrow).max() > 0)
+flat = pil(np.full((100, 100, 3), 0.5, dtype=np.float32) + (rng.standard_normal((100, 100, 1)).astype(np.float32) * 0.01))
+sh_free = np.abs(np.asarray(images.apply_tone(flat, {"sharpness": 100}), dtype=float) - np.asarray(flat, dtype=float)).mean()
+sh_mask = np.abs(np.asarray(images.apply_tone(flat, {"sharpness": 100, "sharp_mask": 100}), dtype=float) - np.asarray(flat, dtype=float)).mean()
+check("masking keeps the sharpening off flat areas (only edges are sharpened)", sh_mask < sh_free, (round(sh_free, 3), round(sh_mask, 3)))
+gb = np.tile(np.linspace(0.25, 0.8, 240, dtype=np.float32)[None, :, None], (160, 1, 3))
+noise = rng.standard_normal((160, 240, 1)).astype(np.float32) * 0.05
+gn = pil(np.clip(gb + noise, 0, 1))
+err = lambda im: np.abs(np.asarray(im, dtype=float) / 255 - gb).mean()
+check("luminance noise reduction cuts the noise strongly", err(images.apply_tone(gn, {"nr_lum": 100})) < err(gn) * 0.6, (round(err(gn), 4), round(err(images.apply_tone(gn, {'nr_lum': 100})), 4)))
+check("...more of it with a bigger amount", err(images.apply_tone(gn, {"nr_lum": 30})) > err(images.apply_tone(gn, {"nr_lum": 80})))
+cn = pil(np.clip(gb + rng.standard_normal((160, 240, 3)).astype(np.float32) * 0.05, 0, 1))
+check("colour noise reduction smooths the colour blotches", err(images.apply_tone(cn, {"nr_color": 100})) < err(cn) * 0.85)
+stp = np.zeros((120, 160, 3), dtype=np.float32)
+stp[:, 80:] = 0.8
+sn = pil(np.clip(stp + 0.1 + rng.standard_normal((120, 160, 1)).astype(np.float32) * 0.04, 0, 1))
+r = np.asarray(images.apply_tone(sn, {"nr_lum": 100, "nr_detail": 80}), dtype=float) / 255
+check("noise reduction keeps a strong edge sharp", r[:, 84:90].mean() - r[:, 70:76].mean() > 0.7 and abs(r[:, 79].mean() - r[:, 70:76].mean()) < 0.25)
+check("the clean values are kept: noise-reduction amounts above 100 are clamped by the server", D.clean({"nr_lum": 500, "sharp_mask": -4})["nr_lum"] == 100 and D.clean({"sharp_mask": -4})["sharp_mask"] == 0)
+
 tmp = Path(tempfile.mkdtemp(prefix="photag_devops_"))
 Image.fromarray((np.clip(ramp * 255, 0, 255)).astype(np.uint8)).save(tmp / "a.png")
 Image.fromarray(np.repeat(np.repeat(np.linspace(30, 220, 200)[None, :, None], 3, axis=2), 120, axis=0).astype(np.uint8)).save(tmp / "b.jpg", "JPEG")

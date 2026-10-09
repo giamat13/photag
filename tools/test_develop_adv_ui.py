@@ -124,6 +124,13 @@ try:
         setslider("grs", 60)
         pg.wait_for_timeout(500)
         check("a resting grain amount (0) does not ask the server for a preview, whatever its size", not pg.get_attribute("#dev-img", "src").startswith("blob:"))
+        check("the sharpening and noise-reduction sliders exist and rest at 50 / 25 / 0 and 0 / 0 / 50",
+              [pg.input_value(f"#d-{k}") for k in ("shr", "shd", "shm", "nrl", "nrc", "nrd")] == ["50", "25", "0", "0", "0", "50"])
+        setslider("shm", 60)
+        pg.wait_for_timeout(400)
+        check("sharpening masking alone (no sharpness) does not ask for a preview", not pg.get_attribute("#dev-img", "src").startswith("blob:"))
+        for k, v in (("shp", 30), ("shr", 70), ("nrl", 40), ("nrc", 30), ("nrd", 80)):
+            setslider(k, v)
         for k, v in (("wht", 40), ("blk", -30), ("tex", 50), ("dhz", 30), ("grn", 25)):
             setslider(k, v)
         pg.wait_for_function("document.querySelector('#dev-img').src.startsWith('blob:')", timeout=10000)
@@ -189,6 +196,9 @@ try:
         check("...and the plain ones (whites 40, blacks -30, texture 50, dehaze 30, grain 25, temperature -45)",
               (o.get("whites"), o.get("blacks"), o.get("texture"), o.get("dehaze"), o.get("grain"), o.get("temperature")) == (40, -30, 50, 30, 25, -45),
               (o.get("whites"), o.get("blacks"), o.get("texture"), o.get("dehaze"), o.get("grain"), o.get("temperature")))
+        check("...sharpening (30, radius 70, masking 60) and noise reduction (luminance 40, colour 30, detail 80)",
+              (o.get("sharpness"), o.get("sharp_radius"), o.get("sharp_mask"), o.get("nr_lum"), o.get("nr_color"), o.get("nr_detail")) == (30, 70, 60, 40, 30, 80),
+              (o.get("sharpness"), o.get("sharp_radius"), o.get("sharp_mask"), o.get("nr_lum"), o.get("nr_color"), o.get("nr_detail")))
         check("...a resting grain size / vignette midpoint is not saved", "grain_size" not in o and "vignette_mid" not in o, sorted(o))
         # leave and come back: everything is read from the saved settings
         pg.click("#modules [data-mod=library]")
