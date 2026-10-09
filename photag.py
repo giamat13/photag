@@ -254,6 +254,10 @@ def main():
     if not ALREADY_RUNNING and not _wait_up(60):                         # a cold first start unpacks and loads a lot: allow a minute
         _fatal("photag could not start its local server",
                f"Nothing answered on port {PORT}. Another program may be using it, or antivirus is blocking photag.")
+    if ALREADY_RUNNING:                          # this window is a process of its own: close it when an update replaces the program it shows
+        from app import updater, windowwatch
+        threading.Thread(target=windowwatch.watch, args=(PORT, windowwatch.server_version(PORT), updater.restarting_recently, updater.hard_exit),
+                         daemon=True, name="photag-window-watch").start()
     view_url = _viewer_url()
     try:
         import webview

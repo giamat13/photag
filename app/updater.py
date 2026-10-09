@@ -259,6 +259,38 @@ def state_dir() -> Path:
     return d
 
 
+RESTARTING = "restarting.json"
+
+
+def mark_restarting():
+    """Written just before this program ends for an update. Another window of the same running program is a process of its own
+    (photag.py, ALREADY_RUNNING): when it sees the server go away it knows the update is the reason, and closes (windowwatch.py)."""
+    try:
+        _write_json(state_dir() / RESTARTING, {"at": time.time()})
+    except OSError:
+        pass
+
+
+def restarting_recently(max_age: float = 300.0) -> bool:
+    try:
+        return time.time() - float(json.loads((state_dir() / RESTARTING).read_text("utf-8")).get("at", 0)) < max_age
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def hard_exit():
+    """End this process now. os._exit() runs the exit code of every loaded DLL (the window's WebView2 among them), which can hang
+    for good and leave the old window open on screen; TerminateProcess does not wait for any of it."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            k = ctypes.windll.kernel32
+            k.TerminateProcess(k.GetCurrentProcess(), 0)
+        except Exception:
+            pass
+    os._exit(0)
+
+
 def download_dir() -> Path:
     d = Path(tempfile.gettempdir()) / "photag-update"
     d.mkdir(parents=True, exist_ok=True)
@@ -457,7 +489,8 @@ def reconcile() -> dict:
     subprocess.Popen(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", str(script),
                       "-StateDir", str(d), "-WaitPid", str(os.getpid())],
                      creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0), close_fds=True)
-    threading.Timer(1.5, lambda: os._exit(0)).start()      # the script waits for this process, puts the old file back, restarts the app
+    mark_restarting()
+    threading.Timer(1.5, hard_exit).start()                # the script waits for this process, puts the old file back, restarts the app
     return {"state": "restoring"}
 
 
@@ -597,9 +630,10 @@ def apply_code(zip_path: Path) -> dict:
         return {"mode": "code-dry-run", "version": version, "code": str(code)}
     # start the same (already allowed) photag.exe again a moment after this process has gone
     args, env = restart_args(str(_exe_path()))
+    mark_restarting()
     subprocess.Popen(args, env=env, close_fds=True,
                      creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
-    threading.Timer(1.0, lambda: os._exit(0)).start()
+    threading.Timer(1.0, hard_exit).start()
     return {"mode": "installing", "version": version}
 
 
@@ -626,6 +660,7 @@ def launch(path: str) -> dict:
     args = [str(p), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/update=1", f"/LOG={d / 'installer.log'}"]
     # detached and outside this process's job object: closing the app (or the updater window) must not stop the installer
     flags = (getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+    mark_restarting()
     try:
         try:
             subprocess.Popen(args, creationflags=flags | 0x01000000, close_fds=True)         # CREATE_BREAKAWAY_FROM_JOB
@@ -636,5 +671,5 @@ def launch(path: str) -> dict:
         if getattr(e, "winerror", None) in BLOCKED_WINERRORS:
             raise BlockedError(str(e))               # Windows (Smart App Control / AppLocker) refused to run the unsigned installer
         raise UpdateError(str(e))
-    threading.Timer(1.0, lambda: os._exit(0)).start()
+    threading.Timer(1.0, hard_exit).start()
     return {"mode": "installing"}
