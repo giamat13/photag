@@ -1541,5 +1541,15 @@
  "Thank you! Your report was sent (#{0}).": "धन्यवाद! आपकी रिपोर्ट भेज दी गई (#{0})।",
  "The report could not be sent": "रिपोर्ट भेजी नहीं जा सकी",
  "What happened? What did you expect?": "क्या हुआ? आप क्या उम्मीद कर रहे थे?",
- "You have sent several reports already. Please try again later.": "आप पहले ही कई रिपोर्ट भेज चुके हैं। कृपया बाद में फिर कोशिश करें।"
+ "You have sent several reports already. Please try again later.": "आप पहले ही कई रिपोर्ट भेज चुके हैं। कृपया बाद में फिर कोशिश करें।",
+ "A feature suggestion": "एक फ़ीचर सुझाव",
+ "A problem": "एक समस्या",
+ "Please write a little more": "कृपया थोड़ा और लिखें",
+ "Report a problem or suggest a feature": "समस्या की रिपोर्ट करें या फ़ीचर सुझाएँ",
+ "Report a problem or suggest a feature…": "समस्या की रिपोर्ट करें या फ़ीचर सुझाएँ…",
+ "Send suggestion": "सुझाव भेजें",
+ "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "बताएँ कि क्या गलत हुआ या आप क्या चाहते हैं। GitHub आपके संदेश के साथ खुलेगा; भेजने के लिए GitHub खाता चाहिए।",
+ "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "बताएँ कि क्या गलत हुआ या आप क्या चाहते हैं। संदेश photag के डेवलपर्स तक पहुँचता है और GitHub पर सार्वजनिक रूप से दिखता है; खाते की ज़रूरत नहीं।",
+ "Thank you! Your suggestion was sent (#{0}).": "धन्यवाद! आपका सुझाव भेज दिया गया (#{0})।",
+ "What would you like photag to do?": "आप photag से क्या करवाना चाहेंगे?"
 }

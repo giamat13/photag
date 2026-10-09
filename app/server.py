@@ -1474,6 +1474,7 @@ def start_merge(b: MergeIn):
 class ReportIn(BaseModel):
     description: str
     include_tech: bool = True
+    kind: str = "problem"              # "problem" or "feature" (a suggestion)
     language: str = ""
     client: str = ""          # what the window knows (screen, theme, its own errors)
 
@@ -1503,18 +1504,19 @@ def report_preview(language: str = ""):
 @app.post("/api/report")
 def report_send(b: ReportIn):
     desc = b.description.strip()
+    kind = "feature" if b.kind == "feature" else "problem"
     if len(desc) < report.MIN_DESC:
-        raise err(400, "Please write a little more about the problem")
+        raise err(400, "Please write a little more")
     if len(desc) > report.MAX_DESC:
         desc = desc[:report.MAX_DESC]
     if not report.allowed():
         raise err(429, "You have sent several reports already. Please try again later.")
-    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client)
+    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind)
     try:
-        r = report.send(title, body, __version__)
+        r = report.send(title, body, __version__, kind)
         return {"sent": True, "number": r["number"], "url": r["url"]}
     except report.ReportError:
-        url = report.fallback_url(title, body)
+        url = report.fallback_url(title, body, kind)
         _open_url(url)                                   # no token (or GitHub refused): the user finishes it on GitHub
         return {"sent": False, "opened": True}
 

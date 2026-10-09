@@ -1541,5 +1541,15 @@
  "Thank you! Your report was sent (#{0}).": "شكرًا لك! تم إرسال تقريرك (#{0}).",
  "The report could not be sent": "تعذّر إرسال التقرير",
  "What happened? What did you expect?": "ماذا حدث؟ وماذا توقعت؟",
- "You have sent several reports already. Please try again later.": "لقد أرسلت عدة تقارير بالفعل. يُرجى المحاولة لاحقًا."
+ "You have sent several reports already. Please try again later.": "لقد أرسلت عدة تقارير بالفعل. يُرجى المحاولة لاحقًا.",
+ "A feature suggestion": "اقتراح ميزة",
+ "A problem": "مشكلة",
+ "Please write a little more": "يُرجى كتابة المزيد",
+ "Report a problem or suggest a feature": "الإبلاغ عن مشكلة أو اقتراح ميزة",
+ "Report a problem or suggest a feature…": "الإبلاغ عن مشكلة أو اقتراح ميزة…",
+ "Send suggestion": "إرسال الاقتراح",
+ "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "أخبرنا بما حدث من خطأ أو بما تريده. سيُفتح GitHub والرسالة معبّأة مسبقًا؛ تحتاج إلى حساب GitHub لإرسالها.",
+ "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "أخبرنا بما حدث من خطأ أو بما تريده. تصل الرسالة إلى مطوّري photag وتظهر علنًا على GitHub؛ لا حاجة إلى حساب.",
+ "Thank you! Your suggestion was sent (#{0}).": "شكرًا لك! تم إرسال اقتراحك (#{0}).",
+ "What would you like photag to do?": "ماذا تريد أن يفعل photag؟"
 }

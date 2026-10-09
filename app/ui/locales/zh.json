@@ -1541,5 +1541,15 @@
  "Thank you! Your report was sent (#{0}).": "谢谢！您的报告已发送 (#{0})。",
  "The report could not be sent": "无法发送报告",
  "What happened? What did you expect?": "发生了什么？您期望的是什么？",
- "You have sent several reports already. Please try again later.": "您已发送多份报告。请稍后再试。"
+ "You have sent several reports already. Please try again later.": "您已发送多份报告。请稍后再试。",
+ "A feature suggestion": "功能建议",
+ "A problem": "问题",
+ "Please write a little more": "请多写一些内容",
+ "Report a problem or suggest a feature": "报告问题或建议功能",
+ "Report a problem or suggest a feature…": "报告问题或建议功能…",
+ "Send suggestion": "发送建议",
+ "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "请告诉我们出了什么问题或您想要什么。GitHub 会打开并填好您的消息；发送需要 GitHub 账号。",
+ "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "请告诉我们出了什么问题或您想要什么。消息会发送给 photag 开发者，并公开显示在 GitHub 上；无需账号。",
+ "Thank you! Your suggestion was sent (#{0}).": "谢谢！您的建议已发送 (#{0})。",
+ "What would you like photag to do?": "您希望 photag 做什么？"
 }
