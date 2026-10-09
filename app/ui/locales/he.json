@@ -1541,5 +1541,15 @@
  "Thank you! Your report was sent (#{0}).": "תודה! הדיווח נשלח (#{0}).",
  "The report could not be sent": "לא ניתן היה לשלוח את הדיווח",
  "What happened? What did you expect?": "מה קרה? מה ציפית שיקרה?",
- "You have sent several reports already. Please try again later.": "כבר שלחת כמה דיווחים. נסה שוב מאוחר יותר."
+ "You have sent several reports already. Please try again later.": "כבר שלחת כמה דיווחים. נסה שוב מאוחר יותר.",
+ "A feature suggestion": "הצעה לפיצ'ר",
+ "A problem": "בעיה",
+ "Please write a little more": "נא לכתוב קצת יותר",
+ "Report a problem or suggest a feature": "דיווח על בעיה או הצעת פיצ'ר",
+ "Report a problem or suggest a feature…": "דיווח על בעיה או הצעת פיצ'ר…",
+ "Send suggestion": "שלח הצעה",
+ "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "ספר לנו מה השתבש או מה היית רוצה. GitHub ייפתח עם ההודעה מוכנה; כדי לשלוח אותה צריך חשבון GitHub.",
+ "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "ספר לנו מה השתבש או מה היית רוצה. ההודעה מגיעה למפתחי photag ומופיעה בפומבי ב-GitHub; אין צורך בחשבון.",
+ "Thank you! Your suggestion was sent (#{0}).": "תודה! ההצעה נשלחה (#{0}).",
+ "What would you like photag to do?": "מה היית רוצה ש-photag יעשה?"
 }

@@ -1541,5 +1541,15 @@
  "Thank you! Your report was sent (#{0}).": "ありがとうございます！報告を送信しました (#{0})。",
  "The report could not be sent": "報告を送信できませんでした",
  "What happened? What did you expect?": "何が起きましたか？どうなると思っていましたか？",
- "You have sent several reports already. Please try again later.": "すでに何度か報告を送信しています。しばらくしてからもう一度お試しください。"
+ "You have sent several reports already. Please try again later.": "すでに何度か報告を送信しています。しばらくしてからもう一度お試しください。",
+ "A feature suggestion": "機能の提案",
+ "A problem": "問題",
+ "Please write a little more": "もう少し詳しく書いてください",
+ "Report a problem or suggest a feature": "問題を報告または機能を提案",
+ "Report a problem or suggest a feature…": "問題を報告または機能を提案…",
+ "Send suggestion": "提案を送信",
+ "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "何が起きたか、または何を望むかを教えてください。GitHub が入力済みのメッセージで開きます。送信には GitHub アカウントが必要です。",
+ "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "何が起きたか、または何を望むかを教えてください。メッセージは photag の開発者に届き、GitHub 上で公開されます。アカウントは不要です。",
+ "Thank you! Your suggestion was sent (#{0}).": "ありがとうございます！提案を送信しました (#{0})。",
+ "What would you like photag to do?": "photag に何をしてほしいですか？"
 }

@@ -1,4 +1,4 @@
-"""Problem reports: "Help > Report a problem" sends what the user wrote (and, if they allow it, a few technical details) to the
+"""Problem reports and feature suggestions: "Help > Report a problem or suggest a feature" sends what the user wrote (and, if they allow it, a few technical details) to the
 photag GitHub repository as an issue -- without the user needing a GitHub account.
 
 The issue is created by a bot account whose access token is NOT in the source: the release workflow writes it into app/_report_token.py
@@ -181,17 +181,18 @@ def tech_text(version: str, language: str = "", library: str = "", photos: int |
     return text[-LOG_CHARS:] if len(text) > LOG_CHARS else text
 
 
-def compose(description: str, tech: str | None, version: str, client: str = "") -> tuple[str, str]:
-    """(title, body) of the issue."""
+def compose(description: str, tech: str | None, version: str, client: str = "", kind: str = "problem") -> tuple[str, str]:
+    """(title, body) of the issue. kind: "problem" or "feature" (a suggestion)."""
     desc = description.strip()
     first = re.sub(r"\s+", " ", desc.splitlines()[0] if desc else "").strip()
-    title = "[Report] " + (first[:70] + ("…" if len(first) > 70 else ""))
+    title = ("[Suggestion] " if kind == "feature" else "[Report] ") + (first[:70] + ("…" if len(first) > 70 else ""))
     body = desc + "\n\n---\n"
     if tech:
         body += "<details><summary>Technical details</summary>\n\n```\n" + tech.replace("```", "'''") + "\n```\n</details>\n\n"
         if client.strip():
             body += "<details><summary>Window details</summary>\n\n```\n" + redact(client.strip()[:3500]).replace("```", "'''") + "\n```\n</details>\n\n"
-    body += f"_Sent from photag {version} with “Report a problem”._"
+    kind_name = "feature suggestion" if kind == "feature" else "problem"
+    body += f"_Sent from photag {version} with “Report a problem or suggest a feature” ({kind_name})._"
     return title, body
 
 
@@ -238,15 +239,16 @@ def can_send() -> bool:
     return bool(token())
 
 
-def fallback_url(title: str, body: str) -> str:
+def fallback_url(title: str, body: str, kind: str = "problem") -> str:
     """GitHub's own "new issue" page with the text filled in (the user needs a GitHub account to finish it)."""
     from urllib.parse import quote
     b = body if len(body) < 4000 else body[:3900] + "\n\n…(shortened)"
-    url = f"https://github.com/{REPO}/issues/new?title={quote(title)}&body={quote(b)}&labels=user-report"
+    label = "enhancement" if kind == "feature" else "user-report"
+    url = f"https://github.com/{REPO}/issues/new?title={quote(title)}&body={quote(b)}&labels={label}"
     return url[:FALLBACK_URL_CHARS] if len(url) > FALLBACK_URL_CHARS else url
 
 
-def send(title: str, body: str, version: str) -> dict:
+def send(title: str, body: str, version: str, kind: str = "problem") -> dict:
     """Create the issue. Returns {"number", "url"}; raises ReportError."""
     import urllib.error
     import urllib.request
@@ -254,7 +256,7 @@ def send(title: str, body: str, version: str) -> dict:
     if not tok:
         raise ReportError("no token")
     base = os.environ.get("PHOTAG_REPORT_API", API).rstrip("/")
-    req = urllib.request.Request(f"{base}/repos/{REPO}/issues", data=json.dumps({"title": title, "body": body, "labels": ["user-report"]}).encode("utf-8"),
+    req = urllib.request.Request(f"{base}/repos/{REPO}/issues", data=json.dumps({"title": title, "body": body, "labels": ["user-report", "enhancement"] if kind == "feature" else ["user-report"]}).encode("utf-8"),
                                  method="POST", headers={"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json", "Content-Type": "application/json",
                                                          "User-Agent": f"photag/{version}", "X-GitHub-Api-Version": "2022-11-28"})
     try:

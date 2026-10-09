@@ -1541,5 +1541,15 @@
  "Thank you! Your report was sent (#{0}).": "Grazie! La tua segnalazione è stata inviata (#{0}).",
  "The report could not be sent": "Impossibile inviare la segnalazione",
  "What happened? What did you expect?": "Cosa è successo? Cosa ti aspettavi?",
- "You have sent several reports already. Please try again later.": "Hai già inviato diverse segnalazioni. Riprova più tardi."
+ "You have sent several reports already. Please try again later.": "Hai già inviato diverse segnalazioni. Riprova più tardi.",
+ "A feature suggestion": "Un suggerimento per una funzione",
+ "A problem": "Un problema",
+ "Please write a little more": "Scrivi qualcosa di più",
+ "Report a problem or suggest a feature": "Segnala un problema o suggerisci una funzione",
+ "Report a problem or suggest a feature…": "Segnala un problema o suggerisci una funzione…",
+ "Send suggestion": "Invia suggerimento",
+ "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "Dicci cosa è andato storto o cosa vorresti. GitHub si aprirà con il tuo messaggio già compilato; per inviarlo serve un account GitHub.",
+ "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Dicci cosa è andato storto o cosa vorresti. Il messaggio arriva agli sviluppatori di photag e compare pubblicamente su GitHub; non serve un account.",
+ "Thank you! Your suggestion was sent (#{0}).": "Grazie! Il tuo suggerimento è stato inviato (#{0}).",
+ "What would you like photag to do?": "Cosa vorresti che facesse photag?"
 }
