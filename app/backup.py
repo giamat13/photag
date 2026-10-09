@@ -24,10 +24,7 @@ and restoring from a reduced set only fills in files that are missing, it never 
 Restoring first takes a safety snapshot of the current state ("before-restore"), then loads the chosen
 catalog into the live database in one transaction. Photo files are only ever ADDED back (never deleted).
 """
-try:
-    import concurrent.futures as cf
-except ImportError:
-    from . import _cf_fallback as cf   # see _cf_fallback.py for why this can happen
+from . import pool as cf    # not concurrent.futures: that pool refuses to start once the window was closed (pool.py)
 import contextlib
 import json
 import os

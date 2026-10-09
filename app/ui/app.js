@@ -3787,8 +3787,13 @@ async function pollJob(name, label){
     }
     return;
   }
+  if(name==='aitag' && p.done && p.done!==AITAG_SHOWN.done && Date.now()-AITAG_SHOWN.at>5000){   // the tags are saved photo by photo: show them while it runs
+    AITAG_SHOWN.done = p.done; AITAG_SHOWN.at = Date.now();
+    try{ await reloadAll(); renderRight(); }catch{}
+  }
   setTimeout(()=>pollJob(name, label), 800);
 }
+const AITAG_SHOWN = {done:0, at:0};
 
 // ---------- menu bar ----------
 const sep='-';

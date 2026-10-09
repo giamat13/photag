@@ -7,10 +7,6 @@ photo is sent, and only when the user starts a run. Keys are stored encrypted
 (keystore.py) in config.json and never sent back to the UI.
 """
 import base64
-try:
-    import concurrent.futures as cf
-except ImportError:
-    from . import _cf_fallback as cf   # see _cf_fallback.py for why this can happen
 import datetime
 import json
 import os
@@ -20,6 +16,7 @@ import urllib.error
 import urllib.request
 
 from . import config, db, images, keystore, render
+from . import pool as cf        # not concurrent.futures: that pool refuses to start once the window was closed (pool.py)
 from .net import ssl_context
 from .config import PATHS
 
@@ -378,8 +375,7 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                         fails += 1; last_err = str(e)
                     progress.done = ok + fails
                     progress.say("Tagging with {model} · {done}/{total}", model=model, done=progress.done, total=len(todo))
-                    if progress.done % 10 == 0:
-                        con.commit()
+                    con.commit()                                # each photo's tags are visible to the window right away, not only at the end
                     if cancelled():
                         for g in futs:
                             g.cancel()
