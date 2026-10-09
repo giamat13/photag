@@ -265,6 +265,17 @@ try:
         check("X swaps the two pictures", pg.inner_text("#lab1").split("  ·")[0] == before.split("  ·")[0] and "a.jpg" in pg.inner_text("#lab2"), (pg.inner_text("#lab1"), before))
         pg.keyboard.press("c")
         check("C again goes back to one picture", not pg.evaluate("document.body.classList.contains('cmp')"))
+        # ---- an older photag.exe ("Open with" while photag already runs, with or without the icon): its window opens the main page,
+        # the picture was handed over to this program -- the page must show it in the viewer
+        hp = call("POST", "/api/viewer/handoff", {"paths": [str(tmp / "pics" / "b.png")]})
+        pg.goto(f"{APP}/")
+        pg.wait_for_url("**/viewer.html?t=*", timeout=20000)
+        pg.wait_for_function("document.querySelector('#name').textContent === 'b.png'", timeout=15000)
+        check("the main page of the running photag jumps to the viewer on the handed-over picture", hp.get("taken") == 1 and pg.inner_text("#name") == "b.png")
+        pg.goto(f"{APP}/")
+        pg.wait_for_selector("#v-grid, #left", timeout=20000)
+        pg.wait_for_timeout(1500)
+        check("...and only once: the next time the main page stays", "viewer.html" not in pg.url, pg.url)
         check("no JavaScript errors", not errs, errs[:2])
         br.close()
 finally:
