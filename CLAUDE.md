@@ -23,6 +23,12 @@ All development happens directly on `main` — no feature branches, no pull requ
 push straight to `main`.
 
 ## How versions and releases work
+- **Never release a version (not even a pre-release) before the change is known to work 100%.** Check it for real first — on the
+  user's own machine when it can be done (run the program from source / F5, call the real endpoints, drive the real dialog headless),
+  not only with the test suite and fakes. Pushes to `main` are fine at any time; releases are not. A regular release only after
+  everything works. Only when there is truly no other way to check it (it can only be seen in a built, installed program) release a
+  **pre-release** (`-beta.N`, `workflow_dispatch` with `prerelease=true`) and say clearly that it is a test build; the user asks
+  before a regular release follows. A release that turns out bad is deleted (`gh release delete vX --cleanup-tag -y`) and made again.
 - `app/version.py` (`__version__`) is the single source of truth for the app's version. Bump it
   before every release.
 - **Numbering ("FEATURE.FIX.SMALL-FIX", decided with the user; from 11.0.0 — earlier it was "FEATURE.FIX" with a trailing 0).**
