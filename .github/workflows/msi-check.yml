@@ -27,7 +27,10 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-ChildItem dist\photag-*.msi)[0].FullName
-          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v msi-install.log" -Wait -PassThru
+          Write-Host ("MSI: {0:N1} MB, {1} files in dist\photag" -f ((Get-Item $msi).Length / 1MB), (Get-ChildItem dist\photag -Recurse -File).Count)
+          $t = Measure-Command { $script:p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v msi-install.log" -Wait -PassThru }
+          Write-Host ("install took {0:N0} s" -f $t.TotalSeconds)
+          $p = $script:p
           if ($p.ExitCode -ne 0) { Get-Content msi-install.log -Tail 60; throw "install failed: $($p.ExitCode)" }
           $exe = "$env:LOCALAPPDATA\Programs\photag-msi\photag.exe"
           if (-not (Test-Path $exe)) { throw "photag.exe was not installed" }

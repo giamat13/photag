@@ -43,6 +43,9 @@ check("a Start menu shortcut to photag.exe", any(s.get("Target") == "[INSTALLFOL
 check("versions: pre-release suffix dropped, three parts", make_msi.msi_version("14.0.0-beta.2") == "14.0.0" and make_msi.msi_version("9.1") == "9.1.0")
 ids = [c.get("Id") for c in root.iter("{%s}Component" % ns["w"])]
 check("component ids are unique", len(ids) == len(set(ids)))
+check("one component per folder, not per file (fast start of the installer)", len(ids) - 1 == len({rel.rsplit("/", 1)[0] if "/" in rel else "" for _, rel in files}), len(ids))
+check("each component has exactly one key file", all(sum(1 for f in c.findall("w:File", ns) if f.get("KeyPath") == "yes") == 1 for c in root.iter("{%s}Component" % ns["w"]) if c.findall("w:File", ns)))
+check("fast-install switches are set", any(p.get("Id") == "MSIFASTINSTALL" and p.get("Value") == "7" for p in pkg.findall("w:Property", ns)))
 n = res.count(False)
 print(f"\n{len(res) - n}/{len(res)} passed")
 sys.exit(1 if n else 0)

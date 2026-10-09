@@ -7,10 +7,10 @@ original requests. Add a task when you start something, mark it `in_progress` wh
 it continuously as you go, not only at the end of a session or when asked.
 
 ## Ideas from other projects
-You may take features (ideas, UX, and code where the license allows it) from **https://github.com/storytold/lightcraft** — the
-user approved it. Add the repo to the session with `add_repo` (owner `storytold`, repo `lightcraft`) to read it. photag is
-GPL-3.0: copy code only when lightcraft's license is compatible, and keep its copyright notice (THIRD_PARTY_NOTICES.md);
-otherwise re-implement the idea in photag's own style. Rebuild it the photag way (every string in all 16 locales, tests, notes).
+You may take **ideas** (features, UX) from **https://github.com/storytold/lightcraft** — the user approved it. Add the repo to the
+session with `add_repo` (owner `storytold`, repo `lightcraft`) to read it. It is written in another programming language, so its
+code cannot be copied or ported line by line: read it for what it does and how it feels, then build the same thing the photag way
+(Python + the web UI, every string in all 16 locales, tests, release notes).
 
 ## Git workflow
 All development happens directly on `main` — no feature branches, no pull requests. Commit and

@@ -47,7 +47,7 @@ def sources() -> list[tuple[Path, str]]:
 
 
 def wxs(files: list[tuple[Path, str]], version: str = None) -> str:
-    """The WiX (v4/v5 schema) source: a directory tree with one component per file, the Start menu shortcut and the upgrade rules."""
+    """The WiX (v4/v5 schema) source: a directory tree with one component per folder, the Start menu shortcut and the upgrade rules."""
     version = version or msi_version()
     tree: dict = {}
     for _, rel in files:
@@ -67,17 +67,24 @@ def wxs(files: list[tuple[Path, str]], version: str = None) -> str:
             lines.append(f"{indent}</Directory>")
 
     emit_dirs(tree, "", "          ")
-    comps = []
+    # one component per FOLDER (not per file): Windows Installer costs every component before it shows the progress bar -- with thousands
+    # of files that was minutes of "Please wait while Windows configures photag" without a bar. Fine here: the whole product is replaced together.
+    by_dir: dict[str, list[tuple[int, Path]]] = {}
     for i, (src, rel) in enumerate(files):
-        d = rel.rsplit("/", 1)[0] if "/" in rel else ""
-        comps.append(f'      <Component Id="c{i}" Directory={quoteattr(dir_ids[d])}><File Id="f{i}" Source={quoteattr(str(src))} KeyPath="yes" /></Component>')
+        by_dir.setdefault(rel.rsplit("/", 1)[0] if "/" in rel else "", []).append((i, src))
+    comps = []
+    for n, d in enumerate(sorted(by_dir)):
+        fl = "".join(f'<File Id="f{i}" Source={quoteattr(str(src))}{" KeyPath=" + chr(34) + "yes" + chr(34) if k == 0 else ""} />' for k, (i, src) in enumerate(by_dir[d]))
+        comps.append(f'      <Component Id="c{n}" Directory={quoteattr(dir_ids[d])}>{fl}</Component>')
     icon = ROOT / "app" / "ui" / "icon.ico"
     return f"""<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="photag" Manufacturer="photag" Version="{version}" UpgradeCode="{UPGRADE_CODE}" Scope="perUser" Compressed="yes" Language="1033">
     <SummaryInformation Description="photag {version}" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of photag is already installed." AllowSameVersionUpgrades="yes" />
-    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="medium" />
+    <!-- 1: no restore point, 2: only the file costing that is needed, 4: fewer progress messages (thousands of files: the progress bar itself was slow) -->
+    <Property Id="MSIFASTINSTALL" Value="7" />
     <Icon Id="photag.ico" SourceFile={quoteattr(str(icon))} />
     <Property Id="ARPPRODUCTICON" Value="photag.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/giamat13/photag" />
