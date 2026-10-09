@@ -2829,8 +2829,8 @@ function mdLite(md){
 async function viewerOffer(){
   if(pref.get('viewerOffer', false) || !$('#modal').classList.contains('hidden')) return;
   let fa; try{ fa = await api('/api/fileassoc'); }catch{ return; }
-  if(!fa.supported || !fa.on) return;                                  // not Windows / not the installed program / "Open with" was switched off
-  pref.set('viewerOffer', true);
+  if(!fa.supported || !fa.on || fa.offered) return;                                  // not Windows / not the installed program / "Open with" was switched off
+  pref.set('viewerOffer', true); send('POST', '/api/fileassoc/offered').catch(()=>{});
   modal(`<h3>${t('Make photag your picture viewer?')}</h3><div class="mb">
     <p>${t('Pictures you open from your folders will open in photag, quickly and without being added to your library.')}</p>
     <p class="hint" style="padding:0">${t('Windows will open its settings: press “Set default” for the picture types you want.')}</p></div>

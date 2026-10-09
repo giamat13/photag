@@ -1535,7 +1535,14 @@ class FileAssocIn(BaseModel):
 @app.get("/api/fileassoc")
 def fileassoc_status():
     sup = fileassoc.supported()
-    return {"supported": sup, "on": bool(sup and fileassoc.is_registered())}
+    return {"supported": sup, "on": bool(sup and fileassoc.is_registered()),
+            "offered": bool(sup and (fileassoc.offered() or fileassoc.is_default()))}   # no need to ask again: asked before, or already the default
+
+
+@app.post("/api/fileassoc/offered")
+def fileassoc_offered():
+    fileassoc.set_offered()
+    return {"ok": True}
 
 
 @app.post("/api/fileassoc")

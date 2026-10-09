@@ -129,6 +129,41 @@ def set_opted_out(off: bool) -> None:
         pass
 
 
+def _offered_marker() -> Path:
+    from . import platform_dirs
+    return platform_dirs.roaming_base() / "photag" / "viewer-offered"
+
+
+def offered() -> bool:
+    """The one-time "make photag your picture viewer?" question was shown already (kept next to the data, not in the browser storage,
+    which is lost when the page's address changes)."""
+    return _offered_marker().exists()
+
+
+def set_offered() -> None:
+    m = _offered_marker()
+    try:
+        m.parent.mkdir(parents=True, exist_ok=True)
+        m.write_text("", "utf-8")
+    except OSError:
+        pass
+
+
+def is_default() -> bool:
+    """True when Windows already opens pictures (.jpg or .png) with photag (the user's choice in Default apps)."""
+    if sys.platform != "win32":
+        return False
+    import winreg
+    for e in (".jpg", ".png"):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, rf"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{e}\UserChoice") as k:
+                if "photag" in str(winreg.QueryValueEx(k, "ProgId")[0]).lower():
+                    return True
+        except (FileNotFoundError, OSError):
+            pass
+    return False
+
+
 def ensure() -> bool:
     """On by default: when photag starts (installed or portable, or after a code update) and is not yet in the "Open with" menu
     for this photag.exe, put it there -- unless the user switched it off. Returns True when it registered."""
