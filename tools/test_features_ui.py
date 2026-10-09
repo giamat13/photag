@@ -194,17 +194,19 @@ try:
         check("the search is stored in the catalog", len(saved) == 1 and saved[0]["name"] == "Only videos" and saved[0]["criteria"]["kind"] == "video", saved)
         check("it is listed under Saved Searches in the left panel with its count", "Only videos" in pg.inner_text("#p-colls") and "Saved Searches" in pg.inner_text("#p-colls"))
 
-        sp = pg.evaluate("""()=>{
-          const all = S.all, jer = all.find(p=>p.filename==='jerusalem.jpg'), tlv = all.find(p=>p.filename==='telaviv_1.jpg'), par = all.find(p=>p.filename==='paris.jpg');
-          const n = c => all.filter(searchPass(c)).length;
-          const near = n({place:{lat:jer.lat, lng:jer.lng, km:5}});
-          const wide = n({place:{lat:jer.lat, lng:jer.lng, km:100}});
-          const world = n({place:{lat:jer.lat, lng:jer.lng, km:5000}});
-          const day = new Date(par.taken_at*1000), d = x=>x.toISOString().slice(0,10);
+        sp = pg.evaluate("""async ()=>{
+          const all = S.all, jer = all.find(p=>p.filename==='jerusalem.jpg'), par = all.find(p=>p.filename==='paris.jpg');
+          const ids = async c => (await send('POST', '/api/smart/ids', {criteria:c})).ids;      // every search is evaluated by the server
+          const n = async c => (await ids(c)).length;
+          const near = await n({place:{lat:jer.lat, lng:jer.lng, km:5}});
+          const wide = await n({place:{lat:jer.lat, lng:jer.lng, km:100}});
+          const world = await n({place:{lat:jer.lat, lng:jer.lng, km:5000}});
+          const day = new Date(par.taken_at*1000), d = x=>{ const z = n => String(n).padStart(2,'0'); return x.getFullYear()+'-'+z(x.getMonth()+1)+'-'+z(x.getDate()); };
+          const onDayIds = await ids({from:d(day), to:d(day)});
           return {near, wide, world, withGps: all.filter(p=>p.lat!=null).length,
-                  onDay: all.filter(searchPass({from:d(day), to:d(day)})).every(p=>d(new Date(p.taken_at*1000))===d(day)) ,
-                  noDay: n({from:'1990-01-01', to:'1990-01-02'}),
-                  big: n({minMB:0.05}), small: n({maxMB:0.05}), jpg: n({exts:['JPG']}), mp4: n({exts:['MP4']}), none: n({})}
+                  onDay: onDayIds.length > 0 && onDayIds.every(id=>d(new Date(S.byId.get(id).taken_at*1000))===d(day)),
+                  noDay: await n({from:'1990-01-01', to:'1990-01-02'}),
+                  big: await n({minMB:0.05}), small: await n({maxMB:0.05}), jpg: await n({exts:['JPG']}), mp4: await n({exts:['MP4']}), none: await n({})}
         }""")
         check("place: only photos within the radius (5 km around Jerusalem)", sp["near"] >= 1 and sp["near"] < sp["world"], sp)
         check("place: a bigger radius includes more, and photos without GPS never match", sp["wide"] >= sp["near"] and sp["world"] <= sp["withGps"], sp)

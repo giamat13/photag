@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "Для пошуку місця потрібне підключення до інтернету",
  "The text you type is sent to OpenStreetMap to find the place": "Введений текст надсилається до OpenStreetMap для пошуку місця",
  "City, address, country or coordinates": "Місто, адреса, країна або координати",
- "Draw an area on the map": "Намалювати область на карті"
+ "Draw an area on the map": "Намалювати область на карті",
+ "All of these": "Усі з них",
+ "With keywords": "З ключовими словами",
+ "With location": "З місцезнаходженням",
+ "Without location": "Без місцезнаходження",
+ "With faces": "З обличчями",
+ "Without faces": "Без облич",
+ "Faces": "Обличчя",
+ "Favorites": "Обране",
+ "Albums": "Альбоми",
+ "Day of week": "День тижня",
+ "Time of day": "Час доби",
+ "Resolution (megapixels)": "Роздільність (мегапікселі)",
+ "Added to the library: from": "Додано до бібліотеки: з"
 }

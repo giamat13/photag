@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "يتطلب البحث عن مكان اتصالاً بالإنترنت",
  "The text you type is sent to OpenStreetMap to find the place": "يُرسل النص الذي تكتبه إلى OpenStreetMap للعثور على المكان",
  "City, address, country or coordinates": "مدينة أو عنوان أو دولة أو إحداثيات",
- "Draw an area on the map": "ارسم منطقة على الخريطة"
+ "Draw an area on the map": "ارسم منطقة على الخريطة",
+ "All of these": "كلها",
+ "With keywords": "مع كلمات مفتاحية",
+ "With location": "مع موقع",
+ "Without location": "بدون موقع",
+ "With faces": "مع وجوه",
+ "Without faces": "بدون وجوه",
+ "Faces": "الوجوه",
+ "Favorites": "المفضلة",
+ "Albums": "الألبومات",
+ "Day of week": "يوم الأسبوع",
+ "Time of day": "وقت اليوم",
+ "Resolution (megapixels)": "الدقة (ميغابكسل)",
+ "Added to the library: from": "أُضيفت إلى المكتبة: من"
 }

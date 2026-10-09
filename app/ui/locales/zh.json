@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "查找地点需要联网",
  "The text you type is sent to OpenStreetMap to find the place": "您输入的文字会发送到 OpenStreetMap 以查找地点",
  "City, address, country or coordinates": "城市、地址、国家或坐标",
- "Draw an area on the map": "在地图上绘制区域"
+ "Draw an area on the map": "在地图上绘制区域",
+ "All of these": "全部包含",
+ "With keywords": "有关键词",
+ "With location": "有位置",
+ "Without location": "无位置",
+ "With faces": "有人脸",
+ "Without faces": "无人脸",
+ "Faces": "人脸",
+ "Favorites": "收藏",
+ "Albums": "相册",
+ "Day of week": "星期",
+ "Time of day": "时段",
+ "Resolution (megapixels)": "分辨率（百万像素）",
+ "Added to the library: from": "添加到图库：从"
 }

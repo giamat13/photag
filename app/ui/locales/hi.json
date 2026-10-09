@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "जगह खोजने के लिए इंटरनेट कनेक्शन चाहिए",
  "The text you type is sent to OpenStreetMap to find the place": "आपका लिखा टेक्स्ट जगह खोजने के लिए OpenStreetMap को भेजा जाता है",
  "City, address, country or coordinates": "शहर, पता, देश या निर्देशांक",
- "Draw an area on the map": "नक्शे पर क्षेत्र बनाएं"
+ "Draw an area on the map": "नक्शे पर क्षेत्र बनाएं",
+ "All of these": "ये सभी",
+ "With keywords": "कीवर्ड वाले",
+ "With location": "स्थान सहित",
+ "Without location": "स्थान रहित",
+ "With faces": "चेहरों वाले",
+ "Without faces": "चेहरों रहित",
+ "Faces": "चेहरे",
+ "Favorites": "पसंदीदा",
+ "Albums": "एल्बम",
+ "Day of week": "सप्ताह का दिन",
+ "Time of day": "दिन का समय",
+ "Resolution (megapixels)": "रिज़ॉल्यूशन (मेगापिक्सल)",
+ "Added to the library: from": "लाइब्रेरी में जोड़ा गया: से"
 }

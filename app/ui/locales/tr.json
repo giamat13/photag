@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "Yer araması için internet bağlantısı gerekir",
  "The text you type is sent to OpenStreetMap to find the place": "Yazdığınız metin, yeri bulmak için OpenStreetMap'e gönderilir",
  "City, address, country or coordinates": "Şehir, adres, ülke veya koordinatlar",
- "Draw an area on the map": "Haritada alan çiz"
+ "Draw an area on the map": "Haritada alan çiz",
+ "All of these": "Hepsi",
+ "With keywords": "Anahtar kelimeli",
+ "With location": "Konumlu",
+ "Without location": "Konumsuz",
+ "With faces": "Yüzlü",
+ "Without faces": "Yüzsüz",
+ "Faces": "Yüzler",
+ "Favorites": "Favoriler",
+ "Albums": "Albümler",
+ "Day of week": "Haftanın günü",
+ "Time of day": "Günün saati",
+ "Resolution (megapixels)": "Çözünürlük (megapiksel)",
+ "Added to the library: from": "Kitaplığa eklendi: başlangıç"
 }

@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "Plaatsen zoeken vereist een internetverbinding",
  "The text you type is sent to OpenStreetMap to find the place": "De ingevoerde tekst wordt naar OpenStreetMap gestuurd om de plaats te vinden",
  "City, address, country or coordinates": "Stad, adres, land of coördinaten",
- "Draw an area on the map": "Teken een gebied op de kaart"
+ "Draw an area on the map": "Teken een gebied op de kaart",
+ "All of these": "Alle",
+ "With keywords": "Met trefwoorden",
+ "With location": "Met locatie",
+ "Without location": "Zonder locatie",
+ "With faces": "Met gezichten",
+ "Without faces": "Zonder gezichten",
+ "Faces": "Gezichten",
+ "Favorites": "Favorieten",
+ "Albums": "Albums",
+ "Day of week": "Dag van de week",
+ "Time of day": "Tijdstip",
+ "Resolution (megapixels)": "Resolutie (megapixels)",
+ "Added to the library: from": "Aan de bibliotheek toegevoegd: van"
 }

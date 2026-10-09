@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "場所の検索にはインターネット接続が必要です",
  "The text you type is sent to OpenStreetMap to find the place": "入力したテキストは場所を探すために OpenStreetMap に送信されます",
  "City, address, country or coordinates": "都市、住所、国、または座標",
- "Draw an area on the map": "地図上で範囲を描く"
+ "Draw an area on the map": "地図上で範囲を描く",
+ "All of these": "すべて含む",
+ "With keywords": "キーワードあり",
+ "With location": "位置情報あり",
+ "Without location": "位置情報なし",
+ "With faces": "顔あり",
+ "Without faces": "顔なし",
+ "Faces": "顔",
+ "Favorites": "お気に入り",
+ "Albums": "アルバム",
+ "Day of week": "曜日",
+ "Time of day": "時間帯",
+ "Resolution (megapixels)": "解像度（メガピクセル）",
+ "Added to the library: from": "ライブラリに追加：開始"
 }

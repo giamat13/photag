@@ -52,7 +52,7 @@ const S = {
   sort:pref.get('sort','capture'), asc:pref.get('asc',false),
   fb:'none',
   F:{on:true, q:'', qf:'any', flags:new Set(), rop:'>=', rating:0, labels:new Set(), kinds:new Set(),
-     meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set()}},
+     meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set()}, place:null},
   cell:pref.get('cellStyle','compact'), cellsz:pref.get('cellsz',180), loupeInfo:true, lights:0,
   stackBursts:pref.get('stackBursts', false), bursts:null,
   status:null, albums:[], folders:{root:'', folders:[]}, tags:[], people:[], searches:[],
@@ -113,7 +113,7 @@ async function fetchSource(){
   let rows;
   if(src.kind==='otd') rows = S.all.filter(otdPass);
   else if(src.kind==='semantic') rows = S.all.filter(p=>src.scores[p.id]!=null);
-  else if(src.kind==='search' && src.id!=='tmp'){
+  else if(src.kind==='search'){
     const ids = new Set((await send('POST', '/api/smart/ids', {criteria: src.crit})).ids);   // evaluated now: a smart collection is always up to date
     if(S.src!==src) return;
     rows = S.all.filter(p=>ids.has(p.id));
@@ -125,7 +125,6 @@ async function fetchSource(){
     if(S.src!==src) return;   // clicked elsewhere meanwhile
   }
   if(src.kind==='smart'){ const f = SMART.find(x=>x[0]===src.id); rows = rows.filter(f[2]); }
-  if(src.kind==='search' && src.id==='tmp') rows = rows.filter(searchPass(src.crit));
   S.base = rows;
   applyFilter();
 }
@@ -152,7 +151,7 @@ function passMeta(p, upto=META_COLS.length){
   return true;
 }
 function filterActive(){
-  const F=S.F; return !!(F.q || F.flags.size || F.rating || F.labels.size || F.kinds.size || Object.values(F.meta).some(s=>s.size));
+  const F=S.F; return !!(F.q || F.flags.size || F.rating || F.labels.size || F.kinds.size || Object.values(F.meta).some(s=>s.size) || F.place);
 }
 // every sort ends with the same tie-breakers (capture time, then file name, then id), so equal values never shuffle
 const byName = (a,b)=>a.filename.localeCompare(b.filename, I18N.locale, {numeric:true, sensitivity:'base'});
@@ -181,7 +180,7 @@ function applyFilter({keepScroll=true}={}){
   let rows = S.base;
   if(S.F.on){
     if(S.F.q && S.F.qf==='name'){ const q=S.F.q.toLowerCase(); rows = rows.filter(p=>p.filename.toLowerCase().includes(q)); }
-    rows = rows.filter(p=>passAttr(p) && passMeta(p));
+    rows = rows.filter(p=>passAttr(p) && passMeta(p) && (!S.F.place || inPlace(p, S.F.place)));
   }
   if(S.stackBursts && S.bursts) rows = rows.filter(p=>{ const b=S.bursts.get(p.id); return !b || b.best===p.id; });
   if(!SORTS[S.sort] || !sortKeys().includes(S.sort)) S.sort='capture';      // e.g. 'Date in Trash' after leaving the trash
@@ -536,12 +535,13 @@ function bindAttrControls(root){
 bindAttrControls($('#fs-filter')); bindAttrControls($('#fb-attr'));
 function clearFilters(){
   const F=S.F; const hadQ = !!F.q;
-  F.q=''; F.flags.clear(); F.labels.clear(); F.kinds.clear(); F.rating=0; F.on=true; Object.values(F.meta).forEach(s=>s.clear());
+  F.q=''; F.flags.clear(); F.labels.clear(); F.kinds.clear(); F.rating=0; F.on=true; Object.values(F.meta).forEach(s=>s.clear()); F.place=null;
   $('#ft-q').value='';
   if(hadQ) fetchSource(); else applyFilter();
 }
 
 // ---------- library filter bar ----------
+$('#fb-adv').onclick = advancedSearch;
 $('#fb-tabs').addEventListener('click', e=>{
   const a=e.target.closest('[data-fb]'); if(!a) return;
   S.fb = a.dataset.fb;
@@ -549,11 +549,37 @@ $('#fb-tabs').addEventListener('click', e=>{
   renderFilterBar();
   if(S.fb==='text') $('#ft-q').focus();
 });
+// ---------- library filter: Location (a place by name / coordinates; the map is in Advanced Search) ----------
+function renderPlacePanel(){
+  const pl = S.F.place, sel = pl && !pl.box && pl.km ? pl.km : 5;
+  $('#fb-place').innerHTML = `<label>${t('Location')}</label>
+    <label class="ft-box"><svg class="ic"><use href="#i-pin"/></svg><input id="fp-q" type="search" placeholder="${t('City, address, country or coordinates')}" title="${t('The text you type is sent to OpenStreetMap to find the place')}" value="${esc(pl ? pl.q || pl.name : '')}"></label>
+    <select id="fp-km">${SEARCH_RADII.map(r=>`<option value="${r}" ${r===sel?'selected':''}>${r} km</option>`).join('')}</select>
+    <button id="fp-go" type="button">${t('Find')}</button>
+    <button id="fp-map" type="button" title="${t('Near a place on the map')}">${I('pin')}</button>
+    <button id="fp-clear" type="button">${t('Clear')}</button>
+    ${pl ? `<span class="hint" dir="auto" style="padding:0">${esc(pl.name)}</span>` : ''}`;
+}
+async function placeFind(){
+  const q = $('#fp-q').value.trim();
+  if(!q){ S.F.place = null; applyFilter(); renderFilterBar(); return; }
+  let pl; try{ pl = await findPlace(q, +$('#fp-km').value || 5); } catch(e){ toast(e.message || t('Place not found'), 3000); return; }
+  pl.q = q; S.F.place = pl; applyFilter(); renderFilterBar();
+}
+$('#fb-place').addEventListener('click', e=>{
+  if(e.target.closest('#fp-go')) placeFind();
+  else if(e.target.closest('#fp-clear')){ S.F.place = null; applyFilter(); renderFilterBar(); }
+  else if(e.target.closest('#fp-map')) advancedSearch();
+});
+$('#fb-place').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.id==='fp-q'){ e.preventDefault(); placeFind(); } });
+$('#fb-place').addEventListener('change', e=>{ if(e.target.id==='fp-km' && S.F.place && !S.F.place.box){ S.F.place.km = +e.target.value; applyFilter(); } });
 function renderFilterBar(){
   $$('#fb-tabs a').forEach(a=>a.classList.toggle('on', a.dataset.fb===S.fb));
   $('#fb-text').classList.toggle('hidden', S.fb!=='text');
   $('#fb-attr').classList.toggle('hidden', S.fb!=='attr');
   $('#fb-meta').classList.toggle('hidden', S.fb!=='meta');
+  $('#fb-place').classList.toggle('hidden', S.fb!=='place');
+  if(S.fb==='place') renderPlacePanel();
   if(S.fb==='attr') $('#fb-attr').innerHTML = attrControls(false);
   if(S.fb==='meta') renderMetaBrowser();
   $('#fb-state').innerHTML = filterActive() ? (S.F.on ? ("<b>"+t("Filter active")+"</b>") : t('Filter off')) : '';
@@ -711,37 +737,26 @@ $$('.pnl>h3').forEach(h=>h.addEventListener('click', e=>{
 // ---------- advanced search: dates, place on the map, file type and size; searches can be saved ----------
 let SEARCH_TMP = null;
 const SEARCH_RADII = [0.5, 1, 2, 5, 10, 25, 50, 100, 500];
-function searchEmpty(c){ return !c || !(c.from || c.to || (c.kind && c.kind!=='all') || (c.exts && c.exts.length) || c.minMB || c.maxMB || c.place || (c.cameras && c.cameras.length) || (c.lenses && c.lenses.length) || c.minFocal || c.maxFocal); }
-function searchPass(c){
-  if(searchEmpty(c)) return ()=>true;
-  const from = c.from ? new Date(c.from+'T00:00:00').getTime()/1000 : null, to = c.to ? new Date(c.to+'T23:59:59').getTime()/1000 : null;
-  const min = c.minMB ? c.minMB*1048576 : 0, max = c.maxMB ? c.maxMB*1048576 : 0, exts = new Set((c.exts||[]).map(x=>x.toUpperCase()));
-  const pl = c.place, R = Math.PI/180;
-  const cams = new Set((c.cameras||[]).map(x=>x.toLowerCase())), lenses = new Set((c.lenses||[]).map(x=>x.toLowerCase()));
-  const minF = c.minFocal ? +c.minFocal : 0, maxF = c.maxFocal ? +c.maxFocal : 0;
-  return p=>{
-    if(from!=null && !(p.taken_at && p.taken_at>=from)) return false;
-    if(to!=null && !(p.taken_at && p.taken_at<=to)) return false;
-    if(c.kind==='photo' && p.is_video) return false;
-    if(c.kind==='video' && !p.is_video) return false;
-    if(exts.size && !exts.has(ext(p))) return false;
-    if(min && (p.bytes||0)<min) return false;
-    if(max && (p.bytes||0)>max) return false;
-    if(cams.size && !cams.has((p.camera_model||'').toLowerCase())) return false;
-    if(lenses.size && !lenses.has((p.lens||'').toLowerCase())) return false;
-    if(minF && !(p.focal_length && p.focal_length>=minF)) return false;
-    if(maxF && !(p.focal_length && p.focal_length<=maxF)) return false;
-    if(pl){
-      if(p.lat==null || p.lng==null) return false;
-      if(pl.box){                                     // a city / country found by name: inside its box (it may cross the 180th meridian)
-        const [s, n, w, e] = pl.box;
-        return p.lat>=s && p.lat<=n && (w<=e ? p.lng>=w && p.lng<=e : p.lng>=w || p.lng<=e);
-      }
-      const a = Math.sin((p.lat-pl.lat)*R/2)**2 + Math.cos(pl.lat*R)*Math.cos(p.lat*R)*Math.sin((p.lng-pl.lng)*R/2)**2;
-      if(12742*Math.asin(Math.min(1, Math.sqrt(a))) > pl.km) return false;
-    }
-    return true;
-  };
+function searchEmpty(c){ return !c || !(c.from || c.to || (c.kind && c.kind!=='all') || (c.exts && c.exts.length) || c.minMB || c.maxMB || c.place || (c.cameras && c.cameras.length) || (c.lenses && c.lenses.length) || c.minFocal || c.maxFocal
+  || (c.q||'').trim() || (c.flags && c.flags.length) || c.rating || (c.colors && c.colors.length) || c.edited || (c.months && c.months.length) || (c.orients && c.orients.length)
+  || (c.keywords||'').trim() || c.kw || c.gps || c.faces || c.fav || (c.persons && c.persons.length) || (c.albumIds && c.albumIds.length) || (c.weekdays && c.weekdays.length)
+  || (c.hourFrom!=='' && c.hourFrom!=null) || (c.hourTo!=='' && c.hourTo!=null) || c.minMP || c.maxMP || c.addedFrom || c.addedTo || c.score); }
+// is the photo inside the place: a box (a city / country found by name or an area drawn on the map; it may cross the 180th meridian) or a circle
+function inPlace(p, pl){
+  if(p.lat==null || p.lng==null) return false;
+  if(pl.box){
+    const [s, n, w, e] = pl.box;
+    return p.lat>=s && p.lat<=n && (w<=e ? p.lng>=w && p.lng<=e : p.lng>=w || p.lng<=e);
+  }
+  const R = Math.PI/180, a = Math.sin((p.lat-pl.lat)*R/2)**2 + Math.cos(pl.lat*R)*Math.cos(p.lat*R)*Math.sin((p.lng-pl.lng)*R/2)**2;
+  return 12742*Math.asin(Math.min(1, Math.sqrt(a))) <= pl.km;
+}
+// a place typed by the user: coordinates (no network) or a name (city, address, country: looked up on OpenStreetMap)
+async function findPlace(q, km){
+  const xy = parseCoords(q);
+  if(xy) return {lat:xy[0], lng:xy[1], km, name:`${xy[0].toFixed(5)}, ${xy[1].toFixed(5)}`, coords:true};
+  const r = await api('/api/geocode?q='+encodeURIComponent(q)+'&lang='+encodeURIComponent(I18N.locale||'en'));
+  return r.box ? {lat:r.lat, lng:r.lng, km:0, box:r.box, name:r.name} : {lat:r.lat, lng:r.lng, km:1, name:r.name};
 }
 // "32.08, 34.78", "32.08 34.78", "32.08°N 34.78°E", "-33.9; 151.2" (a decimal point; N/S/E/W signs are understood)
 function parseCoords(q){
@@ -754,10 +769,16 @@ function parseCoords(q){
 }
 function advancedSearch(){
   const cur = S.src.kind==='search' ? S.src.crit : SEARCH_TMP;
-  const c = {from:'', to:'', kind:'all', exts:[], minMB:'', maxMB:'', place:null, cameras:[], lenses:[], minFocal:'', maxFocal:'', ...(cur||{})};
+  const c = {from:'', to:'', kind:'all', exts:[], minMB:'', maxMB:'', place:null, cameras:[], lenses:[], minFocal:'', maxFocal:'',
+    q:'', qf:'any', flags:[], rating:'', ratingOp:'>=', colors:[], edited:false, months:[], orients:[], keywords:'', keywordsAll:false, kw:'', gps:'', faces:'', fav:false,
+    persons:[], albumIds:[], weekdays:[], hourFrom:'', hourTo:'', minMP:'', maxMP:'', addedFrom:'', addedTo:'', score:'', ...(cur||{})};
+  const chips = (id, items, sel) => `<div class="chips" id="${id}">${items.map(([v,l])=>`<button type="button" class="tg ${sel.map(String).includes(String(v))?'on':''}" data-x="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
+  const opts = (items, cur) => items.map(([v,l])=>`<option value="${esc(v)}" ${String(cur)===String(v)?'selected':''}>${esc(l)}</option>`).join('');
+  const hours = [['', '—'], ...Array.from({length:24}, (_,h)=>[String(h), String(h).padStart(2,'0')+':00'])];
   const exts = [...new Set(S.all.map(ext))].filter(Boolean).sort();
   const cameras = [...new Set(S.all.map(p=>p.camera_model).filter(Boolean))].sort();
   const lenses = [...new Set(S.all.map(p=>p.lens).filter(Boolean))].sort();
+  const people = (S.people||[]).filter(x=>x.name).slice(0, 60), albumsList = (S.albums||[]).filter(x=>x.name).slice(0, 60);
   let map = null, marker = null, circle = null;
   const km = () => +$('#as-km').value;
   const draw = () => {
@@ -766,7 +787,6 @@ function advancedSearch(){
     if(c.place){ marker = L.marker([c.place.lat, c.place.lng], {icon: pinIcon(1), interactive:false}).addTo(map);
       circle = c.place.box ? L.rectangle([[c.place.box[0], c.place.box[2]], [c.place.box[1], c.place.box[3]]], {color:'#4a90d9', weight:2, fillOpacity:.12}).addTo(map)
         : L.circle([c.place.lat, c.place.lng], {radius: c.place.km*1000, color:'#4a90d9', weight:2, fillOpacity:.12}).addTo(map); }
-    $('#as-km').disabled = !!(c.place && c.place.box);
     $('#as-place-note').textContent = c.place ? (c.place.name ? c.place.name : t('{0} km around the chosen place', [c.place.km])) : t('Click the map to choose a place');
   };
   modal(`<h3>${t('Advanced Search')}</h3><div class="mb as">
@@ -782,6 +802,26 @@ function advancedSearch(){
     </div>` : ''}
     <div class="two"><label class="fld"><span>${t('Focal length (mm)')} · ${t('at least')}</span><input type="number" id="as-fmin" min="0" step="any" dir="ltr" value="${esc(c.minFocal)}"></label>
       <label class="fld"><span>${t('at most')}</span><input type="number" id="as-fmax" min="0" step="any" dir="ltr" value="${esc(c.maxFocal)}"></label></div>
+    <div class="two"><div class="fld"><span>${t('Text')}</span><div class="frow"><select id="as-qf">${opts([['any',t('Any Searchable Field')],['name',t('File Name')]], c.qf)}</select><input type="text" id="as-text" style="flex:1" value="${esc(c.q)}"></div></div>
+      <div class="fld"><span>${t('Flag')}</span>${chips('as-flags', [['pick',t('Picks')],['none',t('Unflagged')],['rej',t('Rejects')]], c.flags)}</div></div>
+    <div class="two"><div class="fld"><span>${t('Rating')}</span><div class="frow"><select id="as-rop">${opts([['>=','≥'],['<=','≤'],['=','=']], c.ratingOp)}</select><select id="as-rating">${opts([['','—'],...[1,2,3,4,5].map(n=>[n,'★'.repeat(n)])], c.rating)}</select></div></div>
+      <div class="fld"><span>${t('Color')}</span>${chips('as-colors', [...LABELS.map(([k,n])=>[k,n]), ['none',t('No Label')]], c.colors)}</div></div>
+    <div class="two"><div class="fld"><span>${t('Month')}</span>${chips('as-months', Array.from({length:12}, (_,i)=>[String(i+1).padStart(2,'0'), new Date(2000,i,1).toLocaleDateString(I18N.locale,{month:'short'})]), c.months)}</div>
+      <div class="fld"><span>${t('Orientation')}</span>${chips('as-orients', [['landscape',t('Landscape')],['portrait',t('Portrait')],['square',t('Square')],['unknown',t('Unknown')]], c.orients)}</div></div>
+    <div class="two"><div class="fld"><span>${t('Day of week')}</span>${chips('as-weekdays', Array.from({length:7}, (_,i)=>[String(i), new Date(2024,0,7+i).toLocaleDateString(I18N.locale,{weekday:'short'})]), c.weekdays)}</div>
+      <div class="fld"><span>${t('Time of day')}</span><div class="frow"><select id="as-h1">${opts(hours, c.hourFrom)}</select><span>–</span><select id="as-h2">${opts(hours, c.hourTo)}</select></div></div></div>
+    <div class="two"><label class="fld"><span>${t('Resolution (megapixels)')} · ${t('at least')}</span><input type="number" id="as-mp1" min="0" step="any" dir="ltr" value="${esc(c.minMP)}"></label>
+      <label class="fld"><span>${t('at most')}</span><input type="number" id="as-mp2" min="0" step="any" dir="ltr" value="${esc(c.maxMP)}"></label></div>
+    <div class="two"><label class="fld"><span>${t('Added to the library: from')}</span><input type="date" id="as-add1" dir="ltr" value="${esc(c.addedFrom)}"></label>
+      <label class="fld"><span>${t('To')}</span><input type="date" id="as-add2" dir="ltr" value="${esc(c.addedTo)}"></label></div>
+    <div class="two"><div class="fld"><span>${t('Keywords')}</span><div class="frow"><input type="text" id="as-kws" style="flex:1" placeholder="${t('Type keywords separated by commas')}" value="${esc(c.keywords)}"><label class="check"><input type="checkbox" id="as-kwall" ${c.keywordsAll?'checked':''}> ${t('All of these')}</label></div></div>
+      <div class="fld"><span>${t('Keywords')} · ${t('Location')} · ${t('Faces')}</span><div class="frow">
+        <select id="as-kw">${opts([['','—'],['has',t('With keywords')],['none',t('No Keywords')]], c.kw)}</select>
+        <select id="as-gps">${opts([['','—'],['has',t('With location')],['none',t('Without location')]], c.gps)}</select>
+        <select id="as-faces">${opts([['','—'],['has',t('With faces')],['none',t('Without faces')]], c.faces)}</select></div></div></div>
+    <div class="two"><div class="fld"><span>${t('Quality')}</span><div class="frow"><select id="as-score">${opts([['','—'],['40','40'],['60','60'],['80','80']], c.score)}</select><button type="button" class="tg ${c.fav?'on':''}" id="as-fav">${t('Favorites')}</button><button type="button" class="tg ${c.edited?'on':''}" id="as-edited">${t('Edited')}</button></div></div><div></div></div>
+    ${people.length ? `<div class="fld"><span>${t('People')}</span>${chips('as-persons', people.map(x=>[x.id,x.name]), c.persons)}</div>` : ''}
+    ${albumsList.length ? `<div class="fld"><span>${t('Albums')}</span>${chips('as-albums', albumsList.map(x=>[x.id,x.name]), c.albumIds)}</div>` : ''}
     <div class="fld"><span>${t('Near a place on the map')}</span>
       <div class="frow"><input type="text" id="as-q" style="flex:1" placeholder="${t('City, address, country or coordinates')}" title="${t('The text you type is sent to OpenStreetMap to find the place')}"><button type="button" id="as-find">${t('Find')}</button></div>
       <div id="as-map" class="as-map" dir="ltr"></div>
@@ -794,18 +834,22 @@ function advancedSearch(){
   const read = () => ({from:$('#as-from').value, to:$('#as-to').value, kind:$('#as-kind').value,
     exts:$$('#as-exts .on').map(b=>b.dataset.x), minMB:+$('#as-min').value||'', maxMB:+$('#as-max').value||'', place:c.place ? (c.place.box ? {...c.place} : {...c.place, km:km()}) : null,
     cameras:$$('#as-cams .on').map(b=>b.dataset.x), lenses:$$('#as-lenses .on').map(b=>b.dataset.x),
-    minFocal:+$('#as-fmin').value||'', maxFocal:+$('#as-fmax').value||''});
+    minFocal:+$('#as-fmin').value||'', maxFocal:+$('#as-fmax').value||'',
+    q:$('#as-text').value.trim(), qf:$('#as-qf').value, flags:$$('#as-flags .on').map(b=>b.dataset.x), rating:+$('#as-rating').value||'', ratingOp:$('#as-rop').value,
+    colors:$$('#as-colors .on').map(b=>b.dataset.x), edited:$('#as-edited').classList.contains('on'), months:$$('#as-months .on').map(b=>b.dataset.x), orients:$$('#as-orients .on').map(b=>b.dataset.x),
+    keywords:$('#as-kws').value.trim(), keywordsAll:$('#as-kwall').checked, kw:$('#as-kw').value, gps:$('#as-gps').value, faces:$('#as-faces').value, fav:$('#as-fav').classList.contains('on'),
+    persons:$$('#as-persons .on').map(b=>+b.dataset.x), albumIds:$$('#as-albums .on').map(b=>+b.dataset.x), weekdays:$$('#as-weekdays .on').map(b=>b.dataset.x),
+    hourFrom:$('#as-h1').value, hourTo:$('#as-h2').value, minMP:+$('#as-mp1').value||'', maxMP:+$('#as-mp2').value||'', addedFrom:$('#as-add1').value, addedTo:$('#as-add2').value, score:$('#as-score').value});
   $('#as-exts').onclick = e=>{ const b=e.target.closest('[data-x]'); if(b) b.classList.toggle('on'); };
-  $('.modal-box').addEventListener('click', e=>{ const b=e.target.closest('#as-cams [data-x],#as-lenses [data-x]'); if(b) b.classList.toggle('on'); });
+  $('.mb.as').addEventListener('click', e=>{ const b=e.target.closest('#as-cams [data-x],#as-lenses [data-x],#as-flags [data-x],#as-colors [data-x],#as-months [data-x],#as-orients [data-x],#as-weekdays [data-x],#as-persons [data-x],#as-albums [data-x]'); if(b) b.classList.toggle('on'); });
+  $('#as-fav').onclick = e=>e.currentTarget.classList.toggle('on'); $('#as-edited').onclick = e=>e.currentTarget.classList.toggle('on');
   $('#as-km').onchange = ()=>{ if(c.place){ c.place.km = km(); draw(); } };
   const find = async ()=>{
     const q = $('#as-q').value.trim(); if(!q) return;
-    const xy = parseCoords(q);                                   // "32.08, 34.78" / "32.08N 34.78E": no network needed
-    if(xy){ c.place = {lat:xy[0], lng:xy[1], km:km() || 5, name:`${xy[0].toFixed(5)}, ${xy[1].toFixed(5)}`}; map.setView(xy, 12); draw(); return; }
-    let r; try{ r = await api('/api/geocode?q='+encodeURIComponent(q)+'&lang='+encodeURIComponent(I18N.locale||'en')); }
-    catch(e){ toast(e.message || t('Place not found'), 3000); return; }
-    c.place = {lat:r.lat, lng:r.lng, km:r.box ? 0 : 1, name:r.name};
-    if(r.box){ c.place.box = r.box; map.fitBounds([[r.box[0], r.box[2]], [r.box[1], r.box[3]]]); } else { $('#as-km').value = '1'; map.setView([r.lat, r.lng], 13); }
+    let pl; try{ pl = await findPlace(q, km() || 5); } catch(e){ toast(e.message || t('Place not found'), 3000); return; }
+    c.place = pl;
+    if(pl.box) map.fitBounds([[pl.box[0], pl.box[2]], [pl.box[1], pl.box[3]]]);
+    else { if(!pl.coords) $('#as-km').value = String(pl.km); map.setView([pl.lat, pl.lng], pl.coords ? 12 : 13); }
     draw();
   };
   $('#as-find').onclick = find;

@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "Для поиска места нужно подключение к интернету",
  "The text you type is sent to OpenStreetMap to find the place": "Введённый текст отправляется в OpenStreetMap для поиска места",
  "City, address, country or coordinates": "Город, адрес, страна или координаты",
- "Draw an area on the map": "Нарисовать область на карте"
+ "Draw an area on the map": "Нарисовать область на карте",
+ "All of these": "Все из них",
+ "With keywords": "С ключевыми словами",
+ "With location": "С местоположением",
+ "Without location": "Без местоположения",
+ "With faces": "С лицами",
+ "Without faces": "Без лиц",
+ "Faces": "Лица",
+ "Favorites": "Избранное",
+ "Albums": "Альбомы",
+ "Day of week": "День недели",
+ "Time of day": "Время суток",
+ "Resolution (megapixels)": "Разрешение (мегапиксели)",
+ "Added to the library: from": "Добавлены в библиотеку: с"
 }

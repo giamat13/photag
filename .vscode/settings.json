@@ -3,5 +3,6 @@
         "{**/.c4z/.extsrcs/*.PROTSYM.cbl,**/.c4z/.extsrcs/*.PROTSYM.listing}": true
     },
     "python.defaultInterpreterPath": "C:\\Users\\furst\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
-    "python.terminal.activateEnvironment": false
+    "python.terminal.activateEnvironment": false,
+    "liveServer.settings.port": 5501
 }

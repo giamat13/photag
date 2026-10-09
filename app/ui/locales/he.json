@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "חיפוש מקום דורש חיבור לאינטרנט",
  "The text you type is sent to OpenStreetMap to find the place": "הטקסט שמקלידים נשלח אל OpenStreetMap כדי למצוא את המקום",
  "City, address, country or coordinates": "עיר, כתובת, מדינה או קואורדינטות",
- "Draw an area on the map": "סמן אזור על המפה"
+ "Draw an area on the map": "סמן אזור על המפה",
+ "All of these": "כולם",
+ "With keywords": "עם מילות מפתח",
+ "With location": "עם מיקום",
+ "Without location": "בלי מיקום",
+ "With faces": "עם פנים",
+ "Without faces": "בלי פנים",
+ "Faces": "פנים",
+ "Favorites": "מועדפים",
+ "Albums": "אלבומים",
+ "Day of week": "יום בשבוע",
+ "Time of day": "שעה ביום",
+ "Resolution (megapixels)": "רזולוציה (מגה-פיקסל)",
+ "Added to the library: from": "נוספו לספרייה: מתאריך"
 }

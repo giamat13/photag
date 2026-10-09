@@ -1558,5 +1558,18 @@
  "The place search needs an internet connection": "La búsqueda de lugares necesita conexión a internet",
  "The text you type is sent to OpenStreetMap to find the place": "El texto que escribes se envía a OpenStreetMap para encontrar el lugar",
  "City, address, country or coordinates": "Ciudad, dirección, país o coordenadas",
- "Draw an area on the map": "Dibujar un área en el mapa"
+ "Draw an area on the map": "Dibujar un área en el mapa",
+ "All of these": "Todas ellas",
+ "With keywords": "Con palabras clave",
+ "With location": "Con ubicación",
+ "Without location": "Sin ubicación",
+ "With faces": "Con caras",
+ "Without faces": "Sin caras",
+ "Faces": "Caras",
+ "Favorites": "Favoritos",
+ "Albums": "Álbumes",
+ "Day of week": "Día de la semana",
+ "Time of day": "Hora del día",
+ "Resolution (megapixels)": "Resolución (megapíxeles)",
+ "Added to the library: from": "Añadidas a la biblioteca: desde"
 }
