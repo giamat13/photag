@@ -3338,6 +3338,31 @@ async function viewerOffer(){
   $('#vo-yes').onclick = ()=>{ closeModal(); send('POST', '/api/fileassoc/default-apps', {}).catch(()=>{}); };
 }
 
+// ---- Help > Report a problem: an issue on GitHub, without the user needing an account (the program sends it; see app/report.py)
+async function reportProblem(){
+  let pv={tech:'', can_send:false, allowed:true};
+  try{ pv = await api('/api/report/preview?language='+encodeURIComponent(I18N.lang)); }catch(e){}
+  modal(`<h3>${t('Report a problem')}</h3><div class="mb">
+    <p class="hint" style="padding:0">${pv.can_send ? t('Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.') : t('Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.')}</p>
+    <label for="rp-desc">${t('What happened? What did you expect?')}</label>
+    <textarea id="rp-desc" rows="6" maxlength="4000" style="width:100%;box-sizing:border-box" placeholder="${t('Please do not write personal information: the report is public.')}"></textarea>
+    <label class="chk" style="padding:6px 0"><input type="checkbox" id="rp-tech" checked> ${t('Include technical details (version, system, recent errors)')}</label>
+    <details id="rp-det"><summary>${t('Show what will be sent')}</summary><pre id="rp-pre" dir="ltr" style="max-height:180px;overflow:auto;white-space:pre-wrap;font-size:11px">${esc(pv.tech)}</pre></details>
+    <p id="rp-msg" class="hint" style="padding:0"></p></div>
+    <div class="mf"><button id="rp-no">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="rp-ok">${t('Send report')}</button></div>`);
+  $('#rp-no').onclick = closeModal;
+  $('#rp-tech').onchange = ()=>{ $('#rp-det').style.display = $('#rp-tech').checked ? '' : 'none'; };
+  $('#rp-ok').onclick = async ()=>{
+    const desc=$('#rp-desc').value.trim(), msg=$('#rp-msg');
+    if(desc.length < 10){ msg.textContent = t('Please write a little more about the problem'); return; }
+    $('#rp-ok').disabled = true; msg.textContent = t('Sending…');
+    try{
+      const r = await send('POST', '/api/report', {description:desc, include_tech:$('#rp-tech').checked, language:I18N.lang});
+      if(r.sent){ closeModal(); toast(t('Thank you! Your report was sent (#{0}).', [r.number]), 4500); }
+      else { closeModal(); toast(t('GitHub was opened with your report. Press “Submit new issue” there to send it.'), 6000); }
+    }catch(e){ msg.textContent = e.message || t('The report could not be sent'); $('#rp-ok').disabled = false; }
+  };
+}
 async function updateCheck(manual, force=manual){
   let info;
   try{ info = await api('/api/update/check' + (force ? '?force=1' : '?force=0') + (manual ? '&pre=1' : '')); }
@@ -3863,6 +3888,7 @@ const MENUS = [
     [t('Keyboard Shortcuts'), 'Ctrl+/', shortcuts],
     [t('Check for Updates...'), '', ()=>updateCheck(true)],
     [t('What\'s new in this version...'), '', ()=>whatsNew(true)],
+    [t('Report a problem…'), '', reportProblem],
     [t('About photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('Version {0}', [ltr(S.status?.version || '')])}</p><p>${t("Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.")}</p><p class="hint" style="padding:0">${t("Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.")}</p><p class="hint" style="padding:0">${t("Free software under the GPL-3.0 license, with no warranty. You may modify and redistribute it under the license terms.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`)],
   ]],
 ];
