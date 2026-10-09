@@ -6,9 +6,16 @@
 // ---------- helpers ----------
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+// what the window can tell a problem report: its own errors and the requests that failed (the last few)
+const DIAG = {errors:[], failed:[]};
+const diagAdd = (list, x) => { list.push(x); if(list.length > 20) list.shift(); };
+window.addEventListener('error', e=>diagAdd(DIAG.errors, `${new Date().toISOString().slice(11,19)} ${e.message} (${(e.filename||'').split('/').pop()}:${e.lineno})`));
+window.addEventListener('unhandledrejection', e=>diagAdd(DIAG.errors, `${new Date().toISOString().slice(11,19)} unhandled: ${e.reason?.message||e.reason}`));
 async function api(u, opt){
-  const r = await fetch(u, opt); const tg = await r.text(); let d = {};
+  const r = await fetch(u, opt).catch(e=>{ diagAdd(DIAG.failed, `${new Date().toISOString().slice(11,19)} ${(opt&&opt.method)||'GET'} ${String(u).split('?')[0]} -> ${e.message}`); throw e; });
+  const tg = await r.text(); let d = {};
   try{ d = tg ? JSON.parse(tg) : {}; }catch{}
+  if(!r.ok) diagAdd(DIAG.failed, `${new Date().toISOString().slice(11,19)} ${(opt&&opt.method)||'GET'} ${String(u).split('?')[0]} -> ${r.status}`);
   if(!r.ok) throw new Error(d.detail && d.detail.key ? t(d.detail.key, d.detail.vars) : t(d.detail || r.statusText));
   return d;
 }
@@ -3339,6 +3346,13 @@ async function viewerOffer(){
 }
 
 // ---- Help > Report a problem: an issue on GitHub, without the user needing an account (the program sends it; see app/report.py)
+function clientInfo(){
+  const th = document.documentElement.dataset.themeId || '', st = S.status || {};
+  return [`Window: ${innerWidth}x${innerHeight}, screen ${screen.width}x${screen.height} @${devicePixelRatio}x`, `Browser: ${navigator.userAgent}`,
+    `Module / view: ${S.mod} / ${S.view}`, `Theme: ${th}, language: ${I18N.lang}`, `Photos in the list: ${S.list.length}, selected: ${S.sel.size}`,
+    `Edit module open on a photo: ${DEV.id!=null}`,
+    ...(DIAG.errors.length ? ['', 'Errors in the window:', ...DIAG.errors] : []), ...(DIAG.failed.length ? ['', 'Requests that failed:', ...DIAG.failed] : [])].join('\n');
+}
 async function reportProblem(){
   let pv={tech:'', can_send:false, allowed:true};
   try{ pv = await api('/api/report/preview?language='+encodeURIComponent(I18N.lang)); }catch(e){}
@@ -3347,7 +3361,7 @@ async function reportProblem(){
     <label for="rp-desc">${t('What happened? What did you expect?')}</label>
     <textarea id="rp-desc" rows="6" maxlength="4000" style="width:100%;box-sizing:border-box" placeholder="${t('Please do not write personal information: the report is public.')}"></textarea>
     <label class="chk" style="padding:6px 0"><input type="checkbox" id="rp-tech" checked> ${t('Include technical details (version, system, recent errors)')}</label>
-    <details id="rp-det"><summary>${t('Show what will be sent')}</summary><pre id="rp-pre" dir="ltr" style="max-height:180px;overflow:auto;white-space:pre-wrap;font-size:11px">${esc(pv.tech)}</pre></details>
+    <details id="rp-det"><summary>${t('Show what will be sent')}</summary><pre id="rp-pre" dir="ltr" style="max-height:180px;overflow:auto;white-space:pre-wrap;font-size:11px">${esc(pv.tech + '\n\n' + clientInfo())}</pre></details>
     <p id="rp-msg" class="hint" style="padding:0"></p></div>
     <div class="mf"><button id="rp-no">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="rp-ok">${t('Send report')}</button></div>`);
   $('#rp-no').onclick = closeModal;
@@ -3357,7 +3371,7 @@ async function reportProblem(){
     if(desc.length < 10){ msg.textContent = t('Please write a little more about the problem'); return; }
     $('#rp-ok').disabled = true; msg.textContent = t('Sending…');
     try{
-      const r = await send('POST', '/api/report', {description:desc, include_tech:$('#rp-tech').checked, language:I18N.lang});
+      const r = await send('POST', '/api/report', {description:desc, include_tech:$('#rp-tech').checked, language:I18N.lang, client:clientInfo()});
       if(r.sent){ closeModal(); toast(t('Thank you! Your report was sent (#{0}).', [r.number]), 4500); }
       else { closeModal(); toast(t('GitHub was opened with your report. Press “Submit new issue” there to send it.'), 6000); }
     }catch(e){ msg.textContent = e.message || t('The report could not be sent'); $('#rp-ok').disabled = false; }

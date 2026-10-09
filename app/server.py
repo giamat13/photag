@@ -1475,14 +1475,23 @@ class ReportIn(BaseModel):
     description: str
     include_tech: bool = True
     language: str = ""
+    client: str = ""          # what the window knows (screen, theme, its own errors)
 
 
 def _report_tech(language: str = "") -> str:
+    extra, n = {}, None
     try:
-        n = db.connect().execute("SELECT COUNT(*) AS n FROM photos").fetchone()["n"]
+        con = db.connect()
+        row = con.execute("SELECT COUNT(*) AS n, SUM(is_video) AS v, SUM(edited) AS e FROM photos").fetchone()
+        n = row["n"]
+        extra = {"Videos": row["v"] or 0, "Edited photos": row["e"] or 0}
     except Exception:
-        n = None
-    return report.tech_text(__version__, language, str(PATHS.root), n)
+        pass
+    try:
+        extra["Edits kept in the catalog"] = bool(config.get_catalog_edits())
+    except Exception:
+        pass
+    return report.tech_text(__version__, language, str(PATHS.root), n, extra)
 
 
 @app.get("/api/report/preview")
@@ -1500,7 +1509,7 @@ def report_send(b: ReportIn):
         desc = desc[:report.MAX_DESC]
     if not report.allowed():
         raise err(429, "You have sent several reports already. Please try again later.")
-    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__)
+    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client)
     try:
         r = report.send(title, body, __version__)
         return {"sent": True, "number": r["number"], "url": r["url"]}

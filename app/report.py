@@ -19,8 +19,8 @@ REPO = "giamat13/photag"
 API = "https://api.github.com"
 MAX_DESC = 4000
 MIN_DESC = 10
-LOG_LINES = 80
-LOG_CHARS = 5000
+LOG_LINES = 120
+LOG_CHARS = 9000
 FALLBACK_URL_CHARS = 6500
 _RING = __import__("collections").deque(maxlen=400)       # (imported this way: a new import name would change runtime.lock)
 
@@ -29,8 +29,50 @@ class ReportError(RuntimeError):
     pass
 
 
+_LOG = None            # the open log file (photag.log in the settings folder), None when it cannot be written
+_PREV = []             # the end of the log of the previous run: what happened just before a crash
+_STARTED = time.time()
+LOG_MAX = 1_500_000
+
+
+def log_file():
+    from . import platform_dirs
+    return platform_dirs.roaming_base() / "photag" / "logs" / "photag.log"
+
+
+def _open_log():
+    """Open the log for appending (the old one becomes photag.1.log when it is big); remember the tail of the previous run."""
+    global _LOG
+    try:
+        f = log_file()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if f.exists():
+            try:
+                _PREV[:] = [ln[:300] for ln in f.read_text("utf-8", errors="replace").splitlines()[-60:]]
+            except OSError:
+                pass
+            if f.stat().st_size > LOG_MAX:
+                f.replace(f.with_name("photag.1.log"))
+        _LOG = open(f, "a", encoding="utf-8", errors="replace")
+        _LOG.write(time.strftime("%Y-%m-%d %H:%M:%S") + " ---- start\n")
+        _LOG.flush()
+    except OSError:
+        _LOG = None
+
+
+def _keep(line: str):
+    line = line[:400]
+    _RING.append(line)
+    if _LOG is not None:
+        try:
+            _LOG.write(time.strftime("%Y-%m-%d %H:%M:%S ") + line + "\n")
+            _LOG.flush()
+        except (OSError, ValueError):
+            pass
+
+
 class _Tee:
-    """Passes everything written to stderr on, and keeps the last lines for the report."""
+    """Passes everything written to stderr on, and keeps the last lines for the report (and in the log file)."""
 
     def __init__(self, inner):
         self.inner = inner
@@ -47,7 +89,7 @@ class _Tee:
             *lines, self._partial = self._partial.split("\n")
             for ln in lines:
                 if ln.strip():
-                    _RING.append(ln[:400])
+                    _keep(ln)
         except Exception:
             pass
         return len(s)
@@ -66,12 +108,13 @@ class _Tee:
 def install():
     """Start keeping the recent error lines (called once when the server starts)."""
     if not isinstance(sys.stderr, _Tee):
+        _open_log()
         sys.stderr = _Tee(sys.stderr)
 
 
 def remember(line: str):
     """Add a line to the recent log by hand (used for caught errors)."""
-    _RING.append(str(line)[:400])
+    _keep(str(line))
 
 
 # ------------------------------------------------------------------------------------------------ what is sent
@@ -97,26 +140,48 @@ def redact(text: str, extra: tuple = ()) -> str:
     return out
 
 
-def tech_text(version: str, language: str = "", library: str = "", photos: int | None = None) -> str:
-    """The technical details block (already redacted)."""
+def _versions() -> str:
+    """Versions of the libraries the program depends on most (a bug is often in one of them)."""
+    md = __import__("importlib.metadata", fromlist=["version"])
+    out = []
+    for name in ("Pillow", "numpy", "scipy", "fastapi", "uvicorn", "pywebview", "onnxruntime", "insightface"):
+        try:
+            out.append(f"{name} {md.version(name)}")
+        except Exception:
+            pass
+    return ", ".join(out)
+
+
+def tech_text(version: str, language: str = "", library: str = "", photos: int | None = None, extra: dict | None = None) -> str:
+    """The technical details block (already redacted): version, system, the catalog in numbers, settings that matter, the last log lines."""
     platform = __import__("platform")
+    shutil = __import__("shutil")
     lines = [f"photag {version}" + (" (packaged)" if getattr(sys, "frozen", False) else " (from source)"),
-             f"System: {platform.system()} {platform.release()} {platform.machine()}", f"Python: {platform.python_version()}"]
+             f"System: {platform.system()} {platform.release()} ({platform.version()[:60]}) {platform.machine()}, {os.cpu_count()} CPUs",
+             f"Python: {platform.python_version()}", f"Libraries: {_versions()}",
+             f"Running for: {int((time.time() - _STARTED) // 60)} min"]
     if language:
         lines.append(f"Language: {language}")
     if photos is not None:
         lines.append(f"Photos in the catalog: {photos}")
-    recent = [ln for ln in list(_RING)[-LOG_LINES:]]
+    for k, v in (extra or {}).items():
+        lines.append(f"{k}: {v}")
+    try:
+        if library:
+            du = shutil.disk_usage(library)
+            lines.append(f"Library disk: {du.free // 2**30} GB free of {du.total // 2**30} GB")
+    except OSError:
+        pass
+    recent = list(_RING)[-LOG_LINES:]
     if recent:
-        lines.append("")
-        lines.append("Recent messages:")
-        lines += recent
-    text = "\n".join(lines)
-    text = redact(text, (library,))
+        lines += ["", "Recent messages:"] + recent
+    if _PREV:
+        lines += ["", "End of the previous session's log:"] + _PREV[-40:]
+    text = redact("\n".join(lines), (library,))
     return text[-LOG_CHARS:] if len(text) > LOG_CHARS else text
 
 
-def compose(description: str, tech: str | None, version: str) -> tuple[str, str]:
+def compose(description: str, tech: str | None, version: str, client: str = "") -> tuple[str, str]:
     """(title, body) of the issue."""
     desc = description.strip()
     first = re.sub(r"\s+", " ", desc.splitlines()[0] if desc else "").strip()
@@ -124,6 +189,8 @@ def compose(description: str, tech: str | None, version: str) -> tuple[str, str]
     body = desc + "\n\n---\n"
     if tech:
         body += "<details><summary>Technical details</summary>\n\n```\n" + tech.replace("```", "'''") + "\n```\n</details>\n\n"
+        if client.strip():
+            body += "<details><summary>Window details</summary>\n\n```\n" + redact(client.strip()[:3500]).replace("```", "'''") + "\n```\n</details>\n\n"
     body += f"_Sent from photag {version} with “Report a problem”._"
     return title, body
 
