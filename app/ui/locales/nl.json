@@ -1526,5 +1526,20 @@
  "Vertical": "Verticaal",
  "Vintage": "Vintage",
  "X offset": "X-verschuiving",
- "Y offset": "Y-verschuiving"
+ "Y offset": "Y-verschuiving",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "Beschrijf wat er misging. GitHub opent met je ingevulde melding; om te verzenden heb je een GitHub-account nodig.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Beschrijf wat er misging. De melding gaat naar de photag-ontwikkelaars en verschijnt openbaar op GitHub; een account is niet nodig.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub is geopend met je melding. Klik daar op “Submit new issue” om te verzenden.",
+ "Include technical details (version, system, recent errors)": "Technische gegevens bijvoegen (versie, systeem en recente fouten)",
+ "Please do not write personal information: the report is public.": "Schrijf geen persoonlijke gegevens: de melding is openbaar.",
+ "Please write a little more about the problem": "Schrijf wat meer over het probleem",
+ "Report a problem": "Een probleem melden",
+ "Report a problem…": "Een probleem melden…",
+ "Send report": "Melding verzenden",
+ "Sending…": "Verzenden…",
+ "Show what will be sent": "Tonen wat er wordt verzonden",
+ "Thank you! Your report was sent (#{0}).": "Bedankt! Je melding is verzonden (#{0}).",
+ "The report could not be sent": "De melding kon niet worden verzonden",
+ "What happened? What did you expect?": "Wat gebeurde er? Wat had je verwacht?",
+ "You have sent several reports already. Please try again later.": "Je hebt al meerdere meldingen verzonden. Probeer het later opnieuw."
 }

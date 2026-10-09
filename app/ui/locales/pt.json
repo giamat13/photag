@@ -1526,5 +1526,20 @@
  "Vertical": "Vertical",
  "Vintage": "Vintage",
  "X offset": "Deslocamento X",
- "Y offset": "Deslocamento Y"
+ "Y offset": "Deslocamento Y",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "Descreva o que correu mal. O GitHub abrirá com o seu relatório preenchido; para o enviar é preciso uma conta do GitHub.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Descreva o que correu mal. O relatório chega aos programadores do photag e aparece publicamente no GitHub; não é preciso conta.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "O GitHub foi aberto com o seu relatório. Clique aí em «Submit new issue» para o enviar.",
+ "Include technical details (version, system, recent errors)": "Incluir detalhes técnicos (versão, sistema e erros recentes)",
+ "Please do not write personal information: the report is public.": "Não escreva informações pessoais: o relatório é público.",
+ "Please write a little more about the problem": "Escreva um pouco mais sobre o problema",
+ "Report a problem": "Comunicar um problema",
+ "Report a problem…": "Comunicar um problema…",
+ "Send report": "Enviar relatório",
+ "Sending…": "A enviar…",
+ "Show what will be sent": "Mostrar o que será enviado",
+ "Thank you! Your report was sent (#{0}).": "Obrigado! O seu relatório foi enviado (#{0}).",
+ "The report could not be sent": "Não foi possível enviar o relatório",
+ "What happened? What did you expect?": "O que aconteceu? O que esperava?",
+ "You have sent several reports already. Please try again later.": "Já enviou vários relatórios. Tente novamente mais tarde."
 }

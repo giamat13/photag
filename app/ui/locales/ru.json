@@ -1526,5 +1526,20 @@
  "Vertical": "По вертикали",
  "Vintage": "Винтаж",
  "X offset": "Смещение по X",
- "Y offset": "Смещение по Y"
+ "Y offset": "Смещение по Y",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "Опишите, что пошло не так. Откроется GitHub с готовым отчётом; чтобы отправить его, нужна учётная запись GitHub.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Опишите, что пошло не так. Отчёт попадёт к разработчикам photag и будет публично виден на GitHub; учётная запись не нужна.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub открыт с вашим отчётом. Нажмите там «Submit new issue», чтобы отправить его.",
+ "Include technical details (version, system, recent errors)": "Приложить технические сведения (версия, система и последние ошибки)",
+ "Please do not write personal information: the report is public.": "Пожалуйста, не пишите личные данные: отчёт публичный.",
+ "Please write a little more about the problem": "Напишите о проблеме чуть подробнее",
+ "Report a problem": "Сообщить о проблеме",
+ "Report a problem…": "Сообщить о проблеме…",
+ "Send report": "Отправить отчёт",
+ "Sending…": "Отправка…",
+ "Show what will be sent": "Показать, что будет отправлено",
+ "Thank you! Your report was sent (#{0}).": "Спасибо! Ваш отчёт отправлен (#{0}).",
+ "The report could not be sent": "Не удалось отправить отчёт",
+ "What happened? What did you expect?": "Что произошло? Чего вы ожидали?",
+ "You have sent several reports already. Please try again later.": "Вы уже отправили несколько отчётов. Повторите попытку позже."
 }

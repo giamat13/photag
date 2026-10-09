@@ -1526,5 +1526,20 @@
  "Vertical": "رأسي",
  "Vintage": "قديم (فينتيج)",
  "X offset": "إزاحة X",
- "Y offset": "إزاحة Y"
+ "Y offset": "إزاحة Y",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "صف ما حدث من خطأ. سيُفتح GitHub والتقرير معبّأ مسبقًا؛ تحتاج إلى حساب GitHub لإرساله.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "صف ما حدث من خطأ. يصل التقرير إلى مطوّري photag ويظهر علنًا على GitHub؛ لا حاجة إلى حساب.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "فُتح GitHub مع تقريرك. اضغط هناك على «Submit new issue» لإرساله.",
+ "Include technical details (version, system, recent errors)": "تضمين التفاصيل التقنية (الإصدار والنظام وآخر الأخطاء)",
+ "Please do not write personal information: the report is public.": "يُرجى عدم كتابة معلومات شخصية: التقرير علني.",
+ "Please write a little more about the problem": "يُرجى كتابة المزيد عن المشكلة",
+ "Report a problem": "الإبلاغ عن مشكلة",
+ "Report a problem…": "الإبلاغ عن مشكلة…",
+ "Send report": "إرسال التقرير",
+ "Sending…": "جارٍ الإرسال…",
+ "Show what will be sent": "عرض ما سيتم إرساله",
+ "Thank you! Your report was sent (#{0}).": "شكرًا لك! تم إرسال تقريرك (#{0}).",
+ "The report could not be sent": "تعذّر إرسال التقرير",
+ "What happened? What did you expect?": "ماذا حدث؟ وماذا توقعت؟",
+ "You have sent several reports already. Please try again later.": "لقد أرسلت عدة تقارير بالفعل. يُرجى المحاولة لاحقًا."
 }

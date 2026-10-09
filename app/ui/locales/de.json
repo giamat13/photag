@@ -1526,5 +1526,20 @@
  "Vertical": "Vertikal",
  "Vintage": "Vintage",
  "X offset": "X-Versatz",
- "Y offset": "Y-Versatz"
+ "Y offset": "Y-Versatz",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "Beschreiben Sie, was schiefgegangen ist. GitHub öffnet sich mit Ihrem ausgefüllten Bericht; zum Senden brauchen Sie ein GitHub-Konto.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Beschreiben Sie, was schiefgegangen ist. Der Bericht geht an die photag-Entwickler und erscheint öffentlich auf GitHub; ein Konto ist nicht nötig.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub wurde mit Ihrem Bericht geöffnet. Klicken Sie dort auf „Submit new issue“, um ihn zu senden.",
+ "Include technical details (version, system, recent errors)": "Technische Details einschließen (Version, System, letzte Fehler)",
+ "Please do not write personal information: the report is public.": "Bitte keine persönlichen Daten schreiben: Der Bericht ist öffentlich.",
+ "Please write a little more about the problem": "Bitte schreiben Sie etwas mehr zum Problem",
+ "Report a problem": "Problem melden",
+ "Report a problem…": "Problem melden…",
+ "Send report": "Bericht senden",
+ "Sending…": "Wird gesendet…",
+ "Show what will be sent": "Anzeigen, was gesendet wird",
+ "Thank you! Your report was sent (#{0}).": "Danke! Ihr Bericht wurde gesendet (#{0}).",
+ "The report could not be sent": "Der Bericht konnte nicht gesendet werden",
+ "What happened? What did you expect?": "Was ist passiert? Was hatten Sie erwartet?",
+ "You have sent several reports already. Please try again later.": "Sie haben schon mehrere Berichte gesendet. Bitte versuchen Sie es später erneut."
 }
