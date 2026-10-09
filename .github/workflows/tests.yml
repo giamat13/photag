@@ -80,6 +80,11 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: python tools/test_develop_tools_ui.py
+      - name: Test of "Report a problem" (fake GitHub, Edge)
+        if: ${{ !cancelled() }}
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python tools/test_report.py
       - name: UI test of the pre-release banner and manual check (Edge)
         if: ${{ !cancelled() }}
         env:
@@ -135,6 +140,6 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          for t in ui_smoke test_smart_ui test_develop_ui test_prerelease_ui test_trash_menu test_auto_update test_features_ui test_viewer_ui test_background_ui test_geotag_ui test_develop_adv_ui test_develop_local_ui test_develop_tools_ui; do
+          for t in ui_smoke test_smart_ui test_develop_ui test_prerelease_ui test_trash_menu test_auto_update test_features_ui test_viewer_ui test_background_ui test_geotag_ui test_develop_adv_ui test_develop_local_ui test_develop_tools_ui test_report; do
             echo "=== $t"; python tools/$t.py || exit 1
           done

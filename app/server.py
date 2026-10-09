@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
+from . import report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -143,6 +143,10 @@ def _edit_migrate_loop():
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
+    try:
+        report.install()      # keep the last error lines for "Report a problem"
+    except Exception:
+        pass
     threading.Thread(target=_backup_loop, daemon=True).start()
     threading.Thread(target=_ref_loop, daemon=True).start()
     threading.Thread(target=_exif_loop, daemon=True).start()
@@ -1464,6 +1468,46 @@ def start_merge(b: MergeIn):
         raise err(400, "Cannot edit")
     _start("merge", merge.run, b.ids, b.kind)
     return {"ok": True}
+
+
+# ---- problem reports (Help > Report a problem): an issue on GitHub without the user needing an account (app/report.py) ----
+class ReportIn(BaseModel):
+    description: str
+    include_tech: bool = True
+    language: str = ""
+
+
+def _report_tech(language: str = "") -> str:
+    try:
+        n = db.connect().execute("SELECT COUNT(*) AS n FROM photos").fetchone()["n"]
+    except Exception:
+        n = None
+    return report.tech_text(__version__, language, str(PATHS.root), n)
+
+
+@app.get("/api/report/preview")
+def report_preview(language: str = ""):
+    """The technical details exactly as they would be sent, and whether the program can send a report by itself."""
+    return {"tech": _report_tech(language), "can_send": report.can_send(), "allowed": report.allowed()}
+
+
+@app.post("/api/report")
+def report_send(b: ReportIn):
+    desc = b.description.strip()
+    if len(desc) < report.MIN_DESC:
+        raise err(400, "Please write a little more about the problem")
+    if len(desc) > report.MAX_DESC:
+        desc = desc[:report.MAX_DESC]
+    if not report.allowed():
+        raise err(429, "You have sent several reports already. Please try again later.")
+    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__)
+    try:
+        r = report.send(title, body, __version__)
+        return {"sent": True, "number": r["number"], "url": r["url"]}
+    except report.ReportError:
+        url = report.fallback_url(title, body)
+        _open_url(url)                                   # no token (or GitHub refused): the user finishes it on GitHub
+        return {"sent": False, "opened": True}
 
 
 @app.get("/api/photo/{pid}/upright")

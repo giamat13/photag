@@ -59,3 +59,7 @@ push straight to `main`.
 - If a feature commit lands on `main` *after* a version has already been released, bump the version
   again (e.g. 1.6.0 → 1.6.1) and release separately — don't fold unreleased commits into a release
   that's already been published.
+
+## Problem reports
+"Help > Report a problem…" (app/report.py) creates an issue through a bot account whose token is the repository secret `REPORT_TOKEN`; the
+release workflow writes it into `app/_report_token.py` (never committed). Setup and limits: docs/BUG_REPORTS.md. Do not put a token in the code.

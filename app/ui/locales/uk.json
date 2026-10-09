@@ -1526,5 +1526,20 @@
  "Vertical": "По вертикалі",
  "Vintage": "Вінтаж",
  "X offset": "Зсув по X",
- "Y offset": "Зсув по Y"
+ "Y offset": "Зсув по Y",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "Опишіть, що пішло не так. Відкриється GitHub із готовим звітом; щоб надіслати його, потрібен обліковий запис GitHub.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Опишіть, що пішло не так. Звіт потрапляє до розробників photag і публічно видимий на GitHub; обліковий запис не потрібен.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub відкрито з вашим звітом. Натисніть там «Submit new issue», щоб надіслати його.",
+ "Include technical details (version, system, recent errors)": "Додати технічні відомості (версія, система та останні помилки)",
+ "Please do not write personal information: the report is public.": "Будь ласка, не пишіть особисті дані: звіт публічний.",
+ "Please write a little more about the problem": "Напишіть про проблему трохи докладніше",
+ "Report a problem": "Повідомити про проблему",
+ "Report a problem…": "Повідомити про проблему…",
+ "Send report": "Надіслати звіт",
+ "Sending…": "Надсилання…",
+ "Show what will be sent": "Показати, що буде надіслано",
+ "Thank you! Your report was sent (#{0}).": "Дякуємо! Ваш звіт надіслано (#{0}).",
+ "The report could not be sent": "Не вдалося надіслати звіт",
+ "What happened? What did you expect?": "Що сталося? Чого ви очікували?",
+ "You have sent several reports already. Please try again later.": "Ви вже надіслали кілька звітів. Спробуйте пізніше."
 }

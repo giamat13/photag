@@ -1526,5 +1526,20 @@
  "Vertical": "Verticale",
  "Vintage": "Vintage",
  "X offset": "Scostamento X",
- "Y offset": "Scostamento Y"
+ "Y offset": "Scostamento Y",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "Descrivi cosa è andato storto. GitHub si aprirà con la segnalazione già compilata; per inviarla serve un account GitHub.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Descrivi cosa è andato storto. La segnalazione arriva agli sviluppatori di photag e compare pubblicamente su GitHub; non serve un account.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub è stato aperto con la tua segnalazione. Premi lì «Submit new issue» per inviarla.",
+ "Include technical details (version, system, recent errors)": "Includi i dettagli tecnici (versione, sistema ed errori recenti)",
+ "Please do not write personal information: the report is public.": "Non scrivere informazioni personali: la segnalazione è pubblica.",
+ "Please write a little more about the problem": "Scrivi qualcosa di più sul problema",
+ "Report a problem": "Segnala un problema",
+ "Report a problem…": "Segnala un problema…",
+ "Send report": "Invia segnalazione",
+ "Sending…": "Invio in corso…",
+ "Show what will be sent": "Mostra cosa verrà inviato",
+ "Thank you! Your report was sent (#{0}).": "Grazie! La tua segnalazione è stata inviata (#{0}).",
+ "The report could not be sent": "Impossibile inviare la segnalazione",
+ "What happened? What did you expect?": "Cosa è successo? Cosa ti aspettavi?",
+ "You have sent several reports already. Please try again later.": "Hai già inviato diverse segnalazioni. Riprova più tardi."
 }

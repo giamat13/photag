@@ -1526,5 +1526,20 @@
  "Vertical": "垂直",
  "Vintage": "ヴィンテージ",
  "X offset": "Xオフセット",
- "Y offset": "Yオフセット"
+ "Y offset": "Yオフセット",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "何が起きたかを書いてください。GitHub が入力済みの報告で開きます。送信には GitHub アカウントが必要です。",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "何が起きたかを書いてください。報告は photag の開発者に届き、GitHub 上で公開されます。アカウントは不要です。",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub が報告を入力した状態で開きました。送信するにはそこで「Submit new issue」を押してください。",
+ "Include technical details (version, system, recent errors)": "技術情報を含める（バージョン、システム、最近のエラー）",
+ "Please do not write personal information: the report is public.": "個人情報は書かないでください。報告は公開されます。",
+ "Please write a little more about the problem": "問題についてもう少し詳しく書いてください",
+ "Report a problem": "問題を報告",
+ "Report a problem…": "問題を報告…",
+ "Send report": "報告を送信",
+ "Sending…": "送信しています…",
+ "Show what will be sent": "送信される内容を表示",
+ "Thank you! Your report was sent (#{0}).": "ありがとうございます！報告を送信しました (#{0})。",
+ "The report could not be sent": "報告を送信できませんでした",
+ "What happened? What did you expect?": "何が起きましたか？どうなると思っていましたか？",
+ "You have sent several reports already. Please try again later.": "すでに何度か報告を送信しています。しばらくしてからもう一度お試しください。"
 }

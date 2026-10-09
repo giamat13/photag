@@ -1526,5 +1526,20 @@
  "Vertical": "Dikey",
  "Vintage": "Vintage",
  "X offset": "X kaydırma",
- "Y offset": "Y kaydırma"
+ "Y offset": "Y kaydırma",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "Neyin ters gittiğini yazın. GitHub, raporunuz doldurulmuş olarak açılır; göndermek için bir GitHub hesabı gerekir.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Neyin ters gittiğini yazın. Rapor photag geliştiricilerine ulaşır ve GitHub’da herkese açık görünür; hesap gerekmez.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub raporunuzla açıldı. Göndermek için orada “Submit new issue” düğmesine basın.",
+ "Include technical details (version, system, recent errors)": "Teknik ayrıntıları ekle (sürüm, sistem ve son hatalar)",
+ "Please do not write personal information: the report is public.": "Lütfen kişisel bilgi yazmayın: rapor herkese açıktır.",
+ "Please write a little more about the problem": "Lütfen sorun hakkında biraz daha yazın",
+ "Report a problem": "Sorun bildir",
+ "Report a problem…": "Sorun bildir…",
+ "Send report": "Raporu gönder",
+ "Sending…": "Gönderiliyor…",
+ "Show what will be sent": "Gönderilecekleri göster",
+ "Thank you! Your report was sent (#{0}).": "Teşekkürler! Raporunuz gönderildi (#{0}).",
+ "The report could not be sent": "Rapor gönderilemedi",
+ "What happened? What did you expect?": "Ne oldu? Ne bekliyordunuz?",
+ "You have sent several reports already. Please try again later.": "Zaten birkaç rapor gönderdiniz. Lütfen daha sonra tekrar deneyin."
 }

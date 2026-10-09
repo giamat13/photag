@@ -21,6 +21,7 @@ jobs:
   unix:
     # Linux (tar.gz) and macOS (zip with photag.app) builds, made by the same reusable workflow that tests them on every change to the spec
     uses: ./.github/workflows/unix-build.yml
+    secrets: inherit                      # the Linux / macOS builds get the same REPORT_TOKEN as the Windows one
   build:
     # runs at the same time as the Linux / macOS builds (it used to wait for them: about 3 minutes longer); the publish job below joins them
     runs-on: windows-latest
@@ -50,6 +51,11 @@ jobs:
           fi
           echo "VERSION=$v" >> "$GITHUB_ENV"
           echo "TAG=v$v" >> "$GITHUB_ENV"
+      - name: "Reports: let the program create issues (only when the REPORT_TOKEN secret exists)"
+        shell: bash
+        env:
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+        run: python tools/write_report_token.py
       - run: python tools/make_version_info.py
       - run: python -m PyInstaller --noconfirm photag.spec
       - run: python -m PyInstaller --noconfirm photag_backup.spec

@@ -55,7 +55,9 @@ check("the MSIX is kept as an artifact, never attached to the public release", "
 check("the MSI is built after the install scripts, can fail without stopping the release, and is attached when it was made",
       len(msi) == 1 and msi[0].get("continue-on-error") is True and idx("Build the install scripts") < idx("Build the MSI") < idx("Collect the release files")
       and "photag-*.msi" in pub_run and "nullglob" in pub_run)
-plain = [name(x) for x in steps if x not in signing and x not in store and x not in msi]
+reports = [x for x in steps if name(x).startswith("Reports:")]
+check("the Windows build writes the report token (from the REPORT_TOKEN secret) before it builds the program", len(reports) == 1 and "write_report_token.py" in str(reports[0].get("run")) and "REPORT_TOKEN" in str(reports[0].get("env")) and steps.index(reports[0]) < min(i for i, x in enumerate(steps) if "PyInstaller" in str(x.get("run"))))
+plain = [name(x) for x in steps if x not in signing and x not in store and x not in msi and x not in reports]
 check("without signing, the build is exactly the usual 15 steps in the usual order (installer, its ZIP copy, code zip, portable ZIP, install scripts, collect, keep for the publish job)",
       len(plain) == 15 and plain[:8] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py",
                                          "python tools/make_version_info.py", "python -m PyInstaller --noconfirm photag.spec", "python -m PyInstaller --noconfirm photag_backup.spec",

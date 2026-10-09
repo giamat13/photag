@@ -1526,5 +1526,20 @@
  "Vertical": "ऊर्ध्वाधर",
  "Vintage": "विंटेज",
  "X offset": "X ऑफ़सेट",
- "Y offset": "Y ऑफ़सेट"
+ "Y offset": "Y ऑफ़सेट",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "बताएँ कि क्या गलत हुआ। GitHub आपकी रिपोर्ट भरकर खुलेगा; भेजने के लिए GitHub खाता चाहिए।",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "बताएँ कि क्या गलत हुआ। रिपोर्ट photag के डेवलपर्स तक पहुँचती है और GitHub पर सार्वजनिक रूप से दिखती है; खाते की ज़रूरत नहीं।",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub आपकी रिपोर्ट के साथ खुल गया। भेजने के लिए वहाँ “Submit new issue” दबाएँ।",
+ "Include technical details (version, system, recent errors)": "तकनीकी जानकारी शामिल करें (संस्करण, सिस्टम और हाल की त्रुटियाँ)",
+ "Please do not write personal information: the report is public.": "कृपया निजी जानकारी न लिखें: रिपोर्ट सार्वजनिक है।",
+ "Please write a little more about the problem": "कृपया समस्या के बारे में थोड़ा और लिखें",
+ "Report a problem": "समस्या की रिपोर्ट करें",
+ "Report a problem…": "समस्या की रिपोर्ट करें…",
+ "Send report": "रिपोर्ट भेजें",
+ "Sending…": "भेजा जा रहा है…",
+ "Show what will be sent": "दिखाएँ कि क्या भेजा जाएगा",
+ "Thank you! Your report was sent (#{0}).": "धन्यवाद! आपकी रिपोर्ट भेज दी गई (#{0})।",
+ "The report could not be sent": "रिपोर्ट भेजी नहीं जा सकी",
+ "What happened? What did you expect?": "क्या हुआ? आप क्या उम्मीद कर रहे थे?",
+ "You have sent several reports already. Please try again later.": "आप पहले ही कई रिपोर्ट भेज चुके हैं। कृपया बाद में फिर कोशिश करें।"
 }

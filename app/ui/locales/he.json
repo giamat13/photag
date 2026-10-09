@@ -1526,5 +1526,20 @@
  "Vertical": "אנכי",
  "Vintage": "וינטג'",
  "X offset": "היסט X",
- "Y offset": "היסט Y"
+ "Y offset": "היסט Y",
+ "Describe what went wrong. GitHub will open with your report filled in; you need a GitHub account to send it.": "תאר מה השתבש. GitHub ייפתח עם הדיווח מוכן; כדי לשלוח אותו צריך חשבון GitHub.",
+ "Describe what went wrong. The report goes to the photag developers and appears publicly on GitHub; you do not need an account.": "תאר מה השתבש. הדיווח מגיע למפתחי photag ומופיע בפומבי ב-GitHub; אין צורך בחשבון.",
+ "GitHub was opened with your report. Press “Submit new issue” there to send it.": "GitHub נפתח עם הדיווח שלך. לחץ שם על \"Submit new issue\" כדי לשלוח אותו.",
+ "Include technical details (version, system, recent errors)": "כלול פרטים טכניים (גרסה, מערכת ושגיאות אחרונות)",
+ "Please do not write personal information: the report is public.": "נא לא לכתוב מידע אישי: הדיווח פומבי.",
+ "Please write a little more about the problem": "נא לכתוב קצת יותר על הבעיה",
+ "Report a problem": "דיווח על בעיה",
+ "Report a problem…": "דיווח על בעיה…",
+ "Send report": "שלח דיווח",
+ "Sending…": "שולח…",
+ "Show what will be sent": "הצג מה יישלח",
+ "Thank you! Your report was sent (#{0}).": "תודה! הדיווח נשלח (#{0}).",
+ "The report could not be sent": "לא ניתן היה לשלוח את הדיווח",
+ "What happened? What did you expect?": "מה קרה? מה ציפית שיקרה?",
+ "You have sent several reports already. Please try again later.": "כבר שלחת כמה דיווחים. נסה שוב מאוחר יותר."
 }

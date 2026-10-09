@@ -1,0 +1,24 @@
+name: Bug report
+description: Something in photag does not work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you! In photag you can also use **Help > Report a problem…**, which fills in the version and system for you.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Steps to repeat it help most. Please do not include personal information: this page is public.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: photag version
+      description: Help > About photag
+  - type: input
+    id: system
+    attributes:
+      label: Windows (or other system) version
