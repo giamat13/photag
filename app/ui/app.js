@@ -3316,7 +3316,7 @@ function compressBatchReport(r){
 // ---------- updates from GitHub releases ----------
 // Release notes are Markdown; show the common subset (headings, bullets, **bold**, `code`) -- escaped first, so it is always safe.
 // the three standard headings of release notes (docs/release-checklist.md) are shown in the user's language
-const noteHead = h => ({ 'Features': () => t('Features'), 'Fixes': () => t('Fixes'), 'Small fixes': () => t('Small fixes') }[h] || (() => h))();
+const noteHead = h => ({ 'Features': () => t('Features'), 'Small features': () => t('Small features'), 'Fixes': () => t('Fixes'), 'Small fixes': () => t('Small fixes') }[h] || (() => h))();
 function mdLite(md){
   const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
   const out = []; let list = false;

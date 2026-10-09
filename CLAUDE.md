@@ -31,9 +31,9 @@ push straight to `main`.
   before a regular release follows. A release that turns out bad is deleted (`gh release delete vX --cleanup-tag -y`) and made again.
 - `app/version.py` (`__version__`) is the single source of truth for the app's version. Bump it
   before every release.
-- **Numbering ("FEATURE.FIX.SMALL-FIX", decided with the user; from 11.0.0 — earlier it was "FEATURE.FIX" with a trailing 0).**
-  A release with a new feature raises the first number and resets the others (`12.0.0`); a release with only fixes
-  raises the second and resets the third (`11.1.0`); a release with only small fixes raises the third (`11.1.1`);
+- **Numbering ("FEATURE.SMALL-FEATURE.FIX", decided with the user; from 18.1.0 — from 11.0.0 to 18.0.0 it was "FEATURE.FIX.SMALL-FIX", earlier "FEATURE.FIX" with a trailing 0).**
+  A release with a new feature raises the first number and resets the others (`12.0.0`); a release with only small features
+  raises the second and resets the third (`12.1.0`); a release with only fixes raises the third (`12.1.1`);
   pre-releases add `-beta.N`. **Always write all three parts** (never `9.1`): programs
   installed before the change only recognise a code update `photag-code-X.Y.Z-rtN.zip` with three parts, and
   without it they fall back to the full installer (which Smart App Control may block). `9.1` and `9.1.0`
@@ -42,8 +42,8 @@ push straight to `main`.
   `app/version.py`.
 - **Structure of the release notes (decided with the user, from 12.1.0):** a title line (`# photag X.Y.Z`) and then only these sections,
   in this order, leaving out the ones with nothing in them: `## Features` (things that really change something for the user, first),
-  `## Fixes` (bugs a user could notice) and `## Small fixes` (minor things, wording, looks, internals). It matches the version number:
-  a feature release has `## Features`, a fixes-only release has `## Fixes`, a small-fixes release only `## Small fixes`. The in-app
+  `## Small features` (minor additions, wording, looks, internals) and `## Fixes` (bugs a user could notice). It matches the version number:
+  a feature release has `## Features`, a small-features release has `## Small features`, a fixes-only release only `## Fixes`. (Releases up to 18.0.0 used `## Small fixes`; the updater still reads it.) The in-app
   "What's new" dialog shows the three headings in the user's language and, when several versions are skipped, merges them by section
   (`updater.merge_notes`). `tools/test_release_notes.py` checks the file of the current version.
 - Each release has a `docs/release-notes-v<version>.md` file; its contents become the GitHub Release

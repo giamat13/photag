@@ -172,16 +172,17 @@ def _newest_pre(newer_than: str) -> dict | None:
     return None
 
 
-SECTIONS = ("Features", "Fixes", "Small fixes")          # the order of a release's notes: what changes things for the user first
+SECTIONS = ("Features", "Small features", "Fixes")      # the order of a release's notes: what changes things for the user first
+LEGACY_SECTIONS = ("Small fixes",)                      # written by releases before 18.1.0 ("FEATURE.FIX.SMALL-FIX"); still read, shown last
 
 
 def split_notes(body: str) -> tuple[dict, str]:
-    """({section: text} for the standard '## Features' / '## Fixes' / '## Small fixes' headings, the rest of the text before / around them).
+    """({section: text} for the standard '## Features' / '## Small features' / '## Fixes' headings (and the old '## Small fixes'), the rest of the text before / around them).
     A release written before this structure has no standard heading: everything is 'the rest'."""
     sections, rest, cur = {}, [], None
     for line in (body or "").splitlines():
         m = re.match(r"^#{1,6}\s+(.*?)\s*$", line)
-        if m and m.group(1) in SECTIONS:
+        if m and m.group(1) in SECTIONS + LEGACY_SECTIONS:
             cur = m.group(1)
             sections.setdefault(cur, [])
             continue
@@ -192,9 +193,9 @@ def split_notes(body: str) -> tuple[dict, str]:
 
 
 def merge_notes(releases: list[tuple[str, str]]) -> str:
-    """Notes of several releases (newest first) as ONE text: all the features, then all the fixes, then all the small fixes.
+    """Notes of several releases (newest first) as ONE text: all the features, then all the small features, then all the fixes.
     A release that does not use the sections (older ones) follows under its version number."""
-    merged = {k: [] for k in SECTIONS}
+    merged = {k: [] for k in SECTIONS + LEGACY_SECTIONS}
     old = []
     for tag, body in releases:
         sec, rest = split_notes(body)

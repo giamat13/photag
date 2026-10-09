@@ -1,4 +1,4 @@
-"""Test: the version numbering ("FEATURE.FIX" -- 1.8.1 became 8.1, see app/version.py) and everything that reads a version:
+"""Test: the version numbering ("FEATURE.SMALL-FEATURE.FIX" -- 1.8.1 became 8.1, see app/version.py) and everything that reads a version:
 comparing versions, pre-releases, the code-update file name, and the Windows version resource.
 
     py -3.12 tools/test_version_scheme.py
@@ -78,7 +78,7 @@ for v in ("9.0.0", "9.1", "8.2.0"):
     check(f"release tag and asset names for {v}: v{v} / photag-code-{v}-rt{codeboot.RUNTIME}.zip / photag-{v}-portable.zip", f"v{v}".startswith("v") and CODE_RE.match(f"photag-code-{v}-rt{codeboot.RUNTIME}.zip") is not None and f"photag-{v}-portable.zip".endswith("-portable.zip"))
 # the scheme is written down where the next person looks
 doc = (ROOT / "app" / "version.py").read_text("utf-8")
-check("app/version.py explains the scheme and the three-part first release", "FEATURE.FIX" in doc and "three parts" in doc)
+check("app/version.py explains the scheme and the three-part first release", "FEATURE.SMALL-FEATURE.FIX" in doc and "three parts" in doc)
 
 n_fail = res.count(False)
 print(f"\n{len(res) - n_fail}/{len(res)} passed")
