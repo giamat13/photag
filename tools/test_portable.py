@@ -124,7 +124,7 @@ try:
         print("SKIP  packaged portable ZIP (dist/photag/photag.exe not built here; see build.bat / release.yml)")
     else:
         subprocess.run([sys.executable, str(ROOT / "tools" / "make_portable.py")], capture_output=True, text=True, check=True)
-        z = ROOT / "dist" / f"photag-{__version__}-portable.zip"
+        z = ROOT / "dist" / f"windows-photag-{__version__}-portable.zip"
         check("tools/make_portable.py builds the portable ZIP", z.is_file())
         if z.is_file():
             names = zipfile.ZipFile(z).namelist()

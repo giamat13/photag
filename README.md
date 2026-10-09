@@ -123,7 +123,7 @@ _Releases are not code-signed yet (see [docs/CODE_SIGNING_POLICY.md](docs/CODE_S
 photag is not code-signed yet (a signing certificate costs money; the application to the free signing program for open-source projects was declined for now). Windows 11
 **Smart App Control** (when it is on) blocks unsigned programs it does not know, with no "run anyway" button. SmartScreen only warns
 ("More info" → "Run anyway"). If the installer is blocked:
-0. **Try the install script** from the release page: `photag-install.bat` (double-click it; Windows asks "Run / Cancel" instead of blocking it) or `photag-install.ps1`.
+0. **Try the install script** from the release page: `windows-photag-install.bat` (double-click it; Windows asks "Run / Cancel" instead of blocking it) or `windows-photag-install.ps1`.
    It downloads the portable version straight from GitHub, checks its SHA-256, unpacks it into `%LOCALAPPDATA%\Programs\photag` and makes shortcuts. The files it
    unpacks are never marked "from the internet", which is what Smart App Control looks at. It is plain text -- read it first.
    **Tested limit:** on a PC where Smart App Control is *on* (tested in Windows Sandbox) the script installs everything, but Windows then refuses to *start* the unsigned `photag.exe`
@@ -133,9 +133,9 @@ photag is not code-signed yet (a signing certificate costs money; the applicatio
    **If the downloaded `.bat` / `.ps1` is blocked too** (a file from the internet carries a "from the internet" mark; a file you make yourself does not):
    either open **Windows PowerShell** (not cmd), paste this one line and press Enter -- it runs the script straight from GitHub without saving any file --
    ```
-[Net.ServicePointManager]::SecurityProtocol='Tls12'; $w=New-Object Net.WebClient; $w.Encoding=[Text.Encoding]::UTF8; & ([scriptblock]::Create($w.DownloadString('https://github.com/giamat13/photag/releases/latest/download/photag-install.ps1').TrimStart([char]0xFEFF)))
+[Net.ServicePointManager]::SecurityProtocol='Tls12'; $w=New-Object Net.WebClient; $w.Encoding=[Text.Encoding]::UTF8; & ([scriptblock]::Create($w.DownloadString('https://github.com/giamat13/photag/releases/latest/download/windows-photag-install.ps1').TrimStart([char]0xFEFF)))
    ```
-   or open the script on the release page, copy its whole text, paste it into Notepad, save it as `photag-install.bat` (Save as type: All files) and double-click that.
+   or open the script on the release page, copy its whole text, paste it into Notepad, save it as `windows-photag-install.bat` (Save as type: All files) and double-click that.
 1. Right-click `photagSetup.exe` → Properties → tick **Unblock** if shown, OK, and run it again. Or run it from File Explorer instead of a terminal.
 2. Try the **portable version** instead (see below) — same program, no installer.
 3. Otherwise run photag from source (see below), or turn Smart App Control off in *Windows Security → App & browser control → Smart App Control*
@@ -156,7 +156,7 @@ photag keeps an icon next to the clock. Closing the window does not end the prog
 Right-click a picture > **Open with > photag** shows it in a fast viewer (zoom, pan, next/previous picture in the folder, rotate, full screen, slideshow, print, rename, copy and move to a folder, delete to the Recycle Bin, an editor that saves a copy (tone sliders, straighten, crop, one-button *Improve automatically*), videos, copy to the clipboard, set as desktop background, a strip of thumbnails, the location on a map and all the EXIF) **without adding it to your library**. A button in the viewer adds it if you want. The installer offers this as an option, and Preferences > *Picture viewer* switches it on or off for the portable version. To replace the Windows Photos app, press *Choose in Windows settings* there and pick photag for each picture type (Windows does not allow a program to make itself the default).
 
 ## Portable version
-No installation, no admin rights, nothing written to this PC: download `photag-<version>-portable.zip` from the
+No installation, no admin rights, nothing written to this PC: download `windows-photag-<version>-portable.zip` from the
 [releases page](https://github.com/giamat13/photag/releases), extract it anywhere (a USB stick, a folder, a synced drive) and run `photag.exe`
 from there. Everything photag needs — catalog, settings, backups, your photo library by default — lives in a `data` folder right next to
 `photag.exe`; move or copy the whole extracted folder (photag must be closed first) and it keeps working, on any PC.

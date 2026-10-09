@@ -1,5 +1,5 @@
 """Build the portable ZIP: dist/photag/* + photag-backup.exe + LICENSE + THIRD_PARTY_NOTICES.md + a "portable.txt" marker,
-zipped as photag-<version>-portable.zip. No installer, nothing is written to this PC: the result runs from a USB stick
+zipped as windows-photag-<version>-portable.zip. No installer, nothing is written to this PC: the result runs from a USB stick
 or any folder, on any PC, and keeps its data (catalog, settings, backups) in a "data" folder right beside photag.exe
 (see app/config.py: portable_dir()).
 
@@ -41,7 +41,7 @@ def main() -> Path:
     (stage / "portable.txt").write_text(MARKER, "utf-8")
     (stage / "data").mkdir(exist_ok=True)
 
-    out = out_dir / f"photag-{__version__}-portable.zip"
+    out = out_dir / f"windows-photag-{__version__}-portable.zip"
     out.unlink(missing_ok=True)
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for p in sorted(stage.rglob("*")):

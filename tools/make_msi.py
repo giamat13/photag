@@ -1,5 +1,5 @@
-"""Build the Windows Installer package: dist/photag-<version>.msi (for people and companies who install software from MSI files:
-Group Policy, Intune, `msiexec /i photag-X.Y.Z.msi /qn`).
+"""Build the Windows Installer package: dist/windows-photag-<version>.msi (for people and companies who install software from MSI files:
+Group Policy, Intune, `msiexec /i windows-photag-X.Y.Z.msi /qn`).
 
 It holds exactly what photagSetup.exe installs (the app folder from PyInstaller, photag-backup.exe, LICENSE, THIRD_PARTY_NOTICES.md),
 per user, without administrator rights, into %LOCALAPPDATA%\\Programs\\photag-msi (its own folder, so it never mixes its files with an
@@ -143,7 +143,7 @@ def main(argv: list[str]) -> int:
     build.mkdir(parents=True, exist_ok=True)
     src = build / "photag.wxs"
     src.write_text(wxs(sources()), "utf-8")
-    out = ROOT / "dist" / f"photag-{__version__}.msi"
+    out = ROOT / "dist" / f"windows-photag-{__version__}.msi"
     out.unlink(missing_ok=True)
     # `wix build` does not run the ICE validation (that is `wix msi validate`, which would want a registry key path for every file of a
     # per-user install -- only relevant for repairs)

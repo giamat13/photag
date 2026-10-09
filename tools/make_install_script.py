@@ -1,7 +1,7 @@
 """Build the two install-script downloads of a release from tools/photag-install.ps1 (see its header for what they do):
 
-    dist/photag-install.ps1   the PowerShell script as it is
-    dist/photag-install.bat   the same script behind a double-clickable batch file: one file, no execution-policy trouble
+    dist/windows-photag-install.ps1   the PowerShell script as it is
+    dist/windows-photag-install.bat   the same script behind a double-clickable batch file: one file, no execution-policy trouble
 
     py -3.12 tools/make_install_script.py
 """
@@ -26,8 +26,8 @@ def build(out_dir: Path | None = None) -> tuple[Path, Path]:
     out_dir = out_dir or ROOT / "dist"
     out_dir.mkdir(parents=True, exist_ok=True)
     ps1_text = SRC.read_text("utf-8").replace("\r\n", "\n").replace("\n", "\r\n")
-    ps1 = out_dir / "photag-install.ps1"
-    bat = out_dir / "photag-install.bat"
+    ps1 = out_dir / "windows-photag-install.ps1"
+    bat = out_dir / "windows-photag-install.bat"
     ps1.write_bytes(b"\xef\xbb\xbf" + ps1_text.encode("utf-8"))          # a BOM, so Windows PowerShell 5.1 reads it as UTF-8
     bat.write_bytes((BAT_HEAD + MARKER + "\r\n" + ps1_text).encode("utf-8"))
     return ps1, bat

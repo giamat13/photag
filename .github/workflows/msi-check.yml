@@ -43,5 +43,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: photag-msi
-          path: dist/photag-*.msi
+          path: dist/windows-photag-*.msi
           retention-days: 5

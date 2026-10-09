@@ -7,7 +7,7 @@
  downloads itself and unpacks is never marked "from the internet" (no Mark-of-the-Web), which is what Smart App Control and
  SmartScreen look at. Whether photag.exe then starts depends on your Windows protection settings -- it is not guaranteed.
 
- Usage:   powershell -NoProfile -ExecutionPolicy Bypass -File photag-install.ps1 [options]
+ Usage:   powershell -NoProfile -ExecutionPolicy Bypass -File windows-photag-install.ps1 [options]
    -InstallDir <folder>   where to install (default: %LOCALAPPDATA%\Programs\photag)
    -ZipPath <file>        use this portable ZIP instead of downloading one (offline / testing)
    -Sha256 <hash>         the expected SHA-256 of -ZipPath (the download is checked against GitHub's own digest)
@@ -76,7 +76,7 @@ try {
     if (-not $ZipPath) {
         Say "Looking for the latest photag release on GitHub..."
         $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers @{ "User-Agent" = "photag-installer"; "Accept" = "application/vnd.github+json" }
-        $asset = $rel.assets | Where-Object { $_.name -match '^photag-.*-portable\.zip$' } | Select-Object -First 1
+        $asset = $rel.assets | Where-Object { $_.name -match '^(?:windows-)?photag-.*-portable\.zip$' } | Select-Object -First 1
         if (-not $asset) { Fail "The latest release ($($rel.tag_name)) has no portable ZIP." }
         if ($asset.digest -match '^sha256:([0-9a-fA-F]{64})$') { $expected = $Matches[1] }
         Say "Latest: $($rel.tag_name)  ($($asset.name), $([math]::Round($asset.size / 1MB)) MB)"

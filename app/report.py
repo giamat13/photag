@@ -225,9 +225,8 @@ def _note_sent():
 
 # ------------------------------------------------------------------------------------------------ sending
 def token() -> str:
-    t = os.environ.get("PHOTAG_REPORT_TOKEN", "")
-    if t:
-        return t
+    if "PHOTAG_REPORT_TOKEN" in os.environ:             # set (even empty = "no token"): tests and a deliberate off switch
+        return os.environ["PHOTAG_REPORT_TOKEN"]
     try:
         from . import _report_token                      # written by the release workflow, not in the repository
         return str(_report_token.TOKEN or "")
@@ -256,15 +255,27 @@ def send(title: str, body: str, version: str, kind: str = "problem") -> dict:
     if not tok:
         raise ReportError("no token")
     base = os.environ.get("PHOTAG_REPORT_API", API).rstrip("/")
-    req = urllib.request.Request(f"{base}/repos/{REPO}/issues", data=json.dumps({"title": title, "body": body, "labels": ["user-report", "enhancement"] if kind == "feature" else ["user-report"]}).encode("utf-8"),
-                                 method="POST", headers={"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json", "Content-Type": "application/json",
-                                                         "User-Agent": f"photag/{version}", "X-GitHub-Api-Version": "2022-11-28"})
-    try:
-        from .net import ssl_context
-        ctx = ssl_context() if base.startswith("https") else None
+    labels = ["user-report", "enhancement"] if kind == "feature" else ["user-report"]
+    headers = {"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json", "Content-Type": "application/json",
+               "User-Agent": f"photag/{version}", "X-GitHub-Api-Version": "2022-11-28"}
+    from .net import ssl_context
+    ctx = ssl_context() if base.startswith("https") else None
+
+    def post(with_labels: bool) -> dict:
+        payload = {"title": title, "body": body, **({"labels": labels} if with_labels else {})}
+        req = urllib.request.Request(f"{base}/repos/{REPO}/issues", data=json.dumps(payload).encode("utf-8"), method="POST", headers=headers)
         with urllib.request.urlopen(req, timeout=25, context=ctx) as r:
-            data = json.loads(r.read().decode("utf-8"))
+            return json.loads(r.read().decode("utf-8"))
+
+    try:
+        try:
+            data = post(True)
+        except urllib.error.HTTPError as e:
+            if e.code not in (403, 404, 422):
+                raise
+            data = post(False)                           # the bot may not be allowed to label: the title says it anyway
     except urllib.error.HTTPError as e:
+        remember(f"report: GitHub answered {e.code}")
         raise ReportError(f"GitHub answered {e.code}")
     except Exception as e:
         raise ReportError(str(e)[:120])

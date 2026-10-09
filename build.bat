@@ -62,6 +62,6 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo === Done: installer_output\photagSetup.exe and dist\photag-%VER%-portable.zip ===
+echo === Done: installer_output\photagSetup.exe and dist\windows-photag-%VER%-portable.zip ===
 start "" "installer_output\photagSetup.exe"
 endlocal

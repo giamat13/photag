@@ -131,14 +131,14 @@ if sys.platform.startswith("win"):
 
 # ---- the one-line command from the README (runs the script from a URL, no file saved: nothing carries a Mark-of-the-Web)
 ONE = ("[Net.ServicePointManager]::SecurityProtocol='Tls12'; $w=New-Object Net.WebClient; $w.Encoding=[Text.Encoding]::UTF8; "
-       "& ([scriptblock]::Create($w.DownloadString('https://github.com/giamat13/photag/releases/latest/download/photag-install.ps1').TrimStart([char]0xFEFF)))")
+       "& ([scriptblock]::Create($w.DownloadString('https://github.com/giamat13/photag/releases/latest/download/windows-photag-install.ps1').TrimStart([char]0xFEFF)))")
 for readme in ("README.md", "README.he.md"):
     check(f"{readme} shows the one-line command exactly as tested", ONE in (ROOT / readme).read_text(encoding="utf-8"))
 if sys.platform.startswith("win"):
     inst2 = tmp / "inst_oneliner"
     inst2.mkdir()
     (inst2 / "photag.exe").write_text("x")
-    local = ONE.replace("https://github.com/giamat13/photag/releases/latest/download/photag-install.ps1", ps1.as_uri()) + f" -Uninstall -InstallDir '{inst2}' -NoPause"
+    local = ONE.replace("https://github.com/giamat13/photag/releases/latest/download/windows-photag-install.ps1", ps1.as_uri()) + f" -Uninstall -InstallDir '{inst2}' -NoPause"
     r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", local], capture_output=True, text=True, timeout=120)
     check("the one-line command runs the script (here from a local URL) and passes parameters on", r.returncode == 0 and "Done." in r.stdout and not (inst2 / "photag.exe").exists(), (r.stdout + r.stderr)[-250:])
 

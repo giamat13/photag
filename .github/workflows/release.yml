@@ -118,7 +118,7 @@ jobs:
         run: python tools/signing.py install-setup signed_installer
       - name: "Put a copy of the installer in a ZIP too (an extra download, NOT instead of the .exe -- the in-app update still uses photagSetup.exe)"
         shell: pwsh
-        run: Compress-Archive -Path installer_output/photagSetup.exe -DestinationPath "dist/photagSetup-$env:VERSION.zip" -CompressionLevel Optimal
+        run: Compress-Archive -Path installer_output/photagSetup.exe -DestinationPath "dist/windows-photagSetup-$env:VERSION.zip" -CompressionLevel Optimal
       - name: "Build the code update (a small zip of the app code - updates run without an installer, so Smart App Control cannot block them)"
         run: python tools/make_code_zip.py
       - name: "Build the portable ZIP (no installer - runs from a USB stick or any folder)"
@@ -150,8 +150,8 @@ jobs:
         shell: bash
         run: |
           mkdir release_files
-          cp installer_output/photagSetup.exe dist/photagSetup-*.zip dist/photag-code-*.zip dist/photag-*-portable.zip dist/photag-install.bat dist/photag-install.ps1 release_files/
-          cp dist/photag-*.msi release_files/ 2>/dev/null || echo "no MSI this time (its step failed): the release goes on without it"
+          cp installer_output/photagSetup.exe dist/windows-photagSetup-*.zip dist/photag-code-*.zip dist/windows-photag-*-portable.zip dist/windows-photag-install.bat dist/windows-photag-install.ps1 release_files/
+          cp dist/windows-photag-*.msi release_files/ 2>/dev/null || echo "no MSI this time (its step failed): the release goes on without it"
           ls -la release_files
       - name: Keep the release files for the publish job
         uses: actions/upload-artifact@v4
@@ -192,5 +192,5 @@ jobs:
           [ "${{ inputs.prerelease }}" = "true" ] && flags+=(--prerelease)
           cd release_files
           shopt -s nullglob
-          msi=(photag-*.msi)
-          gh release create "${TAG}" --target "${GITHUB_SHA}" photagSetup.exe photagSetup-*.zip photag-code-*.zip photag-*-portable.zip photag-install.bat photag-install.ps1 photag-*-linux-x64.tar.gz photag-*-macos-*.zip "${msi[@]}" --title "photag ${VERSION}" --notes-file "../$notes" "${flags[@]}"
+          msi=(windows-photag-*.msi)
+          gh release create "${TAG}" --target "${GITHUB_SHA}" photagSetup.exe windows-photagSetup-*.zip photag-code-*.zip windows-photag-*-portable.zip windows-photag-install.bat windows-photag-install.ps1 photag-*-linux-x64.tar.gz photag-*-macos-*.zip "${msi[@]}" --title "photag ${VERSION}" --notes-file "../$notes" "${flags[@]}"
