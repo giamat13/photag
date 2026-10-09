@@ -79,6 +79,11 @@ try:
         pg.reload(); pg.wait_for_function("window.PhotagTheme", timeout=20000)
         check("the choice is kept after a reload", ev("document.documentElement.dataset.themeId") == "hc-dark")
         srv_theme = call("GET", "/api/ui-theme")
+        for _ in range(40):                      # the window saves in the background: give the server a moment (a slow runner raced this)
+            if srv_theme.get("id") == "hc-dark":
+                break
+            pg.wait_for_timeout(250)
+            srv_theme = call("GET", "/api/ui-theme")
         check("...and the server has it too (for the day photag has to use another port)", srv_theme.get("id") == "hc-dark", srv_theme)
         ev("PhotagTheme.apply('light')")
         check("Light: the light base with its own accent", ev("document.documentElement.dataset.theme") == "light")
