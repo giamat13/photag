@@ -857,3 +857,18 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
 .th-sw em{position:absolute;right:8px;bottom:7px;width:22px;height:10px;border-radius:5px}
 .th-custom{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0}
 .th-custom input[type=color]{width:42px;height:26px;padding:0;border:1px solid var(--line-strong);border-radius:5px;background:none;vertical-align:middle}
+
+/* Develop: white balance row, tone curve editor, colour mixer / grading */
+.wbrow{display:flex;gap:6px;padding:2px 12px 4px}
+.wbrow select{flex:1;min-width:0;background:var(--raise1);color:var(--t1);border:1px solid var(--line);height:22px}
+.wbrow button{height:22px;padding:0 8px;display:inline-flex;align-items:center;gap:4px}
+.wbrow button.on{background:var(--acc);color:#000}
+.v-develop.picking,.v-develop.picking *{cursor:crosshair}
+.curve-ch{justify-content:center;gap:12px;padding-top:6px}
+.curve-box{padding:2px 12px 4px}
+#curve-svg{width:100%;aspect-ratio:1;max-width:236px;display:block;margin:0 auto;background:var(--well);border:1px solid var(--line);cursor:crosshair}
+#curve-svg.off{opacity:.5;pointer-events:none}
+#curve-svg .cg{stroke:var(--line);stroke-width:1;fill:none}
+#curve-svg .cd{stroke:var(--t4);stroke-width:1;stroke-dasharray:3 3;fill:none}
+#curve-svg circle{cursor:grab}
+.mix-note{padding:4px 12px;font-size:11px}

@@ -1509,10 +1509,38 @@ async function setModule(m){
 // ---------- develop ----------
 const DEV = {id:null, ops:null, saved:null, hist:[], crop:false, before:false, dirty:false, last:pref.get('lastDev', null)};
 const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1],
-  exp:0, hi:0, sh:0, temp:0, tint:0, vib:0, cla:0, shp:0, blr:0, vig:0, sep:0, fh:false, fv:false});
+  exp:0, hi:0, sh:0, temp:0, tint:0, vib:0, cla:0, shp:0, blr:0, vig:0, sep:0, fh:false, fv:false,
+  wht:0, blk:0, tex:0, dhz:0, grn:0, grs:25, grr:50, vgm:50, vgf:50, vgr:0, vgh:0,
+  crv:{}, crp:[0,0,0,0], mix:{}, bwm:{}, grd:{}, cal:{}});
 // slider key -> develop-setting name, for the settings that change the picture itself (the server draws their preview)
-const TONEK = {exp:'exposure', hi:'highlights', sh:'shadows', temp:'temperature', tint:'tint', vib:'vibrance', cla:'clarity', shp:'sharpness', blr:'blur', vig:'vignette', sep:'sepia'};
-const toneApi = o => { const r={}; for(const [k,n] of Object.entries(TONEK)) if(o[k]) r[n] = k==='exp' ? o[k]/100 : o[k]; return r; };
+const TONEK = {exp:'exposure', hi:'highlights', sh:'shadows', temp:'temperature', tint:'tint', vib:'vibrance', cla:'clarity', shp:'sharpness', blr:'blur', vig:'vignette', sep:'sepia',
+  wht:'whites', blk:'blacks', tex:'texture', dhz:'dehaze', grn:'grain', grs:'grain_size', grr:'grain_rough', vgm:'vignette_mid', vgf:'vignette_feather', vgr:'vignette_round', vgh:'vignette_hl'};
+const STYLE_OF = {grs:'grn', grr:'grn', vgm:'vig', vgf:'vig', vgr:'vig', vgh:'vig'};
+const TONE_DEFAULT = {grs:25, grr:50, vgm:50, vgf:50};                 // the sliders whose resting place is not 0
+// nested settings: key in DEV.ops -> name in the develop settings. They are replaced as a whole (never changed in place), so History keeps its copies.
+const NESTK = {crv:'curve', crp:'curve_p', mix:'mixer', bwm:'bwmix', grd:'grading', cal:'calib'};
+const BANDS = ['red','orange','yellow','green','aqua','blue','purple','magenta'];
+const BAND_RGB = ['#e0453a','#e8943a','#e6d43a','#4fbf4f','#3ac4c4','#3a6fe0','#8a4fd9','#d94fb8'];
+const BAND_NAME = {red:t('Red'), orange:t('Orange'), yellow:t('Yellow'), green:t('Green'), aqua:t('Aqua'), blue:t('Blue'), purple:t('Purple'), magenta:t('Magenta')};
+const nestedActive = (k, v) => {
+  if(!v) return false;
+  if(k==='crp') return v.some(x=>x);
+  if(k==='crv') return Object.values(v).some(pts=>pts && pts.some(p=>Math.abs(p[0]-p[1])>1e-4));
+  if(k==='grd') return ['shadows','mid','high'].some(r=>v[r] && (v[r][1] || v[r][2]));
+  return Object.values(v).some(x=>Array.isArray(x) ? x.some(y=>y) : x);
+};
+const toneApi = o => {
+  const r={};
+  for(const [k,n] of Object.entries(TONEK)){
+    const d=TONE_DEFAULT[k]||0, master = STYLE_OF[k];
+    if(master && !o[master]) continue;                                  // grain size / vignette handles mean nothing while their amount is 0
+    if(o[k]!=null && o[k]!==d) r[n] = k==='exp' ? o[k]/100 : o[k];
+  }
+  for(const [k,n] of Object.entries(NESTK)) if(nestedActive(k, o[k])) r[n] = o[k];
+  return r;
+};
+const toneNeutral = () => { const n=NEUTRAL(); ['rot','crop','fh','fv'].forEach(k=>delete n[k]); return n; };
+const cloneOps = o => ({...o, crop:[...o.crop], ...Object.fromEntries(Object.keys(NESTK).map(k=>[k, JSON.parse(JSON.stringify(o[k]))]))});
 const fac = (v, lo) => v>=0 ? 1+v/100 : 1+(v/100)*(1-lo);
 const unfac = (f, lo) => f==null ? 0 : Math.round(f>=1 ? (f-1)*100 : (f-1)/(1-lo)*100);
 const PRESETS = [
@@ -1537,7 +1565,8 @@ async function devOpen(){
   const o = d.edit_ops ? JSON.parse(d.edit_ops) : {};
   DEV.ops = {...NEUTRAL(), bri:unfac(o.brightness,.3), con:unfac(o.contrast,.3), sat:unfac(o.saturation,0), gray:!!o.grayscale,
              rot:o.rotate||0, crop:o.crop&&o.crop.length===4?o.crop:[0,0,1,1], fh:!!o.flip_h, fv:!!o.flip_v};
-  for(const [k,n] of Object.entries(TONEK)) if(o[n]) DEV.ops[k] = k==='exp' ? Math.round(o[n]*100) : o[n];
+  for(const [k,n] of Object.entries(TONEK)) if(o[n]!=null) DEV.ops[k] = k==='exp' ? Math.round(o[n]*100) : o[n];
+  for(const [k,n] of Object.entries(NESTK)) if(o[n]!=null) DEV.ops[k] = JSON.parse(JSON.stringify(o[n]));
   DEV.pvKey = null;
   DEV.saved = JSON.stringify(DEV.ops);
   DEV.hist=[{t:d.edited?t('Saved Settings'):t('Import'), ops:{...DEV.ops}}];
@@ -1603,13 +1632,18 @@ function renderDevPanels(){
     <div class="dsec">${t("Treatment")}</div>
     <div class="treat"><a data-gray="0" class="${o.gray?'':'on'}">${t("Color")}</a><a data-gray="1" class="${o.gray?'on':''}">${t("Black & White")}</a></div>
     <div class="dsec">${t("Light")}</div>
-    ${sl('exp',t('Exposure'),'exp',-300,300)}${sl('bri',t('Brightness'),'exp')}${sl('con',t('Contrast'),'con')}${sl('hi',t('Highlights'),'exp')}${sl('sh',t('Shadows'),'exp')}
+    ${sl('exp',t('Exposure'),'exp',-300,300)}${sl('bri',t('Brightness'),'exp')}${sl('con',t('Contrast'),'con')}${sl('hi',t('Highlights'),'exp')}${sl('sh',t('Shadows'),'exp')}${sl('wht',t('Whites'),'exp')}${sl('blk',t('Blacks'),'exp')}
     <div class="dsec">${t("Color")}</div>
+    <div class="wbrow"><select data-wb ${dis} title="${t('White balance preset')}">${WB_PRESET_LIST.map(([n],i)=>`<option value="${i}">${n}</option>`).join('')}</select><button data-t="wbpick" class="${DEV.pick?'on':''}" ${dis} title="${t('Click a neutral grey area of the photo to set the white balance')}">${I('pick')} ${t('Pick')}</button></div>
     ${sl('temp',t('Temperature'),'temp')}${sl('tint',t('Tint'),'tint')}${sl('vib',t('Vibrance'),'sat')}${sl('sat',t('Saturation'),'sat')}
     <div class="dsec">${t("Detail")}</div>
-    ${sl('cla',t('Clarity'),'',0,100)}${sl('shp',t('Sharpness'),'',0,100)}${sl('blr',t('Blur'),'',0,100)}
+    ${sl('cla',t('Clarity'),'',0,100)}${sl('tex',t('Texture'),'')}${sl('dhz',t('Dehaze'),'')}${sl('shp',t('Sharpness'),'',0,100)}${sl('blr',t('Blur'),'',0,100)}
     <div class="dsec">${t("Effects")}</div>
-    ${sl('vig',t('Vignette'),'exp')}${sl('sep',t('Sepia'),'',0,100)}`;
+    ${sl('vig',t('Vignette'),'exp')}${sl('vgm',t('Midpoint'),'',0,100)}${sl('vgf',t('Feather'),'',0,100)}${sl('vgr',t('Roundness'),'')}${sl('vgh',t('Highlights'),'',0,100)}
+    ${sl('sep',t('Sepia'),'',0,100)}
+    <div class="dsec">${t("Grain")}</div>
+    ${sl('grn',t('Amount'),'',0,100)}${sl('grs',t('Size'),'',0,100)}${sl('grr',t('Roughness'),'',0,100)}`;
+  renderAdvPanels(o, dis, sl);
   const fine = Math.round((o.rot - Math.round(o.rot/90)*90)*10)/10;
   $('#p-transform').innerHTML = `
     <div class="dsl"><label for="d-straight">${t("Straighten")}</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
@@ -1620,6 +1654,143 @@ function renderDevPanels(){
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
 }
+// ---- the advanced panels: tone curve, colour mixer / black & white mix, colour grading, calibration (issue #6) + white balance helpers
+const WB_PRESET_LIST = [[t('As Shot'),0,0],[t('Cloudy'),18,6],[t('Shade'),32,8],[t('Tungsten'),-45,6],[t('Fluorescent'),-12,24],[t('Flash'),6,2]];
+const nGet = (path, d) => { let v=DEV.ops; for(const k of path){ v = v==null ? v : v[k]; } return v==null ? d : v; };
+const nDefault = path => path[0]==='grd' && path[1]==='blend' ? 50 : 0;
+// replaces DEV.ops[path[0]] by an edited copy (History keeps the old objects)
+function nPut(path, val){
+  const root = JSON.parse(JSON.stringify(DEV.ops[path[0]])); let node = root;
+  for(let i=1;i<path.length-1;i++){
+    if(node[path[i]]==null) node[path[i]] = (path[0]==='cal' ? [0,0] : [0,0,0]);
+    node = node[path[i]];
+  }
+  node[path[path.length-1]] = val; DEV.ops[path[0]] = root;
+}
+const nfmt = (v, hue) => hue ? v+'°' : (v>0?'+':'')+v;
+function renderAdvPanels(o, dis, sl){
+  const nsl = (path, label, min, max, opt={}) => { const v = nGet(path, nDefault(path)), id = 'n-'+path.join('-');
+    return `<div class="dsl ${opt.cls||''}" ${opt.track?`style="--track:${opt.track}"`:''}><label for="${id}" title="${label}">${label}</label><input id="${id}" data-n="${path.join('.')}" data-l="${esc(opt.lab||label)}" ${opt.hue?'data-hue="1"':''} type="range" min="${min}" max="${max}" step="1" value="${v}" ${dis} title="${t('Double-click to reset')}"><output>${opt.plain?v:nfmt(v, opt.hue)}</output></div>`; };
+  // tone curve
+  const ch = DEV.curveCh || 'rgb', crp = o.crp || [0,0,0,0];
+  $('#p-curve').innerHTML = `<div class="treat curve-ch">${[['rgb',t('RGB')],['r',t('Red')],['g',t('Green')],['b',t('Blue')]].map(([k,n])=>`<a data-cch="${k}" class="${ch===k?'on':''}">${n}</a>`).join('')}</div>
+    <div class="curve-box"><svg id="curve-svg" viewBox="0 0 200 200" ${dis?'class="off"':''}></svg></div>
+    <div class="dsec">${t('Parametric')}</div>
+    ${[[t('Highlights'),0],[t('Lights'),1],[t('Darks'),2],[t('Shadows'),3]].map(([n,i])=>nsl(['crp',i], n, -100, 100, {cls:'exp'})).join('')}
+    <div class="btnrow90"><button data-t="curvereset" ${dis}>${t('Reset Curve')}</button></div>`;
+  drawCurve();
+  // colour mixer (colour photo) or black & white mix (black & white photo)
+  const mt = DEV.mixTab || 0, bandTrack = (i, a) => { const n = BAND_RGB[(i+7)%8], m = BAND_RGB[i], x = BAND_RGB[(i+1)%8]; return a==0 ? `linear-gradient(90deg,${n},${m},${x})` : a==1 ? `linear-gradient(90deg,#808080,${m})` : `linear-gradient(90deg,#111,${m},#eee)`; };
+  if(o.gray){
+    $('#p-mixer').innerHTML = `<div class="hint mix-note">${t('How bright each colour becomes in the black & white photo')}</div>` + BANDS.map((b,i)=>nsl(['bwm',b], BAND_NAME[b], -100, 100, {track:bandTrack(i,2), lab:BAND_NAME[b]})).join('');
+  } else {
+    $('#p-mixer').innerHTML = `<div class="treat curve-ch">${[t('Hue'),t('Saturation'),t('Luminance')].map((n,i)=>`<a data-mix="${i}" class="${mt===i?'on':''}">${n}</a>`).join('')}</div>` +
+      BANDS.map((b,i)=>nsl(['mix',b,mt], BAND_NAME[b], -100, 100, {track:bandTrack(i,mt), lab:`${BAND_NAME[b]} · ${[t('Hue'),t('Saturation'),t('Luminance')][mt]}`})).join('');
+  }
+  // colour grading
+  const hueTrack = 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)';
+  const reg = (key, name) => `<div class="dsec">${name}</div>` + nsl(['grd',key,0], t('Hue'), 0, 360, {track:hueTrack, hue:1, lab:`${name} · ${t('Hue')}`}) + nsl(['grd',key,1], t('Saturation'), 0, 100, {plain:1, lab:`${name} · ${t('Saturation')}`}) + nsl(['grd',key,2], t('Luminance'), -100, 100, {cls:'exp', lab:`${name} · ${t('Luminance')}`});
+  $('#p-grading').innerHTML = reg('shadows', t('Shadows')) + reg('mid', t('Midtones')) + reg('high', t('Highlights')) +
+    `<div class="dsec">${t('Blend and balance')}</div>` + nsl(['grd','blend'], t('Blend'), 0, 100, {plain:1}) + nsl(['grd','balance'], t('Balance'), -100, 100);
+  // calibration
+  const cs = (key, name, c) => `<div class="dsec">${name}</div>` + nsl(['cal',key,0], t('Hue'), -100, 100, {lab:`${name} · ${t('Hue')}`}) + nsl(['cal',key,1], t('Saturation'), -100, 100, {track:`linear-gradient(90deg,#808080,${c})`, lab:`${name} · ${t('Saturation')}`});
+  $('#p-calib').innerHTML = `<div class="dsec">${t('Shadows')}</div>` + nsl(['cal','shadow_tint'], t('Tint'), -100, 100, {cls:'tint'}) +
+    cs('red', t('Red primary'), '#e0453a') + cs('green', t('Green primary'), '#4fbf4f') + cs('blue', t('Blue primary'), '#3a6fe0');
+}
+// the curve editor: the same monotone curve the server draws (Fritsch-Carlson), points are dragged with the mouse, double-click removes one
+function pchipJs(xs, ys, x){
+  const n = xs.length, h = [], d = [], m = new Array(n).fill(0);
+  for(let i=0;i<n-1;i++){ h[i] = Math.max(xs[i+1]-xs[i], 1e-9); d[i] = (ys[i+1]-ys[i])/h[i]; }
+  m[0] = d[0]; m[n-1] = d[n-2];
+  for(let i=1;i<n-1;i++) m[i] = d[i-1]*d[i] <= 0 ? 0 : 2*d[i-1]*d[i]/(d[i-1]+d[i]);
+  for(let i=0;i<n-1;i++){
+    if(Math.abs(d[i]) < 1e-12){ m[i] = m[i+1] = 0; continue; }
+    const a = m[i]/d[i], b = m[i+1]/d[i], q = a*a+b*b;
+    if(q > 9){ const k = 3/Math.sqrt(q); m[i] = k*a*d[i]; m[i+1] = k*b*d[i]; }
+  }
+  let i = 0; while(i < n-2 && x >= xs[i+1]) i++;
+  const tt = (x-xs[i])/h[i];
+  return (2*tt**3-3*tt**2+1)*ys[i] + (tt**3-2*tt**2+tt)*h[i]*m[i] + (-2*tt**3+3*tt**2)*ys[i+1] + (tt**3-tt**2)*h[i]*m[i+1];
+}
+function curvePoints(ch){ return (DEV.ops.crv && DEV.ops.crv[ch]) || []; }
+function drawCurve(){
+  const svg = $('#curve-svg'); if(!svg) return;
+  const ch = DEV.curveCh || 'rgb', pts = curvePoints(ch), col = {rgb:'#e6e6e6', r:'#e0453a', g:'#4fbf4f', b:'#3a6fe0'}[ch];
+  const all = [[0,0], ...pts.map(p=>[p[0], p[1]]), [1,1]].sort((a,b)=>a[0]-b[0]);
+  let top = 0; const cl = []; for(const [x,y] of all){ if(cl.length && x <= cl[cl.length-1][0]+1e-4) continue; top = Math.max(top, y); cl.push([x, top]); }
+  const xs = cl.map(p=>p[0]), ys = cl.map(p=>p[1]); let path = '';
+  for(let i=0;i<=100;i++){ const x = i/100, y = Math.min(1, Math.max(0, pchipJs(xs, ys, x))); path += (i?'L':'M') + (x*200).toFixed(1) + ' ' + (200-y*200).toFixed(1); }
+  let grid = ''; for(let i=1;i<4;i++) grid += `<path d="M${i*50} 0V200M0 ${i*50}H200" class="cg"/>`;
+  svg.innerHTML = `${grid}<path d="M0 200L200 0" class="cd"/><path d="${path}" fill="none" stroke="${col}" stroke-width="1.6"/>` +
+    pts.map((p,i)=>`<circle data-pt="${i}" cx="${p[0]*200}" cy="${200-p[1]*200}" r="4.5" fill="${col}" stroke="#000" stroke-width="1"/>`).join('');
+}
+function curveSet(pts, label){
+  const ch = DEV.curveCh || 'rgb', crv = {...DEV.ops.crv}; if(pts.length) crv[ch] = pts; else delete crv[ch];
+  DEV.ops.crv = crv; DEV.dirty = true; drawCurve(); if(label){ devSet({}, label); } else devPreviewSoon();
+}
+document.addEventListener('mousedown', e=>{
+  const svg = e.target.closest && e.target.closest('#curve-svg'); if(!svg || DEV.id==null || e.button) return;
+  e.preventDefault();
+  const r = svg.getBoundingClientRect(), pos = ev => [clamp((ev.clientX-r.left)/r.width, 0, 1), clamp(1-(ev.clientY-r.top)/r.height, 0, 1)];
+  let pts = curvePoints(DEV.curveCh || 'rgb').map(p=>[...p]), idx = e.target.dataset.pt != null ? +e.target.dataset.pt : -1;
+  if(idx < 0){ const [x,y] = pos(e); if(x < .02 || x > .98) return; pts.push([x,y]); pts.sort((a,b)=>a[0]-b[0]); idx = pts.findIndex(p=>p[0]===x); curveSet(pts); }
+  const mv = ev => { const [x,y] = pos(ev), lo = idx>0 ? pts[idx-1][0]+.02 : .02, hi = idx<pts.length-1 ? pts[idx+1][0]-.02 : .98;
+    pts[idx] = [clamp(x, lo, Math.max(lo, hi)), y]; curveSet(pts); };
+  const up = () => { removeEventListener('mousemove', mv); removeEventListener('mouseup', up); devSet({}, `${t('Tone Curve')}`); };
+  addEventListener('mousemove', mv); addEventListener('mouseup', up);
+});
+document.addEventListener('dblclick', e=>{
+  const c = e.target.closest && e.target.closest('#curve-svg circle'); if(!c || DEV.id==null) return;
+  const pts = curvePoints(DEV.curveCh || 'rgb').map(p=>[...p]); pts.splice(+c.dataset.pt, 1); curveSet(pts, t('Tone Curve'));
+});
+// nested sliders (data-n="mix.red.1"): same flow as the plain ones -- the page and the server preview follow while dragging, History gets one step on release
+const nPath = el => el.dataset.n.split('.').map(x=>/^\d+$/.test(x) ? +x : x);
+$('#right').addEventListener('input', e=>{
+  const n = e.target.dataset.n; if(!n || DEV.id==null) return;
+  const path = nPath(e.target), v = +e.target.value; nPut(path, v);
+  e.target.nextElementSibling.textContent = e.target.dataset.hue ? v+'°' : /^grd\.(\w+\.1|blend)$/.test(n) ? v : nfmt(v);
+  DEV.dirty = true; devPreviewSoon();
+});
+$('#right').addEventListener('change', e=>{ if(e.target.dataset.n && DEV.id!=null) devSet({}, `${e.target.dataset.l} ${e.target.value}`); });
+$('#right').addEventListener('dblclick', e=>{
+  const n = e.target.dataset?.n; if(!n || DEV.id==null) return;
+  nPut(nPath(e.target), nDefault(nPath(e.target))); devSet({}, `${e.target.dataset.l} 0`);
+});
+$('#right').addEventListener('click', e=>{
+  if(S.mod!=='develop' || DEV.id==null) return;
+  const cc = e.target.closest('[data-cch]'); if(cc){ DEV.curveCh = cc.dataset.cch; renderDevPanels(); return; }
+  const mx = e.target.closest('[data-mix]'); if(mx){ DEV.mixTab = +mx.dataset.mix; renderDevPanels(); return; }
+  if(e.target.closest('[data-t="curvereset"]')) devSet({crv:{}, crp:[0,0,0,0]}, t('Reset Curve'));
+  if(e.target.closest('[data-t="wbpick"]')) wbPickToggle();
+});
+$('#right').addEventListener('change', e=>{
+  if(e.target.dataset.wb == null || DEV.id==null) return;
+  const [n, tp, ti] = WB_PRESET_LIST[+e.target.value]; devSet({temp:tp, tint:ti}, `${t('White Balance')}: ${n}`);
+});
+// white balance eyedropper: the colour under the click (read from the original file) is made neutral grey -- same formula as the server's wb_from_neutral
+function wbPickToggle(){
+  DEV.pick = !DEV.pick; $('#v-develop').classList.toggle('picking', !!DEV.pick); renderDevPanels();
+  if(DEV.pick && !DEV.origImg){ const im = new Image(); im.onload = ()=>{ DEV.origImg = im; }; im.src = DEV.orig; }
+}
+$('#v-develop').addEventListener('click', e=>{
+  if(!DEV.pick || DEV.id==null || !DEV.origImg) return;
+  const img = $('#dev-img'), cv = $('#dev-canvas'), st = $('#v-develop').getBoundingClientRect(), o = DEV.ops, c = o.crop;
+  let px = e.clientX - st.left - parseFloat(cv.style.left), py = e.clientY - st.top - parseFloat(cv.style.top);
+  const cw = parseFloat(cv.style.width), ch_ = parseFloat(cv.style.height);
+  if(o.fh) px = (c[0]+c[2])*cw - px; if(o.fv) py = (c[1]+c[3])*ch_ - py;
+  const iw = parseFloat(img.style.width), ih = parseFloat(img.style.height), cx = parseFloat(img.style.left) + iw/2, cy = parseFloat(img.style.top) + ih/2;
+  const a = o.rot*Math.PI/180, dx = px-cx, dy = py-cy, x = dx*Math.cos(a) + dy*Math.sin(a), y = -dx*Math.sin(a) + dy*Math.cos(a);
+  const nw = DEV.origImg.naturalWidth, nh = DEV.origImg.naturalHeight, ux = Math.round((x+iw/2)/iw*nw), uy = Math.round((y+ih/2)/ih*nh);
+  if(ux < 0 || uy < 0 || ux >= nw || uy >= nh) return;
+  const cvs = document.createElement('canvas'), R = 3; cvs.width = cvs.height = 2*R+1;
+  const g = cvs.getContext('2d'); g.drawImage(DEV.origImg, ux-R, uy-R, 2*R+1, 2*R+1, 0, 0, 2*R+1, 2*R+1);
+  const d = g.getImageData(0, 0, 2*R+1, 2*R+1).data; let r=0, gg=0, b=0, n=0;
+  for(let i=0;i<d.length;i+=4){ r+=d[i]; gg+=d[i+1]; b+=d[i+2]; n++; }
+  [r, gg, b] = [r, gg, b].map(v=>Math.max(v/n/255, 1e-3));
+  const tp = (b-r)/(0.3*(r+b)), ti = (1-(1+0.3*tp)*r/gg)/0.2;
+  DEV.pick = false; $('#v-develop').classList.remove('picking');
+  devSet({temp:clamp(Math.round(tp*100), -100, 100), tint:clamp(Math.round(ti*100), -100, 100)}, t('White Balance'));
+}, true);
 // Straightening leaves empty corners: while the crop is untouched (full, or the one made here) it follows the largest rectangle that fits inside the turned picture
 function devAutoCrop(deg){
   const img=$('#dev-img'), o=DEV.ops, c=o.crop, full=c.every((x,i)=>Math.abs(x-[0,0,1,1][i])<1e-3);
@@ -1630,7 +1801,8 @@ function devAutoCrop(deg){
   o.crop=[.5-fx/2,.5-fy/2,.5+fx/2,.5+fy/2]; DEV.autoCrop=[...o.crop];
 }
 const dfmt = (k,v)=>k==='exp' ? (v>0?'+':'')+(v/100).toFixed(2) : (v>0?'+':'')+v;
-const DLABEL = {bri:t('Brightness'), con:t('Contrast'), sat:t('Saturation'), exp:t('Exposure'), hi:t('Highlights'), sh:t('Shadows'), temp:t('Temperature'), tint:t('Tint'), vib:t('Vibrance'), cla:t('Clarity'), shp:t('Sharpness'), blr:t('Blur'), vig:t('Vignette'), sep:t('Sepia')};
+const DLABEL = {bri:t('Brightness'), con:t('Contrast'), sat:t('Saturation'), exp:t('Exposure'), hi:t('Highlights'), sh:t('Shadows'), temp:t('Temperature'), tint:t('Tint'), vib:t('Vibrance'), cla:t('Clarity'), shp:t('Sharpness'), blr:t('Blur'), vig:t('Vignette'), sep:t('Sepia'),
+  wht:t('Whites'), blk:t('Blacks'), tex:t('Texture'), dhz:t('Dehaze'), grn:t('Grain'), grs:t('Grain size'), grr:t('Grain roughness'), vgm:t('Vignette midpoint'), vgf:t('Vignette feather'), vgr:t('Vignette roundness'), vgh:t('Vignette highlights')};
 $('#right').addEventListener('input', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
   const v=+e.target.value;
@@ -1647,7 +1819,7 @@ $('#right').addEventListener('change', e=>{
 });
 $('#right').addEventListener('dblclick', e=>{
   const k=e.target.dataset?.k; if(!k || DEV.id==null) return;
-  if(k==='straight') devSet({rot:Math.round(DEV.ops.rot/90)*90}, t('Straighten 0°')); else devSet({[k]:0}, `${DLABEL[k]} 0`);
+  if(k==='straight') devSet({rot:Math.round(DEV.ops.rot/90)*90}, t('Straighten 0°')); else devSet({[k]:TONE_DEFAULT[k]||0}, `${DLABEL[k]} ${TONE_DEFAULT[k]||0}`);
 });
 $('#right').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
@@ -1694,7 +1866,7 @@ async function devApply(silent){
   const d=await api('/api/photo/'+id);
   const p=S.byId.get(id); if(p) Object.assign(p, {width:d.width, height:d.height, edited:d.edited, bytes:d.bytes});
   VER[id]=Date.now();
-  DEV.last = {bri:ops.bri, con:ops.con, sat:ops.sat, gray:ops.gray, exp:ops.exp, hi:ops.hi, sh:ops.sh, temp:ops.temp, tint:ops.tint, vib:ops.vib, cla:ops.cla, shp:ops.shp, blr:ops.blr, vig:ops.vig, sep:ops.sep}; pref.set('lastDev', DEV.last);
+  DEV.last = Object.fromEntries(Object.keys(NEUTRAL()).filter(k=>!['rot','crop','fh','fv'].includes(k)).map(k=>[k, JSON.parse(JSON.stringify(ops[k]))])); pref.set('lastDev', DEV.last);
   if(DEV.id===id){ DEV.saved=JSON.stringify(DEV.ops); DEV.dirty=false; renderToolbar(); }
   G.cells.forEach(c=>{ if(+c.dataset.id===id){ const img=c.querySelector('img'); if(img) img.src=thumbUrl(id); } });
   renderFilm(true); renderColls();
@@ -1714,7 +1886,7 @@ $('#btn-dev-auto').onclick = async ()=>{
   await devApply(true); toast(t('Auto: the photo was improved · original kept'));
 };
 $('#btn-dev-reset').onclick = ()=>{ if(DEV.id!=null) devSet(NEUTRAL(), t('Reset')); };
-$('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast(t('No settings have been applied to another photo yet')); devSet({...DEV.last}, t('Previous Settings')); };
+$('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast(t('No settings have been applied to another photo yet')); devSet({...toneNeutral(), ...JSON.parse(JSON.stringify(DEV.last))}, t('Previous Settings')); };
 $('#btn-dev-revert').onclick = async ()=>{
   if(DEV.id==null) return; const p=actPhoto();
   if(!p?.edited){ devSet(NEUTRAL(), t('Reset')); return; }
