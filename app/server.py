@@ -1186,6 +1186,34 @@ class EditIn(BaseModel):
     sepia: float | None = None
     flip_h: bool | None = None
     flip_v: bool | None = None
+    # the extra tools (develop_ops.py); numbers are clamped by develop_ops.clean() before anything is stored or drawn
+    whites: float | None = None
+    blacks: float | None = None
+    texture: float | None = None
+    dehaze: float | None = None
+    grain: float | None = None
+    grain_size: float | None = None
+    grain_rough: float | None = None
+    vignette_mid: float | None = None
+    vignette_feather: float | None = None
+    vignette_round: float | None = None
+    vignette_hl: float | None = None
+    curve: dict | None = None
+    curve_p: list[float] | None = None
+    mixer: dict | None = None
+    bwmix: dict | None = None
+    grading: dict | None = None
+    calib: dict | None = None
+
+
+def _edit_ops(e: "EditIn") -> dict:
+    """The settings of an edit request as they are stored: the extra tools cleaned (clamped, unknown names dropped)."""
+    from . import develop_ops
+    d = e.dict(exclude_none=True)
+    for k in list(develop_ops._RANGES) + ["curve", "curve_p", "mixer", "bwmix", "grading", "calib"]:
+        d.pop(k, None)
+    d.update(develop_ops.clean(e.dict(exclude_none=True)))
+    return d
 
 
 _is_neutral = render.is_neutral
@@ -1291,7 +1319,7 @@ def _editable(con, pid):
 @app.post("/api/photo/{pid}/edit")
 def edit_image(pid: int, e: EditIn):
     con = db.connect()
-    _render(con, _editable(con, pid), e.dict(exclude_none=True))
+    _render(con, _editable(con, pid), _edit_ops(e))
     return {"ok": True}
 
 
@@ -1360,7 +1388,7 @@ def edit_preview(pid: int, e: EditIn):
     """Live preview of the Develop tone sliders: the original, shrunk, with only the tone settings applied.
     Nothing is saved."""
     p = _original_path(db.connect(), pid)
-    data = images.preview_tone(p, {k: v for k, v in e.dict(exclude_none=True).items() if k in images.TONE_KEYS})
+    data = images.preview_tone(p, {k: v for k, v in _edit_ops(e).items() if k in images.TONE_KEYS or k == "grayscale"})
     return Response(data, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
@@ -1573,6 +1601,29 @@ def tray_set(body: BackgroundIn):
 
 class UiLangIn(BaseModel):
     lang: str
+
+
+class UiThemeIn(BaseModel):
+    id: str
+    custom: dict | None = None
+
+
+@app.get("/api/ui-theme")
+def ui_theme_get():
+    """The look the user chose (kept here as well as in the window's own storage, which is lost when photag has to use another port)."""
+    return config.read_all().get("ui_theme") or {}
+
+
+@app.post("/api/ui-theme")
+def ui_theme_set(body: UiThemeIn):
+    import re
+    c = body.custom or {}
+    custom = ({"name": str(c.get("name") or "Custom")[:40], "bg": c.get("bg"), "acc": c.get("acc"), "light": bool(c.get("light"))}
+              if re.fullmatch(r"#[0-9a-fA-F]{6}", str(c.get("bg", ""))) and re.fullmatch(r"#[0-9a-fA-F]{6}", str(c.get("acc", ""))) else None)
+    if not re.fullmatch(r"[a-z0-9-]{1,24}", body.id):
+        raise err(400, "Unknown theme")
+    config.merge_settings({"ui_theme": {"id": body.id, "custom": custom}})
+    return {"ok": True}
 
 
 @app.post("/api/ui-lang")

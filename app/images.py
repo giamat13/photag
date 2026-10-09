@@ -313,12 +313,20 @@ def export_resized(src: Path, dst: Path, long_edge: int | None, quality: int):
 # Develop settings that change the picture itself ("stage 1", done on the full frame before rotating/cropping) -- the
 # rest (rotate, crop, flips, brightness, contrast, saturation, grayscale) is geometry and simple tone ("stage 2").
 TONE_KEYS = ("exposure", "highlights", "shadows", "temperature", "tint", "vibrance", "clarity", "sharpness",
-             "blur", "vignette", "sepia")
+             "blur", "vignette", "sepia",
+             # the extra tools (develop_ops.py)
+             "whites", "blacks", "texture", "dehaze", "grain", "grain_size", "grain_rough",
+             "vignette_mid", "vignette_feather", "vignette_round", "vignette_hl",
+             "curve", "curve_p", "mixer", "bwmix", "grading", "calib")
 FLIP_KEYS = ("flip_h", "flip_v")
 
 
+_PLAIN_TONE = ("exposure", "highlights", "shadows", "temperature", "tint", "vibrance", "clarity", "sharpness", "blur", "vignette", "sepia")
+
+
 def has_tone(ops: dict) -> bool:
-    return any(ops.get(k) not in (None, 0, 0.0) for k in TONE_KEYS)
+    from . import develop_ops
+    return any(ops.get(k) not in (None, 0, 0.0) for k in _PLAIN_TONE) or develop_ops.active(ops)
 
 
 def _smooth(x, a, b):
@@ -343,6 +351,7 @@ def apply_tone(im, ops: dict):
     Radii scale with the picture size, so a small preview looks like the full-size render."""
     import numpy as np
     from PIL import ImageFilter
+    from . import develop_ops
     if not has_tone(ops):
         return im
     im = im.convert("RGB")
@@ -372,16 +381,17 @@ def apply_tone(im, ops: dict):
         f = 1 + v * (1 - sat) if v > 0 else 1 + v * (0.5 + 0.5 * sat)
         gray = a.mean(axis=2, keepdims=True)
         a = gray + (a - gray) * f
+    a = develop_ops.apply(a, ops, size)                            # texture, dehaze, whites / blacks, curves, colour mixer, grading...
     if g("vignette"):
-        h, w = a.shape[:2]
-        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-        r = np.sqrt(((xx - (w - 1) / 2) / (w / 2)) ** 2 + ((yy - (h - 1) / 2) / (h / 2)) ** 2) / np.sqrt(2.0)
-        m = (np.clip((r - 0.35) / 0.65, 0.0, 1.0) ** 2)[..., None]
-        v = g("vignette") / 100.0
-        a = a * (1 - (-v) * 0.9 * m) if v < 0 else a + v * 0.9 * m * (1 - a)
+        a = develop_ops.vignette(a, g("vignette"), float(ops.get("vignette_mid", 50) if ops.get("vignette_mid") is not None else 50),
+                                 float(ops.get("vignette_feather", 50) if ops.get("vignette_feather") is not None else 50),
+                                 g("vignette_round"), g("vignette_hl"))
     if g("sepia"):
         k = np.array([[0.393, 0.769, 0.189], [0.349, 0.686, 0.168], [0.272, 0.534, 0.131]], dtype=np.float32)
         a = a + (np.clip(a @ k.T, 0.0, 1.0) - a) * (g("sepia") / 100.0)
+    if g("grain"):
+        a = develop_ops.grain(a, g("grain"), float(ops.get("grain_size", 25) if ops.get("grain_size") is not None else 25),
+                              float(ops.get("grain_rough", 50) if ops.get("grain_rough") is not None else 50))
     return _from_unit(a)
 
 
