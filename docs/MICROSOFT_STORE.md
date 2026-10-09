@@ -36,3 +36,11 @@ With those variables set, the *release* workflow also builds `photag-<version>.m
 ## Not done / unknown
 * Nobody has submitted this package yet: whether certification passes is unknown.
 * The Store build has not been run on a PC with Smart App Control on. Do that with the first Store build.
+
+## Wording of the Store listing (do not skip)
+- The name, the short and the long description, the keywords and the screenshots' captions must **not contain "Lightroom"** (or any other
+  Adobe name or logo). Describe photag in its own words: "a local photo manager: catalog, collections, ratings, keywords, face
+  recognition, non-destructive editing, backups".
+- "Import from a Lightroom catalog" may be mentioned once in the long description as a compatibility feature, followed by:
+  "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe." Not in the keywords.
+- Use photag's own icon and screenshots only.

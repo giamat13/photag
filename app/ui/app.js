@@ -1,4 +1,4 @@
-/* photag — Lightroom Classic-style Library / Develop / Slideshow.
+/* photag — the Library / Develop / Slideshow window.
    One page, no framework. State lives in S; the grid and filmstrip are
    virtualized so catalogs with tens of thousands of photos stay smooth. */
 'use strict';
@@ -1284,7 +1284,7 @@ function drawHisto(img){
     HCACHE.set(key, H); if(HCACHE.size>200) HCACHE.delete(HCACHE.keys().next().value);
   }
   let max=1; for(const c of H) for(let k=2;k<254;k++) max=Math.max(max,c[k]);
-  // grid lines like Lightroom's (quarters)
+  // crop grid lines (quarters)
   ctx.strokeStyle='rgba(255,255,255,.06)'; for(let q=1;q<4;q++){ ctx.beginPath(); ctx.moveTo(q*cv.width/4,0); ctx.lineTo(q*cv.width/4,cv.height); ctx.stroke(); }
   ctx.globalCompositeOperation='lighter';
   ['rgba(220,60,60,.8)','rgba(60,190,80,.8)','rgba(60,110,235,.8)'].forEach((col,ci)=>{
@@ -2807,7 +2807,7 @@ function openExport(){
   };
 }
 
-// ---------- import (full-window dialog like Lightroom's) ----------
+// ---------- import (full-window dialog) ----------
 const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, dkpath:'', dkinfo:null, socialZips:[], recursive:true, files:[], on:new Set(), skipDup:true, show:'all', recoverXmp:false};
 function openImport(mode){
   IM.mode = mode || IM.mode;
@@ -3127,7 +3127,7 @@ const MENUS = [
     [t('Keyboard Shortcuts'), 'Ctrl+/', shortcuts],
     [t('Check for Updates...'), '', ()=>updateCheck(true)],
     [t('What\'s new in this version...'), '', ()=>whatsNew(true)],
-    [t('About photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('Version {0}', [ltr(S.status?.version || '')])}</p><p>${t("Local photo management and storage inspired by Lightroom Classic: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.")}</p><p class="hint" style="padding:0">${t("Free software under the GPL-3.0 license, with no warranty. You may modify and redistribute it under the license terms.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`)],
+    [t('About photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('Version {0}', [ltr(S.status?.version || '')])}</p><p>${t("Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.")}</p><p class="hint" style="padding:0">${t("Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.")}</p><p class="hint" style="padding:0">${t("Free software under the GPL-3.0 license, with no warranty. You may modify and redistribute it under the license terms.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`)],
   ]],
 ];
 let MENU_OPEN=null, MENU_ITEMS=[];
@@ -3242,7 +3242,7 @@ function cycleCellStyle(){ S.cell = S.cell==='compact'?'xp':S.cell==='xp'?'plain
 function toggleSides(){ const hide = !(document.body.classList.contains('hide-left') && document.body.classList.contains('hide-right')); togglePanel('left', hide); togglePanel('right', hide); }
 function toggleAllPanels(){ const hide = !(document.body.classList.contains('hide-left') && document.body.classList.contains('hide-film')); ['left','right','top','film'].forEach(k=>togglePanel(k, hide)); }
 
-// ---------- keyboard (Lightroom's shortcuts) ----------
+// ---------- keyboard shortcuts ----------
 document.addEventListener('keydown', e=>{
   const typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type!=='checkbox' && e.target.type!=='range';
   const k=e.key, ctrl=e.ctrlKey||e.metaKey;

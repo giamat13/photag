@@ -1,12 +1,12 @@
 # photag — a local photo manager
 
-A photo and video manager for Windows in the spirit of Lightroom Classic: catalog, collections, flags, ratings,
+A local photo and video manager for Windows: catalog, collections, flags, ratings,
 color labels, keywords, face recognition and non-destructive editing (the original is always kept).
 The interface is available in 17 languages (English by default). A Hebrew version of this file is in [README.he.md](README.he.md).
 
 ## What's inside
-- **Lightroom Classic–style interface** — Library / Develop / Slideshow modules; grid, loupe, compare, survey and people views;
-  filmstrip, library filter and the Lightroom keyboard shortcuts.
+- **A photo-manager interface** — Library, Develop and Slideshow modules; grid, loupe, compare, survey and people views;
+  filmstrip, library filter and keyboard shortcuts for rating, flagging and moving between photos.
 - **AI tagging (optional, with your own key)** — an "AI tagging" button next to the keywords. Providers: OpenAI, Claude (Anthropic),
   Gemini (Google), OpenRouter (one key for dozens of providers) and any OpenAI-compatible server (Groq, Together, local Ollama…).
   The model is **automatic** (a cheap, fast vision model is picked from the provider's live list) or chosen by hand. Only a small
@@ -227,3 +227,5 @@ Not bundled, and therefore not covered by this license:
 
 ## Code signing
 Not signed yet. Policy, status and privacy statement: [docs/CODE_SIGNING_POLICY.md](docs/CODE_SIGNING_POLICY.md).
+
+Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.

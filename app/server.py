@@ -1427,7 +1427,7 @@ def open_external(pid: int):
 
 @app.post("/api/photo/{pid}/reveal")
 def reveal(pid: int):
-    """Lightroom's "Show in Explorer": open the folder with the file selected."""
+    """"Show in Explorer": open the folder with the file selected."""
     import subprocess
     r = db.connect().execute("SELECT rel_path FROM photos WHERE id=?", (pid,)).fetchone()
     if not r:
@@ -2133,7 +2133,7 @@ def scan_folder(path: str, recursive: int = 1):
         raise err(404, "Folder not found")
     files = importer.scan_folder(path, bool(recursive))
     known = {(r["filename"], r["bytes"]) for r in db.connect().execute("SELECT filename, bytes FROM photos")}
-    for f in files:  # Lightroom's "suspected duplicate": same name + size already in the catalog
+    for f in files:  # "suspected duplicate": same name + size already in the catalog
         f["dup"] = (f["name"], f["bytes"]) in known
     return {"files": files}
 
@@ -2291,7 +2291,7 @@ def rename_person(pid: int, body: RenameIn):
 
 @app.get("/api/clusters")
 def clusters():
-    """Face groups nobody has named yet (Lightroom's "Unnamed People"), each with a suggested
+    """Face groups nobody has named yet ("Unnamed People"), each with a suggested
     name when the group is close to an already-named person -- "is this <name>?" instead of a
     blank box to type into."""
     con = db.connect()

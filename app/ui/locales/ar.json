@@ -1314,5 +1314,7 @@
  "{0} pictures copied. Paste them with Ctrl+V": "تم نسخ {0} صور. الصقها بـ Ctrl+V",
  "The small copies are in the opened folder": "النسخ الصغيرة في المجلد المفتوح",
  "Nothing selected": "لم يتم تحديد شيء",
- "Could not prepare the pictures": "تعذر تحضير الصور"
+ "Could not prepare the pictures": "تعذر تحضير الصور",
+ "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.": "Lightroom علامة تجارية لشركة Adobe؛ photag ليست تابعة لـ Adobe.",
+ "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "إدارة وتخزين الصور محليًا: كتالوج ومجموعات وأعلام وتقييمات وتسميات لونية وكلمات مفتاحية وكشف الوجوه وتحرير غير مدمّر — يتم الحفاظ على الأصل دائمًا."
 }

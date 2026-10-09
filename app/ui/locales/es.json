@@ -1314,5 +1314,7 @@
  "{0} pictures copied. Paste them with Ctrl+V": "{0} imágenes copiadas. Pégalas con Ctrl+V",
  "The small copies are in the opened folder": "Las copias pequeñas están en la carpeta abierta",
  "Nothing selected": "Nada seleccionado",
- "Could not prepare the pictures": "No se pudieron preparar las imágenes"
+ "Could not prepare the pictures": "No se pudieron preparar las imágenes",
+ "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.": "Lightroom es una marca comercial de Adobe; photag no está afiliada a Adobe.",
+ "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "Gestión y almacenamiento local de fotos: catálogo, colecciones, marcas, valoraciones, etiquetas de color, palabras clave, detección de rostros y edición no destructiva; el original siempre se conserva."
 }

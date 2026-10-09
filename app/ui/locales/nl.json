@@ -1314,5 +1314,7 @@
  "{0} pictures copied. Paste them with Ctrl+V": "{0} afbeeldingen gekopieerd. Plak met Ctrl+V",
  "The small copies are in the opened folder": "De kleine kopieën staan in de geopende map",
  "Nothing selected": "Niets geselecteerd",
- "Could not prepare the pictures": "De afbeeldingen konden niet worden voorbereid"
+ "Could not prepare the pictures": "De afbeeldingen konden niet worden voorbereid",
+ "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.": "Lightroom is een handelsmerk van Adobe; photag is niet verbonden met Adobe.",
+ "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "Lokaal fotobeheer en opslag: catalogus, collecties, vlaggen, beoordelingen, kleurlabels, trefwoorden, gezichtsherkenning en niet-destructief bewerken — het origineel blijft altijd bewaard."
 }

@@ -12,6 +12,12 @@ session with `add_repo` (owner `storytold`, repo `lightcraft`) to read it. It is
 code cannot be copied or ported line by line: read it for what it does and how it feels, then build the same thing the photag way
 (Python + the web UI, every string in all 16 locales, tests, release notes).
 
+## Wording about Adobe / Lightroom
+Never describe photag as "Lightroom-style", "in the spirit of Lightroom" or "a faithful take on Lightroom", in the README, the site,
+the app, the Store listing or code comments, and keep "Lightroom" out of the Store name, description and keywords. It may appear only
+as a compatibility fact ("import from a Lightroom catalog (.lrcat)"), with the line "Lightroom is a trademark of Adobe; photag is not
+affiliated with Adobe." (see docs/MICROSOFT_STORE.md).
+
 ## Git workflow
 All development happens directly on `main` — no feature branches, no pull requests. Commit and
 push straight to `main`.

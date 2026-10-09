@@ -437,7 +437,7 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
     return status, size
 
 
-# ---------- import from a folder / memory card (Lightroom "Copy") ----------
+# ---------- import from a folder / memory card ("Copy") ----------
 MEDIA_EXT = images.IMAGE_EXT | images.VIDEO_EXT
 
 

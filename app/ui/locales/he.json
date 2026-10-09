@@ -1314,5 +1314,7 @@
  "{0} pictures copied. Paste them with Ctrl+V": "{0} תמונות הועתקו. הדבק עם Ctrl+V",
  "The small copies are in the opened folder": "העותקים הקטנים נמצאים בתיקייה שנפתחה",
  "Nothing selected": "לא נבחר דבר",
- "Could not prepare the pictures": "לא ניתן היה להכין את התמונות"
+ "Could not prepare the pictures": "לא ניתן היה להכין את התמונות",
+ "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.": "Lightroom הוא סימן מסחרי של Adobe; photag אינה קשורה ל-Adobe.",
+ "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "ניהול ואחסון תמונות מקומי: קטלוג, אוספים, דגלים, דירוגים, תוויות צבע, מילות מפתח, זיהוי פנים ועריכה שלא הורסת את המקור — המקור תמיד נשמר."
 }

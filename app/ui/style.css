@@ -1,9 +1,9 @@
-/* photag — a faithful take on Lightroom Classic's Library module.
+/* photag — the Library module.
    Neutral charcoal chrome, light-gray grid cells that brighten when selected,
    white stars/flags, photos are the only color on screen.
    Two chrome themes (View ▸ Light Theme, or Preferences): dark (default) and light. The photo-viewing surfaces
    (grid, loupe, compare/survey, filmstrip, develop canvas, map, timeline, people/ranking/review galleries, the
-   histogram) stay the SAME neutral dark gray in both themes — like Lightroom Classic, so judging color and exposure
+   histogram) stay the SAME neutral dark gray in both themes — so judging color and exposure
    is never thrown off by the panels around it. --st1.._st4 are the fixed light-on-dark text used on those surfaces;
    --t1.._t4 are the chrome text that switches with the theme.
    RTL: panels mirror (Catalog on the right, Metadata on the left). */
@@ -20,7 +20,7 @@
   --film:#1f1f1f; --film-h:#2b2b2b;
   --t1:#e6e6e6; --t2:#c2c2c2; --t3:#939393; --t4:#6b6b6b;
   --st1:#e6e6e6; --st2:#c2c2c2; --st3:#939393; --st4:#6b6b6b;  /* fixed text for the photo surfaces — never themed */
-  --acc:#4b98f0;         /* focus / checked only — Lightroom uses almost no color */
+  --acc:#4b98f0;         /* focus / checked only — almost no color */
   --star:#dadada;
   --red:#d44d4d; --yellow:#e0c33f; --green:#5db35b; --blue:#4a88d6; --purple:#9a5cc8;
   --ui:Heebo,"Segoe UI",system-ui,sans-serif;
@@ -72,7 +72,7 @@ a{color:var(--t2);cursor:pointer;text-decoration:none}
 a:hover{color:var(--t1)}
 code{font-family:Consolas,monospace;font-size:11.5px;direction:ltr;unicode-bidi:embed;color:var(--t2);word-break:break-all}
 
-/* sliders: thin dark track, small light triangle-ish knob like Lightroom's */
+/* sliders: thin dark track, small light triangle-ish knob */
 input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:0;padding:0;height:16px;width:100%;cursor:pointer}
 input[type=range]:focus{background:transparent}
 input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:var(--track,#1e1e1e);box-shadow:0 1px 0 #444}
@@ -500,7 +500,7 @@ body.hide-film .edge-b::after{border-top:0;border-bottom:5px solid #5a5a5a}
 .mem-list div{padding:5px 8px;background:var(--raise1);color:var(--t1)}
 .mem-list time{color:var(--t3);font-size:11px;margin-inline-end:10px}
 
-/* ---------- import dialog (full window, like Lightroom's) ---------- */
+/* ---------- import dialog (full window) ---------- */
 .importer{position:fixed;inset:0;z-index:85;background:var(--mb);display:flex;flex-direction:column}
 .im-top{height:72px;flex:none;display:flex;align-items:center;gap:20px;padding:0 20px;background:linear-gradient(var(--deep2),var(--deep));border-bottom:1px solid var(--line-strong)}
 .im-top .blk{display:flex;flex-direction:column;gap:3px;min-width:0}

@@ -1,6 +1,6 @@
 """photag entry point.
 
-photag - a local photo manager in the spirit of Lightroom Classic.
+photag - a local photo manager.
 Copyright (C) the photag authors. Free software under the GNU General Public License version 3
 (or, at your option, any later version); see the file LICENSE. There is NO WARRANTY.
 
