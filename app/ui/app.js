@@ -1778,11 +1778,60 @@ async function toggleStackBursts(){
   }
   applyFilter();
 }
-function toggleTheme(){
-  const light = document.documentElement.dataset.theme !== 'light';
-  if(light) document.documentElement.dataset.theme='light'; else delete document.documentElement.dataset.theme;
-  pref.set('theme', light ? 'light' : 'dark');
+// ---------- themes (the engine is themes.js; this is the picker) ----------
+function toggleTheme(){                    // View > Light Theme: the Light theme, and back to the last dark one
+  const cur = PhotagTheme.current(), th = PhotagTheme.resolve(cur);
+  if(th.light) PhotagTheme.apply(pref.get('themeDark', 'slate'));
+  else { pref.set('themeDark', cur); PhotagTheme.apply('light'); }
 }
+// the names of the built-in themes (themes.js holds the English text; t() translates it, and this list lets the translation tool see them)
+const THEME_NAMES = [t('Slate'), t('Classic'), t('Midnight'), t('Graphite'), t('Forest'), t('Plum'), t('Sunset'), t('Ocean'), t('Rose'), t('High contrast (dark)'), t('High contrast (light)'), t('Light'), t('Paper'), t('Sepia'), t('Colour-blind friendly'), t('Follow Windows')];
+function themeSwatch(th){                  // a tiny picture of the theme: panel colour, top bar, accent
+  const r = PhotagTheme.resolve(th.id), v = r.classic ? null : (r.base ? null : PhotagTheme.derive(r));
+  const bg = r.classic ? '#343434' : r.base ? '#ededed' : v['--pnl'], top = r.classic ? '#1b1b1b' : r.base ? '#f1f1f1' : v['--top'];
+  const acc = r.classic ? '#4b98f0' : r.base ? r.acc : v['--acc'], tx = r.classic ? '#c2c2c2' : r.base ? '#3d3d3d' : v['--t2'];
+  return `<span class="th-sw" style="background:${bg}"><i style="background:${top}"></i><b style="background:${tx}"></b><em style="background:${acc}"></em></span>`;
+}
+function themeDialog(){
+  const cur = PhotagTheme.current(), cust = PhotagTheme.readCustom();
+  const card = th => `<button class="th-card ${th.id===cur?'on':''}" data-th="${th.id}">${themeSwatch(th)}<span>${esc(t(th.name))}</span></button>`;
+  modal(`<h3>${t('Themes')}</h3><div class="mb">
+    <div class="hint" style="padding:0">${t('Choose how photag looks. The photo areas always stay neutral gray, so colour is judged fairly.')}</div>
+    <div class="th-grid">${PhotagTheme.THEMES.map(card).join('')}${cust ? card({id:'custom', name:cust.name || 'Custom', bg:cust.bg, acc:cust.acc, light:cust.light}) : ''}</div>
+    <div class="lbl-sub" style="padding:0">${t('Your own theme')}</div>
+    <div class="th-custom">
+      <label>${t('Background')} <input type="color" id="th-bg" value="${cust ? cust.bg : '#212736'}"></label>
+      <label>${t('Accent')} <input type="color" id="th-acc" value="${cust ? cust.acc : '#ff9a3c'}"></label>
+      <label class="check"><input type="checkbox" id="th-light" ${cust && cust.light ? 'checked' : ''}> ${t('Light')}</label>
+      <button id="th-use">${t('Use it')}</button>
+    </div>
+    <div class="th-custom"><button id="th-export">${t('Export theme…')}</button><button id="th-import">${t('Import theme…')}</button><input type="file" id="th-file" accept=".json" class="hidden"></div>
+  </div><div class="mf"><span class="spacer"></span><button class="primary" id="th-close">${t('Close')}</button></div>`);
+  $('#th-close').onclick = closeModal;
+  $$('#modal-box .th-card').forEach(b=>b.onclick = ()=>{ PhotagTheme.apply(b.dataset.th); $$('#modal-box .th-card').forEach(x=>x.classList.toggle('on', x===b)); });
+  $('#th-use').onclick = ()=>{
+    const c = {name:t('Custom'), bg:$('#th-bg').value, acc:$('#th-acc').value, light:$('#th-light').checked};
+    PhotagTheme.setCustom(c); PhotagTheme.apply('custom'); themeDialog();
+  };
+  $('#th-export').onclick = ()=>{
+    const c = PhotagTheme.readCustom() || {name:'Custom', bg:$('#th-bg').value, acc:$('#th-acc').value, light:$('#th-light').checked};
+    const a = document.createElement('a'); a.download = 'photag-theme.json';
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({'photag-theme':1, name:c.name, bg:c.bg, acc:c.acc, light:!!c.light}, null, 1)], {type:'application/json'})); a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  };
+  $('#th-import').onclick = ()=>$('#th-file').click();
+  $('#th-file').onchange = async e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const c = PhotagTheme.parseThemeFile(await f.text());
+    if(!c){ toast(t('This is not a photag theme file'), 4000); return; }
+    PhotagTheme.setCustom(c); PhotagTheme.apply('custom'); themeDialog();
+  };
+}
+// the choice is also kept by the server (the window's own storage is lost when photag has to use another port): take it when this window has none
+(async()=>{
+  try{ if(localStorage.getItem('pm.themeId')) return;
+    const r = await api('/api/ui-theme'); if(r && r.id){ if(r.custom) PhotagTheme.setCustom(r.custom); PhotagTheme.apply(r.id, {mirror:false}); } }catch{}
+})();
 
 // ---------- dialogs ----------
 function modal(html){ $('#modal-box').innerHTML=html; $('#modal').classList.remove('hidden'); const f=$('#modal-box input:not([type=checkbox]),#modal-box button.primary'); f?.focus(); f?.select?.(); }
@@ -1849,6 +1898,8 @@ async function preferences(){
   modal(`<h3>${t("Preferences")}</h3><div class="mb">
     <p>${t("Face detection runs locally on your computer, without sending photos. AI tagging sends small thumbnails to the provider you choose, only when you start it.")}</p>
     <div class="pathrow"><span>${t("Face Detection")}</span><span>${t("InsightFace · {0} faces detected so far", [num(s.counts.faces)])}</span></div>
+    <div class="lbl-sub" style="padding:0">${t('Appearance')}</div>
+    <div class="bk-path"><button id="pf-themes">${t('Themes...')}</button></div>
     <label class="chkrow"><input type="checkbox" id="pf-upd" ${pref.get('autoUpdate', true) ? 'checked' : ''}> ${t('Check for updates automatically once a day')}</label>
     <label class="chkrow"><input type="checkbox" id="pf-beta" ${beta.on ? 'checked' : ''}> ${t('Tester mode: also offer pre-release versions')}</label>
     <label class="chkrow"><input type="checkbox" id="pf-cat" ${cat.on ? 'checked' : ''}> ${t('Keep edits and EXIF in the catalog database, never in the photo file')}</label>
@@ -1875,6 +1926,7 @@ async function preferences(){
     <div class="hint" style="padding:0">${t("photag only lists the image files of the folder and its subfolders and keeps the list up to date. Your files are never moved, renamed or changed; the catalog, thumbnails and backups stay in photag's own folder. Only when you delete a photo from the trash for good does its file go to the Recycle Bin.")}</div>
   </div><div class="mf"><button onclick="closeModal()">${t("Close")}</button>
     <button id="pf-ai">${t("AI tagging settings")}</button><button class="primary" id="pf-faces">${t("Detect Faces")}</button></div>`);
+  $('#pf-themes').onclick=()=>themeDialog();
   $('#pf-upd').onchange=e=>pref.set('autoUpdate', e.target.checked);
   $('#pf-beta').onchange=e=>send('POST', '/api/update/beta', {on: e.target.checked});
   $('#pf-cat').onchange=e=>send('POST', '/api/catalog-edits', {on: e.target.checked}).then(()=>toast(e.target.checked ? t('Edits and EXIF are kept in the catalog') : t('Edits will be written into the photo files')));
@@ -3121,6 +3173,7 @@ const MENUS = [
     [t('Toolbar'), 'T', ()=>togglePanel('tool'), null, ()=>!document.body.classList.contains('hide-tool')],
     [t('Lights Out'), 'L', cycleLights],
     sep,
+    [t('Themes...'), '', themeDialog],
     [t('Light Theme'), '', toggleTheme, null, ()=>document.documentElement.dataset.theme==='light'],
   ]],
   [t('Help'), [

@@ -1575,6 +1575,29 @@ class UiLangIn(BaseModel):
     lang: str
 
 
+class UiThemeIn(BaseModel):
+    id: str
+    custom: dict | None = None
+
+
+@app.get("/api/ui-theme")
+def ui_theme_get():
+    """The look the user chose (kept here as well as in the window's own storage, which is lost when photag has to use another port)."""
+    return config.read_all().get("ui_theme") or {}
+
+
+@app.post("/api/ui-theme")
+def ui_theme_set(body: UiThemeIn):
+    import re
+    c = body.custom or {}
+    custom = ({"name": str(c.get("name") or "Custom")[:40], "bg": c.get("bg"), "acc": c.get("acc"), "light": bool(c.get("light"))}
+              if re.fullmatch(r"#[0-9a-fA-F]{6}", str(c.get("bg", ""))) and re.fullmatch(r"#[0-9a-fA-F]{6}", str(c.get("acc", ""))) else None)
+    if not re.fullmatch(r"[a-z0-9-]{1,24}", body.id):
+        raise err(400, "Unknown theme")
+    config.merge_settings({"ui_theme": {"id": body.id, "custom": custom}})
+    return {"ok": True}
+
+
 @app.post("/api/ui-lang")
 def ui_lang(body: UiLangIn):
     bgmode.set_ui_lang(body.lang)       # the language of the notifications (they come from the program, not from the window)

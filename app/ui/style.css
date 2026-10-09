@@ -795,8 +795,9 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
 .pl-h{color:var(--t3,#888);font-size:12px;white-space:nowrap;direction:ltr}
 
 /* ======================================================================================================================
-   photag's own look: a deep slate-blue chrome with a warm amber accent, pill-shaped module tabs, rounded cells and panel titles in
-   small capitals. The photo surfaces (grid background, loupe, develop canvas) stay neutral gray so colour is judged fairly.
+   photag's own look (the default theme "Slate"): a deep slate-blue chrome with a warm amber accent, pill-shaped module tabs, rounded cells and
+   panel titles in small capitals. The colours come from themes.js (inline variables on <html>); the three layout switches are the attributes
+   data-tabs (pills|words), data-cells (cards|flat) and data-titles (caps|plain) -- "Classic" is the look before 15.0.0. The photo surfaces (grid background, loupe, develop canvas) stay neutral gray so colour is judged fairly.
    ====================================================================================================================== */
 :root:not([data-theme="light"]){
   --mb:#171c28; --top:#121620; --pnl:#212736; --pnl-h:#2a3142; --pnl-line:#161a25; --well:#181d2a; --tool:#232a3a;
@@ -807,37 +808,52 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
   --t1:#eef0f6; --t2:#c9cedc; --t3:#98a0b5; --t4:#6c748a;
 }
 :root[data-theme="light"]{ --acc:#e0731a; --star:#e0861f; }
-button{border-radius:6px}
-input[type=text],input[type=search],input[type=number],select,textarea{border-radius:5px}
-::selection{background:#ff9a3c;color:#1b1206}
-input[type=range]::-webkit-slider-thumb{background:var(--acc);border:2px solid #14171f;width:12px;height:12px;margin-top:-4.5px}
-input[type=range]:hover::-webkit-slider-thumb{background:#ffb76e}
+:root:not([data-cells=flat]) button{border-radius:6px}
+:root:not([data-cells=flat]) :is(input[type=text],input[type=search],input[type=number],select,textarea){border-radius:5px}
+::selection{background:var(--acc,#ff9a3c);color:#10131a}
+:root[data-cells=cards] input[type=range]::-webkit-slider-thumb{background:var(--knob,var(--acc));border:2px solid #14171f;width:12px;height:12px;margin-top:-4.5px}
+:root[data-cells=cards] input[type=range]:hover::-webkit-slider-thumb{filter:brightness(1.15)}
 
-/* module tabs: pills in the middle of the top bar (not plain words on the right) */
-header.top, .top{ }
-.modules{margin-inline:auto;gap:4px;background:rgba(255,255,255,.05);padding:3px;border-radius:999px}
-.modules span{display:none}
-.modules button{padding:5px 18px;font-size:13px;font-weight:600;letter-spacing:.02em;border-radius:999px;color:var(--t3)}
-.modules button:hover{color:var(--t1);background:rgba(255,255,255,.07)}
-.modules button.on{background:var(--acc);color:#1b1206}
-.idtext b{font-weight:700;font-size:16px;color:var(--t1);letter-spacing:.4px}
+/* module tabs: pills in the middle of the top bar (data-tabs=words keeps the plain words on the right) */
+:root[data-tabs=pills] .modules{margin-inline:auto;gap:4px;background:rgba(255,255,255,.05);padding:3px;border-radius:999px}
+:root[data-tabs=pills][data-theme=light] .modules{background:rgba(0,0,0,.06)}
+:root[data-tabs=pills] .modules span{display:none}
+:root[data-tabs=pills] .modules button{padding:5px 18px;font-size:13px;font-weight:600;letter-spacing:.02em;border-radius:999px;color:var(--t3)}
+:root[data-tabs=pills] .modules button:hover{color:var(--t1);background:rgba(255,255,255,.07)}
+:root[data-tabs=pills][data-theme=light] .modules button:hover{background:rgba(0,0,0,.06)}
+:root[data-tabs=pills] .modules button.on{background:var(--acc);color:#10131a}
+:root[data-tabs=pills] .idtext b{font-weight:700;font-size:16px;color:var(--t1);letter-spacing:.4px}
+:root[data-tabs=words][data-theme=light] .modules button.on{color:var(--t1)}
 
-/* panel titles: small capitals with an accent bar */
-.pnl>h3{height:32px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);
+/* panel titles: small capitals with an accent bar (data-titles=plain: plain words) */
+:root[data-titles=caps] .pnl>h3{height:32px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);
   border-inline-start:3px solid var(--acc);padding-inline-start:9px}
-.pnl>h3:hover{color:var(--t1)}
-.pnl>h3::after{border-top-color:var(--acc)}
+:root[data-titles=caps] .pnl>h3:hover{color:var(--t1)}
+:root[data-titles=caps] .pnl>h3::after{border-top-color:var(--acc)}
 
-/* grid cells and filmstrip: rounded, selection ring in the accent colour, small index badge instead of the big ghost numbers */
-.cell{border:0;border-radius:0;box-shadow:none;clip-path:inset(3px round 8px)}      /* a 3px gutter between the cards */
-.cell.sel,.cell.sel:hover{box-shadow:inset 0 0 0 5px rgba(255,154,60,.55)}
-.cell.act,.cell.act:hover{box-shadow:inset 0 0 0 5px var(--acc)}
-.cell .idx{inset-block-start:6px;inset-inline-start:6px;font-size:10px;font-weight:600;line-height:1;padding:3px 6px;border-radius:9px;
+/* grid cells and filmstrip: rounded cards with a gutter, selection ring in the accent colour, small index badge (data-cells=flat: flat cells, big ghost numbers) */
+:root[data-cells=cards] .cell{border:0;border-radius:0;box-shadow:none;clip-path:inset(3px round 8px)}
+:root[data-cells=cards] .cell.sel,:root[data-cells=cards] .cell.sel:hover{box-shadow:inset 0 0 0 5px color-mix(in srgb,var(--acc) 55%,transparent)}
+:root[data-cells=cards] .cell.act,:root[data-cells=cards] .cell.act:hover{box-shadow:inset 0 0 0 5px var(--acc)}
+:root[data-cells=cards] .cell .idx{inset-block-start:6px;inset-inline-start:6px;font-size:10px;font-weight:600;line-height:1;padding:3px 6px;border-radius:9px;
   background:rgba(0,0,0,.38);color:rgba(255,255,255,.7)}
-.cell.sel .idx,.cell.act .idx{background:var(--acc);color:#1b1206}
-.cell .ph img{border-radius:3px}
-.fc{border:0;border-radius:6px}
-.fc.sel{box-shadow:inset 0 0 0 2px rgba(255,154,60,.55)}
-.fc.act{box-shadow:inset 0 0 0 2px var(--acc)}
-.fc img{border-radius:2px}
-.act-bar i{background:var(--acc)}
+:root[data-cells=cards] .cell.sel .idx,:root[data-cells=cards] .cell.act .idx{background:var(--acc);color:#10131a}
+:root[data-cells=cards] .cell .ph img{border-radius:3px}
+:root[data-cells=cards] .fc{border:0;border-radius:6px}
+:root[data-cells=cards] .fc.sel{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--acc) 55%,transparent)}
+:root[data-cells=cards] .fc.act{box-shadow:inset 0 0 0 2px var(--acc)}
+:root[data-cells=cards] .fc img{border-radius:2px}
+.act-bar i{background:var(--acc,#a8a8a8)}
+
+/* theme picker */
+.th-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:10px 0}
+.th-card{display:flex;flex-direction:column;align-items:stretch;gap:6px;height:auto;padding:6px;border:2px solid transparent;border-radius:8px;background:var(--raise1);text-align:start}
+.th-card.on{border-color:var(--acc)}
+.th-card>span:last-child{font-size:11px;line-height:1.2;color:var(--t2);white-space:normal}
+.th-sw{position:relative;display:block;height:46px;border-radius:5px;overflow:hidden;border:1px solid rgba(128,128,128,.35)}
+.th-sw i{position:absolute;inset:0 0 auto 0;height:12px}
+.th-sw b{position:absolute;left:8px;top:20px;width:48%;height:4px;border-radius:2px;opacity:.8}
+.th-sw b::after{content:"";position:absolute;left:0;top:9px;width:70%;height:4px;border-radius:2px;background:inherit;opacity:.6}
+.th-sw em{position:absolute;right:8px;bottom:7px;width:22px;height:10px;border-radius:5px}
+.th-custom{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0}
+.th-custom input[type=color]{width:42px;height:26px;padding:0;border:1px solid var(--line-strong);border-radius:5px;background:none;vertical-align:middle}
