@@ -1368,6 +1368,90 @@ def mask_overlay(pid: int, b: MaskOverlayIn):
     return Response(out.getvalue(), media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
+# ---- own Develop presets and snapshots: small JSON files next to the library (settings of the Edit module as the page keeps them) ----
+_JSON_LOCK = threading.RLock()
+
+
+def _json_read(name: str, default):
+    import json
+    p = PATHS.root / name
+    try:
+        return json.loads(p.read_text("utf-8"))
+    except (OSError, ValueError):
+        return default
+
+
+def _json_write(name: str, data):
+    import json
+    p = PATHS.root / name
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False), "utf-8")
+    tmp.replace(p)
+
+
+class DevStoreIn(BaseModel):
+    name: str
+    ops: dict
+
+
+def _store_check(b: DevStoreIn):
+    import json
+    if not b.name.strip() or len(json.dumps(b.ops)) > 400_000:
+        raise err(400, "Cannot edit")
+    return b.name.strip()[:60]
+
+
+@app.get("/api/dev-presets")
+def dev_presets():
+    return {"presets": _json_read("develop-presets.json", [])}
+
+
+@app.post("/api/dev-presets")
+def dev_presets_save(b: DevStoreIn):
+    name = _store_check(b)
+    with _JSON_LOCK:
+        items = [x for x in _json_read("develop-presets.json", []) if x.get("name") != name][:199]
+        items.append({"name": name, "ops": b.ops})
+        _json_write("develop-presets.json", items)
+    return {"ok": True}
+
+
+@app.delete("/api/dev-presets/{name}")
+def dev_presets_delete(name: str):
+    with _JSON_LOCK:
+        _json_write("develop-presets.json", [x for x in _json_read("develop-presets.json", []) if x.get("name") != name])
+    return {"ok": True}
+
+
+@app.get("/api/photo/{pid}/snapshots")
+def snapshots_list(pid: int):
+    return {"snapshots": _json_read("develop-snapshots.json", {}).get(str(pid), [])}
+
+
+@app.post("/api/photo/{pid}/snapshots")
+def snapshots_add(pid: int, b: DevStoreIn):
+    name = _store_check(b)
+    with _JSON_LOCK:
+        d = _json_read("develop-snapshots.json", {})
+        lst = d.get(str(pid), [])[:49]
+        lst.append({"name": name, "ops": b.ops, "ts": int(time.time())})
+        d[str(pid)] = lst
+        _json_write("develop-snapshots.json", d)
+    return {"ok": True}
+
+
+@app.delete("/api/photo/{pid}/snapshots/{i}")
+def snapshots_delete(pid: int, i: int):
+    with _JSON_LOCK:
+        d = _json_read("develop-snapshots.json", {})
+        lst = d.get(str(pid), [])
+        if 0 <= i < len(lst):
+            lst.pop(i)
+            d[str(pid)] = lst
+            _json_write("develop-snapshots.json", d)
+    return {"ok": True}
+
+
 @app.get("/api/photo/{pid}/upright")
 def upright_suggest(pid: int, mode: str = "auto"):
     """What the picture needs to look upright: rotate (degrees), persp_v, persp_h (the Edit module's settings), worked out from its lines."""

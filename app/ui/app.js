@@ -1231,7 +1231,7 @@ function tbAttrs(){
 function renderToolbar(){
   const tb=$('#toolbar');
   if(S.mod==='develop'){ const p=actPhoto();
-    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="${t("Before/After (\\)")}">${t("Before / After")}</button><span class="tb-sep"></span>
+    tb.innerHTML = `<button class="tb-btn ${DEV.before?'on':''}" data-t="before" title="${t("Before/After (\\)")}">${t("Before / After")}</button><button class="tb-btn ${DEV.view==='side'?'on':''}" data-t="viewside" title="${t('Before and after, side by side (Y)')}">${t('Side by side')}</button><button class="tb-btn ${DEV.view==='split'?'on':''}" data-t="viewsplit" title="${t('Before and after, split (Shift+Y)')}">${t('Split')}</button><span class="tb-sep"></span>
       <button class="tb-btn ${DEV.crop?'on':''}" data-t="crop" title="${t("Crop (R)")}">${I('crop')}</button><span class="spacer"></span>
       <span class="tb-info">${p?`<bdi>${esc(p.filename)}</bdi>`:''}${DEV.dirty?t(' · unapplied changes'):''}</span>`; return; }
   let h = tbViews() + '<span class="tb-sep"></span>';
@@ -1260,7 +1260,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
   else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
   else if(tg==='rank') rankSelected(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
-  else if(tg==='before') devBefore(); else if(tg==='crop') devCropToggle();
+  else if(tg==='before') devBefore(); else if(tg==='viewside') devView('side'); else if(tg==='viewsplit') devView('split'); else if(tg==='crop') devCropToggle();
   else if(tg==='flythrough') mapFlythrough();
 });
 $('#toolbar').addEventListener('change', e=>{ if(e.target.dataset.t==='sort'){ S.sort=e.target.value; S.asc=SORT_ASC_FIRST.has(S.sort); pref.set('sort',S.sort); pref.set('asc',S.asc); applyFilter(); renderToolbar(); } });
@@ -1574,40 +1574,88 @@ async function devOpen(){
   for(const [k,n] of Object.entries(TONEK)) if(o[n]!=null) DEV.ops[k] = k==='exp' ? Math.round(o[n]*100) : o[n];
   for(const [k,n] of Object.entries(NESTK)) if(o[n]!=null) DEV.ops[k] = JSON.parse(JSON.stringify(o[n]));
   DEV.pvKey = null;
+  DEV.preBase = null; DEV.preIdx = null; loadSnaps(); if(!DEV.userPresets) loadDevLists();
   DEV.saved = JSON.stringify(DEV.ops);
   DEV.hist=[{t:d.edited?t('Saved Settings'):t('Import'), ops:{...DEV.ops}}];
-  const img=$('#dev-img'); img.onload=()=>{ layoutDev(); drawHisto(img); };
+  const img=$('#dev-img'); img.onload=()=>{ layoutDev(); drawHisto(img); devClipping(); };
   img.src = DEV.orig = `/original/${p.id}${VER[p.id]?'?v='+VER[p.id]:''}`;
   devPreview();
   renderDevPanels(); renderToolbar(); updateNavigator();
 }
 async function devLeave(){ if(DEV.id!=null && DEV.dirty) await devApply(true); }
+// where a picture of w x h, turned by rot and cut to the crop c, goes inside the box [x0, x0+SW] x [pad, pad+SH]
+function fitCanvas(w, h, rot, c, SW, SH, x0, pad){
+  const th=rot*Math.PI/180, C=Math.abs(Math.cos(th)), Sn=Math.abs(Math.sin(th)), BW=w*C+h*Sn, BH=w*Sn+h*C;
+  const s=Math.min(SW/((c[2]-c[0])*BW), SH/((c[3]-c[1])*BH)), cw=BW*s, ch=BH*s;
+  return {s, cw, ch, left:x0+SW/2-(c[0]+c[2])/2*cw, top:pad+SH/2-(c[1]+c[3])/2*ch};
+}
+function styleCanvas(cv, img, w, h, f, rot, c, filter, flipT, clip){
+  Object.assign(cv.style, {left:f.left+'px', top:f.top+'px', width:f.cw+'px', height:f.ch+'px', clipPath: clip || `inset(${c[1]*100}% ${(1-c[2])*100}% ${(1-c[3])*100}% ${c[0]*100}%)`});
+  Object.assign(img.style, {width:w*f.s+'px', height:h*f.s+'px', left:(f.cw-w*f.s)/2+'px', top:(f.ch-h*f.s)/2+'px', transform:`rotate(${rot}deg)`, filter});
+  cv.style.transformOrigin = `${(c[0]+c[2])/2*f.cw}px ${(c[1]+c[3])/2*f.ch}px`;
+  cv.style.transform = flipT || '';
+}
 function layoutDev(){
   const img=$('#dev-img'), cv=$('#dev-canvas'), st=$('#v-develop');
   if(!img.naturalWidth || DEV.id==null) return;
-  const pad=24, SW=st.clientWidth-2*pad, SH=st.clientHeight-2*pad;
+  const pad=24, SWfull=st.clientWidth-2*pad, SH=st.clientHeight-2*pad;
   const o=DEV.ops, w=img.naturalWidth, h=img.naturalHeight;
-  const th = (DEV.before?0:o.rot)*Math.PI/180, C=Math.abs(Math.cos(th)), Sn=Math.abs(Math.sin(th));
-  const BW=w*C+h*Sn, BH=w*Sn+h*C;
-  const c = (DEV.crop||DEV.before) ? [0,0,1,1] : o.crop;
-  const s = Math.min(SW/((c[2]-c[0])*BW), SH/((c[3]-c[1])*BH));
-  const cw=BW*s, ch=BH*s;
-  const left = pad + SW/2 - (c[0]+c[2])/2*cw, top = pad + SH/2 - (c[1]+c[3])/2*ch;
-  Object.assign(cv.style, {left:left+'px', top:top+'px', width:cw+'px', height:ch+'px',
-    clipPath:`inset(${c[1]*100}% ${(1-c[2])*100}% ${(1-c[3])*100}% ${c[0]*100}%)`});
-  Object.assign(img.style, {width:w*s+'px', height:h*s+'px', left:(cw-w*s)/2+'px', top:(ch-h*s)/2+'px',
-    transform:`rotate(${DEV.before?0:o.rot}deg)`,
-    filter: DEV.before ? '' : `brightness(${fac(o.bri,.3)}) contrast(${fac(o.con,.3)}) saturate(${fac(o.sat,0)})${o.gray?' grayscale(1)':''}`});
+  const view = (DEV.crop || DEV.before) ? 'after' : (DEV.view || 'after');
+  const side = view==='side', SW = side ? (SWfull-pad)/2 : SWfull;
+  const rot = DEV.before?0:o.rot, c = (DEV.crop||DEV.before) ? [0,0,1,1] : o.crop;
+  const f = fitCanvas(w, h, rot, c, SW, SH, side ? pad+SW+pad : pad, pad);
+  const filter = DEV.before ? '' : `brightness(${fac(o.bri,.3)}) contrast(${fac(o.con,.3)}) saturate(${fac(o.sat,0)})${o.gray?' grayscale(1)':''}`;
   const flip = !DEV.before && !DEV.crop && (o.fh || o.fv);                 // flips are applied last: mirror the picture around the visible centre
-  cv.style.transformOrigin = `${(c[0]+c[2])/2*cw}px ${(c[1]+c[3])/2*ch}px`;
-  cv.style.transform = flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '';
+  styleCanvas(cv, img, w, h, f, rot, c, filter, flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '');
+  // the original beside the edited picture ("side") or under half of it ("split")
+  const cv0=$('#dev-canvas0'), img0=$('#dev-img0'), bar=$('#split-bar');
+  cv0.classList.toggle('hidden', view==='after'); bar.classList.toggle('hidden', view!=='split');
+  $('#lbl-before').classList.toggle('hidden', view==='after'); $('#lbl-after').classList.toggle('hidden', view!=='side');
+  if(view!=='after'){
+    if(!img0.src.endsWith(DEV.orig||'?')) img0.src = DEV.orig;
+    if(side){
+      const f0 = fitCanvas(w, h, 0, [0,0,1,1], SW, SH, pad, pad);
+      styleCanvas(cv0, img0, w, h, f0, 0, [0,0,1,1], '', '');
+      Object.assign($('#lbl-before').style, {left:pad+'px'}); Object.assign($('#lbl-after').style, {left:(pad+SW+pad)+'px'});
+    } else {
+      const pos = DEV.split ?? .5, sx = c[0]*f.cw + (c[2]-c[0])*f.cw*pos;
+      styleCanvas(cv0, img0, w, h, f, rot, c, '', flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '', `inset(${c[1]*100}% ${f.cw-sx}px ${(1-c[3])*100}% ${c[0]*100}%)`);
+      bar.style.left = (f.left + sx) + 'px'; Object.assign($('#lbl-before').style, {left:(f.left+c[0]*f.cw+8)+'px'});
+      bar._geo = {left:f.left + c[0]*f.cw, width:(c[2]-c[0])*f.cw};
+    }
+  }
   const tint=$('#mask-tint'); if(tint){ Object.assign(tint.style, {width:img.style.width, height:img.style.height, left:img.style.left, top:img.style.top, transform:img.style.transform}); }
-  toolDraw();
+  const cc=$('#clip-cv'); if(cc){ Object.assign(cc.style, {width:img.style.width, height:img.style.height, left:img.style.left, top:img.style.top, transform:img.style.transform}); }
+  toolDraw(); if(DEV.clipOn) devClipping();
   $('#dev-badge').classList.toggle('hidden', !DEV.before);
+  const left=f.left, top=f.top, cw=f.cw, ch=f.ch;
   const ov=$('#crop-ov'); ov.classList.toggle('hidden', !DEV.crop); ov.dataset.ovl = DEV.ovl || pref.get('cropOverlay','thirds');
   if(DEV.crop){ const k=o.crop; Object.assign(ov.style, {left:left+k[0]*cw+'px', top:top+k[1]*ch+'px', width:(k[2]-k[0])*cw+'px', height:(k[3]-k[1])*ch+'px'});
     ov._box={left, top, cw, ch}; if(!ov.children.length) ov.innerHTML=['nw','n','ne','e','se','s','sw','w'].map(h=>`<i data-h="${h}"></i>`).join(''); }
 }
+// before / after views: Y = side by side, Shift+Y = split with a draggable line, again = back to one picture
+function devView(v){
+  if(DEV.id==null) return; DEV.view = DEV.view===v ? 'after' : v; if(DEV.crop){ DEV.crop=false; renderDevPanels(); }
+  layoutDev(); renderToolbar(); if(DEV.view!=='after') toast(DEV.view==='side' ? t('Before and after, side by side (Y)') : t('Before and after, split (Shift+Y)'), 1400);
+}
+$('#split-bar').addEventListener('mousedown', e=>{
+  e.preventDefault(); const g=$('#split-bar')._geo; if(!g) return;
+  const mv=ev=>{ const r=$('#v-develop').getBoundingClientRect(); DEV.split = clamp((ev.clientX-r.left-g.left)/g.width, .02, .98); layoutDev(); };
+  const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); };
+  addEventListener('mousemove',mv); addEventListener('mouseup',up);
+});
+// clipping warnings (J): blown highlights red, crushed shadows blue, drawn from the picture on screen
+function devClipping(){
+  const cc=$('#clip-cv'), img=$('#dev-img'); if(!cc) return;
+  if(!DEV.clipOn || !img.naturalWidth){ cc.classList.add('hidden'); return; }
+  const k=Math.min(1, 360/Math.max(img.naturalWidth, img.naturalHeight)), W=Math.max(2,Math.round(img.naturalWidth*k)), H=Math.max(2,Math.round(img.naturalHeight*k));
+  const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H; const x=tmp.getContext('2d'); x.filter=img.style.filter||'none'; x.drawImage(img,0,0,W,H);
+  let d; try{ d=x.getImageData(0,0,W,H); }catch(e){ return; }
+  const px=d.data; for(let i=0;i<px.length;i+=4){ const r=px[i],g=px[i+1],b=px[i+2], mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+    if(mn>=250){ px[i]=255; px[i+1]=40; px[i+2]=40; px[i+3]=200; } else if(mx<=4){ px[i]=40; px[i+1]=90; px[i+2]=255; px[i+3]=200; } else px[i+3]=0; }
+  cc.width=W; cc.height=H; cc.getContext('2d').putImageData(d,0,0); cc.classList.remove('hidden');
+}
+function devClipToggle(){ if(DEV.id==null) return; DEV.clipOn=!DEV.clipOn; devClipping(); toast(DEV.clipOn ? t('Clipping warnings on (J): red = blown highlights, blue = crushed shadows') : t('Clipping warnings off'), 1800); }
 function devSet(changes, label){
   if(DEV.id==null) return;
   Object.assign(DEV.ops, changes);
@@ -1694,7 +1742,7 @@ function renderDevPanels(){
     <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('Done Cropping (Enter)'):t('Crop (R)')}</button><button data-t="cropreset" ${dis}>${t("Reset Crop")}</button></div>
     <div class="btnrow90"><select data-aspect ${dis} title="${t('Aspect ratio of the crop')}">${ASPECTS.map(([k,n])=>`<option value="${k}" ${DEV.aspect===k?'selected':''}>${n}</option>`).join('')}</select>
       <select data-overlay ${dis} title="${t('Crop guide')}">${OVERLAYS.map(([k,n])=>`<option value="${k}" ${(DEV.ovl||pref.get('cropOverlay','thirds'))===k?'selected':''}>${n}</option>`).join('')}</select></div>`;
-  $('#p-presets').innerHTML = PRESETS.map(([n],i)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${n}</span></div>`).join('');
+  renderPresetsPanel(); renderSnapsPanel();
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
 }
@@ -2092,6 +2140,155 @@ function pickColorAt(e, cb){
     x.drawImage(im, Math.round(u*im.naturalWidth)-3, Math.round(v*im.naturalHeight)-3, 7, 7, 0, 0, 7, 7); const d=x.getImageData(0,0,7,7).data; let r=0,gg=0,b=0,n=0; for(let i=0;i<d.length;i+=4){ r+=d[i]; gg+=d[i+1]; b+=d[i+2]; n++; } cb([Math.round(r/n),Math.round(gg/n),Math.round(b/n)]); };
   if(DEV.origImg) take(DEV.origImg); else { const im=new Image(); im.onload=()=>{ DEV.origImg=im; take(im); }; im.src=DEV.orig; }
 }
+// ---- presets (built in, your own, from files), look-up tables, snapshots, copy / paste / sync of settings (issue #6)
+const PRESETS2 = [
+  [t('Golden Hour'), {temp:25, vib:20, hi:-20, sh:15, vig:-15, grd:{shadows:[28,25,0], high:[42,30,5], blend:50, balance:0}}],
+  [t('Teal & Orange'), {con:15, vib:10, grd:{shadows:[190,35,0], high:[30,35,0], blend:60, balance:10}}],
+  [t('Faded Matte'), {sat:-15, con:-5, crv:{rgb:[[0.08,0.15],[0.92,0.88]]}}],
+  [t('Selenium Tone'), {gray:true, con:15, grd:{shadows:[265,18,0], high:[38,12,0], blend:50, balance:0}}],
+  [t('Crisp Landscape'), {cla:25, dhz:15, tex:20, vib:25, shp:35, hi:-25, sh:20}],
+  [t('Soft Portrait'), {tex:-25, cla:-10, shp:15, sh:15, vib:8, hi:-10}],
+  [t('Cinematic'), {con:10, grn:12, vig:-20, crv:{rgb:[[0.25,0.2],[0.75,0.8]]}, grd:{shadows:[205,30,0], high:[35,25,0], blend:50, balance:0}}],
+  [t('Film Grain Black & White'), {gray:true, con:20, grn:40, vig:-20, tex:10}],
+  [t('Vintage'), {temp:15, sat:-20, grn:20, vig:-30, crv:{rgb:[[0.06,0.12],[0.94,0.9]]}}],
+];
+const PRESET_KEEP = ['rot','crop','fh','fv','lnd','lnv','car','cab','caa','dfr','pv','ph','gas','gsc','gx','gy','sp','rey','mk'];     // what a preset leaves alone: geometry, lens and the local work
+const allPresets = () => [...PRESETS, ...PRESETS2, ...(DEV.userPresets||[]).map(x=>[x.name, x.ops, true])];
+// a preset at some amount: every number moves from its resting place by that share (0 = nothing, 1 = as made, 2 = double)
+function scaleOps(p, k){
+  const r={}, lim = key=>key==='exp' ? 300 : 100, num = (key,v)=>{ const d=TONE_DEFAULT[key]||0; return clamp(Math.round(d+(v-d)*k), key==='gsc'?100:-lim(key), lim(key)); };
+  const arr = (a,n=3)=>a.map((x,i)=>i<n?Math.round(x*k):x);
+  for(const [key,val] of Object.entries(p)){
+    if(typeof val==='number') r[key]=num(key,val);
+    else if(key==='crp') r[key]=val.map(x=>clamp(Math.round(x*k),-100,100));
+    else if(key==='crv') r[key]=Object.fromEntries(Object.entries(val).map(([ch,pts])=>[ch,pts.map(([x,y])=>[x, clamp(x+(y-x)*k,0,1)])]));
+    else if(key==='mix') r[key]=Object.fromEntries(Object.entries(val).map(([b,a])=>[b,a.map(x=>clamp(Math.round(x*k),-100,100))]));
+    else if(key==='bwm') r[key]=Object.fromEntries(Object.entries(val).map(([b,x])=>[b,clamp(Math.round(x*k),-100,100)]));
+    else if(key==='cal') r[key]=Object.fromEntries(Object.entries(val).map(([b,x])=>[b,Array.isArray(x)?x.map(y=>clamp(Math.round(y*k),-100,100)):clamp(Math.round(x*k),-100,100)]));
+    else if(key==='grd') r[key]=Object.fromEntries(Object.entries(val).map(([b,x])=>[b,Array.isArray(x)?[x[0],clamp(Math.round(x[1]*k),0,100),clamp(Math.round(x[2]*k),-100,100)]:x]));
+    else if(key==='lut') r[key]={...val, amount:clamp(Math.round((val.amount??100)*k),0,100)};
+    else r[key]=val;
+  }
+  return r;
+}
+function devPreset(i, reuseBase){
+  if(DEV.id==null) return; const [n, o] = allPresets()[i]; if(!o) return;
+  const base = reuseBase && DEV.preBase ? DEV.preBase : cloneOps(DEV.ops); DEV.preBase = base; DEV.preIdx = i;
+  const keep = Object.fromEntries(PRESET_KEEP.map(key=>[key, base[key]]));
+  devSet({...NEUTRAL(), ...keep, ...JSON.parse(JSON.stringify(scaleOps(o, (DEV.preAmt ?? 100)/100)))}, `${t('Preset: ')}${n}${(DEV.preAmt ?? 100)!==100 ? ' '+DEV.preAmt+'%' : ''}`);
+}
+async function loadDevLists(){
+  try{ DEV.userPresets = (await api('/api/dev-presets')).presets || []; }catch(e){ DEV.userPresets = []; }
+  try{ DEV.luts = (await api('/api/luts')).luts || []; }catch(e){ DEV.luts = []; }
+  renderPresetsPanel();
+}
+function renderPresetsPanel(){
+  const el=$('#p-presets'); if(!el) return;
+  const dis = DEV.id==null ? 'disabled' : '', amt = DEV.preAmt ?? 100, user = DEV.userPresets || [], n0 = PRESETS.length + PRESETS2.length;
+  const row = (nm,i,del)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${esc(nm)}</span>${del?`<button class="xbtn" data-presetdel="${esc(del)}" title="${t('Delete')}">✕</button>`:''}</div>`;
+  const lut = DEV.ops && DEV.ops.lut && DEV.ops.lut.name ? DEV.ops.lut : null;
+  el.innerHTML = `<div class="dsl"><label for="pre-amt">${t('Amount')}</label><input id="pre-amt" data-preamt type="range" min="0" max="200" value="${amt}" ${dis} title="${t('How strongly the next preset is applied (100 = as made)')}"><output>${amt}</output></div>`
+    + [...PRESETS, ...PRESETS2].map(([n],i)=>row(n,i)).join('')
+    + (user.length ? `<div class="dsec">${t('My presets')}</div>` + user.map((x,j)=>row(x.name, n0+j, x.name)).join('') : '')
+    + `<div class="btnrow90"><button data-t="presave" ${dis}>${t('Save preset…')}</button><button data-t="preexport" ${dis}>${t('Export…')}</button><button data-t="preimport" ${dis}>${t('Import…')}</button></div><input type="file" id="pre-file" accept=".json" class="hidden">`
+    + `<div class="dsec">${t('Looks (LUT)')}</div>` + (DEV.luts||[]).map(nm=>`<div class="row ${lut&&lut.name===nm?'on':''}" data-lut="${esc(nm)}">${I('dev')}<span class="nm">${esc(nm.replace(/\.cube$/i,''))}</span><button class="xbtn" data-lutdel="${esc(nm)}" title="${t('Delete')}">✕</button></div>`).join('')
+    + (lut ? `<div class="dsl"><label for="lut-amt">${t('Amount')}</label><input id="lut-amt" data-lutamt type="range" min="0" max="100" value="${lut.amount ?? 100}" ${dis}><output>${lut.amount ?? 100}</output></div>` : '')
+    + `<div class="btnrow90"><button data-t="lutimport" ${dis}>${t('Import a look (.cube)…')}</button></div><input type="file" id="lut-file" accept=".cube,.txt" class="hidden">`;
+}
+function renderSnapsPanel(){
+  const el=$('#p-snaps'); if(!el) return; const sn = DEV.snaps || [];
+  el.innerHTML = sn.map((x,i)=>`<div class="row" data-snap="${i}">${I('dev')}<span class="nm">${esc(x.name)}</span><button class="xbtn" data-snapdel="${i}" title="${t('Delete')}">✕</button></div>`).join('') || `<div class="hint">${t('No snapshots yet')}</div>`;
+}
+async function loadSnaps(){ if(DEV.id==null){ DEV.snaps=[]; return renderSnapsPanel(); } try{ DEV.snaps = (await api(`/api/photo/${DEV.id}/snapshots`)).snapshots || []; }catch(e){ DEV.snaps=[]; } renderSnapsPanel(); }
+const presetOps = o => { const r=JSON.parse(JSON.stringify(o)); ['rot','crop','fh','fv'].forEach(k=>delete r[k]); return r; };
+$('#snap-add').onclick = async ()=>{
+  if(DEV.id==null) return; const name = await promptBox(t('Snapshot name'), new Date().toLocaleString()); if(!name) return;
+  await send('POST', `/api/photo/${DEV.id}/snapshots`, {name, ops:JSON.parse(JSON.stringify(DEV.ops))}); await loadSnaps(); toast(t('Snapshot saved'));
+};
+$('#left').addEventListener('click', async e=>{
+  if(S.mod!=='develop' || DEV.id==null) return; let q;
+  if((q=e.target.closest('[data-presetdel]'))){ await send('DELETE', '/api/dev-presets/'+encodeURIComponent(q.dataset.presetdel)); await loadDevLists(); e.stopPropagation(); return; }
+  if((q=e.target.closest('[data-preset]'))){ devPreset(+q.dataset.preset); return; }
+  if((q=e.target.closest('[data-lutdel]'))){ await send('DELETE', '/api/luts/'+encodeURIComponent(q.dataset.lutdel)); if(DEV.ops.lut.name===q.dataset.lutdel) devSet({lut:{}}, t('Look removed')); await loadDevLists(); e.stopPropagation(); return; }
+  if((q=e.target.closest('[data-lut]'))){ const same = DEV.ops.lut && DEV.ops.lut.name===q.dataset.lut; devSet({lut: same ? {} : {name:q.dataset.lut, amount:100}}, same ? t('Look removed') : `${t('Look')}: ${q.dataset.lut.replace(/\.cube$/i,'')}`); renderPresetsPanel(); return; }
+  if((q=e.target.closest('[data-snapdel]'))){ await send('DELETE', `/api/photo/${DEV.id}/snapshots/${q.dataset.snapdel}`); await loadSnaps(); e.stopPropagation(); return; }
+  if((q=e.target.closest('[data-snap]'))){ const x=DEV.snaps[+q.dataset.snap]; if(x) devSet({...NEUTRAL(), ...JSON.parse(JSON.stringify(x.ops))}, `${t('Snapshot')}: ${x.name}`); return; }
+  if(e.target.closest('[data-t="presave"]')){
+    const name = await promptBox(t('Preset name')); if(!name) return;
+    await send('POST', '/api/dev-presets', {name, ops:presetOps(DEV.ops)}); await loadDevLists(); toast(t('Preset saved')); return;
+  }
+  if(e.target.closest('[data-t="preexport"]')){
+    const a=document.createElement('a'); a.download='photag-preset.json';
+    a.href=URL.createObjectURL(new Blob([JSON.stringify({'photag-preset':1, name:DEV.preIdx!=null ? allPresets()[DEV.preIdx][0] : 'Preset', ops:presetOps(DEV.ops)}, null, 1)], {type:'application/json'})); a.click(); return;
+  }
+  if(e.target.closest('[data-t="preimport"]')){ $('#pre-file').click(); return; }
+  if(e.target.closest('[data-t="lutimport"]')){ $('#lut-file').click(); return; }
+});
+$('#left').addEventListener('change', async e=>{
+  if(e.target.id==='pre-file' && e.target.files[0]){
+    let o; try{ o = JSON.parse(await e.target.files[0].text()); }catch(err){ return toast(t('This is not a photag preset file')); }
+    e.target.value='';
+    if(!o || o['photag-preset']!==1 || typeof o.ops!=='object') return toast(t('This is not a photag preset file'));
+    const N=NEUTRAL(), ops={}; for(const k of Object.keys(N)) if(o.ops[k]!==undefined && typeof o.ops[k]===typeof N[k]) ops[k]=o.ops[k];
+    await send('POST', '/api/dev-presets', {name:String(o.name||'Preset').slice(0,60), ops}); await loadDevLists(); toast(t('Preset imported')); return;
+  }
+  if(e.target.id==='lut-file' && e.target.files[0]){
+    const f=e.target.files[0], text=await f.text(); e.target.value='';
+    try{ const r=await send('POST', '/api/luts', {name:f.name, text}); await loadDevLists(); devSet({lut:{name:r.name, amount:100}}, `${t('Look')}: ${r.name.replace(/\.cube$/i,'')}`); toast(t('Look imported')); }catch(err){ /* send() already showed the message */ }
+    return;
+  }
+  if(e.target.dataset.preamt!=null){ DEV.preAmt=+e.target.value; if(DEV.preIdx!=null && DEV.preBase) devPreset(DEV.preIdx, true); else renderPresetsPanel(); return; }
+  if(e.target.dataset.lutamt!=null){ devSet({lut:{...DEV.ops.lut, amount:+e.target.value}}, `${t('Look')} ${e.target.value}%`); }
+});
+$('#left').addEventListener('input', e=>{
+  if(e.target.dataset.preamt!=null) e.target.nextElementSibling.textContent=e.target.value;
+  if(e.target.dataset.lutamt!=null){ e.target.nextElementSibling.textContent=e.target.value; DEV.ops.lut={...DEV.ops.lut, amount:+e.target.value}; DEV.dirty=true; devPreviewSoon(); }
+});
+// ---- copy, paste and sync settings between photos
+const COPY_GROUPS = [
+  ['basic', t('Light'), ['exposure','highlights','shadows','whites','blacks','brightness','contrast'], true],
+  ['color', t('Color'), ['temperature','tint','vibrance','saturation','grayscale','mixer','bwmix','grading','calib','lut'], true],
+  ['curve', t('Tone Curve'), ['curve','curve_p'], true],
+  ['detail', t('Detail'), ['clarity','texture','dehaze','sharpness','sharp_radius','sharp_detail','sharp_mask','blur','nr_lum','nr_color','nr_detail'], true],
+  ['effects', t('Effects'), ['vignette','vignette_mid','vignette_feather','vignette_round','vignette_hl','grain','grain_size','grain_rough','sepia'], true],
+  ['lens', t('Lens Corrections'), ['lens_dist','lens_vig','ca_r','ca_b','ca_auto','defringe'], true],
+  ['geometry', t('Geometry'), ['persp_v','persp_h','geo_aspect','geo_scale','geo_x','geo_y'], false],
+  ['crop', t('Crop and rotation'), ['rotate','crop','flip_h','flip_v'], false],
+  ['local', t('Masks and spots'), ['masks','spots','redeye'], false],
+];
+async function settingsOf(id){
+  if(S.mod==='develop' && DEV.id===id){ const o=devOpsToApi(DEV.ops), r={}; for(const [k,v] of Object.entries(o)) if(v!=null && v!==false) r[k]=v; return r; }
+  const d=await api('/api/photo/'+id); return d.edit_ops ? JSON.parse(d.edit_ops) : {};
+}
+// mode: 'copy' (keep for Paste) or 'sync' (copy from the active photo and paste to the selected ones at once)
+async function copySettings(mode){
+  const id=S.act; if(id==null) return toast(t('Select a photo first'));
+  const chosen = pref.get('copyGroups', Object.fromEntries(COPY_GROUPS.map(g=>[g[0], g[3]])));
+  modal(`<h3>${mode==='sync' ? t('Synchronize settings') : t('Copy settings')}</h3><div class="mb">${COPY_GROUPS.map(([k,n])=>`<label class="chk"><input type="checkbox" data-cg="${k}" ${chosen[k]?'checked':''}> ${n}</label>`).join('')}</div>
+    <div class="mf"><button id="cg-no">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="cg-ok">${mode==='sync' ? t('Synchronize') : t('Copy')}</button></div>`);
+  $('#cg-no').onclick=closeModal;
+  $('#cg-ok').onclick=async ()=>{
+    const sel={}; $$('#modal-box [data-cg]').forEach(c=>sel[c.dataset.cg]=c.checked); pref.set('copyGroups', sel); closeModal();
+    const keys = COPY_GROUPS.filter(g=>sel[g[0]]).flatMap(g=>g[2]); if(!keys.length) return;
+    const src = await settingsOf(id), ops = {}; for(const k of keys) if(src[k]!==undefined) ops[k]=src[k];
+    DEV.clip = {keys, ops, id}; toast(t('Settings copied'));
+    if(mode==='sync') await pasteSettings(targets().filter(x=>x!==id));
+  };
+}
+async function pasteSettings(ids){
+  const c=DEV.clip; if(!c) return toast(t('Copy the settings of a photo first (Ctrl+Shift+C)'));
+  ids = (ids || targets()).filter(x=>x!==c.id); if(!ids.length) return toast(t('Select the photos to paste to'));
+  toast(t('Pasting the settings…'), 1500);
+  for(const id of ids){
+    const d=await api('/api/photo/'+id); if(d.is_video) continue;
+    const base = d.edit_ops ? JSON.parse(d.edit_ops) : {}; for(const k of c.keys) delete base[k]; Object.assign(base, JSON.parse(JSON.stringify(c.ops)));
+    try{ await send('POST', `/api/photo/${id}/edit`, base); }catch(e){ continue; }
+    VER[id]=Date.now(); const dd=await api('/api/photo/'+id), p=S.byId.get(id); if(p) Object.assign(p, {width:dd.width, height:dd.height, edited:dd.edited, bytes:dd.bytes});
+    G.cells.forEach(cl=>{ if(+cl.dataset.id===id){ const im=cl.querySelector('img'); if(im) im.src=thumbUrl(id); } });
+  }
+  renderFilm(true); renderColls(); if(S.mod==='develop') devOpen();
+  toast(t('Settings pasted to {0} photos', [ids.length]));
+}
 // Straightening leaves empty corners: while the crop is untouched (full, or the one made here) it follows the largest rectangle that fits inside the turned picture
 function devAutoCrop(deg){
   const img=$('#dev-img'), o=DEV.ops, c=o.crop, full=c.every((x,i)=>Math.abs(x-[0,0,1,1][i])<1e-3);
@@ -2137,7 +2334,6 @@ $('#right').addEventListener('click', e=>{
 });
 $('#left').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
-  const pr=e.target.closest('[data-preset]'); if(pr){ const [n,o]=PRESETS[+pr.dataset.preset]; devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, ...o}, t('Preset: ')+n); return; }
   const h=e.target.closest('[data-hist]'); if(h){ const s=DEV.hist[+h.dataset.hist]; devSet({...s.ops, crop:[...s.ops.crop]}); }
 });
 function devCropToggle(){ if(DEV.id==null) return; DEV.crop=!DEV.crop; if(!DEV.crop) devSet({}, t('Crop')); else { layoutDev(); renderDevPanels(); renderToolbar(); } }
@@ -3615,6 +3811,10 @@ const MENUS = [
     sep,
     [t('Rank Selected Photos'), '', rankSelected],
     sep,
+    [t('Copy settings…'), 'Ctrl+Shift+C', ()=>copySettings('copy')],
+    [t('Paste settings'), 'Ctrl+Shift+V', ()=>pasteSettings()],
+    [t('Synchronize settings…'), 'Ctrl+Shift+S', ()=>copySettings('sync')],
+    sep,
     [t('Compress selected files...'), '', ()=>compressDialog(targets())],
     [t('Stop compression'), '', ()=>send('POST','/api/compress/cancel')],
     sep,
@@ -3795,6 +3995,9 @@ document.addEventListener('keydown', e=>{
       BracketLeft: ()=>rotateSel(-90), BracketRight: ()=>rotateSel(90),
       Slash: shortcuts, Enter: ssStart, Comma: preferences,
     };
+    if(shift && code==='KeyC'){ e.preventDefault(); copySettings('copy'); return; }
+    if(shift && code==='KeyV'){ e.preventDefault(); pasteSettings(); return; }
+    if(shift && code==='KeyS'){ e.preventDefault(); copySettings('sync'); return; }
     if(shift && code==='KeyI'){ e.preventDefault(); openImport('folder'); return; }
     if(shift && code==='KeyM'){ e.preventDefault(); semanticDialog(); return; }
     if(shift && code==='KeyF'){ e.preventDefault(); advancedSearch(); return; }
@@ -3816,7 +4019,8 @@ document.addEventListener('keydown', e=>{
     case 'KeyU': setFlag(0, adv); return;
     case 'Backquote': toggleFlag(); return;
     case 'KeyB': toggleQuick(); return;
-    case 'KeyJ': cycleCellStyle(); return;
+    case 'KeyJ': if(S.mod==='develop') devClipToggle(); else cycleCellStyle(); return;
+    case 'KeyY': if(S.mod==='develop') devView(shift ? 'split' : 'side'); return;
     case 'KeyI': S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); return;
     case 'KeyL': cycleLights(); return;
     case 'KeyT': togglePanel('tool'); return;
@@ -3835,7 +4039,7 @@ document.addEventListener('keydown', e=>{
     case 'Enter': if(S.mod==='develop' && DEV.crop){ devCropToggle(); return; } if(S.view==='grid' && S.act!=null) setView('loupe'); return;
     case 'Escape':
       if(MENU_OPEN!=null){ closeMenu(); return; }
-      if(S.mod==='develop'){ if(DEV.crop){ devCropToggle(); return; } setModule('library'); return; }
+      if(S.mod==='develop'){ if(DEV.crop){ devCropToggle(); return; } if(DEV.tool){ DEV.tool=null; renderDevPanels(); return; } if(DEV.view && DEV.view!=='after'){ devView(DEV.view); return; } setModule('library'); return; }
       if(S.lights){ S.lights=2; cycleLights(); return; }
       if(S.view!=='grid') setView('grid'); return;
   }
