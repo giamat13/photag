@@ -27,7 +27,7 @@ push straight to `main`.
   user's own machine when it can be done (run the program from source / F5, call the real endpoints, drive the real dialog headless),
   not only with the test suite and fakes. Pushes to `main` are fine at any time; releases are not. A regular release only after
   everything works. Only when there is truly no other way to check it (it can only be seen in a built, installed program) release a
-  **pre-release** (`-beta.N`, `workflow_dispatch` with `prerelease=true`) and say clearly that it is a test build; the user asks
+  **pre-release** (`workflow_dispatch` with `prerelease=true`; the version in `app/version.py` stays plain, e.g. `18.0.0` -- the tests assume the running version is not a `-beta`; delete the pre-release and its tag before the regular release of the same version) and say clearly that it is a test build; the user asks
   before a regular release follows. A release that turns out bad is deleted (`gh release delete vX --cleanup-tag -y`) and made again.
 - `app/version.py` (`__version__`) is the single source of truth for the app's version. Bump it
   before every release.
