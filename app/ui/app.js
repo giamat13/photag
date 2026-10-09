@@ -52,7 +52,7 @@ const S = {
   sort:pref.get('sort','capture'), asc:pref.get('asc',false),
   fb:'none',
   F:{on:true, q:'', qf:'any', flags:new Set(), rop:'>=', rating:0, labels:new Set(), kinds:new Set(),
-     meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set()}},
+     meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set(), place:new Set()}},
   cell:pref.get('cellStyle','compact'), cellsz:pref.get('cellsz',180), loupeInfo:true, lights:0,
   stackBursts:pref.get('stackBursts', false), bursts:null,
   status:null, albums:[], folders:{root:'', folders:[]}, tags:[], people:[], searches:[],
@@ -134,6 +134,8 @@ async function fetchSource(){
 const yearOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getFullYear()) : t('None');
 const monthOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getMonth()+1).padStart(2,'0') : t('None');
 const orientOf = p => !p.width||!p.height ? t('Unknown') : p.width>p.height*1.05 ? t('Landscape') : p.height>p.width*1.05 ? t('Portrait') : t('Square');
+// the place of a photo: its GPS position to 0.1 degree (about 11 km), nothing is looked up online
+const placeOf = p => p.lat==null || p.lng==null ? t('None') : `${Math.abs(p.lat).toFixed(1)}°${p.lat>=0?'N':'S'} ${Math.abs(p.lng).toFixed(1)}°${p.lng>=0?'E':'W'}`;
 const flagKey = p => p.flag===1 ? 'pick' : p.flag===-1 ? 'rej' : 'none';
 function passAttr(p){
   const F = S.F;
@@ -146,7 +148,7 @@ function passAttr(p){
   if(F.kinds.size && !((F.kinds.has('photo')&&!p.is_video) || (F.kinds.has('video')&&p.is_video) || (F.kinds.has('edited')&&p.edited))) return false;
   return true;
 }
-const META_COLS = [['year',t('Date'),yearOf],['month',t('Month'),monthOf],['ext',t('File Type'),ext],['orient',t('Orientation'),orientOf]];
+const META_COLS = [['year',t('Date'),yearOf],['month',t('Month'),monthOf],['ext',t('File Type'),ext],['orient',t('Orientation'),orientOf],['place',t('Location'),placeOf]];
 function passMeta(p, upto=META_COLS.length){
   for(let i=0;i<upto;i++){ const [k,,fn]=META_COLS[i]; const set=S.F.meta[k]; if(set.size && !set.has(fn(p))) return false; }
   return true;

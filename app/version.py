@@ -10,5 +10,5 @@ with only fixes raises the third ("12.1.1").
 Pre-releases add "-beta.N" ("11.1.0-beta.1"). ALWAYS write all three parts: programs installed before this scheme only
 recognise a code update "photag-code-X.Y.Z-rtN.zip" with three parts. (The short "9.1" is still read as 9.1.0.)
 """
-__version__ = "18.0.1"
+__version__ = "18.1.0"
 REPO = "giamat13/photag"
