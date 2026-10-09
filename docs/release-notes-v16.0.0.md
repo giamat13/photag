@@ -12,3 +12,6 @@
   - **Calibration**.
   - White-balance presets and an **eyedropper** that makes a clicked grey area neutral.
   - All of it is non-destructive, shows in History, and works with Reset and Previous Settings.
+
+## Fixes
+- The one-time question "Make photag your picture viewer?" no longer comes back again and again: it is remembered next to the program's data, and it is not asked at all when photag is already the default for pictures.
