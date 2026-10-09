@@ -9,3 +9,8 @@ tools/sandbox/results/
 tools/sandbox/photag.wsb
 tools/sandbox/codeupdate/
 app/_report_token.py
+
+# live release status page (tools/release_status): generated, not source
+tools/release_status/status.html
+tools/release_status/local-tests*.json
+tools/release_status/status-data.js

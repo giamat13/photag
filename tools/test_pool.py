@@ -63,7 +63,16 @@ with pool.ThreadPoolExecutor(3) as ex:
 
 ex = pool.ThreadPoolExecutor(1)
 gate = threading.Event()
-first = ex.submit(gate.wait)
+started = threading.Event()
+
+
+def hold():
+    started.set()
+    return gate.wait()
+
+
+first = ex.submit(hold)
+started.wait(10)                  # it must be running, not just queued: shutdown(cancel_futures=True) cancels what is still queued
 queued = [ex.submit(lambda: 1) for _ in range(3)]
 check("cancel() stops a queued job", all(q.cancel() for q in queued) and all(q.cancelled() for q in queued))
 check("a cancelled job is still reported by as_completed()", len(list(pool.as_completed(queued))) == 3)
