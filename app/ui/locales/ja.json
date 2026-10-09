@@ -1571,5 +1571,8 @@
  "Day of week": "曜日",
  "Time of day": "時間帯",
  "Resolution (megapixels)": "解像度（メガピクセル）",
- "Added to the library: from": "ライブラリに追加：開始"
+ "Added to the library: from": "ライブラリに追加：開始",
+ "Surprise Me": "サプライズ",
+ "No photos to choose from": "選べる写真がありません",
+ "Jump to a random photo from the current list (Shift+R)": "現在のリストからランダムな写真へ移動（Shift+R）"
 }

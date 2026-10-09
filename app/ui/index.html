@@ -137,7 +137,8 @@
       <div class="fb-panel hidden" id="fb-text">
         <label>Text</label>
         <select id="ft-field"><option value="any">Any Searchable Field</option><option value="name">File Name</option><option value="meaning">Meaning (local AI, press Enter)</option></select>
-        <label class="ft-box"><svg class="ic"><use href="#i-search"/></svg><input id="ft-q" type="search" placeholder="Search"></label>
+        <label class="ft-box"><svg class="ic"><use href="#i-search"/></svg><input id="ft-q" type="search" placeholder="Search" list="ft-q-recent" autocomplete="off"></label>
+        <datalist id="ft-q-recent"></datalist>
       </div>
       <div class="fb-panel hidden" id="fb-attr"></div>
       <div class="fb-panel meta hidden" id="fb-meta"></div>

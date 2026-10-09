@@ -1571,5 +1571,8 @@
  "Day of week": "Dag van de week",
  "Time of day": "Tijdstip",
  "Resolution (megapixels)": "Resolutie (megapixels)",
- "Added to the library: from": "Aan de bibliotheek toegevoegd: van"
+ "Added to the library: from": "Aan de bibliotheek toegevoegd: van",
+ "Surprise Me": "Verras me",
+ "No photos to choose from": "Geen foto's om uit te kiezen",
+ "Jump to a random photo from the current list (Shift+R)": "Spring naar een willekeurige foto uit de huidige lijst (Shift+R)"
 }

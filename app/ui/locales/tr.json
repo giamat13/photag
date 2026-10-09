@@ -1571,5 +1571,8 @@
  "Day of week": "Haftanın günü",
  "Time of day": "Günün saati",
  "Resolution (megapixels)": "Çözünürlük (megapiksel)",
- "Added to the library: from": "Kitaplığa eklendi: başlangıç"
+ "Added to the library: from": "Kitaplığa eklendi: başlangıç",
+ "Surprise Me": "Beni şaşırt",
+ "No photos to choose from": "Seçilecek fotoğraf yok",
+ "Jump to a random photo from the current list (Shift+R)": "Geçerli listeden rastgele bir fotoğrafa geç (Shift+R)"
 }

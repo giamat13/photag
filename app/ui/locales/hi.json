@@ -1571,5 +1571,8 @@
  "Day of week": "सप्ताह का दिन",
  "Time of day": "दिन का समय",
  "Resolution (megapixels)": "रिज़ॉल्यूशन (मेगापिक्सल)",
- "Added to the library: from": "लाइब्रेरी में जोड़ा गया: से"
+ "Added to the library: from": "लाइब्रेरी में जोड़ा गया: से",
+ "Surprise Me": "मुझे चौंका दो",
+ "No photos to choose from": "चुनने के लिए कोई तस्वीर नहीं",
+ "Jump to a random photo from the current list (Shift+R)": "वर्तमान सूची से एक यादृच्छिक तस्वीर पर जाएं (Shift+R)"
 }

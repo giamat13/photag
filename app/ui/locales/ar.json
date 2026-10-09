@@ -1571,5 +1571,8 @@
  "Day of week": "يوم الأسبوع",
  "Time of day": "وقت اليوم",
  "Resolution (megapixels)": "الدقة (ميغابكسل)",
- "Added to the library: from": "أُضيفت إلى المكتبة: من"
+ "Added to the library: from": "أُضيفت إلى المكتبة: من",
+ "Surprise Me": "فاجئني",
+ "No photos to choose from": "لا توجد صور للاختيار منها",
+ "Jump to a random photo from the current list (Shift+R)": "الانتقال إلى صورة عشوائية من القائمة الحالية (Shift+R)"
 }

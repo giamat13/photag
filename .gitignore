@@ -14,3 +14,5 @@ app/_report_token.py
 tools/release_status/status.html
 tools/release_status/local-tests*.json
 tools/release_status/status-data.js
+tools/release_status/todo.json
+tools/release_status/activity.json

@@ -305,10 +305,13 @@ body.mod-library .dev-only,body.mod-develop .lib-only{display:none!important}
 
 /* compare + survey */
 .v-compare{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#1f1f1f}
-.cmp{position:relative;display:flex;align-items:center;justify-content:center;padding:28px 14px 14px;background:var(--center);min-width:0;min-height:0}
-.cmp img{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 2px 12px rgba(0,0,0,.5)}
-.cmp .lab{position:absolute;inset-block-start:7px;inset-inline-start:12px;color:var(--st3);font-size:12px}
+.cmp{position:relative;display:flex;align-items:center;justify-content:center;padding:28px 14px 14px;background:var(--center);min-width:0;min-height:0;overflow:hidden}
+.cmp img{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 2px 12px rgba(0,0,0,.5);user-select:none;-webkit-user-drag:none}
+.v-compare.zoomed .cmp img{max-width:none;max-height:none;cursor:grab}
+.v-compare.zoomed .cmp img.dragging{cursor:grabbing}
+.cmp .lab{position:absolute;inset-block-start:7px;inset-inline-start:12px;color:var(--st3);font-size:12px;z-index:1}
 .cmp.sel .lab{color:#fff}
+.cmp-zoom{position:absolute;inset-block-end:8px;inset-inline-end:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;z-index:1;pointer-events:none}
 .v-survey{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:10px;padding:14px;overflow:auto}
 .sv{position:relative;display:flex;align-items:center;justify-content:center;padding:8px;background:var(--cell);border:1px solid #2c2c2c}
 .sv.act{background:var(--cell-sel)}
@@ -366,7 +369,7 @@ body.mod-library .dev-only,body.mod-develop .lib-only{display:none!important}
 body.hide-tool .toolbar{display:none}
 .tb-grp{display:flex;align-items:center;gap:1px}
 .tb-sep{width:1px;height:18px;background:var(--pnl-line);box-shadow:1px 0 0 var(--line);margin:0 6px}
-.tb-btn{height:24px;min-width:28px;padding:0 5px;background:transparent;border:1px solid transparent;color:var(--t3)}
+.tb-btn{flex:none;height:24px;min-width:28px;padding:0 5px;background:transparent;border:1px solid transparent;color:var(--t3)}
 .tb-btn:hover{background:var(--hover);border-color:var(--raise1)}
 .tb-btn.on{background:linear-gradient(var(--raise1),var(--raise2));border-color:var(--deep2);color:var(--t1)}
 .tb-btn .ic{width:16px;height:16px}
@@ -381,7 +384,7 @@ body.hide-tool .toolbar{display:none}
 .tb-labs{display:flex;gap:3px}
 .tb-labs button{width:13px;height:13px;min-width:0;padding:0;border-radius:2px;border:1px solid rgba(0,0,0,.45)}
 .tb-labs button.on{box-shadow:0 0 0 1px #eee}
-.tb-size{display:flex;align-items:center;gap:8px;width:160px;margin-inline-start:auto}
+.tb-size{display:flex;align-items:center;gap:8px;width:160px;min-width:56px;margin-inline-start:auto}
 .tb-size span{white-space:nowrap}
 .tb-flag.on.pick .ic{fill:#e8e8e8}
 .tb-flag.on.rej .ic{fill:#111;stroke:#111}

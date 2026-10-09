@@ -1571,5 +1571,8 @@
  "Day of week": "星期",
  "Time of day": "时段",
  "Resolution (megapixels)": "分辨率（百万像素）",
- "Added to the library: from": "添加到图库：从"
+ "Added to the library: from": "添加到图库：从",
+ "Surprise Me": "给我惊喜",
+ "No photos to choose from": "没有可选的照片",
+ "Jump to a random photo from the current list (Shift+R)": "跳转到当前列表中的随机照片（Shift+R）"
 }

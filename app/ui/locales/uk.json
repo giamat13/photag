@@ -1571,5 +1571,8 @@
  "Day of week": "День тижня",
  "Time of day": "Час доби",
  "Resolution (megapixels)": "Роздільність (мегапікселі)",
- "Added to the library: from": "Додано до бібліотеки: з"
+ "Added to the library: from": "Додано до бібліотеки: з",
+ "Surprise Me": "Здивуй мене",
+ "No photos to choose from": "Немає фото для вибору",
+ "Jump to a random photo from the current list (Shift+R)": "Перейти до випадкового фото з поточного списку (Shift+R)"
 }

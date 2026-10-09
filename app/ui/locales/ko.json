@@ -1571,5 +1571,8 @@
  "Day of week": "요일",
  "Time of day": "시간대",
  "Resolution (megapixels)": "해상도(메가픽셀)",
- "Added to the library: from": "라이브러리에 추가됨: 시작"
+ "Added to the library: from": "라이브러리에 추가됨: 시작",
+ "Surprise Me": "서프라이즈",
+ "No photos to choose from": "선택할 사진이 없습니다",
+ "Jump to a random photo from the current list (Shift+R)": "현재 목록에서 임의의 사진으로 이동 (Shift+R)"
 }

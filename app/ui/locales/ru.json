@@ -1571,5 +1571,8 @@
  "Day of week": "День недели",
  "Time of day": "Время суток",
  "Resolution (megapixels)": "Разрешение (мегапиксели)",
- "Added to the library: from": "Добавлены в библиотеку: с"
+ "Added to the library: from": "Добавлены в библиотеку: с",
+ "Surprise Me": "Удиви меня",
+ "No photos to choose from": "Нет фото для выбора",
+ "Jump to a random photo from the current list (Shift+R)": "Перейти к случайному фото из текущего списка (Shift+R)"
 }

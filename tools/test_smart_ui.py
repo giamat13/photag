@@ -109,8 +109,12 @@ try:
         check("the metadata panel shows the score", "Quality score" in pg.inner_text("#p-meta"))
 
         # ---- On This Day
-        check("the Catalog lists 'On This Day' with the two photos from earlier years", pg.locator("#p-catalog .row[data-src=otd] .n").inner_text().strip() == "3",
-              pg.locator("#p-catalog .row[data-src=otd] .n").inner_text())
+        otd_n = pg.locator("#p-catalog .row[data-src=otd] .n")
+        check("the Catalog lists 'On This Day' with the two photos from earlier years", otd_n.count() == 1 and otd_n.inner_text().strip() == "3",
+              (otd_n.count(), "browser: " + pg.evaluate("new Date().toString()"), "python: " + str(datetime.datetime.now()),
+               pg.evaluate("S.all.filter(p => p.taken_at).map(p => new Date(p.taken_at * 1000).toDateString()).slice(0, 4)"),
+               "otd=" + str(pg.evaluate("S.all.filter(otdPass).length")), "errors=" + str(errs[:2]),
+               "catalog=" + pg.inner_text("#p-catalog")[:160].replace("\n", " | ")))
         pg.click("#p-catalog .row[data-src=otd]")
         pg.wait_for_timeout(500)
         n_otd = pg.evaluate("S.list.length")

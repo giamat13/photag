@@ -1,6 +1,7 @@
 """Runs the local tests one after the other and writes their progress to local-tests.json, which tools/release_status/status_page.py
-shows live (what is running, what passed, how long is left). How long each test took last time is kept in local-tests-history.json
-and is the estimate for the next run. Nothing here touches a real library: the tests use throw-away profiles.
+shows live: what is running, how many checks of it passed so far, its last lines, what passed, how long is left. How long each test
+took last time is kept in local-tests-history.json and is the estimate for the next run. Nothing here touches a real library: the
+tests use throw-away profiles.
 
     py -3.12 tools/release_status/run_local_tests.py            the usual set
     py -3.12 tools/release_status/run_local_tests.py test_pool ui_smoke      only these
@@ -17,9 +18,12 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 PROGRESS = HERE / "local-tests.json"
 HISTORY = HERE / "local-tests-history.json"
-DEFAULT = ["test_pool", "test_aitag", "test_place_search", "test_advanced_filters", "test_smart_features", "test_smart_ui",
-           "test_features_ui", "ui_smoke", "test_release_notes", "test_version_scheme", "test_runtime_lock", "i18n check"]
+DEFAULT = ["test_pool", "test_window_close", "test_aitag", "test_place_search", "test_advanced_filters", "test_help_search_history",
+           "test_surprise_compare", "test_smart_features", "test_smart_ui", "test_features_ui", "ui_smoke", "test_code_update",
+           "test_update_rollback", "test_release_notes", "test_version_scheme", "test_runtime_lock", "i18n check"]
 GUESS = 45          # seconds, for a test that has never run
+TAIL = 5            # lines of the running test that the page shows
+WRITE_EVERY = 0.4   # seconds between writes of the progress file while a test runs
 
 
 def load(p, default):
@@ -36,7 +40,7 @@ def command(name):
 
 
 def summarize(text):
-    """('12/12 passed' | '30 PASS' | ..., failed count) from what a test printed."""
+    """('12/12' | '30 עברו' | ..., failed count) from what a test printed."""
     fails = len(re.findall(r"^FAIL", text, re.M))
     m = re.findall(r"(\d+)/(\d+) passed", text)
     if m:
@@ -50,28 +54,62 @@ def summarize(text):
     return "", fails
 
 
+def save(state):
+    tmp = PROGRESS.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, ensure_ascii=False), "utf-8")
+    for _ in range(5):
+        try:
+            os.replace(tmp, PROGRESS)
+            return
+        except PermissionError:               # the page is reading it this very moment
+            time.sleep(0.1)
+
+
+def run_one(t, state, env):
+    """Run one test, streaming its output: the page sees the checks pile up while it runs."""
+    t["state"], t["began"], t["live"] = "run", time.time(), {"pass": 0, "fail": 0, "last": []}
+    save(state)
+    p = subprocess.Popen(command(t["name"]), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+                         env=env, cwd=str(ROOT), bufsize=1)
+    lines, last_write = [], 0.0
+    for line in p.stdout:
+        line = line.rstrip("\n")
+        lines.append(line)
+        live = t["live"]
+        if line.startswith("PASS"):
+            live["pass"] += 1
+        elif line.startswith("FAIL"):
+            live["fail"] += 1
+        if line.strip():
+            live["last"] = (live["last"] + [line[:150]])[-TAIL:]
+        if time.time() - last_write > WRITE_EVERY:
+            save(state)
+            last_write = time.time()
+    p.wait()
+    return p.returncode, "\n".join(lines)
+
+
 def main():
     names = sys.argv[1:] or DEFAULT
     hist = load(HISTORY, {})
     state = {"started": time.time(), "finished": None,
              "tests": [{"name": n, "state": "todo", "seconds": None, "estimate": hist.get(n, GUESS), "summary": ""} for n in names]}
-    PROGRESS.write_text(json.dumps(state, ensure_ascii=False), "utf-8")
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    save(state)
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
     for t in state["tests"]:
-        t["state"], t["began"] = "run", time.time()
-        PROGRESS.write_text(json.dumps(state, ensure_ascii=False), "utf-8")
-        r = subprocess.run(command(t["name"]), capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, cwd=str(ROOT))
+        code, out = run_one(t, state, env)
         t["seconds"] = round(time.time() - t["began"], 1)
-        t["summary"], fails = summarize(r.stdout)
-        t["state"] = "done" if r.returncode == 0 and not fails else "fail"
+        t["summary"], fails = summarize(out)
+        t["state"] = "done" if code == 0 and not fails else "fail"
+        t.pop("live", None)
         if t["state"] == "fail":
-            t["detail"] = "\n".join(l for l in (r.stdout + r.stderr).splitlines() if l.startswith("FAIL") or "Error" in l)[-600:]
+            t["detail"] = "\n".join(l for l in out.splitlines() if l.startswith("FAIL") or "Error" in l)[-600:]
         else:
             hist[t["name"]] = t["seconds"]
         HISTORY.write_text(json.dumps(hist, ensure_ascii=False), "utf-8")
-        PROGRESS.write_text(json.dumps(state, ensure_ascii=False), "utf-8")
+        save(state)
     state["finished"] = time.time()
-    PROGRESS.write_text(json.dumps(state, ensure_ascii=False), "utf-8")
+    save(state)
     bad = [t["name"] for t in state["tests"] if t["state"] == "fail"]
     print("FAILED: " + ", ".join(bad) if bad else "all passed")
     sys.exit(1 if bad else 0)

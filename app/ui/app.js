@@ -57,6 +57,7 @@ const S = {
   stackBursts:pref.get('stackBursts', false), bursts:null,
   status:null, albums:[], folders:{root:'', folders:[]}, tags:[], people:[], searches:[],
   recentKw:pref.get('recentKw',[]),
+  recentSearches:pref.get('recentSearches',[]),
 };
 const targets = () => (S.view==='grid' || S.view==='survey') && S.sel.size ? [...S.sel] : (S.act!=null ? [S.act] : []);
 const actPhoto = () => S.act!=null ? (S.byId.get(S.act) || S.base.find(p=>p.id===S.act)) : null;
@@ -584,8 +585,15 @@ function renderFilterBar(){
   if(S.fb==='meta') renderMetaBrowser();
   $('#fb-state').innerHTML = filterActive() ? (S.F.on ? ("<b>"+t("Filter active")+"</b>") : t('Filter off')) : '';
 }
+function renderRecentSearches(){ $('#ft-q-recent').innerHTML = S.recentSearches.map(q=>`<option value="${esc(q)}">`).join(''); }
+renderRecentSearches();
+function rememberSearch(q){
+  q=(q||'').trim(); if(!q || q.length<2) return;
+  S.recentSearches=[q, ...S.recentSearches.filter(x=>x!==q)].slice(0,10); pref.set('recentSearches', S.recentSearches); renderRecentSearches();
+}
 $('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf==='meaning') return; if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
-$('#ft-q').addEventListener('keydown', e=>{ if(e.key==='Enter' && S.F.qf==='meaning' && $('#ft-q').value.trim()) semanticSearch($('#ft-q').value.trim()); });
+$('#ft-q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ const q=$('#ft-q').value.trim(); if(q){ rememberSearch(q); if(S.F.qf==='meaning') semanticSearch(q); } } });
+$('#ft-q').addEventListener('change', ()=>rememberSearch($('#ft-q').value));
 $('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; if(S.F.qf==='meaning') return; if(S.F.q) fetchSource(); };
 function renderMetaBrowser(){
   const base = S.base;
@@ -1151,16 +1159,56 @@ $('#loupe-media').addEventListener('mousedown', e=>{   // drag to pan when zoome
 $('#v-loupe').addEventListener('dblclick', e=>{ if(e.target.closest('.vp')) return; if(!$('#loupe-media').classList.contains('zoom')) setView('grid'); });
 
 let CMP_CAND=null;
+// synchronized pan/zoom: wheel on either image zooms both the same way, and dragging either pans both together
+const CMPZ = {scale:1, x:0, y:0};
+function cmpApply(){
+  const el=$('#v-compare'); if(!el) return;
+  el.classList.toggle('zoomed', CMPZ.scale>1.001);
+  const t = CMPZ.scale>1.001 ? `translate(${CMPZ.x}px, ${CMPZ.y}px) scale(${CMPZ.scale})` : '';
+  $$('#v-compare .cmp img').forEach(img=>{ img.style.transform=t; img.style.transformOrigin='center center'; });
+  const z=$('#v-compare .cmp-zoom'); if(z) z.textContent=Math.round(CMPZ.scale*100)+'%';
+}
+function cmpResetZoom(){ CMPZ.scale=1; CMPZ.x=0; CMPZ.y=0; cmpApply(); }
 function renderCompare(){
   const a=actPhoto(); if(!a){ $('#v-compare').innerHTML=''; return; }
   let b = CMP_CAND && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : ([...S.sel].find(id=>id!==a.id) ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
   CMP_CAND=b;
-  const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt=""></div>`:'<div class="cmp"></div>';
+  const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}</div>`:'<div class="cmp"></div>';
+  const prevIds = [...$$('#v-compare .cmp')].map(c=>c.dataset.id).join(',');
   $('#v-compare').innerHTML = pane(a,t('Selection'),'sel') + pane(S.byId.get(b)||S.base.find(x=>x.id===b),t('Candidate'),'');
+  if(`${a.id},${b}`!==prevIds) cmpResetZoom(); else cmpApply();
 }
-$('#v-compare').addEventListener('click', e=>{ const c=e.target.closest('.cmp:not(.sel)'); if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; renderCompare(); } });
+$('#v-compare').addEventListener('click', e=>{ if(CMPZ.scale>1.001) return; const c=e.target.closest('.cmp:not(.sel)'); if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; renderCompare(); } });
+$('#v-compare').addEventListener('wheel', e=>{
+  if(!e.target.closest('.cmp')) return;
+  e.preventDefault();
+  const was=CMPZ.scale;
+  CMPZ.scale = clamp(CMPZ.scale * (e.deltaY<0?1.15:1/1.15), 1, 8);
+  if(CMPZ.scale<=1.001){ cmpResetZoom(); return; }
+  if(was<=1.001){ CMPZ.x=0; CMPZ.y=0; }
+  cmpApply();
+}, {passive:false});
+let CMP_DRAG=null;
+$('#v-compare').addEventListener('pointerdown', e=>{
+  if(CMPZ.scale<=1.001 || !e.target.closest('img')) return;
+  CMP_DRAG={x:e.clientX, y:e.clientY, sx:CMPZ.x, sy:CMPZ.y}; e.target.classList.add('dragging'); e.target.setPointerCapture(e.pointerId);
+});
+$('#v-compare').addEventListener('pointermove', e=>{
+  if(!CMP_DRAG) return;
+  CMPZ.x = CMP_DRAG.sx + (e.clientX-CMP_DRAG.x); CMPZ.y = CMP_DRAG.sy + (e.clientY-CMP_DRAG.y); cmpApply();
+});
+['pointerup','pointercancel'].forEach(ev=>$('#v-compare').addEventListener(ev, e=>{ CMP_DRAG=null; e.target.classList?.remove('dragging'); }));
 function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; renderCompare(); }
 function compareSwap(){ const a=S.act, b=CMP_CAND; if(b==null) return; selectOnly(b); CMP_CAND=a; renderCompare(); }
+let SURPRISE_LAST=null;
+function surpriseMe(){
+  if(!S.list.length) return toast(t('No photos to choose from'));
+  const pool = S.list.length>1 ? S.list.filter(p=>p.id!==SURPRISE_LAST) : S.list;
+  const p = pool[Math.floor(Math.random()*pool.length)];
+  SURPRISE_LAST = p.id;
+  selectOnly(p.id); setView('loupe');
+  toast(`<bdi>${esc(p.filename)}</bdi>`, 1600);
+}
 
 function renderSurvey(){
   const el=$('#v-survey');
@@ -1332,6 +1380,7 @@ function renderToolbar(){
   if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">${t("Sort:")}</span><button class="tb-btn" data-t="asc" title="${S.asc?t('Ascending'):t('Descending')}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
       <select data-t="sort">${sortKeys().map(k=>`<option value="${k}" ${k===S.sort?'selected':''}>${SORTS[k][0]}</option>`).join('')}</select></div><span class="tb-sep"></span>` + tbAttrs() +
       `<button class="tb-btn" data-t="rank" title="${t('Score the selected photos and find the best one')}">${I('rank')} ${t('Rank')}</button>
+      <button class="tb-btn" data-t="surprise" title="${t('Surprise Me')} — ${t('Jump to a random photo from the current list (Shift+R)')}">${I('spark')}</button>
       <label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
   else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
@@ -1353,7 +1402,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='asc'){ S.asc=!S.asc; pref.set('asc',S.asc); applyFilter(); }
   else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
   else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
-  else if(tg==='rank') rankSelected(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
+  else if(tg==='rank') rankSelected(); else if(tg==='surprise') surpriseMe(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
   else if(tg==='before') devBefore(); else if(tg==='viewside') devView('side'); else if(tg==='viewsplit') devView('split'); else if(tg==='crop') devCropToggle();
   else if(tg==='flythrough') mapFlythrough();
 });
@@ -3596,7 +3645,7 @@ async function memories(){
 function shortcuts(){
   const k=(key,tg)=>`<kbd>${key}</kbd><span>${tg}</span>`;
   modal(`<h3>${t("Keyboard Shortcuts")}</h3><div class="mb"><div class="kgrid">
-    <h4>${t("Views")}</h4>${k('G',t('Grid'))}${k('E',t('Loupe'))}${k('C',t('Compare'))}${k('N',t('Survey'))}${k('O',t('People'))}${k('D',t('Edit Module'))}${k('Ctrl+Enter',t('Slideshow'))}${k('Esc',t('Back / Exit'))}
+    <h4>${t("Views")}</h4>${k('G',t('Grid'))}${k('E',t('Loupe'))}${k('C',t('Compare'))}${k('N',t('Survey'))}${k('O',t('People'))}${k('D',t('Edit Module'))}${k('Ctrl+Enter',t('Slideshow'))}${k('Esc',t('Back / Exit'))}${k('Shift+R',t('Surprise Me'))}
     <h4>${t("Rating and Flagging")}</h4>${k('P',t('Flag as Pick'))}${k('X',t('Flag as Rejected'))}${k('U',t('Remove Flag'))}${k('`',t('Toggle Flag'))}${k('0–5',t('Star Rating'))}${k('[ / ]',t('Decrease / Increase Rating'))}${k('6–9',t('Label Red/Yellow/Green/Blue'))}${k(t('Shift+key'),t('Mark and Go to Next'))}${k('B',t('Quick Collection'))}${k('Ctrl+B',t('Show Quick Collection'))}
     <h4>${t("Selection")}</h4>${k('Ctrl+A',t('Select All'))}${k('Ctrl+D',t('Deselect'))}${k(t('Ctrl+click'),t('Add to Selection'))}${k(t('Shift+click'),t('Select Range'))}${k('← → ↑ ↓',t('Move Between Photos'))}${k('Delete',t('Move to Trash'))}${k('Ctrl+Z',t('Undo'))}${k('Ctrl+Y',t('Redo'))}
     <h4>${t("Interface")}</h4>${k('Tab',t('Hide Side Panels'))}${k('Shift+Tab',t('Hide All Panels'))}${k('F5 / F6',t('Top Panel / Filmstrip'))}${k('F7 / F8',t('Right / Left Panel'))}${k('T',t('Toolbar'))}${k('L',t('Lights Out'))}${k('J',t('Grid Cell Style'))}${k('I',t('Loupe Info'))}${k('\\\\',t('Filter Bar / Before-After'))}${k('Ctrl+L',t('Enable/Disable Filters'))}${k('Ctrl+F',t('Text Search'))}${k(t('Z / Space'),t('Zoom 1:1'))}
@@ -4169,7 +4218,7 @@ document.addEventListener('keydown', e=>{
     case 'KeyI': S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); return;
     case 'KeyL': cycleLights(); return;
     case 'KeyT': togglePanel('tool'); return;
-    case 'KeyR': if(S.mod==='develop') devCropToggle(); return;
+    case 'KeyR': if(S.mod==='develop') devCropToggle(); else if(shift && S.mod==='library') surpriseMe(); return;
     case 'KeyZ': if(S.view==='loupe') zoomLoupe(); else if(S.mod==='library'){ setView('loupe'); } return;
     case 'Space': if(S.view==='loupe'){ e.preventDefault(); zoomLoupe(); } return;
     case 'BracketLeft': bumpRating(-1); return;

@@ -26,14 +26,18 @@ push straight to `main`.
 - **Never release a version (not even a pre-release) before the change is known to work 100%.** Check it for real first — on the
   user's own machine when it can be done (run the program from source / F5, call the real endpoints, drive the real dialog headless),
   not only with the test suite and fakes. Pushes to `main` are fine at any time; releases are not. A regular release only after
-  everything works. Only when there is truly no other way to check it (it can only be seen in a built, installed program) release a
+  everything works. **When all the tests pass there is no reason not to make a regular release** (decided with the user) -- a pre-release
+  is only for a huge update, or for something the tests may not cover that has to be checked for real. Only when there is truly no other
+  way to check it (it can only be seen in a built, installed program) release a
   **pre-release** (`workflow_dispatch` with `prerelease=true`; the version in `app/version.py` stays plain, e.g. `18.0.0` -- the tests assume the running version is not a `-beta`; delete the pre-release and its tag before the regular release of the same version) and say clearly that it is a test build; the user asks
   before a regular release follows. A release that turns out bad is deleted (`gh release delete vX --cleanup-tag -y`) and made again.
 - `app/version.py` (`__version__`) is the single source of truth for the app's version. Bump it
   before every release.
 - **Numbering ("FEATURE.SMALL-FEATURE.FIX", decided with the user; from 18.1.0 — from 11.0.0 to 18.0.0 it was "FEATURE.FIX.SMALL-FIX", earlier "FEATURE.FIX" with a trailing 0).**
   A release with a new feature raises the first number and resets the others (`12.0.0`); a release with only small features
-  raises the second and resets the third (`12.1.0`); a release with only fixes raises the third (`12.1.1`);
+  raises the second and resets the third (`12.1.0`); a release with only fixes raises the third (`12.1.1`).
+  A "feature" is an ordinary feature, not a huge one, and **several small features released together count as one feature**
+  (decided with the user: three small additions in one release are `19.0.0`, not `18.4.0`);
   pre-releases add `-beta.N`. **Always write all three parts** (never `9.1`): programs
   installed before the change only recognise a code update `photag-code-X.Y.Z-rtN.zip` with three parts, and
   without it they fall back to the full installer (which Smart App Control may block). `9.1` and `9.1.0`
@@ -43,7 +47,7 @@ push straight to `main`.
 - **Structure of the release notes (decided with the user, from 12.1.0):** a title line (`# photag X.Y.Z`) and then only these sections,
   in this order, leaving out the ones with nothing in them: `## Features` (things that really change something for the user, first),
   `## Small features` (minor additions, wording, looks, internals) and `## Fixes` (bugs a user could notice). It matches the version number:
-  a feature release has `## Features`, a small-features release has `## Small features`, a fixes-only release only `## Fixes`. (Releases up to 18.0.0 used `## Small fixes`; the updater still reads it.) The in-app
+  a feature release has `## Features` (several small features together are listed there), a small-features release has `## Small features`, a fixes-only release only `## Fixes`. (Releases up to 18.0.0 used `## Small fixes`; the updater still reads it.) The in-app
   "What's new" dialog shows the three headings in the user's language and, when several versions are skipped, merges them by section
   (`updater.merge_notes`). `tools/test_release_notes.py` checks the file of the current version.
 - Each release has a `docs/release-notes-v<version>.md` file; its contents become the GitHub Release

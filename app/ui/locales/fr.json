@@ -1571,5 +1571,8 @@
  "Day of week": "Jour de la semaine",
  "Time of day": "Heure de la journée",
  "Resolution (megapixels)": "Résolution (mégapixels)",
- "Added to the library: from": "Ajoutées à la bibliothèque : du"
+ "Added to the library: from": "Ajoutées à la bibliothèque : du",
+ "Surprise Me": "Surprends-moi",
+ "No photos to choose from": "Aucune photo au choix",
+ "Jump to a random photo from the current list (Shift+R)": "Aller à une photo aléatoire de la liste actuelle (Maj+R)"
 }

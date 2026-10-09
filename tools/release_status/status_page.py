@@ -23,6 +23,8 @@ ROOT = HERE.parent.parent
 PAGE = HERE / "status.html"
 DATA = HERE / "status-data.js"
 PROGRESS = HERE / "local-tests.json"
+ACTIVITY = HERE / "activity.json"   # the live log: [{"at": epoch, "text": "..."}], written by log.py
+TODO = HERE / "todo.json"          # the coding tasks, written by whoever is writing the code: [{"text": "...", "state": "todo|run|done"}]
 REPO = "giamat13/photag"
 DEFAULT_GH_SECONDS = 720
 LOCAL_EVERY, GITHUB_EVERY = 3, 8          # seconds
@@ -155,7 +157,7 @@ def collect():
                 left = t["estimate"]
             local_left += left
             local.append({"name": t["name"], "state": t["state"], "summary": t.get("summary", ""), "seconds": t.get("seconds"),
-                          "estimate": t["estimate"], "began": t.get("began"), "detail": t.get("detail", "")})
+                          "estimate": t["estimate"], "began": t.get("began"), "detail": t.get("detail", ""), "live": t.get("live")})
         sts = [t["state"] for t in prog["tests"]]
         local_state = "fail" if "fail" in sts else ("done" if all(s == "done" for s in sts) else "run")
 
@@ -202,9 +204,20 @@ def collect():
                      "est": jest, "took": dur(j) if state_of(j) in ("done", "fail") else None, "end": (jbegan + jest) if state_of(j) == "run" and jbegan and jest else None,
                      "now": running["text"] if running else "", "failed": next((x["text"] for x in steps if x["state"] == "fail"), "")})
 
+    stale = False
+    if prog and prog.get("finished"):
+        changed = [ln[3:].strip().strip('"') for ln in git("status", "--porcelain").splitlines() if len(ln) > 3]
+        newest = 0.0
+        for rel in changed:
+            try:
+                newest = max(newest, (ROOT / rel).stat().st_mtime)
+            except OSError:
+                pass
+        stale = newest > prog["finished"] + 1
+    local_eff = "todo" if (stale and local_state == "done") else local_state
     stages = [
-        {"name": "בודקים שהכול עובד אצלך במחשב", "plain": "מריצים אוטומטית עשרות בדיקות על התוכנה כדי לוודא ששום דבר לא נשבר.", "state": local_state,
-         "note": local_now},
+        {"name": "בודקים שהכול עובד אצלך במחשב", "plain": "מריצים אוטומטית עשרות בדיקות על התוכנה כדי לוודא ששום דבר לא נשבר.", "state": local_eff,
+         "note": local_now or ("הורצו לפני השינויים האחרונים — צריך להריץ שוב" if local_eff != local_state else "")},
         {"name": "שומרים את השינויים", "plain": "שומרים את העבודה בהיסטוריה של הפרויקט (זה נקרא commit).", "state": "done" if dirty == 0 else "todo",
          "note": "" if dirty == 0 else f"{dirty} קבצים עוד לא נשמרו"},
         {"name": "מעלים ל-GitHub", "plain": "שולחים את הקוד לאינטרנט כדי שאפשר יהיה לבנות ממנו גרסה (זה נקרא push).", "state": "done" if pushed else "todo", "note": ""},
@@ -221,9 +234,20 @@ def collect():
         stages[4]["end"] = now + gh_left
     elif gh_state == "todo":
         stages[4]["est"] = typical
+    try:
+        todo = [{"text": str(x.get("text", ""))[:160], "state": x.get("state") if x.get("state") in ("todo", "run", "done") else "todo"}
+                for x in json.loads(TODO.read_text("utf-8")) if x.get("text")]
+    except (OSError, ValueError, AttributeError):
+        todo = []
+    todo_done = sum(1 for x in todo if x["state"] == "done")
+    todo_open = bool(todo) and todo_done < len(todo)
+    try:
+        activity = [{"at": float(x["at"]), "text": str(x["text"])[:200]} for x in json.loads(ACTIVITY.read_text("utf-8"))][-12:][::-1]
+    except (OSError, ValueError, KeyError, TypeError):
+        activity = []
     n_done = sum(1 for s in stages if s["state"] == "done")
     local_total = sum(t["estimate"] for t in local)
-    local_frac = 1.0 if local_state == "done" else (max(0.0, 1 - local_left / local_total) if local_total else 0.0)
+    local_frac = 1.0 if local_eff == "done" else (max(0.0, 1 - local_left / local_total) if local_total else 0.0)
     got = tot = 0.0
     for j in jobs:
         e = j["est"] or 0.0
@@ -232,25 +256,39 @@ def collect():
     gh_frac = 1.0 if (published or gh_state == "done") else (got / tot if tot else (sum(1 for j in jobs if j["state"] == "done") / len(jobs) if jobs else 0.0))
     pct = 100 if published else min(99, int(100 * (0.25 * local_frac + 0.03 * (stages[1]["state"] == "done") + 0.03 * (stages[2]["state"] == "done")
                                                   + 0.04 * (stages[3]["state"] == "done") + 0.65 * gh_frac)))
-    left = (local_left if local_state != "done" else 0.0) + gh_left
+    local_need = local_total if local_eff != local_state else local_left      # old results: all of them have to run again
+    left = (local_need if local_eff != "done" else 0.0) + gh_left
     failing = [s["name"] for s in stages if s["state"] == "fail"]
+    if todo:                                   # the coding comes first: it holds the first fifth of the way
+        pct = 100 if published else min(99, int(100 * (0.2 * todo_done / len(todo) + 0.8 * pct / 100)))
+        run_item = next((x["text"] for x in todo if x["state"] == "run"), next((x["text"] for x in todo if x["state"] == "todo"), ""))
+        stages.insert(0, {"name": "כותבים את הקוד", "plain": "בונים את הפיצ'רים והתיקונים עצמם. הרשימה למטה מראה מה כבר נעשה ומה נשאר.",
+                          "state": "done" if not todo_open else "run", "note": f"{todo_done}/{len(todo)}"})
     if published:
         hero, sub = f"הגרסה {target} באוויר! ✓", "אפשר לעדכן מתוך photag (עזרה ← חיפוש עדכונים)."
     elif failing:
-        hero, sub = "משהו נכשל", "הסעיף האדום למטה מראה איפה. אפשר לספר לי ואטפל בזה."
+        bad = [t["name"] for t in local if t["state"] == "fail"]
+        hero = ("בדיקה מקומית נכשלה: " + ", ".join(bad)) if bad else "משהו נכשל"
+        sub = activity[0]["text"] if activity else "הסעיף האדום למטה מראה איפה."
+    elif todo_open:
+        hero, sub = "עכשיו: כותבים את הקוד", (activity[0]["text"] if activity else run_item)
     elif local_state == "run":
         hero, sub = "עכשיו: בודקים שהכול עובד במחשב שלך", local_now
+    elif local_eff == "todo" and stale:
+        hero, sub = "הבדיקות המקומיות צריכות לרוץ שוב", "הקוד השתנה אחרי הריצה האחרונה שלהן."
     elif not pushed:
         hero, sub = "עכשיו: מעלים את השינויים", "ואז GitHub יתחיל לבנות."
     elif not cur:
-        hero, sub = "עכשיו: ממתינים שה-שחרור יתחיל ב-GitHub", ""
+        hero, sub = "עוד לא הופעל שחרור", "הטיימר יתחיל ברגע שהשחרור יופעל ב-GitHub."
     else:
         hero, sub = "עכשיו: GitHub בונה את הגרסה", hero_run
 
     return {
         "at": now, "target": target, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
-        "eta_end": None if (published or failing) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
-        "percent": pct, "stages": stages, "local": local, "jobs": jobs, "gh_began": cur_began,
+        "waiting": bool(not published and not failing and pushed and not cur and local_state != "run"),
+        "coding": todo_open, "todo": todo, "activity": activity,
+        "eta_end": None if (published or failing or todo_open or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
+        "percent": pct, "stages": stages, "local": local, "local_stale": stale, "jobs": jobs, "gh_began": cur_began,
         "error": gh["error"], "recent": [r["tag_name"] for r in rels[:3]],
     }
 
@@ -286,6 +324,19 @@ main{max-width:1180px;margin:0 auto;padding:16px 16px 48px}
 .stg .n{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:var(--todo)}
 .stg.done{border-top-color:var(--ok)}.stg.done .n{background:var(--ok)}.stg.run{border-top-color:var(--run)}.stg.run .n{background:var(--run);animation:blink 1.4s infinite}.stg.fail{border-top-color:var(--bad)}.stg.fail .n{background:var(--bad)}
 @keyframes blink{50%{opacity:.5}}.stg .t{font-weight:700;font-size:14px;line-height:1.3}.stg.todo .t{color:var(--mut)}.stg .s{font-size:12px;color:var(--run)}
+.todo-card{margin:10px 0 4px;background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px 16px;box-shadow:var(--sh);border-inline-start:5px solid var(--run)}
+.todo-card.done{border-inline-start-color:var(--ok)}.todo-card h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;gap:10px}
+.todo-card ul{list-style:none;margin:6px 0 0;padding:0}.todo-card li{display:flex;gap:9px;padding:3px 0;font-size:14px;align-items:baseline}
+.todo-card li .ic{width:1.2em;text-align:center;font-weight:800;flex:none}.todo-card li.done .ic{color:var(--ok)}.todo-card li.done{color:var(--mut);text-decoration:line-through}
+.todo-card li.run .ic{color:var(--run);animation:blink 1.4s infinite}.todo-card li.run{font-weight:700}.todo-card li.todo{color:var(--mut)}
+.todo-card .bar{margin:4px 0 6px}
+.log-card{margin:10px 0 4px;background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px 16px;box-shadow:var(--sh);border-inline-start:5px solid var(--ok)}
+.log-card.stale{border-inline-start-color:var(--warn)}
+.log-card .now{font-size:17px;font-weight:700;line-height:1.35;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.log-card .ago{font-size:13px;font-weight:400;color:var(--mut);white-space:nowrap}
+.log-card .stalemsg{color:var(--warn);font-size:13px;margin-top:3px}
+.log-card ul{list-style:none;margin:8px 0 0;padding:6px 0 0;border-top:1px solid var(--ln)}
+.log-card li{display:flex;gap:10px;font-size:13px;color:var(--mut);padding:1px 0}.log-card li .ago{margin-inline-start:auto}
 .explain{font-size:14px;color:var(--mut);margin:4px 2px 0;min-height:21px}
 h2{font-size:15px;margin:20px 2px 8px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.grid.small{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
@@ -301,9 +352,28 @@ h2{font-size:15px;margin:20px 2px 8px;color:var(--mut);text-transform:uppercase;
 small{color:var(--mut);font-weight:400}
 .lt{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:9px 12px;box-shadow:var(--sh);border-inline-start:5px solid var(--todo)}
 .lt.done{border-inline-start-color:var(--ok)}.lt.run{border-inline-start-color:var(--run);animation:blink 1.6s infinite}.lt.fail{border-inline-start-color:var(--bad)}
+.lt pre.live{color:var(--mut);font-size:10.5px;line-height:1.35;margin:4px 0 0;max-height:none;white-space:pre-wrap;word-break:break-word}
+.lt.run{grid-column:span 2}
 .lt .nm{font-weight:700;font-size:13px;word-break:break-word}.lt .sm{font-size:12px;color:var(--mut)}.lt pre{white-space:pre-wrap;color:var(--bad);font-size:11px;margin:3px 0 0}
 .empty{grid-column:1/-1;color:var(--mut);padding:10px 2px}
 footer{margin-top:22px;color:var(--mut);font-size:13px;line-height:1.7}footer .err{color:var(--bad)}
+/* everything on one screen */
+main{padding:8px 12px 10px}.top{margin-bottom:4px}.ttl{font-size:19px}
+.kpis{gap:8px;margin:6px 0}.tile{min-height:0;padding:8px 12px}
+.ring{width:72px;height:72px}.ringtxt b{font-size:18px}.ringtxt span{font-size:10px}
+.eta-tile .big{font-size:30px;margin:0}.nowtxt{font-size:15px}.lbl{margin-bottom:3px}
+.counts .row{padding:2px 0;font-size:13px}
+.pipe{margin:4px 0 0}.stg{padding:5px 9px;flex:1 1 130px}.stg .t{font-size:12.5px}.stg .n{width:20px;height:20px;font-size:11px}
+.explain{display:none}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:8px;margin:6px 0}
+.log-card,.todo-card{margin:0;padding:8px 12px}.log-card .now{font-size:15px}.todo-card li,.log-card li{font-size:12.5px;padding:1px 0}
+h2{font-size:12px;margin:8px 2px 3px}
+.grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.job{padding:7px 10px}.job .ds{display:none}.job .nm{margin:3px 0 0;font-size:13.5px}.job .cur{min-height:0;font-size:12px}.job .bar{margin:4px 0 2px}
+.grid.small{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px}
+.lt{padding:3px 8px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}.lt .nm{font-size:12px}.lt .sm{font-size:11px}
+.lt.run{grid-column:span 2}.lt pre.live{flex-basis:100%;max-height:3.9em;overflow:hidden}
+footer{margin-top:6px;font-size:11px;line-height:1.4}
 </style></head><body><main>
 <header class="top"><div><div class="ttl" id="title">שחרור photag</div><div class="mut">לוח בקרה לשחרור גרסה חדשה</div></div>
 <div class="live" id="live"><span class="dot"></span><span id="livetxt">טוען…</span></div></header>
@@ -316,9 +386,11 @@ footer{margin-top:22px;color:var(--mut);font-size:13px;line-height:1.7}footer .e
 </section>
 <section class="pipe" id="pipe"></section>
 <div class="explain" id="explain"></div>
+<div class="duo"><section class="log-card" id="logcard" style="display:none"><div class="lbl">יומן חי — מה קורה עכשיו</div><div class="now"><span id="lognow"></span><span class="ago" id="logago"></span></div><div class="stalemsg" id="logstale"></div><ul id="loglist"></ul></section>
+<section class="todo-card" id="todocard" style="display:none"><h3><span>משימות — כתיבת הקוד</span><span class="mut" id="todocount"></span></h3><div class="bar"><i id="todobar" style="width:0"></i></div><ul id="todolist"></ul></section></div>
 <h2>GitHub <span class="mut" style="text-transform:none;font-weight:400">— מה נבנה ונבדק עכשיו</span></h2>
 <div class="grid" id="jobs"></div>
-<h2>בדיקות במחשב שלך <span class="mut" style="text-transform:none;font-weight:400">— כל בדיקה מנסה עותק זמני של התוכנה</span></h2>
+<h2>בדיקות במחשב שלך <span class="mut" style="text-transform:none;font-weight:400">— כל בדיקה מנסה עותק זמני של התוכנה</span> <span id="stale-local" class="mut" style="text-transform:none;color:var(--warn)"></span></h2>
 <div class="grid small" id="local"></div>
 <footer id="foot"></footer>
 </main><script src="status-data.js"></script><script>
@@ -348,12 +420,29 @@ function render(){
   $('etatile').className = 'tile eta-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
   setText($('hero'), D.hero); setText($('sub'), D.sub || '');
   const jd = D.jobs.filter(j => j.state === 'done').length, ld = D.local.filter(t => t.state === 'done').length, sd = D.stages.filter(s => s.state === 'done').length;
+  const lg = D.activity || [];
+  $('logcard').style.display = lg.length ? '' : 'none';
+  if(lg.length){
+    setText($('lognow'), lg[0].text);
+    $('logago').dataset.at = lg[0].at;
+    setHtml($('loglist'), lg.slice(1, 8).map(x => `<li><span>${esc(x.text)}</span><span class="ago" data-at="${x.at}"></span></li>`).join(''));
+  }
+  const td = D.todo || [], tdDone = td.filter(x => x.state === 'done').length;
+  $('todocard').style.display = td.length ? '' : 'none';
+  $('todocard').className = 'todo-card' + (td.length && tdDone === td.length ? ' done' : '');
+  if(td.length){
+    setText($('todocount'), tdDone + ' מתוך ' + td.length);
+    $('todobar').style.width = Math.round(100 * tdDone / td.length) + '%';
+    setHtml($('todolist'), (tdDone ? `<li class="done"><span class="ic">✓</span><span>${tdDone} משימות הושלמו</span></li>` : '')
+      + td.filter(x => x.state !== 'done').map(x => `<li class="${x.state}"><span class="ic">${IC[x.state]}</span><span>${esc(x.text)}</span></li>`).join(''));
+  }
+  setText($('stale-local'), D.local_stale ? '— הורצו לפני השינויים האחרונים, צריך להריץ שוב' : '');
   setHtml($('counts'), `<div class="row"><span>שלבים</span><b>${sd}/${D.stages.length}</b></div><div class="row"><span>בדיקות במחשב</span><b>${D.local.length ? ld + '/' + D.local.length : '—'}</b></div><div class="row"><span>עבודות ב-GitHub</span><b>${D.jobs.length ? jd + '/' + D.jobs.length : '—'}</b></div><div class="row"><span>הגרסה האחרונה שפורסמה</span><b dir="ltr">${esc((D.recent||[])[0] || '—')}</b></div>`);
   setHtml($('pipe'), D.stages.map((s,i) => `<div class="stg ${s.state}" title="${esc(s.plain)}"><div class="n">${s.state==='done'?'✓':s.state==='fail'?'✕':i+1}</div><div><div class="t">${esc(s.name)}</div>${s.note?`<div class="s">${esc(s.note)}</div>`:''}${s.end?`<div class="s" data-end="${s.end}"></div>`:s.est?`<div class="mut">בערך ${mmss(s.est)}</div>`:''}</div></div>`).join(''));
   const act = D.stages.find(s => s.state === 'run') || D.stages.find(s => s.state === 'fail') || D.stages.find(s => s.state === 'todo');
   setText($('explain'), act ? 'מה קורה בשלב הזה: ' + act.plain : '');
   setHtml($('local'), D.local.length ? D.local.map(t => {
-    const run = t.state === 'run', sm = run ? `<span data-began="${t.began}" data-est="${t.estimate}"></span>` : t.state === 'todo' ? `בערך ${Math.round(t.estimate)} שנ׳` : `${esc(t.summary)}${t.seconds ? ' · ' + Math.round(t.seconds) + ' שנ׳' : ''}`;
+    const run = t.state === 'run', lv = t.live || {pass:0, fail:0, last:[]}, sm = run ? `<span data-began="${t.began}" data-est="${t.estimate}"></span><div><b>${lv.pass}</b> בדיקות עברו${lv.fail ? ` · <b style="color:var(--bad)">${lv.fail} נכשלו</b>` : ''}</div>${lv.last.length ? `<pre class="live" dir="ltr">${esc(lv.last.join('\n'))}</pre>` : ''}` : t.state === 'todo' ? `בערך ${Math.round(t.estimate)} שנ׳` : `${esc(t.summary)}${t.seconds ? ' · ' + Math.round(t.seconds) + ' שנ׳' : ''}`;
     return `<div class="lt ${t.state}"><div class="nm">${IC[t.state]} ${esc(t.name)}</div><div class="sm">${sm}</div>${t.detail ? `<pre>${esc(t.detail)}</pre>` : ''}</div>`; }).join('')
     : '<div class="empty">עוד לא הורצו בדיקות במחשב (tools/release_status/run_local_tests.py).</div>');
   const box = $('jobs');
@@ -374,9 +463,17 @@ function render(){
   }
   setHtml($('foot'), 'איך נראית גרסה חדשה: בודקים שהכול עובד ← שומרים ← מעלים לאינטרנט ← GitHub בודק ובונה את קובצי ההתקנה ← הגרסה מתפרסמת. אין צורך לעשות כלום — הלוח מתעדכן לבד.<br>גרסאות שפורסמו לאחרונה: <span dir="ltr">' + esc((D.recent||[]).join(' · ')) + '</span>' + (D.error ? `<div class="err">${esc(D.error)}</div>` : ''));
 }
+const agoText = s => s < 5 ? 'עכשיו' : s < 60 ? 'לפני ' + Math.round(s) + ' שניות' : s < 3600 ? 'לפני ' + Math.round(s / 60) + ' דקות' : 'לפני ' + Math.round(s / 3600) + ' שעות';
 function tick(){
   const now = Date.now() / 1000;
   if(!D) return;
+  document.querySelectorAll('[data-at]').forEach(e => setText(e, agoText(now - e.dataset.at)));
+  const act = D.activity || [];
+  if(act.length){
+    const old = now - act[0].at, quiet = old > 300 && !D.published;
+    $('logcard').classList.toggle('stale', quiet);
+    setText($('logstale'), quiet ? 'אין עדכון חדש ביומן כבר ' + Math.round(old / 60) + ' דקות — ייתכן שהעבודה ממתינה, ואפשר לשאול אותי.' : '');
+  }
   const age = now - D.at, live = $('live');
   const cls = 'live' + (age > 60 ? ' dead' : age > 15 ? ' stale' : '');
   if(live.className !== cls) live.className = cls;
@@ -387,17 +484,25 @@ function tick(){
     const left = D.eta_end - now;
     setText($('etabig'), left > 0 ? mmss(left) : 'עוד רגע…');
     setText($('etasub'), `בדיקות במחשב ~${mmss(D.local_left)} · בנייה ב-GitHub ~${mmss(D.gh_left)} · לפי שחרורים קודמים (~${mmss(D.typical)})`);
-  } else { setText($('etabig'), D.published ? '✓' : '✕'); setText($('etasub'), D.published ? 'הגרסה באוויר' : 'משהו נכשל — ראו בכרטיס האדום'); }
+  } else if(D.coding){ setText($('etabig'), '—'); setText($('etasub'), 'הטיימר יתחיל אחרי שהקוד נכתב ונבדק'); }
+  else if(D.waiting){ setText($('etabig'), '—'); setText($('etasub'), 'הטיימר יתחיל כשיופעל שחרור ב-GitHub'); }
+  else { setText($('etabig'), D.published ? '✓' : '✕'); setText($('etasub'), D.published ? 'הגרסה באוויר' : 'משהו נכשל — ראו בכרטיס האדום'); }
   document.querySelectorAll('[data-began][data-est]').forEach(e => setText(e, 'רץ ' + Math.round(now - e.dataset.began) + ' שנ׳ מתוך ~' + Math.round(e.dataset.est)));
   document.querySelectorAll('[data-began]:not([data-est])').forEach(e => setText(e, 'רץ ' + mmss(now - e.dataset.began)));
   document.querySelectorAll('[data-end]').forEach(e => { const l = e.dataset.end - now; setText(e, l > 0 ? 'נשאר ~' + mmss(l) : 'עוד רגע…'); });
 }
+function fit(){
+  const b = document.body; b.style.zoom = 1;
+  const h = document.documentElement.scrollHeight, v = window.innerHeight;
+  if(h > v + 2) b.style.zoom = Math.max(0.55, (v - 2) / h);
+}
+window.addEventListener('resize', fit);
 function load(){
   const s = document.createElement('script'); s.src = 'status-data.js?t=' + Date.now();
-  s.onload = () => { if(window.STATUS && (!D || window.STATUS.at !== D.at)){ D = window.STATUS; render(); } s.remove(); };
+  s.onload = () => { if(window.STATUS && (!D || window.STATUS.at !== D.at)){ D = window.STATUS; render(); fit(); } s.remove(); };
   s.onerror = () => s.remove(); document.head.appendChild(s);
 }
-D = window.STATUS || null; render(); tick();
+D = window.STATUS || null; render(); tick(); fit();
 requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('ready')));
 setInterval(load, 2000); setInterval(tick, 1000);
 </script></body></html>"""

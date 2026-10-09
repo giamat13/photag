@@ -1571,5 +1571,8 @@
  "Day of week": "יום בשבוע",
  "Time of day": "שעה ביום",
  "Resolution (megapixels)": "רזולוציה (מגה-פיקסל)",
- "Added to the library: from": "נוספו לספרייה: מתאריך"
+ "Added to the library: from": "נוספו לספרייה: מתאריך",
+ "Surprise Me": "הפתע אותי",
+ "No photos to choose from": "אין תמונות לבחור מהן",
+ "Jump to a random photo from the current list (Shift+R)": "קפיצה לתמונה אקראית מהרשימה הנוכחית (Shift+R)"
 }
