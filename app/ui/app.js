@@ -1,4 +1,4 @@
-/* photag — the Library / Develop / Slideshow window.
+/* photag — the Library / Edit / Slideshow window.
    One page, no framework. State lives in S; the grid and filmstrip are
    virtualized so catalogs with tens of thousands of photos stay smooth. */
 'use strict';
@@ -2742,7 +2742,7 @@ async function memories(){
 function shortcuts(){
   const k=(key,tg)=>`<kbd>${key}</kbd><span>${tg}</span>`;
   modal(`<h3>${t("Keyboard Shortcuts")}</h3><div class="mb"><div class="kgrid">
-    <h4>${t("Views")}</h4>${k('G',t('Grid'))}${k('E',t('Loupe'))}${k('C',t('Compare'))}${k('N',t('Survey'))}${k('O',t('People'))}${k('D',t('Develop Module'))}${k('Ctrl+Enter',t('Slideshow'))}${k('Esc',t('Back / Exit'))}
+    <h4>${t("Views")}</h4>${k('G',t('Grid'))}${k('E',t('Loupe'))}${k('C',t('Compare'))}${k('N',t('Survey'))}${k('O',t('People'))}${k('D',t('Edit Module'))}${k('Ctrl+Enter',t('Slideshow'))}${k('Esc',t('Back / Exit'))}
     <h4>${t("Rating and Flagging")}</h4>${k('P',t('Flag as Pick'))}${k('X',t('Flag as Rejected'))}${k('U',t('Remove Flag'))}${k('`',t('Toggle Flag'))}${k('0–5',t('Star Rating'))}${k('[ / ]',t('Decrease / Increase Rating'))}${k('6–9',t('Label Red/Yellow/Green/Blue'))}${k(t('Shift+key'),t('Mark and Go to Next'))}${k('B',t('Quick Collection'))}${k('Ctrl+B',t('Show Quick Collection'))}
     <h4>${t("Selection")}</h4>${k('Ctrl+A',t('Select All'))}${k('Ctrl+D',t('Deselect'))}${k(t('Ctrl+click'),t('Add to Selection'))}${k(t('Shift+click'),t('Select Range'))}${k('← → ↑ ↓',t('Move Between Photos'))}${k('Delete',t('Move to Trash'))}${k('Ctrl+Z',t('Undo'))}${k('Ctrl+Y',t('Redo'))}
     <h4>${t("Interface")}</h4>${k('Tab',t('Hide Side Panels'))}${k('Shift+Tab',t('Hide All Panels'))}${k('F5 / F6',t('Top Panel / Filmstrip'))}${k('F7 / F8',t('Right / Left Panel'))}${k('T',t('Toolbar'))}${k('L',t('Lights Out'))}${k('J',t('Grid Cell Style'))}${k('I',t('Loupe Info'))}${k('\\\\',t('Filter Bar / Before-After'))}${k('Ctrl+L',t('Enable/Disable Filters'))}${k('Ctrl+F',t('Text Search'))}${k(t('Z / Space'),t('Zoom 1:1'))}
@@ -3109,7 +3109,7 @@ const MENUS = [
     [t('Language') + (I18N.lang==='en' ? '' : ' / Language') + '...', '', languageDialog],
     sep,
     [t('Grid'), 'G', ()=>setView('grid')], [t('Loupe'), 'E', ()=>setView('loupe')], [t('Compare'), 'C', ()=>setView('compare')],
-    [t('Survey'), 'N', ()=>setView('survey')], [t('People'), 'O', ()=>setView('people')], [t('Map'), '', ()=>setView('map')], [t('Timeline'), '', ()=>setView('timeline')], [t('Develop'), 'D', ()=>setModule('develop')],
+    [t('Survey'), 'N', ()=>setView('survey')], [t('People'), 'O', ()=>setView('people')], [t('Map'), '', ()=>setView('map')], [t('Timeline'), '', ()=>setView('timeline')], [t('Edit'), 'D', ()=>setModule('develop')],
     [t('Slideshow'), 'Ctrl+Enter', ssStart],
     sep,
     [t('Cycle Grid Cell Style'), 'J', cycleCellStyle],
@@ -3671,7 +3671,7 @@ function paletteItems(){
     if(!it || it===sep || typeof it[2]!=='function' || it[2]===collectionItems) return;
     out.push({kind:'cmd', label:String(it[0]).replace(/<[^>]*>/g,''), hint:[menu, it[1]].filter(Boolean).join('  ·  '), run:it[2]});
   }));
-  [['grid',t('Grid')],['loupe',t('Loupe')],['compare',t('Compare')],['survey',t('Survey')],['people',t('People')],['develop',t('Develop Module')]].forEach(([v,n])=>
+  [['grid',t('Grid')],['loupe',t('Loupe')],['compare',t('Compare')],['survey',t('Survey')],['people',t('People')],['develop',t('Edit Module')]].forEach(([v,n])=>
     out.push({kind:'view', label:n, hint:t('View'), run:()=>setView(v)}));
   const go = (key, name) => out.push({kind:'place', label:name, hint:t('Go to'), run:()=>{ const src = srcFromKey(key); if(name) src.name = name; setSource(src); }});
   [['all',t('All Photographs')],['quick',t('Quick Collection')],['prev',t('Previous Import')],['trash',t('Trash')],['otd',t('On This Day')]].forEach(([k,n])=>go(k,n));

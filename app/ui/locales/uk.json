@@ -1316,5 +1316,6 @@
  "Nothing selected": "Нічого не вибрано",
  "Could not prepare the pictures": "Не вдалося підготувати зображення",
  "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.": "Lightroom — торговельна марка Adobe; photag не пов’язаний з Adobe.",
- "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "Локальне керування фотографіями та їх зберігання: каталог, колекції, прапорці, оцінки, кольорові мітки, ключові слова, розпізнавання облич і неруйнівне редагування — оригінал завжди зберігається."
+ "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "Локальне керування фотографіями та їх зберігання: каталог, колекції, прапорці, оцінки, кольорові мітки, ключові слова, розпізнавання облич і неруйнівне редагування — оригінал завжди зберігається.",
+ "Edit Module": "Модуль «Редагування»"
 }

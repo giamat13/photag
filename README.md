@@ -5,7 +5,7 @@ color labels, keywords, face recognition and non-destructive editing (the origin
 The interface is available in 17 languages (English by default). A Hebrew version of this file is in [README.he.md](README.he.md).
 
 ## What's inside
-- **A photo-manager interface** — Library, Develop and Slideshow modules; grid, loupe, compare, survey and people views;
+- **A photo-manager interface** — Library, Edit and Slideshow modules; grid, loupe, compare, survey and people views;
   filmstrip, library filter and keyboard shortcuts for rating, flagging and moving between photos.
 - **AI tagging (optional, with your own key)** — an "AI tagging" button next to the keywords. Providers: OpenAI, Claude (Anthropic),
   Gemini (Google), OpenRouter (one key for dozens of providers) and any OpenAI-compatible server (Groq, Together, local Ollama…).

@@ -1316,5 +1316,6 @@
  "Nothing selected": "선택된 항목이 없습니다",
  "Could not prepare the pictures": "사진을 준비하지 못했습니다",
  "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.": "Lightroom은 Adobe의 상표입니다. photag는 Adobe와 관련이 없습니다.",
- "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "로컬 사진 관리 및 저장: 카탈로그, 컬렉션, 플래그, 별점, 색상 라벨, 키워드, 얼굴 감지, 비파괴 편집 — 원본은 항상 보존됩니다."
+ "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "로컬 사진 관리 및 저장: 카탈로그, 컬렉션, 플래그, 별점, 색상 라벨, 키워드, 얼굴 감지, 비파괴 편집 — 원본은 항상 보존됩니다.",
+ "Edit Module": "편집 모듈"
 }

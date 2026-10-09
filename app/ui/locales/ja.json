@@ -1316,5 +1316,6 @@
  "Nothing selected": "何も選択されていません",
  "Could not prepare the pictures": "画像を準備できませんでした",
  "Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.": "Lightroom は Adobe の商標です。photag は Adobe とは関係ありません。",
- "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "ローカルの写真管理と保存：カタログ、コレクション、フラグ、評価、カラーラベル、キーワード、顔検出、元に戻せる編集 — 元のファイルは常に保持されます。"
+ "Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.": "ローカルの写真管理と保存：カタログ、コレクション、フラグ、評価、カラーラベル、キーワード、顔検出、元に戻せる編集 — 元のファイルは常に保持されます。",
+ "Edit Module": "編集モジュール"
 }
