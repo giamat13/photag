@@ -3703,6 +3703,10 @@ $('#import').addEventListener('change', e=>{
 });
 
 // ---------- background jobs (activity indicator in the identity plate) ----------
+async function mergePhotos(kind){
+  const ids = targets(); if(ids.length < 2) return toast(t('Choose at least two photos to merge'));
+  runJob('/api/merge', 'merge', kind==='hdr' ? t('Merge to HDR') : t('Merge to panorama'), {ids, kind});
+}
 async function runJob(url, name, label, body){ await send('POST', url, body); pollJob(name, label); }
 async function pollJob(name, label){
   let p; try{ p=await api('/api/job/'+name); }catch{ return; }
@@ -3721,8 +3725,9 @@ async function pollJob(name, label){
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
-    if(['import','faces','aitag','compress','backup','refscan','analysis'].includes(name)){
+    if(['import','faces','aitag','compress','backup','refscan','analysis','merge'].includes(name)){
       await reloadAll();
+      if(name==='merge' && p.state==='done' && p.result) selectOnly(p.result.id);
       if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
       if(S.view==='people') renderPeople();
       if(name==='aitag' || name==='backup') renderRight();
@@ -3810,6 +3815,9 @@ const MENUS = [
     [t('No Label'), '', ()=>setAttr({label:''})],
     sep,
     [t('Rank Selected Photos'), '', rankSelected],
+    sep,
+    [t('Merge to HDR…'), '', ()=>mergePhotos('hdr')],
+    [t('Merge to panorama…'), '', ()=>mergePhotos('pano')],
     sep,
     [t('Copy settings…'), 'Ctrl+Shift+C', ()=>copySettings('copy')],
     [t('Paste settings'), 'Ctrl+Shift+V', ()=>pasteSettings()],

@@ -286,7 +286,8 @@ def wallpaper(token: str) -> bool:
 
 
 TONE_RANGES = {"exposure": (-4.0, 4.0), "highlights": (-100, 100), "shadows": (-100, 100), "temperature": (-100, 100), "tint": (-100, 100),
-               "vibrance": (-100, 100), "sharpness": (0, 100), "vignette": (-100, 100), "clarity": (-100, 100)}
+               "vibrance": (-100, 100), "sharpness": (0, 100), "vignette": (-100, 100), "clarity": (-100, 100),
+               "whites": (-100, 100), "blacks": (-100, 100), "texture": (-100, 100), "dehaze": (-100, 100), "grain": (0, 100), "nr_lum": (0, 100), "nr_color": (0, 100)}
 
 
 def clean_ops(ops: dict) -> dict:

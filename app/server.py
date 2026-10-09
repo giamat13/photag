@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
+from . import merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -1452,6 +1452,20 @@ def snapshots_delete(pid: int, i: int):
     return {"ok": True}
 
 
+class MergeIn(BaseModel):
+    ids: list[int]
+    kind: str = "hdr"
+
+
+@app.post("/api/merge")
+def start_merge(b: MergeIn):
+    """Photo merge: HDR (exposure fusion) or panorama; the result is added to the library as a new photo."""
+    if b.kind not in ("hdr", "pano"):
+        raise err(400, "Cannot edit")
+    _start("merge", merge.run, b.ids, b.kind)
+    return {"ok": True}
+
+
 @app.get("/api/photo/{pid}/upright")
 def upright_suggest(pid: int, mode: str = "auto"):
     """What the picture needs to look upright: rotate (degrees), persp_v, persp_h (the Edit module's settings), worked out from its lines."""
@@ -1917,6 +1931,13 @@ class ViewerEditIn(BaseModel):
     sharpness: float = 0.0
     vignette: float = 0.0
     clarity: float = 0.0
+    whites: float = 0.0
+    blacks: float = 0.0
+    texture: float = 0.0
+    dehaze: float = 0.0
+    grain: float = 0.0
+    nr_lum: float = 0.0
+    nr_color: float = 0.0
 
 
 @app.get("/api/viewer/{token}/list")
