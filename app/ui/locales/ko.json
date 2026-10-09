@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "무엇이 잘못되었는지 또는 무엇을 원하는지 알려 주세요. GitHub가 작성된 메시지와 함께 열립니다. 보내려면 GitHub 계정이 필요합니다.",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "무엇이 잘못되었는지 또는 무엇을 원하는지 알려 주세요. 메시지는 photag 개발자에게 전달되며 GitHub에 공개로 표시됩니다. 계정은 필요 없습니다.",
  "Thank you! Your suggestion was sent (#{0}).": "감사합니다! 제안을 보냈습니다 (#{0}).",
- "What would you like photag to do?": "photag가 무엇을 해 주면 좋겠나요?"
+ "What would you like photag to do?": "photag가 무엇을 해 주면 좋겠나요?",
+ "Find": "찾기",
+ "Place not found": "장소를 찾을 수 없습니다",
+ "The place search needs an internet connection": "장소 검색에는 인터넷 연결이 필요합니다",
+ "The text you type is sent to OpenStreetMap to find the place": "입력한 텍스트는 장소를 찾기 위해 OpenStreetMap으로 전송됩니다",
+ "City, address, country or coordinates": "도시, 주소, 국가 또는 좌표",
+ "Draw an area on the map": "지도에서 영역 그리기"
 }

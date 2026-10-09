@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "Sagen Sie uns, was schiefgegangen ist oder was Sie sich wünschen. GitHub öffnet sich mit Ihrer ausgefüllten Nachricht; zum Senden brauchen Sie ein GitHub-Konto.",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Sagen Sie uns, was schiefgegangen ist oder was Sie sich wünschen. Die Nachricht geht an die photag-Entwickler und erscheint öffentlich auf GitHub; ein Konto ist nicht nötig.",
  "Thank you! Your suggestion was sent (#{0}).": "Danke! Ihr Vorschlag wurde gesendet (#{0}).",
- "What would you like photag to do?": "Was soll photag können?"
+ "What would you like photag to do?": "Was soll photag können?",
+ "Find": "Finden",
+ "Place not found": "Ort nicht gefunden",
+ "The place search needs an internet connection": "Die Ortssuche braucht eine Internetverbindung",
+ "The text you type is sent to OpenStreetMap to find the place": "Der eingegebene Text wird an OpenStreetMap gesendet, um den Ort zu finden",
+ "City, address, country or coordinates": "Stadt, Adresse, Land oder Koordinaten",
+ "Draw an area on the map": "Bereich auf der Karte zeichnen"
 }

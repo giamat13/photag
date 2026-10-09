@@ -52,7 +52,7 @@ const S = {
   sort:pref.get('sort','capture'), asc:pref.get('asc',false),
   fb:'none',
   F:{on:true, q:'', qf:'any', flags:new Set(), rop:'>=', rating:0, labels:new Set(), kinds:new Set(),
-     meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set(), place:new Set()}},
+     meta:{year:new Set(), month:new Set(), ext:new Set(), orient:new Set()}},
   cell:pref.get('cellStyle','compact'), cellsz:pref.get('cellsz',180), loupeInfo:true, lights:0,
   stackBursts:pref.get('stackBursts', false), bursts:null,
   status:null, albums:[], folders:{root:'', folders:[]}, tags:[], people:[], searches:[],
@@ -134,8 +134,6 @@ async function fetchSource(){
 const yearOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getFullYear()) : t('None');
 const monthOf = p => p.taken_at ? String(new Date(p.taken_at*1000).getMonth()+1).padStart(2,'0') : t('None');
 const orientOf = p => !p.width||!p.height ? t('Unknown') : p.width>p.height*1.05 ? t('Landscape') : p.height>p.width*1.05 ? t('Portrait') : t('Square');
-// the place of a photo: its GPS position to 0.1 degree (about 11 km), nothing is looked up online
-const placeOf = p => p.lat==null || p.lng==null ? t('None') : `${Math.abs(p.lat).toFixed(1)}°${p.lat>=0?'N':'S'} ${Math.abs(p.lng).toFixed(1)}°${p.lng>=0?'E':'W'}`;
 const flagKey = p => p.flag===1 ? 'pick' : p.flag===-1 ? 'rej' : 'none';
 function passAttr(p){
   const F = S.F;
@@ -148,7 +146,7 @@ function passAttr(p){
   if(F.kinds.size && !((F.kinds.has('photo')&&!p.is_video) || (F.kinds.has('video')&&p.is_video) || (F.kinds.has('edited')&&p.edited))) return false;
   return true;
 }
-const META_COLS = [['year',t('Date'),yearOf],['month',t('Month'),monthOf],['ext',t('File Type'),ext],['orient',t('Orientation'),orientOf],['place',t('Location'),placeOf]];
+const META_COLS = [['year',t('Date'),yearOf],['month',t('Month'),monthOf],['ext',t('File Type'),ext],['orient',t('Orientation'),orientOf]];
 function passMeta(p, upto=META_COLS.length){
   for(let i=0;i<upto;i++){ const [k,,fn]=META_COLS[i]; const set=S.F.meta[k]; if(set.size && !set.has(fn(p))) return false; }
   return true;
@@ -735,11 +733,24 @@ function searchPass(c){
     if(maxF && !(p.focal_length && p.focal_length<=maxF)) return false;
     if(pl){
       if(p.lat==null || p.lng==null) return false;
+      if(pl.box){                                     // a city / country found by name: inside its box (it may cross the 180th meridian)
+        const [s, n, w, e] = pl.box;
+        return p.lat>=s && p.lat<=n && (w<=e ? p.lng>=w && p.lng<=e : p.lng>=w || p.lng<=e);
+      }
       const a = Math.sin((p.lat-pl.lat)*R/2)**2 + Math.cos(pl.lat*R)*Math.cos(p.lat*R)*Math.sin((p.lng-pl.lng)*R/2)**2;
       if(12742*Math.asin(Math.min(1, Math.sqrt(a))) > pl.km) return false;
     }
     return true;
   };
+}
+// "32.08, 34.78", "32.08 34.78", "32.08°N 34.78°E", "-33.9; 151.2" (a decimal point; N/S/E/W signs are understood)
+function parseCoords(q){
+  const m = q.match(/^\s*([+-]?\d{1,3}(?:\.\d+)?)\s*°?\s*([NSns])?\s*[,;\s]\s*([+-]?\d{1,3}(?:\.\d+)?)\s*°?\s*([EWew])?\s*$/);
+  if(!m) return null;
+  let lat = +m[1], lng = +m[3];
+  if(m[2] && m[2].toUpperCase()==='S') lat = -Math.abs(lat);
+  if(m[4] && m[4].toUpperCase()==='W') lng = -Math.abs(lng);
+  return Math.abs(lat)<=90 && Math.abs(lng)<=180 ? [lat, lng] : null;
 }
 function advancedSearch(){
   const cur = S.src.kind==='search' ? S.src.crit : SEARCH_TMP;
@@ -753,8 +764,10 @@ function advancedSearch(){
     if(!map || !$('#as-map')) return;
     if(marker){ map.removeLayer(marker); marker = null; } if(circle){ map.removeLayer(circle); circle = null; }
     if(c.place){ marker = L.marker([c.place.lat, c.place.lng], {icon: pinIcon(1), interactive:false}).addTo(map);
-      circle = L.circle([c.place.lat, c.place.lng], {radius: c.place.km*1000, color:'#4a90d9', weight:2, fillOpacity:.12}).addTo(map); }
-    $('#as-place-note').textContent = c.place ? t('{0} km around the chosen place', [c.place.km]) : t('Click the map to choose a place');
+      circle = c.place.box ? L.rectangle([[c.place.box[0], c.place.box[2]], [c.place.box[1], c.place.box[3]]], {color:'#4a90d9', weight:2, fillOpacity:.12}).addTo(map)
+        : L.circle([c.place.lat, c.place.lng], {radius: c.place.km*1000, color:'#4a90d9', weight:2, fillOpacity:.12}).addTo(map); }
+    $('#as-km').disabled = !!(c.place && c.place.box);
+    $('#as-place-note').textContent = c.place ? (c.place.name ? c.place.name : t('{0} km around the chosen place', [c.place.km])) : t('Click the map to choose a place');
   };
   modal(`<h3>${t('Advanced Search')}</h3><div class="mb as">
     <div class="two"><label class="fld"><span>${t('Date taken: from')}</span><input type="date" id="as-from" dir="ltr" value="${esc(c.from)}"></label>
@@ -770,19 +783,36 @@ function advancedSearch(){
     <div class="two"><label class="fld"><span>${t('Focal length (mm)')} · ${t('at least')}</span><input type="number" id="as-fmin" min="0" step="any" dir="ltr" value="${esc(c.minFocal)}"></label>
       <label class="fld"><span>${t('at most')}</span><input type="number" id="as-fmax" min="0" step="any" dir="ltr" value="${esc(c.maxFocal)}"></label></div>
     <div class="fld"><span>${t('Near a place on the map')}</span>
+      <div class="frow"><input type="text" id="as-q" style="flex:1" placeholder="${t('City, address, country or coordinates')}" title="${t('The text you type is sent to OpenStreetMap to find the place')}"><button type="button" id="as-find">${t('Find')}</button></div>
       <div id="as-map" class="as-map" dir="ltr"></div>
       <div class="frow"><span class="hint" id="as-place-note" style="padding:0;flex:1"></span>
         <select id="as-km">${SEARCH_RADII.map(r=>`<option value="${r}">${r} km</option>`).join('')}</select>
+        <button type="button" id="as-draw" class="tg" title="${t('Draw an area on the map')}">${I('crop')}</button>
         <button type="button" id="as-here" title="${t('Use the place of the selected photo')}">${I('pin')}</button><button type="button" id="as-noplace">${t('Clear')}</button></div></div>
   </div><div class="mf"><button id="as-clear">${t('Clear Filter')}</button><span class="spacer"></span><button id="as-save">${t('Save')}…</button><button class="primary" id="as-go">${t('Search')}</button></div>`);
   $('#as-kind').value = c.kind; $('#as-km').value = String(c.place ? c.place.km : 5);
   const read = () => ({from:$('#as-from').value, to:$('#as-to').value, kind:$('#as-kind').value,
-    exts:$$('#as-exts .on').map(b=>b.dataset.x), minMB:+$('#as-min').value||'', maxMB:+$('#as-max').value||'', place:c.place ? {...c.place, km:km()} : null,
+    exts:$$('#as-exts .on').map(b=>b.dataset.x), minMB:+$('#as-min').value||'', maxMB:+$('#as-max').value||'', place:c.place ? (c.place.box ? {...c.place} : {...c.place, km:km()}) : null,
     cameras:$$('#as-cams .on').map(b=>b.dataset.x), lenses:$$('#as-lenses .on').map(b=>b.dataset.x),
     minFocal:+$('#as-fmin').value||'', maxFocal:+$('#as-fmax').value||''});
   $('#as-exts').onclick = e=>{ const b=e.target.closest('[data-x]'); if(b) b.classList.toggle('on'); };
   $('.modal-box').addEventListener('click', e=>{ const b=e.target.closest('#as-cams [data-x],#as-lenses [data-x]'); if(b) b.classList.toggle('on'); });
   $('#as-km').onchange = ()=>{ if(c.place){ c.place.km = km(); draw(); } };
+  const find = async ()=>{
+    const q = $('#as-q').value.trim(); if(!q) return;
+    const xy = parseCoords(q);                                   // "32.08, 34.78" / "32.08N 34.78E": no network needed
+    if(xy){ c.place = {lat:xy[0], lng:xy[1], km:km() || 5, name:`${xy[0].toFixed(5)}, ${xy[1].toFixed(5)}`}; map.setView(xy, 12); draw(); return; }
+    let r; try{ r = await api('/api/geocode?q='+encodeURIComponent(q)+'&lang='+encodeURIComponent(I18N.locale||'en')); }
+    catch(e){ toast(e.message || t('Place not found'), 3000); return; }
+    c.place = {lat:r.lat, lng:r.lng, km:r.box ? 0 : 1, name:r.name};
+    if(r.box){ c.place.box = r.box; map.fitBounds([[r.box[0], r.box[2]], [r.box[1], r.box[3]]]); } else { $('#as-km').value = '1'; map.setView([r.lat, r.lng], 13); }
+    draw();
+  };
+  $('#as-find').onclick = find;
+  let drawing = false, start = null, rect = null, drewAt = 0;
+  const stopDraw = ()=>{ drawing = false; start = null; if(rect){ map.removeLayer(rect); rect = null; } $('#as-draw').classList.remove('on'); map.dragging.enable(); map.getContainer().style.cursor = ''; };
+  $('#as-draw').onclick = ()=>{ if(drawing){ stopDraw(); return; } drawing = true; $('#as-draw').classList.add('on'); map.dragging.disable(); map.getContainer().style.cursor = 'crosshair'; };
+  $('#as-q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); find(); } });
   $('#as-noplace').onclick = ()=>{ c.place = null; draw(); };
   $('#as-here').onclick = ()=>{ const p = actPhoto(); if(!p || p.lat==null){ toast(t('The selected photos have no location'), 2200); return; }
     c.place = {lat:p.lat, lng:p.lng, km:km()}; map.setView([p.lat, p.lng], 11); draw(); };
@@ -803,7 +833,18 @@ function advancedSearch(){
   $('#as-clear').onclick = ()=>{ SEARCH_TMP = null; closeModal(); if(S.src.kind==='search' && S.src.id==='tmp') setSource(srcFromKey('all')); };
   map = L.map('as-map', {zoomControl:true, worldCopyJump:true}).setView(c.place ? [c.place.lat, c.place.lng] : [31.8, 35.0], c.place ? 10 : 3);
   mapTiles(()=>{ const n = $('#as-place-note'); if(n) n.textContent = t('No internet connection, so map tiles can\'t load. The pins are still shown.'); }).addTo(map);
-  map.on('click', e=>{ c.place = {lat:e.latlng.lat, lng:e.latlng.lng, km:km()}; draw(); });
+  map.on('click', e=>{ if(drawing || Date.now()-drewAt < 400) return; c.place = {lat:e.latlng.lat, lng:e.latlng.lng, km:km() || 5}; draw(); });
+  map.on('mousedown', e=>{ if(!drawing) return; start = e.latlng; rect = L.rectangle([start, start], {color:'#4a90d9', weight:2, fillOpacity:.12}).addTo(map); });
+  map.on('mousemove', e=>{ if(drawing && start && rect) rect.setBounds([start, e.latlng]); });
+  map.on('mouseup', e=>{
+    if(!drawing || !start) return;
+    const b = L.latLngBounds(start, e.latlng); stopDraw(); drewAt = Date.now();
+    if(Math.abs(b.getNorth()-b.getSouth()) < 1e-4 && Math.abs(b.getEast()-b.getWest()) < 1e-4) return;     // a click, not a drag
+    const sw = map.wrapLatLng(b.getSouthWest()), ne = map.wrapLatLng(b.getNorthEast());
+    c.place = {lat:b.getCenter().lat, lng:map.wrapLatLng(b.getCenter()).lng, km:0, box:[sw.lat, ne.lat, sw.lng, ne.lng],
+               name:`${sw.lat.toFixed(4)}, ${sw.lng.toFixed(4)} → ${ne.lat.toFixed(4)}, ${ne.lng.toFixed(4)}`};
+    draw();
+  });
   setTimeout(()=>{ map.invalidateSize(); draw(); }, 60);
 }
 

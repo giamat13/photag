@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "请告诉我们出了什么问题或您想要什么。GitHub 会打开并填好您的消息；发送需要 GitHub 账号。",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "请告诉我们出了什么问题或您想要什么。消息会发送给 photag 开发者，并公开显示在 GitHub 上；无需账号。",
  "Thank you! Your suggestion was sent (#{0}).": "谢谢！您的建议已发送 (#{0})。",
- "What would you like photag to do?": "您希望 photag 做什么？"
+ "What would you like photag to do?": "您希望 photag 做什么？",
+ "Find": "查找",
+ "Place not found": "未找到该地点",
+ "The place search needs an internet connection": "查找地点需要联网",
+ "The text you type is sent to OpenStreetMap to find the place": "您输入的文字会发送到 OpenStreetMap 以查找地点",
+ "City, address, country or coordinates": "城市、地址、国家或坐标",
+ "Draw an area on the map": "在地图上绘制区域"
 }

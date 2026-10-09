@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "ספר לנו מה השתבש או מה היית רוצה. GitHub ייפתח עם ההודעה מוכנה; כדי לשלוח אותה צריך חשבון GitHub.",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "ספר לנו מה השתבש או מה היית רוצה. ההודעה מגיעה למפתחי photag ומופיעה בפומבי ב-GitHub; אין צורך בחשבון.",
  "Thank you! Your suggestion was sent (#{0}).": "תודה! ההצעה נשלחה (#{0}).",
- "What would you like photag to do?": "מה היית רוצה ש-photag יעשה?"
+ "What would you like photag to do?": "מה היית רוצה ש-photag יעשה?",
+ "Find": "חפש",
+ "Place not found": "המקום לא נמצא",
+ "The place search needs an internet connection": "חיפוש מקום דורש חיבור לאינטרנט",
+ "The text you type is sent to OpenStreetMap to find the place": "הטקסט שמקלידים נשלח אל OpenStreetMap כדי למצוא את המקום",
+ "City, address, country or coordinates": "עיר, כתובת, מדינה או קואורדינטות",
+ "Draw an area on the map": "סמן אזור על המפה"
 }

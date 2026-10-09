@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "何が起きたか、または何を望むかを教えてください。GitHub が入力済みのメッセージで開きます。送信には GitHub アカウントが必要です。",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "何が起きたか、または何を望むかを教えてください。メッセージは photag の開発者に届き、GitHub 上で公開されます。アカウントは不要です。",
  "Thank you! Your suggestion was sent (#{0}).": "ありがとうございます！提案を送信しました (#{0})。",
- "What would you like photag to do?": "photag に何をしてほしいですか？"
+ "What would you like photag to do?": "photag に何をしてほしいですか？",
+ "Find": "検索",
+ "Place not found": "場所が見つかりません",
+ "The place search needs an internet connection": "場所の検索にはインターネット接続が必要です",
+ "The text you type is sent to OpenStreetMap to find the place": "入力したテキストは場所を探すために OpenStreetMap に送信されます",
+ "City, address, country or coordinates": "都市、住所、国、または座標",
+ "Draw an area on the map": "地図上で範囲を描く"
 }

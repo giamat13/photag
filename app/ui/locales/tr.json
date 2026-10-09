@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "Neyin ters gittiğini ya da ne istediğinizi anlatın. GitHub, mesajınız doldurulmuş olarak açılır; göndermek için bir GitHub hesabı gerekir.",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Neyin ters gittiğini ya da ne istediğinizi anlatın. Mesaj photag geliştiricilerine ulaşır ve GitHub’da herkese açık görünür; hesap gerekmez.",
  "Thank you! Your suggestion was sent (#{0}).": "Teşekkürler! Öneriniz gönderildi (#{0}).",
- "What would you like photag to do?": "photag’ın ne yapmasını istersiniz?"
+ "What would you like photag to do?": "photag’ın ne yapmasını istersiniz?",
+ "Find": "Bul",
+ "Place not found": "Yer bulunamadı",
+ "The place search needs an internet connection": "Yer araması için internet bağlantısı gerekir",
+ "The text you type is sent to OpenStreetMap to find the place": "Yazdığınız metin, yeri bulmak için OpenStreetMap'e gönderilir",
+ "City, address, country or coordinates": "Şehir, adres, ülke veya koordinatlar",
+ "Draw an area on the map": "Haritada alan çiz"
 }

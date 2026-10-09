@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "Vertel ons wat er misging of wat je graag wilt. GitHub opent met je ingevulde bericht; om te verzenden heb je een GitHub-account nodig.",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Vertel ons wat er misging of wat je graag wilt. Het bericht gaat naar de photag-ontwikkelaars en verschijnt openbaar op GitHub; een account is niet nodig.",
  "Thank you! Your suggestion was sent (#{0}).": "Bedankt! Je voorstel is verzonden (#{0}).",
- "What would you like photag to do?": "Wat wil je dat photag doet?"
+ "What would you like photag to do?": "Wat wil je dat photag doet?",
+ "Find": "Zoeken",
+ "Place not found": "Plaats niet gevonden",
+ "The place search needs an internet connection": "Plaatsen zoeken vereist een internetverbinding",
+ "The text you type is sent to OpenStreetMap to find the place": "De ingevoerde tekst wordt naar OpenStreetMap gestuurd om de plaats te vinden",
+ "City, address, country or coordinates": "Stad, adres, land of coördinaten",
+ "Draw an area on the map": "Teken een gebied op de kaart"
 }

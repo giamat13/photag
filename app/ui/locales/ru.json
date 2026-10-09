@@ -1552,5 +1552,11 @@
  "Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.": "Расскажите, что пошло не так или чего бы вы хотели. Откроется GitHub с готовым сообщением; чтобы отправить его, нужна учётная запись GitHub.",
  "Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.": "Расскажите, что пошло не так или чего бы вы хотели. Сообщение попадёт к разработчикам photag и будет публично видно на GitHub; учётная запись не нужна.",
  "Thank you! Your suggestion was sent (#{0}).": "Спасибо! Ваше предложение отправлено (#{0}).",
- "What would you like photag to do?": "Что бы вы хотели, чтобы делал photag?"
+ "What would you like photag to do?": "Что бы вы хотели, чтобы делал photag?",
+ "Find": "Найти",
+ "Place not found": "Место не найдено",
+ "The place search needs an internet connection": "Для поиска места нужно подключение к интернету",
+ "The text you type is sent to OpenStreetMap to find the place": "Введённый текст отправляется в OpenStreetMap для поиска места",
+ "City, address, country or coordinates": "Город, адрес, страна или координаты",
+ "Draw an area on the map": "Нарисовать область на карте"
 }

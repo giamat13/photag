@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
+from . import geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -738,6 +738,17 @@ def ai_save(body: AiSettingsIn):
 def ai_delete_key(provider: str):
     aitag.delete_key(provider)
     return aitag.get_settings()
+
+
+@app.get("/api/geocode")
+def geocode_find(q: str, lang: str = "en"):
+    """A place typed by the user (city, address, country) -> where it is; only the typed text leaves the computer."""
+    try:
+        return geocode.find(q, lang)
+    except geocode.NotFound:
+        raise err(404, "Place not found")
+    except geocode.Offline:
+        raise err(502, "The place search needs an internet connection")
 
 
 @app.post("/api/ai/models")
