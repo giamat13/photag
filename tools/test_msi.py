@@ -45,6 +45,9 @@ ids = [c.get("Id") for c in root.iter("{%s}Component" % ns["w"])]
 check("component ids are unique", len(ids) == len(set(ids)))
 check("one component per folder, not per file (fast start of the installer)", len(ids) - 1 == len({rel.rsplit("/", 1)[0] if "/" in rel else "" for _, rel in files}), len(ids))
 check("each component has exactly one key file", all(sum(1 for f in c.findall("w:File", ns) if f.get("KeyPath") == "yes") == 1 for c in root.iter("{%s}Component" % ns["w"]) if c.findall("w:File", ns)))
+guids = [c.get("Guid") for c in root.iter("{%s}Component" % ns["w"])]
+check("every component has its own fixed GUID (a component with several files cannot use '*')", all(guids) and "*" not in guids and len(set(guids)) == len(guids)
+      and guids == [c.get("Guid") for c in ET.fromstring(make_msi.wxs(files, "14.0.1").encode()).iter("{%s}Component" % ns["w"])], guids[:2])
 check("fast-install switches are set", any(p.get("Id") == "MSIFASTINSTALL" and p.get("Value") == "7" for p in pkg.findall("w:Property", ns)))
 n = res.count(False)
 print(f"\n{len(res) - n}/{len(res)} passed")

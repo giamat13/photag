@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from xml.sax.saxutils import quoteattr
 
@@ -75,7 +76,8 @@ def wxs(files: list[tuple[Path, str]], version: str = None) -> str:
     comps = []
     for n, d in enumerate(sorted(by_dir)):
         fl = "".join(f'<File Id="f{i}" Source={quoteattr(str(src))}{" KeyPath=" + chr(34) + "yes" + chr(34) if k == 0 else ""} />' for k, (i, src) in enumerate(by_dir[d]))
-        comps.append(f'      <Component Id="c{n}" Directory={quoteattr(dir_ids[d])}>{fl}</Component>')
+        guid = str(uuid.uuid5(uuid.UUID(UPGRADE_CODE), "folder:" + d)).upper()        # fixed per folder: a multi-file component cannot use Guid="*"
+        comps.append(f'      <Component Id="c{n}" Guid="{{{guid}}}" Directory={quoteattr(dir_ids[d])}>{fl}</Component>')
     icon = ROOT / "app" / "ui" / "icon.ico"
     return f"""<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
