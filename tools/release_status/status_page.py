@@ -254,24 +254,17 @@ def collect():
         tot += e
         got += e if j["state"] == "done" else (min(now - j["began"], e) if j["state"] == "run" and j["began"] else 0.0)
     gh_frac = 1.0 if (published or gh_state == "done") else (got / tot if tot else (sum(1 for j in jobs if j["state"] == "done") / len(jobs) if jobs else 0.0))
-    pct = 100 if published else min(99, int(100 * (0.25 * local_frac + 0.03 * (stages[1]["state"] == "done") + 0.03 * (stages[2]["state"] == "done")
-                                                  + 0.04 * (stages[3]["state"] == "done") + 0.65 * gh_frac)))
+    pct = 100 if published else min(99.99, 100 * (0.25 * local_frac + 0.03 * (stages[1]["state"] == "done") + 0.03 * (stages[2]["state"] == "done")
+                                                  + 0.04 * (stages[3]["state"] == "done") + 0.65 * gh_frac))
     local_need = local_total if local_eff != local_state else local_left      # old results: all of them have to run again
     left = (local_need if local_eff != "done" else 0.0) + gh_left
     failing = [s["name"] for s in stages if s["state"] == "fail"]
-    if todo:                                   # the coding comes first: it holds the first fifth of the way
-        pct = 100 if published else min(99, int(100 * (0.2 * todo_done / len(todo) + 0.8 * pct / 100)))
-        run_item = next((x["text"] for x in todo if x["state"] == "run"), next((x["text"] for x in todo if x["state"] == "todo"), ""))
-        stages.insert(0, {"name": "כותבים את הקוד", "plain": "בונים את הפיצ'רים והתיקונים עצמם. הרשימה למטה מראה מה כבר נעשה ומה נשאר.",
-                          "state": "done" if not todo_open else "run", "note": f"{todo_done}/{len(todo)}"})
     if published:
         hero, sub = f"הגרסה {target} באוויר! ✓", "אפשר לעדכן מתוך photag (עזרה ← חיפוש עדכונים)."
     elif failing:
         bad = [t["name"] for t in local if t["state"] == "fail"]
         hero = ("בדיקה מקומית נכשלה: " + ", ".join(bad)) if bad else "משהו נכשל"
         sub = activity[0]["text"] if activity else "הסעיף האדום למטה מראה איפה."
-    elif todo_open:
-        hero, sub = "עכשיו: כותבים את הקוד", (activity[0]["text"] if activity else run_item)
     elif local_state == "run":
         hero, sub = "עכשיו: בודקים שהכול עובד במחשב שלך", local_now
     elif local_eff == "todo" and stale:
@@ -283,11 +276,13 @@ def collect():
     else:
         hero, sub = "עכשיו: GitHub בונה את הגרסה", hero_run
 
+    running_eta = not (published or failing or (pushed and not cur and local_state != "run"))
+    pct_rate = max(0.0, (99.5 - pct) / max(left, 5.0)) if running_eta else 0.0      # percent per second: it reaches ~99.5% when the release is expected to end
     return {
-        "at": now, "target": target, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
+        "pct_rate": pct_rate, "at": now, "target": target, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
         "waiting": bool(not published and not failing and pushed and not cur and local_state != "run"),
-        "coding": todo_open, "todo": todo, "activity": activity,
-        "eta_end": None if (published or failing or todo_open or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
+        "todo": todo, "activity": activity,
+        "eta_end": None if (published or failing or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
         "percent": pct, "stages": stages, "local": local, "local_stale": stale, "jobs": jobs, "gh_began": cur_began,
         "error": gh["error"], "recent": [r["tag_name"] for r in rels[:3]],
     }
@@ -373,7 +368,9 @@ h2{font-size:12px;margin:8px 2px 3px}
 .grid.small{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px}
 .lt{padding:3px 8px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}.lt .nm{font-size:12px}.lt .sm{font-size:11px}
 .lt.run{grid-column:span 2}.lt pre.live{flex-basis:100%;max-height:3.9em;overflow:hidden}
+.job pre.live{color:var(--mut);font-size:10.5px;line-height:1.35;margin:4px 0 0;max-height:2.8em;overflow:hidden;white-space:pre-wrap;word-break:break-word}
 footer{margin-top:6px;font-size:11px;line-height:1.4}
+.ringtxt b{font-size:15px;font-variant-numeric:tabular-nums}.ready .ring .fg{transition:stroke-dashoffset .3s linear}
 </style></head><body><main>
 <header class="top"><div><div class="ttl" id="title">שחרור photag</div><div class="mut">לוח בקרה לשחרור גרסה חדשה</div></div>
 <div class="live" id="live"><span class="dot"></span><span id="livetxt">טוען…</span></div></header>
@@ -387,11 +384,11 @@ footer{margin-top:6px;font-size:11px;line-height:1.4}
 <section class="pipe" id="pipe"></section>
 <div class="explain" id="explain"></div>
 <div class="duo"><section class="log-card" id="logcard" style="display:none"><div class="lbl">יומן חי — מה קורה עכשיו</div><div class="now"><span id="lognow"></span><span class="ago" id="logago"></span></div><div class="stalemsg" id="logstale"></div><ul id="loglist"></ul></section>
-<section class="todo-card" id="todocard" style="display:none"><h3><span>משימות — כתיבת הקוד</span><span class="mut" id="todocount"></span></h3><div class="bar"><i id="todobar" style="width:0"></i></div><ul id="todolist"></ul></section></div>
+<section class="todo-card" id="todocard" style="display:none"><h3><span>משימות</span><span class="mut" id="todocount"></span></h3><div class="bar"><i id="todobar" style="width:0"></i></div><ul id="todolist"></ul></section></div>
 <h2>GitHub <span class="mut" style="text-transform:none;font-weight:400">— מה נבנה ונבדק עכשיו</span></h2>
 <div class="grid" id="jobs"></div>
-<h2>בדיקות במחשב שלך <span class="mut" style="text-transform:none;font-weight:400">— כל בדיקה מנסה עותק זמני של התוכנה</span> <span id="stale-local" class="mut" style="text-transform:none;color:var(--warn)"></span></h2>
-<div class="grid small" id="local"></div>
+<div id="localsec" style="display:none"><h2>בדיקות במחשב שלך <span class="mut" style="text-transform:none;font-weight:400">— מה נבדק עכשיו</span> <span id="stale-local" class="mut" style="text-transform:none;color:var(--warn)"></span></h2><div class="grid" id="local"></div></div>
+<div class="mut" id="localok" style="display:none;margin:6px 2px"></div>
 <footer id="foot"></footer>
 </main><script src="status-data.js"></script><script>
 const $ = id => document.getElementById(id);
@@ -411,11 +408,9 @@ const timeOf = x => x.state === 'done' || x.state === 'fail' ? (x.took ? `<span>
 function render(){
   if(!D) return;
   const st = D.published ? 'done' : D.failed ? 'fail' : 'run';
-  document.title = (D.published ? '✓ ' : D.failed ? '✕ ' : D.percent + '% · ') + D.target.replace('v','') + ' · photag';
+  document.title = (D.published ? '✓ ' : D.failed ? '✕ ' : Math.floor(D.percent) + '% · ') + D.target.replace('v','') + ' · photag';
   setText($('title'), 'שחרור גרסה ' + D.target.replace('v',''));
-  $('ringfg').style.strokeDashoffset = RING * (1 - D.percent / 100);
   $('ringfg').style.stroke = D.failed ? 'var(--bad)' : 'var(--ok)';
-  setText($('ringpct'), D.percent + '%');
   $('nowtile').className = 'tile now-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
   $('etatile').className = 'tile eta-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
   setText($('hero'), D.hero); setText($('sub'), D.sub || '');
@@ -441,10 +436,21 @@ function render(){
   setHtml($('pipe'), D.stages.map((s,i) => `<div class="stg ${s.state}" title="${esc(s.plain)}"><div class="n">${s.state==='done'?'✓':s.state==='fail'?'✕':i+1}</div><div><div class="t">${esc(s.name)}</div>${s.note?`<div class="s">${esc(s.note)}</div>`:''}${s.end?`<div class="s" data-end="${s.end}"></div>`:s.est?`<div class="mut">בערך ${mmss(s.est)}</div>`:''}</div></div>`).join(''));
   const act = D.stages.find(s => s.state === 'run') || D.stages.find(s => s.state === 'fail') || D.stages.find(s => s.state === 'todo');
   setText($('explain'), act ? 'מה קורה בשלב הזה: ' + act.plain : '');
-  setHtml($('local'), D.local.length ? D.local.map(t => {
-    const run = t.state === 'run', lv = t.live || {pass:0, fail:0, last:[]}, sm = run ? `<span data-began="${t.began}" data-est="${t.estimate}"></span><div><b>${lv.pass}</b> בדיקות עברו${lv.fail ? ` · <b style="color:var(--bad)">${lv.fail} נכשלו</b>` : ''}</div>${lv.last.length ? `<pre class="live" dir="ltr">${esc(lv.last.join('\n'))}</pre>` : ''}` : t.state === 'todo' ? `בערך ${Math.round(t.estimate)} שנ׳` : `${esc(t.summary)}${t.seconds ? ' · ' + Math.round(t.seconds) + ' שנ׳' : ''}`;
-    return `<div class="lt ${t.state}"><div class="nm">${IC[t.state]} ${esc(t.name)}</div><div class="sm">${sm}</div>${t.detail ? `<pre>${esc(t.detail)}</pre>` : ''}</div>`; }).join('')
-    : '<div class="empty">עוד לא הורצו בדיקות במחשב (tools/release_status/run_local_tests.py).</div>');
+  const lt = D.local || [], ltBad = lt.some(t => t.state === 'fail'), ltRun = lt.some(t => t.state === 'run'), ltDone = lt.filter(t => t.state === 'done').length;
+  const showLocal = lt.length && (ltBad || ltRun);               // only when something is running or failed
+  $('localsec').style.display = showLocal ? '' : 'none';
+  $('localok').style.display = lt.length && !showLocal ? '' : 'none';
+  setText($('localok'), lt.length && !showLocal ? (ltDone === lt.length ? `✓ כל ${lt.length} הבדיקות במחשב עברו` : `הבדיקות במחשב: ${ltDone} מתוך ${lt.length} עברו`) + (D.local_stale ? ' — הורצו לפני השינויים האחרונים, צריך להריץ שוב' : '') : '');
+  if(showLocal){
+    setHtml($('local'), lt.map(t => {
+      const run = t.state === 'run', lv = t.live || {pass:0, fail:0, last:[]};
+      const pct = t.state === 'done' ? 100 : run ? 0 : 0;
+      const cur = run ? `${lv.pass} בדיקות עברו${lv.fail ? ` · <b style="color:var(--bad)">${lv.fail} נכשלו</b>` : ''}` : t.state === 'done' ? esc(t.summary) + ' ✓' : t.state === 'fail' ? 'נכשלה' : 'ממתינה';
+      const time = run ? `<span data-end="${t.began + t.estimate}"></span>` : t.state === 'done' && t.seconds ? `<span>לקח ${Math.round(t.seconds)} שנ׳</span>` : t.state === 'todo' ? `<span>~${Math.round(t.estimate)} שנ׳</span>` : '';
+      const extra = run && lv.last.length ? `<pre class="live" dir="ltr">${esc(lv.last.slice(-2).join('\n'))}</pre>` : t.state === 'fail' && t.detail ? `<pre class="live" dir="ltr" style="color:var(--bad)">${esc(t.detail)}</pre>` : '';
+      return `<div class="job ${t.state}"><span class="chip ${t.state}">${CHIP[t.state]}</span><div class="nm" dir="ltr" style="text-align:start">${esc(t.name)}</div><div class="cur">${cur}</div>
+        <div class="bar"><i ${run ? `data-pb="${t.began}" data-pe="${t.estimate}"` : ''} style="width:${pct}%"></i></div><div class="meta"><span>${run ? 'רץ עכשיו' : ''}</span>${time}</div>${extra}</div>`; }).join(''));
+  }
   const box = $('jobs');
   if(!D.jobs.length){ setHtml(box, '<div class="empty">עוד לא התחיל. אחרי ההעלאה והפעלת השחרור יופיעו כאן העבודות של GitHub — בדיקות, בניית קובץ ההתקנה, ה-ZIP וה-MSI, ופרסום.</div>'); }
   else {
@@ -462,6 +468,19 @@ function render(){
     while(box.children.length > D.jobs.length) box.lastChild.remove();
   }
   setHtml($('foot'), 'איך נראית גרסה חדשה: בודקים שהכול עובד ← שומרים ← מעלים לאינטרנט ← GitHub בודק ובונה את קובצי ההתקנה ← הגרסה מתפרסמת. אין צורך לעשות כלום — הלוח מתעדכן לבד.<br>גרסאות שפורסמו לאחרונה: <span dir="ltr">' + esc((D.recent||[]).join(' · ')) + '</span>' + (D.error ? `<div class="err">${esc(D.error)}</div>` : ''));
+}
+// the percentage rises smoothly at the pace the data says (percent per second), never goes back, and eases toward the real value
+const PCT = {shown: 0, init: false};
+function animPct(){
+  if(!D) return;
+  const now = Date.now() / 1000;
+  const target = D.published ? 100 : Math.min(99.99, D.percent + (D.pct_rate || 0) * (now - D.at));
+  if(!PCT.init || target < PCT.shown - 3){ PCT.shown = target; PCT.init = true; }
+  else if(target > PCT.shown) PCT.shown += (target - PCT.shown) * 0.2;
+  const v = D.published ? 100 : PCT.shown;
+  setText($('ringpct'), v.toFixed(2) + '%');
+  const off = (RING * (1 - v / 100)).toFixed(2);
+  if($('ringfg').style.strokeDashoffset !== off) $('ringfg').style.strokeDashoffset = off;
 }
 const agoText = s => s < 5 ? 'עכשיו' : s < 60 ? 'לפני ' + Math.round(s) + ' שניות' : s < 3600 ? 'לפני ' + Math.round(s / 60) + ' דקות' : 'לפני ' + Math.round(s / 3600) + ' שעות';
 function tick(){
@@ -484,11 +503,11 @@ function tick(){
     const left = D.eta_end - now;
     setText($('etabig'), left > 0 ? mmss(left) : 'עוד רגע…');
     setText($('etasub'), `בדיקות במחשב ~${mmss(D.local_left)} · בנייה ב-GitHub ~${mmss(D.gh_left)} · לפי שחרורים קודמים (~${mmss(D.typical)})`);
-  } else if(D.coding){ setText($('etabig'), '—'); setText($('etasub'), 'הטיימר יתחיל אחרי שהקוד נכתב ונבדק'); }
-  else if(D.waiting){ setText($('etabig'), '—'); setText($('etasub'), 'הטיימר יתחיל כשיופעל שחרור ב-GitHub'); }
+  } else if(D.waiting){ setText($('etabig'), '—'); setText($('etasub'), 'הטיימר יתחיל כשיופעל שחרור ב-GitHub'); }
   else { setText($('etabig'), D.published ? '✓' : '✕'); setText($('etasub'), D.published ? 'הגרסה באוויר' : 'משהו נכשל — ראו בכרטיס האדום'); }
   document.querySelectorAll('[data-began][data-est]').forEach(e => setText(e, 'רץ ' + Math.round(now - e.dataset.began) + ' שנ׳ מתוך ~' + Math.round(e.dataset.est)));
   document.querySelectorAll('[data-began]:not([data-est])').forEach(e => setText(e, 'רץ ' + mmss(now - e.dataset.began)));
+  document.querySelectorAll('[data-pb]').forEach(e => { const w = Math.min(99, 100 * (now - e.dataset.pb) / Math.max(1, e.dataset.pe)); e.style.width = w.toFixed(1) + '%'; });
   document.querySelectorAll('[data-end]').forEach(e => { const l = e.dataset.end - now; setText(e, l > 0 ? 'נשאר ~' + mmss(l) : 'עוד רגע…'); });
 }
 function fit(){
@@ -502,13 +521,30 @@ function load(){
   s.onload = () => { if(window.STATUS && (!D || window.STATUS.at !== D.at)){ D = window.STATUS; render(); fit(); } s.remove(); };
   s.onerror = () => s.remove(); document.head.appendChild(s);
 }
-D = window.STATUS || null; render(); tick(); fit();
+D = window.STATUS || null; render(); tick(); fit(); animPct();
 requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('ready')));
-setInterval(load, 2000); setInterval(tick, 1000);
+setInterval(load, 2000); setInterval(tick, 1000); setInterval(animPct, 250);
 </script></body></html>"""
 
 
+def stable(x, key=None):
+    """Round every number: an epoch to a whole second, anything else to a tenth. A float that differs in its 12th digit between two
+    updates made the page see a 'change', rebuild its cards and flicker."""
+    if isinstance(x, float):
+        if key == "percent":
+            return round(x, 3)
+        if key == "pct_rate":
+            return round(x, 6)
+        return round(x) if abs(x) > 1e8 else round(x, 1)
+    if isinstance(x, dict):
+        return {k: stable(v, k) for k, v in x.items()}
+    if isinstance(x, list):
+        return [stable(v) for v in x]
+    return x
+
+
 def write(data):
+    data = stable(data)
     tmp = DATA.with_suffix(".tmp")
     tmp.write_text("window.STATUS = " + json.dumps(data, ensure_ascii=False) + ";\n", "utf-8")
     for _ in range(5):
@@ -520,6 +556,7 @@ def write(data):
 
 
 def main():
+    me, born = Path(__file__).resolve(), Path(__file__).resolve().stat().st_mtime
     PAGE.write_text(TEMPLATE, "utf-8")
     if "--once" in sys.argv:
         write(collect())
@@ -536,6 +573,9 @@ def main():
                 break
         except Exception as e:
             print("error:", e, flush=True)
+        if me.stat().st_mtime != born:                      # this program was edited: run the new version
+            print("changed on disk: restarting", flush=True)
+            os.execv(sys.executable, [sys.executable, str(me)])
         time.sleep(LOCAL_EVERY)
 
 
