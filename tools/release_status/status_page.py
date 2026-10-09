@@ -1,4 +1,4 @@
-"""A live page about a release, in plain language: the local tests (from local-tests.json, written by run_local_tests.py), the commit and
+"""A live dashboard about a release, in plain language: the local tests (from local-tests.json, written by run_local_tests.py), the commit and
 push, and what GitHub is doing (the release workflow's jobs and steps), with a time estimate for each part and for the whole.
 
 Open tools/release_status/status.html in a browser. It loads fresh data (status-data.js, written here every few seconds) without
@@ -104,6 +104,11 @@ def state_of(o):
 class Cache:
     gh_at = 0.0
     gh = {}
+    hist = {}              # the jobs (with their steps) of the last successful release run: how long each part usually takes
+
+
+def dur(o):
+    return (epoch(o["completed_at"]) - epoch(o["started_at"])) if o and o.get("started_at") and o.get("completed_at") else None
 
 
 def github(remote):
@@ -114,6 +119,12 @@ def github(remote):
     try:
         out["runs"] = api("/actions/runs?per_page=15")["workflow_runs"]
         out["rels"] = api("/releases?per_page=4")
+        ok_runs = [r for r in out["runs"] if r["name"] == "release" and r["status"] == "completed" and r["conclusion"] == "success"]
+        if ok_runs and Cache.hist.get("run") != ok_runs[0]["id"]:
+            try:
+                Cache.hist = {"run": ok_runs[0]["id"], "jobs": {j["name"]: j for j in api(f"/actions/runs/{ok_runs[0]['id']}/jobs?per_page=50")["jobs"]}}
+            except Exception:
+                pass
         rel_runs = [r for r in out["runs"] if r["name"] == "release"]
         out["cur"] = next((r for r in rel_runs if r["head_sha"] == remote), None) if remote else None
         if out["cur"]:
@@ -174,15 +185,22 @@ def collect():
     for j in gh["jobs"]:
         plain, desc = JOBS.get(j["name"], (j["name"], ""))
         steps = []
+        hj = Cache.hist.get("jobs", {}).get(j["name"])
+        hs = {x["name"]: x for x in (hj or {}).get("steps", [])}
         for s in j.get("steps", []):
             text, small = plain_step(s["name"])
-            steps.append({"text": text, "small": small, "state": state_of(s), "plumbing": s["name"].startswith(PLUMBING)})
+            st = state_of(s)
+            est, sbegan = dur(hs.get(s["name"])), epoch(s.get("started_at"))
+            steps.append({"text": text, "small": small, "state": st, "plumbing": s["name"].startswith(PLUMBING), "est": est,
+                          "took": dur(s) if st in ("done", "fail") else None, "end": (sbegan + est) if st == "run" and sbegan and est else None})
         done_n = sum(1 for s in steps if s["state"] == "done")
         running = next((s for s in steps if s["state"] == "run" and not s["plumbing"]), None) or next((s for s in steps if s["state"] == "run"), None)
         if running and not hero_run and not running["plumbing"]:
             hero_run = f"{plain}: {running['text']}"
-        jobs.append({"name": plain, "desc": desc, "state": state_of(j), "done": done_n, "total": len(steps), "began": epoch(j.get("started_at")),
-                     "now": running["text"] if running else "", "steps": [s for s in steps if not s["plumbing"]]})
+        jest, jbegan = dur(hj), epoch(j.get("started_at"))
+        jobs.append({"name": plain, "desc": desc, "state": state_of(j), "done": done_n, "total": len(steps), "began": jbegan,
+                     "est": jest, "took": dur(j) if state_of(j) in ("done", "fail") else None, "end": (jbegan + jest) if state_of(j) == "run" and jbegan and jest else None,
+                     "now": running["text"] if running else "", "failed": next((x["text"] for x in steps if x["state"] == "fail"), "")})
 
     stages = [
         {"name": "בודקים שהכול עובד אצלך במחשב", "plain": "מריצים אוטומטית עשרות בדיקות על התוכנה כדי לוודא ששום דבר לא נשבר.", "state": local_state,
@@ -195,7 +213,25 @@ def collect():
          "state": gh_state if (cur or published) else "todo", "note": hero_run},
         {"name": f"הגרסה {target} באוויר", "plain": "מופיעה בדף ההורדות, ואפשר לעדכן אליה מתוך photag.", "state": "done" if published else ("fail" if gh_state == "fail" else "todo"), "note": ""},
     ]
+    if local_state == "run":
+        stages[0]["end"] = now + local_left
+    elif local_state == "todo" and local_left:
+        stages[0]["est"] = local_left
+    if gh_state == "run":
+        stages[4]["end"] = now + gh_left
+    elif gh_state == "todo":
+        stages[4]["est"] = typical
     n_done = sum(1 for s in stages if s["state"] == "done")
+    local_total = sum(t["estimate"] for t in local)
+    local_frac = 1.0 if local_state == "done" else (max(0.0, 1 - local_left / local_total) if local_total else 0.0)
+    got = tot = 0.0
+    for j in jobs:
+        e = j["est"] or 0.0
+        tot += e
+        got += e if j["state"] == "done" else (min(now - j["began"], e) if j["state"] == "run" and j["began"] else 0.0)
+    gh_frac = 1.0 if (published or gh_state == "done") else (got / tot if tot else (sum(1 for j in jobs if j["state"] == "done") / len(jobs) if jobs else 0.0))
+    pct = 100 if published else min(99, int(100 * (0.25 * local_frac + 0.03 * (stages[1]["state"] == "done") + 0.03 * (stages[2]["state"] == "done")
+                                                  + 0.04 * (stages[3]["state"] == "done") + 0.65 * gh_frac)))
     left = (local_left if local_state != "done" else 0.0) + gh_left
     failing = [s["name"] for s in stages if s["state"] == "fail"]
     if published:
@@ -214,118 +250,147 @@ def collect():
     return {
         "at": now, "target": target, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
         "eta_end": None if (published or failing) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
-        "percent": int(100 * n_done / len(stages)), "stages": stages, "local": local, "jobs": jobs, "gh_began": cur_began,
+        "percent": pct, "stages": stages, "local": local, "jobs": jobs, "gh_began": cur_began,
         "error": gh["error"], "recent": [r["tag_name"] for r in rels[:3]],
     }
 
 
 TEMPLATE = r"""<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>מצב שחרור photag</title><style>
-:root{--bg:#f4f6f8;--card:#fff;--tx:#1b1f24;--mut:#5d6874;--ok:#1a7f37;--run:#0969da;--bad:#cf222e;--warn:#9a6700;--todo:#8a949f;--ln:#e1e5ea}
-@media (prefers-color-scheme:dark){:root{--bg:#12161b;--card:#1b2128;--tx:#e6eaee;--mut:#9aa6b2;--ok:#3fb950;--run:#58a6ff;--bad:#f85149;--warn:#d29922;--todo:#6b7783;--ln:#2b333c}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,Segoe UI,Arial,sans-serif}
-main{max-width:820px;margin:0 auto;padding:18px 14px 50px}
-.live{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mut)}
+<title>Dashboard שחרור photag</title><style>
+:root{--bg:#eef1f5;--card:#fff;--tx:#18202a;--mut:#5f6b79;--ok:#1a7f37;--run:#0b6bdb;--bad:#cf222e;--warn:#9a6700;--todo:#8d98a5;--ln:#dde2e8;--sh:0 1px 2px rgba(20,30,50,.06),0 4px 14px rgba(20,30,50,.05)}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1217;--card:#171d25;--tx:#e8edf2;--mut:#98a4b1;--ok:#3fb950;--run:#58a6ff;--bad:#f85149;--warn:#d29922;--todo:#66727f;--ln:#27303a;--sh:0 1px 2px rgba(0,0,0,.4)}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,Segoe UI,Arial,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ttl{font-size:24px;font-weight:800;letter-spacing:-.3px}.mut{color:var(--mut);font-size:13px}
+.live{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--ln);border-radius:99px;padding:5px 13px;font-size:13px;color:var(--mut);box-shadow:var(--sh)}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);animation:pulse 1.2s infinite}
 .live.stale .dot{background:var(--warn);animation:none}.live.dead .dot{background:var(--bad);animation:none}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(26,127,55,.55)}70%{box-shadow:0 0 0 9px rgba(26,127,55,0)}100%{box-shadow:0 0 0 0 rgba(26,127,55,0)}}
-.warn{background:rgba(210,153,34,.15);border:1px solid var(--warn);color:var(--tx);border-radius:10px;padding:10px 12px;margin:10px 0}
-.warn.dead{background:rgba(248,81,73,.13);border-color:var(--bad)}
-h1{font-size:15px;font-weight:600;color:var(--mut);margin:14px 0 2px}
-.hero{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:16px 18px;margin:8px 0}
-.hero .big{font-size:23px;font-weight:700;line-height:1.3}.hero .sub{color:var(--mut);margin-top:2px}
-.eta{margin-top:10px;font-size:19px;font-weight:600}.eta small{display:block;font-size:14px;font-weight:400;color:var(--mut)}
-.bar{height:16px;background:var(--ln);border-radius:9px;overflow:hidden;margin:12px 0 4px;position:relative}
-.bar i{display:block;height:100%;background:var(--ok)}
-.ready .bar i{transition:width .8s}
-.bar.go i{background:repeating-linear-gradient(135deg,var(--ok) 0 14px,#2ea44f 14px 28px);background-size:40px 40px;animation:move 1s linear infinite}
-@keyframes move{to{background-position:40px 0}}
-.muted{color:var(--mut);font-size:14px}.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:14px 16px;margin:14px 0}
-.card>b{display:block;margin-bottom:6px}.how{font-size:14px;color:var(--mut)}
-.stage{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--ln)}.stage:first-of-type{border-top:0}
-.num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;background:var(--todo)}
-.stage.done .num{background:var(--ok)}.stage.run .num{background:var(--run);animation:pulse2 1.4s infinite}.stage.fail .num{background:var(--bad)}
-@keyframes pulse2{50%{opacity:.55}}
-.stage .t{font-weight:600}.stage .p{color:var(--mut);font-size:14px}.stage .n{color:var(--run);font-size:14px;font-weight:600}
-.stage.todo .t{color:var(--todo)}
-.job{border-top:1px solid var(--ln);padding:8px 0}.job:first-of-type{border-top:0}
-.job summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;list-style:none}
-.job summary::-webkit-details-marker{display:none}
-.chip{font-size:12px;border-radius:99px;padding:1px 9px;color:#fff;background:var(--todo)}.chip.done{background:var(--ok)}.chip.run{background:var(--run)}.chip.fail{background:var(--bad)}
-.mini{height:6px;background:var(--ln);border-radius:4px;overflow:hidden;margin:6px 0}.mini i{display:block;height:100%;background:var(--run)}.mini.done i{background:var(--ok)}
-ul{list-style:none;margin:6px 0 2px;padding:0}li{display:flex;gap:8px;padding:2px 0;align-items:baseline}
-li .ic{width:1.2em;text-align:center;font-weight:700;flex:none}li.done .ic{color:var(--ok)}li.run .ic{color:var(--run)}li.fail .ic{color:var(--bad)}li.todo{color:var(--todo)}li.run{font-weight:600}
-small{color:var(--mut);font-weight:400}pre{white-space:pre-wrap;color:var(--bad);font-size:12px;margin:2px 0}
-.err{color:var(--bad)}details>summary{cursor:pointer}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,185,80,.6)}70%{box-shadow:0 0 0 9px rgba(63,185,80,0)}100%{box-shadow:0 0 0 0 rgba(63,185,80,0)}}
+.warn{background:rgba(210,153,34,.14);border:1px solid var(--warn);border-radius:12px;padding:10px 14px;margin:8px 0}.warn.dead{background:rgba(248,81,73,.12);border-color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}@media (max-width:520px){.kpis{grid-template-columns:1fr}}
+.tile{background:var(--card);border:1px solid var(--ln);border-radius:16px;padding:14px 16px;box-shadow:var(--sh);min-height:150px;position:relative;overflow:hidden}
+.lbl{font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.ring-tile{display:grid;place-items:center}.ring{width:130px;height:130px}
+.ring .bg{fill:none;stroke:var(--ln);stroke-width:11}.ring .fg{fill:none;stroke:var(--ok);stroke-width:11;stroke-linecap:round;stroke-dasharray:326.7;stroke-dashoffset:326.7}
+.ready .ring .fg{transition:stroke-dashoffset .9s}
+.ringtxt{position:absolute;inset:0;display:grid;place-content:center;text-align:center}.ringtxt b{font-size:30px;line-height:1}.ringtxt span{font-size:12px;color:var(--mut)}
+.eta-tile .big{font-size:46px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;margin:4px 0}
+.eta-tile.done .big{color:var(--ok)}.eta-tile.fail .big{color:var(--bad)}
+.now-tile{border-inline-start:5px solid var(--run)}.now-tile.done{border-inline-start-color:var(--ok)}.now-tile.fail{border-inline-start-color:var(--bad)}
+.nowtxt{font-size:19px;font-weight:700;line-height:1.35}
+.counts .row{display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--ln)}.counts .row:first-of-type{border-top:0}.counts b{font-variant-numeric:tabular-nums}
+.pipe{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.stg{flex:1 1 150px;background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:9px 12px;display:flex;gap:9px;align-items:flex-start;box-shadow:var(--sh);border-top:4px solid var(--todo)}
+.stg .n{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:var(--todo)}
+.stg.done{border-top-color:var(--ok)}.stg.done .n{background:var(--ok)}.stg.run{border-top-color:var(--run)}.stg.run .n{background:var(--run);animation:blink 1.4s infinite}.stg.fail{border-top-color:var(--bad)}.stg.fail .n{background:var(--bad)}
+@keyframes blink{50%{opacity:.5}}.stg .t{font-weight:700;font-size:14px;line-height:1.3}.stg.todo .t{color:var(--mut)}.stg .s{font-size:12px;color:var(--run)}
+.explain{font-size:14px;color:var(--mut);margin:4px 2px 0;min-height:21px}
+h2{font-size:15px;margin:20px 2px 8px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.grid.small{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.job{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px 14px;box-shadow:var(--sh);border-top:4px solid var(--todo)}
+.job.done{border-top-color:var(--ok)}.job.run{border-top-color:var(--run)}.job.fail{border-top-color:var(--bad)}
+.chip{display:inline-block;font-size:11px;border-radius:99px;padding:1px 9px;color:#fff;background:var(--todo);font-weight:700}.chip.done{background:var(--ok)}.chip.run{background:var(--run)}.chip.fail{background:var(--bad)}
+.job .nm{font-weight:700;margin:5px 0 1px;line-height:1.3}.job .ds{font-size:12px;color:var(--mut);min-height:34px}
+.job .cur{font-size:13px;color:var(--run);font-weight:600;min-height:20px}
+.bar{height:8px;background:var(--ln);border-radius:5px;overflow:hidden;margin:7px 0 3px}.bar i{display:block;height:100%;background:var(--run);width:0}.ready .bar i{transition:width .7s}.job.done .bar i{background:var(--ok)}.job.fail .bar i{background:var(--bad)}
+.job.run .bar i{background-image:linear-gradient(135deg,rgba(255,255,255,.28) 25%,transparent 25% 50%,rgba(255,255,255,.28) 50% 75%,transparent 75%);background-size:20px 20px;animation:mv 1s linear infinite}
+@keyframes mv{to{background-position:20px 0}}
+.job .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
+small{color:var(--mut);font-weight:400}
+.lt{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:9px 12px;box-shadow:var(--sh);border-inline-start:5px solid var(--todo)}
+.lt.done{border-inline-start-color:var(--ok)}.lt.run{border-inline-start-color:var(--run);animation:blink 1.6s infinite}.lt.fail{border-inline-start-color:var(--bad)}
+.lt .nm{font-weight:700;font-size:13px;word-break:break-word}.lt .sm{font-size:12px;color:var(--mut)}.lt pre{white-space:pre-wrap;color:var(--bad);font-size:11px;margin:3px 0 0}
+.empty{grid-column:1/-1;color:var(--mut);padding:10px 2px}
+footer{margin-top:22px;color:var(--mut);font-size:13px;line-height:1.7}footer .err{color:var(--bad)}
 </style></head><body><main>
-<div class="live" id="live"><span class="dot"></span><span id="livetxt">טוען…</span></div>
+<header class="top"><div><div class="ttl" id="title">שחרור photag</div><div class="mut">לוח בקרה לשחרור גרסה חדשה</div></div>
+<div class="live" id="live"><span class="dot"></span><span id="livetxt">טוען…</span></div></header>
 <div id="stale"></div>
-<h1 id="title"></h1>
-<div class="hero"><div class="big" id="hero">…</div><div class="sub" id="sub"></div>
-<div class="eta" id="eta"></div>
-<div class="bar" id="bar"><i id="barfill" style="width:0"></i></div><div class="muted" id="pct"></div></div>
-<div class="card"><b>איך נראית גרסה חדשה — בקיצור</b><div class="how">בודקים שהכול עובד ← שומרים ← מעלים לאינטרנט ← GitHub בונה את קובצי ההתקנה ← הגרסה מתפרסמת. הדף הזה מראה איפה אנחנו, ובכל שלב מה בדיוק קורה. אין צורך לעשות כלום.</div></div>
-<div class="card"><b>השלבים</b><div id="stages"></div></div>
-<div class="card"><b>בדיקות במחשב שלך</b><div class="how">כל בדיקה פותחת עותק זמני של התוכנה, מנסה אותה ומוודאת שהיא עונה נכון. שום דבר אמיתי שלך לא נוגעים בו.</div><ul id="local"></ul></div>
-<div class="card"><b>מה GitHub עושה עכשיו</b><div class="how">GitHub מריץ הרבה עבודות במקביל על מחשבים שלו. לחצו על עבודה כדי לראות את השלבים שלה.</div><div id="jobs"></div></div>
-<div class="card muted" id="recent"></div>
+<section class="kpis">
+ <div class="tile ring-tile"><svg viewBox="0 0 120 120" class="ring"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="ringfg" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"/></svg><div class="ringtxt"><b id="ringpct">0%</b><span>מהדרך</span></div></div>
+ <div class="tile eta-tile" id="etatile"><div class="lbl">עד שהגרסה באוויר</div><div class="big" id="etabig">—</div><div class="mut" id="etasub"></div></div>
+ <div class="tile now-tile" id="nowtile"><div class="lbl">עכשיו קורה</div><div class="nowtxt" id="hero"></div><div class="mut" id="sub"></div></div>
+ <div class="tile counts"><div class="lbl">במספרים</div><div id="counts"></div></div>
+</section>
+<section class="pipe" id="pipe"></section>
+<div class="explain" id="explain"></div>
+<h2>GitHub <span class="mut" style="text-transform:none;font-weight:400">— מה נבנה ונבדק עכשיו</span></h2>
+<div class="grid" id="jobs"></div>
+<h2>בדיקות במחשב שלך <span class="mut" style="text-transform:none;font-weight:400">— כל בדיקה מנסה עותק זמני של התוכנה</span></h2>
+<div class="grid small" id="local"></div>
+<footer id="foot"></footer>
 </main><script src="status-data.js"></script><script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const IC = {done:'✓', run:'●', todo:'○', fail:'✕'}, CHIP = {done:'הסתיים', run:'רץ עכשיו', todo:'ממתין', fail:'נכשל'};
 const mmss = s => { s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
-let D = null, loadedAt = 0;
-// Only what really changed is touched: a part whose HTML is the same as last time is left alone, so nothing flickers, restarts its
-// animation, loses the scroll position or closes a job the reader opened.
+const RING = 2 * Math.PI * 52;
+let D = null;
+// Only what really changed is touched: a part whose HTML is the same as last time is left alone, so nothing flickers, restarts an
+// animation or loses the scroll position.
 const setHtml = (el, html) => { if(el._h !== html){ el._h = html; el.innerHTML = html; } };
 const setText = (el, t) => { if(el.textContent !== t) el.textContent = t; };
-const opened = {};                                   // which jobs the reader opened or closed by hand
-document.addEventListener('toggle', e => { const d = e.target; if(d.dataset && d.dataset.job) opened[d.dataset.job] = d.open; }, true);
+// the time of a card / step: how long it took, how much is left (ticking), or how long it usually takes
+const timeOf = x => x.state === 'done' || x.state === 'fail' ? (x.took ? `<span>לקח ${mmss(x.took)}</span>` : '')
+  : x.state === 'run' ? (x.end ? `<span data-end="${x.end}"></span>` : (x.began ? `<span data-began="${x.began}"></span>` : ''))
+  : (x.est ? `<span>~${mmss(x.est)}</span>` : '');
 function render(){
   if(!D) return;
-  setText($('title'), 'שחרור גרסה ' + D.target.replace('v','') + ' של photag');
+  const st = D.published ? 'done' : D.failed ? 'fail' : 'run';
+  document.title = (D.published ? '✓ ' : D.failed ? '✕ ' : D.percent + '% · ') + D.target.replace('v','') + ' · photag';
+  setText($('title'), 'שחרור גרסה ' + D.target.replace('v',''));
+  $('ringfg').style.strokeDashoffset = RING * (1 - D.percent / 100);
+  $('ringfg').style.stroke = D.failed ? 'var(--bad)' : 'var(--ok)';
+  setText($('ringpct'), D.percent + '%');
+  $('nowtile').className = 'tile now-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
+  $('etatile').className = 'tile eta-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
   setText($('hero'), D.hero); setText($('sub'), D.sub || '');
-  if($('barfill').style.width !== D.percent + '%') $('barfill').style.width = D.percent + '%';
-  setText($('pct'), D.percent + '% מהדרך');
-  $('bar').classList.toggle('go', !D.published && !D.failed);
-  setHtml($('stages'), D.stages.map((s,i) => `<div class="stage ${s.state}"><div class="num">${s.state==='done'?'✓':s.state==='fail'?'✕':i+1}</div><div><div class="t">${esc(s.name)}</div><div class="p">${esc(s.plain)}</div>${s.note?`<div class="n">${esc(s.note)}</div>`:''}</div></div>`).join(''));
+  const jd = D.jobs.filter(j => j.state === 'done').length, ld = D.local.filter(t => t.state === 'done').length, sd = D.stages.filter(s => s.state === 'done').length;
+  setHtml($('counts'), `<div class="row"><span>שלבים</span><b>${sd}/${D.stages.length}</b></div><div class="row"><span>בדיקות במחשב</span><b>${D.local.length ? ld + '/' + D.local.length : '—'}</b></div><div class="row"><span>עבודות ב-GitHub</span><b>${D.jobs.length ? jd + '/' + D.jobs.length : '—'}</b></div><div class="row"><span>הגרסה האחרונה שפורסמה</span><b dir="ltr">${esc((D.recent||[])[0] || '—')}</b></div>`);
+  setHtml($('pipe'), D.stages.map((s,i) => `<div class="stg ${s.state}" title="${esc(s.plain)}"><div class="n">${s.state==='done'?'✓':s.state==='fail'?'✕':i+1}</div><div><div class="t">${esc(s.name)}</div>${s.note?`<div class="s">${esc(s.note)}</div>`:''}${s.end?`<div class="s" data-end="${s.end}"></div>`:s.est?`<div class="mut">בערך ${mmss(s.est)}</div>`:''}</div></div>`).join(''));
+  const act = D.stages.find(s => s.state === 'run') || D.stages.find(s => s.state === 'fail') || D.stages.find(s => s.state === 'todo');
+  setText($('explain'), act ? 'מה קורה בשלב הזה: ' + act.plain : '');
   setHtml($('local'), D.local.length ? D.local.map(t => {
-    const run = t.state==='run', note = run ? `<small data-began="${t.began}" data-est="${t.estimate}"></small>` : (t.state==='todo' ? `<small>בערך ${Math.round(t.estimate)} שנ׳</small>` : `<small>${esc(t.summary)}${t.seconds?` · ${Math.round(t.seconds)} שנ׳`:''}</small>`);
-    return `<li class="${t.state}"><span class="ic">${IC[t.state]}</span><span>${esc(t.name)} ${note}${t.detail?`<pre>${esc(t.detail)}</pre>`:''}</span></li>`; }).join('')
-    : '<li class="todo"><span class="ic">○</span><span>עוד לא הורצו בדיקות במחשב (tools/release_status/run_local_tests.py)</span></li>');
+    const run = t.state === 'run', sm = run ? `<span data-began="${t.began}" data-est="${t.estimate}"></span>` : t.state === 'todo' ? `בערך ${Math.round(t.estimate)} שנ׳` : `${esc(t.summary)}${t.seconds ? ' · ' + Math.round(t.seconds) + ' שנ׳' : ''}`;
+    return `<div class="lt ${t.state}"><div class="nm">${IC[t.state]} ${esc(t.name)}</div><div class="sm">${sm}</div>${t.detail ? `<pre>${esc(t.detail)}</pre>` : ''}</div>`; }).join('')
+    : '<div class="empty">עוד לא הורצו בדיקות במחשב (tools/release_status/run_local_tests.py).</div>');
   const box = $('jobs');
-  if(!D.jobs.length){ setHtml(box, '<div class="muted">עוד לא התחיל. אחרי ההעלאה והפעלת השחרור יופיעו כאן העבודות של GitHub.</div>'); }
+  if(!D.jobs.length){ setHtml(box, '<div class="empty">עוד לא התחיל. אחרי ההעלאה והפעלת השחרור יופיעו כאן העבודות של GitHub — בדיקות, בניית קובץ ההתקנה, ה-ZIP וה-MSI, ופרסום.</div>'); }
   else {
     if(box._h !== 'jobs'){ box.innerHTML = ''; box._h = 'jobs'; }
-    D.jobs.forEach((j, i) => {                       // one block per job, each updated on its own
+    D.jobs.forEach((j, i) => {
       let el = box.children[i];
-      if(!el){ el = document.createElement('div'); el.className = 'job'; box.appendChild(el); }
-      const open = j.name in opened ? opened[j.name] : j.state === 'run';
-      setHtml(el, `<details data-job="${esc(j.name)}" ${open?'open':''}><summary><span class="chip ${j.state}">${CHIP[j.state]}</span><b>${esc(j.name)}</b><small>${j.done}/${j.total}${j.state==='run'&&j.began?` · <span data-began="${j.began}"></span>`:''}</small></summary>
-        <div class="muted">${esc(j.desc)}${j.now?` — <b style="color:var(--run)">עכשיו: ${esc(j.now)}</b>`:''}</div>
-        <div class="mini ${j.state}"><i style="width:${j.total?Math.round(100*j.done/j.total):0}%"></i></div>
-        <ul>${j.steps.map(s => `<li class="${s.state}"><span class="ic">${IC[s.state]}</span><span>${esc(s.text)} ${s.small?`<small>${esc(s.small)}</small>`:''}</span></li>`).join('')}</ul></details>`);
+      if(!el){ el = document.createElement('div'); box.appendChild(el); }
+      const cls = 'job ' + j.state; if(el.className !== cls) el.className = cls;
+      const pct = j.total ? Math.round(100 * j.done / j.total) : 0;
+      setHtml(el, `<div><span class="chip ${j.state}">${CHIP[j.state]}</span><div class="nm">${esc(j.name)}</div><div class="ds">${esc(j.desc)}</div>
+        <div class="cur">${j.state==='run' && j.now ? 'עכשיו: ' + esc(j.now) : j.state==='done' ? 'הסתיים ✓' : j.state==='fail' ? 'נכשל בשלב: ' + esc(j.failed || '') : ''}</div>
+        <div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${j.done} מתוך ${j.total} שלבים</span>${timeOf(j)}</div>${j.state==='run' && j.began && j.end ? `<div class="meta"><span>רץ כבר</span><span data-began="${j.began}"></span></div>` : ''}
+</div>`);
     });
     while(box.children.length > D.jobs.length) box.lastChild.remove();
   }
-  setHtml($('recent'), 'גרסאות שפורסמו לאחרונה: ' + esc((D.recent||[]).join(' · ')) + (D.error ? `<div class="err">${esc(D.error)}</div>` : ''));
+  setHtml($('foot'), 'איך נראית גרסה חדשה: בודקים שהכול עובד ← שומרים ← מעלים לאינטרנט ← GitHub בודק ובונה את קובצי ההתקנה ← הגרסה מתפרסמת. אין צורך לעשות כלום — הלוח מתעדכן לבד.<br>גרסאות שפורסמו לאחרונה: <span dir="ltr">' + esc((D.recent||[]).join(' · ')) + '</span>' + (D.error ? `<div class="err">${esc(D.error)}</div>` : ''));
 }
 function tick(){
-  const now = Date.now()/1000;
+  const now = Date.now() / 1000;
   if(!D) return;
   const age = now - D.at, live = $('live');
   const cls = 'live' + (age > 60 ? ' dead' : age > 15 ? ' stale' : '');
   if(live.className !== cls) live.className = cls;
   setText($('livetxt'), age < 8 ? 'חי · מתעדכן' : 'עודכן לפני ' + Math.round(age) + ' שניות');
-  setHtml($('stale'), age > 60 ? '<div class="warn dead"><b>הנתונים לא מתעדכנים כבר ' + mmss(age) + ' דקות.</b> כנראה התוכנית שמעדכנת את הדף נעצרה, ולכן מה שמוצג כאן ישן. הפעילו אותה מחדש: <code>py -3.12 tools/release_status/status_page.py</code> או בקשו ממני.</div>'
-    : age > 15 ? '<div class="warn"><b>הנתונים לא התעדכנו ' + Math.round(age) + ' שניות.</b> הדף חי ומחכה לעדכון הבא; אם זה נמשך — התוכנית שמעדכנת אותו אולי נתקעה.</div>' : '');
+  setHtml($('stale'), age > 60 ? '<div class="warn dead"><b>הנתונים לא מתעדכנים כבר ' + mmss(age) + ' דקות.</b> כנראה התוכנית שמעדכנת את הלוח נעצרה, ולכן מה שמוצג ישן. הפעילו אותה מחדש: <code>py -3.12 tools/release_status/status_page.py</code> או בקשו ממני.</div>'
+    : age > 15 ? '<div class="warn"><b>הנתונים לא התעדכנו ' + Math.round(age) + ' שניות.</b> הלוח חי ומחכה לעדכון הבא; אם זה נמשך — התוכנית שמעדכנת אותו אולי נתקעה.</div>' : '');
   if(D.eta_end){
     const left = D.eta_end - now;
-    setHtml($('eta'), (left > 0 ? 'עוד בערך <b>' + mmss(left) + '</b> דקות' : 'מתארך קצת יותר מהצפוי… עוד רגע')
-      + `<small>בדיקות במחשב: ~${mmss(D.local_left)} · בנייה ב-GitHub: ~${mmss(D.gh_left)} (לפי שחרורים קודמים, בדרך כלל ~${mmss(D.typical)})</small>`);
-  } else setText($('eta'), D.published ? 'סיימנו!' : '');
+    setText($('etabig'), left > 0 ? mmss(left) : 'עוד רגע…');
+    setText($('etasub'), `בדיקות במחשב ~${mmss(D.local_left)} · בנייה ב-GitHub ~${mmss(D.gh_left)} · לפי שחרורים קודמים (~${mmss(D.typical)})`);
+  } else { setText($('etabig'), D.published ? '✓' : '✕'); setText($('etasub'), D.published ? 'הגרסה באוויר' : 'משהו נכשל — ראו בכרטיס האדום'); }
   document.querySelectorAll('[data-began][data-est]').forEach(e => setText(e, 'רץ ' + Math.round(now - e.dataset.began) + ' שנ׳ מתוך ~' + Math.round(e.dataset.est)));
-  document.querySelectorAll('span[data-began]:not([data-est])').forEach(e => setText(e, 'רץ ' + mmss(now - e.dataset.began)));
+  document.querySelectorAll('[data-began]:not([data-est])').forEach(e => setText(e, 'רץ ' + mmss(now - e.dataset.began)));
+  document.querySelectorAll('[data-end]').forEach(e => { const l = e.dataset.end - now; setText(e, l > 0 ? 'נשאר ~' + mmss(l) : 'עוד רגע…'); });
 }
 function load(){
   const s = document.createElement('script'); s.src = 'status-data.js?t=' + Date.now();
