@@ -8,7 +8,7 @@
       "python": "C:\\Users\\furst\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "program": "${workspaceFolder}/photag.py",
       "console": "integratedTerminal",
-      "env": { "PYTHONUTF8": "1" }
+      "env": { "PYTHONUTF8": "1", "PHOTAG_PORT": "8799" }
     }
   ]
 }

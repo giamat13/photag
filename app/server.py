@@ -1473,6 +1473,7 @@ def start_merge(b: MergeIn):
 # ---- problem reports (Help > Report a problem): an issue on GitHub without the user needing an account (app/report.py) ----
 class ReportIn(BaseModel):
     description: str
+    title: str = ""
     include_tech: bool = True
     kind: str = "problem"              # "problem" or "feature" (a suggestion)
     language: str = ""
@@ -1511,14 +1512,12 @@ def report_send(b: ReportIn):
         desc = desc[:report.MAX_DESC]
     if not report.allowed():
         raise err(429, "You have sent several reports already. Please try again later.")
-    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind)
+    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind, report.redact(b.title)[:200])
     try:
         r = report.send(title, body, __version__, kind)
         return {"sent": True, "number": r["number"], "url": r["url"]}
-    except report.ReportError:
-        url = report.fallback_url(title, body, kind)
-        _open_url(url)                                   # no token (or GitHub refused): the user finishes it on GitHub
-        return {"sent": False, "opened": True}
+    except report.ReportError:                        # never opens GitHub in the browser: the user is told it was not sent
+        raise err(503, "The report could not be sent")
 
 
 @app.get("/api/photo/{pid}/upright")

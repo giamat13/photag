@@ -3357,8 +3357,10 @@ async function reportProblem(){
   let pv={tech:'', can_send:false, allowed:true};
   try{ pv = await api('/api/report/preview?language='+encodeURIComponent(I18N.lang)); }catch(e){}
   modal(`<h3>${t('Report a problem or suggest a feature')}</h3><div class="mb">
-    <p class="hint" style="padding:0">${pv.can_send ? t('Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.') : t('Tell us what went wrong or what you would like. GitHub will open with your message filled in; you need a GitHub account to send it.')}</p>
+    <p class="hint" style="padding:0">${pv.can_send ? t('Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.') : t('Tell us what went wrong or what you would like. The message goes to the photag developers and appears publicly on GitHub; you do not need an account.')}</p>
     <div class="rp-kind" role="radiogroup"><label class="chk"><input type="radio" name="rp-kind" value="problem" checked> ${t('A problem')}</label><label class="chk"><input type="radio" name="rp-kind" value="feature"> ${t('A feature suggestion')}</label></div>
+    <label for="rp-title">${t('Title')}</label>
+    <input id="rp-title" type="text" maxlength="200" style="width:100%;box-sizing:border-box">
     <label for="rp-desc" id="rp-lbl">${t('What happened? What did you expect?')}</label>
     <textarea id="rp-desc" rows="6" maxlength="4000" style="width:100%;box-sizing:border-box" placeholder="${t('Please do not write personal information: the report is public.')}"></textarea>
     <label class="chk" style="padding:6px 0"><input type="checkbox" id="rp-tech" checked> ${t('Include technical details (version, system, recent errors)')}</label>
@@ -3375,9 +3377,8 @@ async function reportProblem(){
     if(desc.length < 10){ msg.textContent = t('Please write a little more'); return; }
     $('#rp-ok').disabled = true; msg.textContent = t('Sending…');
     try{
-      const r = await send('POST', '/api/report', {description:desc, kind:k, include_tech:$('#rp-tech').checked, language:I18N.lang, client:clientInfo()});
+      const r = await send('POST', '/api/report', {description:desc, title:$('#rp-title').value.trim(), kind:k, include_tech:$('#rp-tech').checked, language:I18N.lang, client:clientInfo()});
       if(r.sent){ closeModal(); toast(k==='feature' ? t('Thank you! Your suggestion was sent (#{0}).', [r.number]) : t('Thank you! Your report was sent (#{0}).', [r.number]), 4500); }
-      else { closeModal(); toast(t('GitHub was opened with your report. Press “Submit new issue” there to send it.'), 6000); }
     }catch(e){ msg.textContent = e.message || t('The report could not be sent'); $('#rp-ok').disabled = false; }
   };
 }

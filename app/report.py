@@ -181,10 +181,10 @@ def tech_text(version: str, language: str = "", library: str = "", photos: int |
     return text[-LOG_CHARS:] if len(text) > LOG_CHARS else text
 
 
-def compose(description: str, tech: str | None, version: str, client: str = "", kind: str = "problem") -> tuple[str, str]:
-    """(title, body) of the issue. kind: "problem" or "feature" (a suggestion)."""
+def compose(description: str, tech: str | None, version: str, client: str = "", kind: str = "problem", title: str = "") -> tuple[str, str]:
+    """(title, body) of the issue. kind: "problem" or "feature" (a suggestion). The title is the one the user wrote, else the first line of the text."""
     desc = description.strip()
-    first = re.sub(r"\s+", " ", desc.splitlines()[0] if desc else "").strip()
+    first = re.sub(r"\s+", " ", title.strip() or (desc.splitlines()[0] if desc else "")).strip()
     title = ("[Suggestion] " if kind == "feature" else "[Report] ") + (first[:70] + ("…" if len(first) > 70 else ""))
     body = desc + "\n\n---\n"
     if tech:

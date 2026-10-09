@@ -179,8 +179,8 @@ srv = start({"PHOTAG_REPORT_TOKEN": "", "PHOTAG_NO_OPEN": "1"})
 try:
     pv = call("GET", "/api/report/preview")
     check("without a token the preview says the program cannot send by itself", pv["can_send"] is False)
-    r = call("POST", "/api/report", {"description": "No token here, so GitHub opens instead."})
-    check("...and a report opens GitHub's page instead (nothing is sent)", r == {"sent": False, "opened": True} and len(got) == n_before, r)
+    r = call("POST", "/api/report", {"description": "No token here, so it cannot be sent."}, ok=False)
+    check("...and a report is refused, GitHub is never opened (nothing is sent)", r.get("_status") == 503 and len(got) == n_before, r)
 finally:
     stop(srv)
 fake.shutdown()
