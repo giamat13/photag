@@ -1204,6 +1204,22 @@ class EditIn(BaseModel):
     nr_lum: float | None = None
     nr_color: float | None = None
     nr_detail: float | None = None
+    lens_dist: float | None = None
+    lens_vig: float | None = None
+    ca_r: float | None = None
+    ca_b: float | None = None
+    ca_auto: bool | None = None
+    defringe: float | None = None
+    persp_v: float | None = None
+    persp_h: float | None = None
+    geo_aspect: float | None = None
+    geo_scale: float | None = None
+    geo_x: float | None = None
+    geo_y: float | None = None
+    spots: list[dict] | None = None
+    redeye: list[dict] | None = None
+    lut: dict | None = None
+    masks: list[dict] | None = None
     curve: dict | None = None
     curve_p: list[float] | None = None
     mixer: dict | None = None
@@ -1216,7 +1232,8 @@ def _edit_ops(e: "EditIn") -> dict:
     """The settings of an edit request as they are stored: the extra tools cleaned (clamped, unknown names dropped)."""
     from . import develop_ops
     d = e.dict(exclude_none=True)
-    for k in list(develop_ops._RANGES) + ["curve", "curve_p", "mixer", "bwmix", "grading", "calib"]:
+    from . import develop_local
+    for k in list(develop_ops._RANGES) + ["curve", "curve_p", "mixer", "bwmix", "grading", "calib"] + list(develop_local.NUM_KEYS) + list(develop_local.LIST_KEYS) + ["ca_auto"]:
         d.pop(k, None)
     d.update(develop_ops.clean(e.dict(exclude_none=True)))
     return d
@@ -1320,6 +1337,86 @@ def _editable(con, pid):
     if images.is_raw(Path(r["rel_path"])):
         raise err(400, "Editing RAW files is not supported — export a JPEG and edit that")
     return r
+
+
+class MaskOverlayIn(BaseModel):
+    masks: list[dict] = []
+    index: int = 0
+
+
+@app.post("/api/photo/{pid}/mask-overlay")
+def mask_overlay(pid: int, b: MaskOverlayIn):
+    """A red, see-through picture of one local-adjustment mask, to lay over the picture while editing it."""
+    import io
+    import numpy as np
+    from PIL import Image
+    from . import develop_local
+    p = _original_path(db.connect(), pid)
+    im = images.open_image(p)
+    im.thumbnail((900, 900))
+    ms = develop_local.clean({"masks": b.masks}).get("masks", [])
+    if not (0 <= b.index < len(ms)) or not ms[b.index]["comps"]:
+        raise err(400, "Cannot edit")
+    a = np.asarray(im.convert("RGB"), dtype=np.float32) / 255.0
+    m = develop_local.mask_of(ms[b.index], a)
+    h, w = m.shape
+    rgba = np.zeros((h, w, 4), dtype=np.uint8)
+    rgba[..., 0], rgba[..., 1], rgba[..., 2] = 235, 40, 60
+    rgba[..., 3] = (np.clip(m, 0, 1) * 150).astype(np.uint8)
+    out = io.BytesIO()
+    Image.fromarray(rgba, "RGBA").save(out, "PNG")
+    return Response(out.getvalue(), media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/photo/{pid}/upright")
+def upright_suggest(pid: int, mode: str = "auto"):
+    """What the picture needs to look upright: rotate (degrees), persp_v, persp_h (the Edit module's settings), worked out from its lines."""
+    from . import develop_local
+    p = _original_path(db.connect(), pid)
+    im = images.open_image(p)
+    im.thumbnail((720, 720))
+    return develop_local.upright(im, mode if mode in ("auto", "level", "vertical", "full") else "auto")
+
+
+class LutIn(BaseModel):
+    name: str
+    text: str
+
+
+@app.get("/api/luts")
+def luts_list():
+    from . import develop_local
+    d = develop_local.lut_dir()
+    return {"luts": sorted(f.name for f in d.glob("*.cube")) if d.is_dir() else []}
+
+
+@app.post("/api/luts")
+def luts_add(b: LutIn):
+    """Add a colour look-up table (.cube) to the library; refused when it is not a valid 3D .cube file."""
+    from . import develop_local
+    import re as _re
+    if len(b.text) > 40_000_000:
+        raise err(400, "This LUT file is too big")
+    try:
+        develop_local.parse_cube(b.text)
+    except ValueError:
+        raise err(400, "This is not a valid 3D .cube file")
+    name = _re.sub(r"[^\w .()+-]", "_", Path(b.name).name)[:80] or "lut.cube"
+    if not name.lower().endswith(".cube"):
+        name += ".cube"
+    d = develop_local.lut_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    (d / name).write_text(b.text, "utf-8")
+    return {"name": name}
+
+
+@app.delete("/api/luts/{name}")
+def luts_delete(name: str):
+    from . import develop_local
+    p = develop_local.lut_dir() / Path(name).name
+    if p.suffix.lower() == ".cube" and p.is_file():
+        p.unlink()
+    return {"ok": True}
 
 
 @app.post("/api/photo/{pid}/edit")

@@ -107,14 +107,16 @@ check("no tone settings -> has_tone is False", not images.has_tone({}) and not i
 check("...and apply_tone returns the picture itself", images.apply_tone(Image.new("RGB", (4, 4)), {"rotate": 5}) is not None)
 check("an edit with only zeros reproduces the picture (within JPEG-free PNG: exactly)",
       np.abs(edit(SC, {"exposure": 0, "highlights": 0, "shadows": 0, "temperature": 0, "blur": 0}) - S0).max() == 0)
-NOT_ALONE = {"grain_size", "grain_rough", "vignette_mid", "vignette_feather", "vignette_round", "vignette_hl", "sharp_radius", "sharp_detail", "sharp_mask", "nr_detail"}      # styles of grain / vignette: nothing by themselves
-NESTED_ON = {"curve": {"rgb": [[0.5, 0.7]]}, "curve_p": [0, 0, 0, 20], "mixer": {"red": [0, -50, 0]}, "bwmix": {"red": 30},
-             "grading": {"shadows": [200, 40, 0]}, "calib": {"shadow_tint": 20}}
+NOT_ALONE = {"grain_size", "grain_rough", "vignette_mid", "vignette_feather", "vignette_round", "vignette_hl", "sharp_radius", "sharp_detail", "sharp_mask", "nr_detail"}      # styles of grain / vignette / sharpening: nothing by themselves
+SPECIAL = {"curve": ({}, {"rgb": [[0.5, 0.7]]}), "curve_p": ([0, 0, 0, 0], [0, 0, 0, 20]), "mixer": ({}, {"red": [0, -50, 0]}), "bwmix": ({}, {"red": 30}),
+           "grading": ({}, {"shadows": [200, 40, 0]}), "calib": ({}, {"shadow_tint": 20}),
+           "geo_scale": (100, 130), "ca_auto": (False, True), "spots": ([], [{"x": .5, "y": .5, "r": .02}]), "redeye": ([], [{"x": .5, "y": .5, "r": .02}]),
+           "lut": ({}, {"name": "a.cube", "amount": 100}), "masks": ([], [{"comps": [{"kind": "sky"}], "adj": {"exposure": 1}}])}
 for k in images.TONE_KEYS:
     if k in NOT_ALONE:
         check(f"render.is_neutral: {k} alone changes nothing", render.is_neutral({k: 10}))
-    elif k in NESTED_ON:
-        check(f"render.is_neutral: an empty {k} is neutral, a real one is not", render.is_neutral({k: {} if isinstance(NESTED_ON[k], dict) else [0, 0, 0, 0]}) and not render.is_neutral({k: NESTED_ON[k]}))
+    elif k in SPECIAL:
+        check(f"render.is_neutral: a resting {k} is neutral, a real one is not", render.is_neutral({k: SPECIAL[k][0]}) and not render.is_neutral({k: SPECIAL[k][1]}))
     else:
         check(f"render.is_neutral: {k}=0 is neutral, {k}=10 is not", render.is_neutral({k: 0}) and not render.is_neutral({k: 10}))
 check("render.is_neutral: a flip is an edit, False is not", not render.is_neutral({"flip_h": True}) and not render.is_neutral({"flip_v": True})

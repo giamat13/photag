@@ -67,6 +67,9 @@ def _curve_active(c):
 
 def active(ops: dict) -> bool:
     """Does `ops` ask for any of the tools of this module?"""
+    from . import develop_local
+    if develop_local.active(ops):
+        return True
     if any(_nz(ops.get(k)) for k in SCALAR_KEYS):
         return True
     return (_curve_active(ops.get("curve")) or _list_nonzero(ops.get("curve_p")) or _dict_nonzero(ops.get("mixer")) or _dict_nonzero(ops.get("bwmix"))
@@ -483,6 +486,8 @@ def clean(ops: dict) -> dict:
                 gg[k] = _num(g[k], lo, hi, dflt)
         if gg:
             out["grading"] = gg
+    from . import develop_local
+    out.update(develop_local.clean(ops))
     cal = ops.get("calib")
     if isinstance(cal, dict):
         cc = {}

@@ -1512,21 +1512,25 @@ const NEUTRAL = () => ({bri:0, con:0, sat:0, gray:false, rot:0, crop:[0,0,1,1],
   exp:0, hi:0, sh:0, temp:0, tint:0, vib:0, cla:0, shp:0, blr:0, vig:0, sep:0, fh:false, fv:false,
   wht:0, blk:0, tex:0, dhz:0, grn:0, grs:25, grr:50, vgm:50, vgf:50, vgr:0, vgh:0,
   shr:50, shd:25, shm:0, nrl:0, nrc:0, nrd:50,
-  crv:{}, crp:[0,0,0,0], mix:{}, bwm:{}, grd:{}, cal:{}});
+  lnd:0, lnv:0, car:0, cab:0, caa:false, dfr:0, pv:0, ph:0, gas:0, gsc:100, gx:0, gy:0,
+  crv:{}, crp:[0,0,0,0], mix:{}, bwm:{}, grd:{}, cal:{}, sp:[], rey:[], lut:{}, mk:[]});
 // slider key -> develop-setting name, for the settings that change the picture itself (the server draws their preview)
 const TONEK = {exp:'exposure', hi:'highlights', sh:'shadows', temp:'temperature', tint:'tint', vib:'vibrance', cla:'clarity', shp:'sharpness', blr:'blur', vig:'vignette', sep:'sepia',
   wht:'whites', blk:'blacks', tex:'texture', dhz:'dehaze', grn:'grain', grs:'grain_size', grr:'grain_rough', vgm:'vignette_mid', vgf:'vignette_feather', vgr:'vignette_round', vgh:'vignette_hl',
-  shr:'sharp_radius', shd:'sharp_detail', shm:'sharp_mask', nrl:'nr_lum', nrc:'nr_color', nrd:'nr_detail'};
+  shr:'sharp_radius', shd:'sharp_detail', shm:'sharp_mask', nrl:'nr_lum', nrc:'nr_color', nrd:'nr_detail',
+  lnd:'lens_dist', lnv:'lens_vig', car:'ca_r', cab:'ca_b', caa:'ca_auto', dfr:'defringe', pv:'persp_v', ph:'persp_h', gas:'geo_aspect', gsc:'geo_scale', gx:'geo_x', gy:'geo_y'};
 const STYLE_OF = {grs:'grn', grr:'grn', vgm:'vig', vgf:'vig', vgr:'vig', vgh:'vig', shr:'shp', shd:'shp', shm:'shp', nrd:['nrl','nrc']};
-const TONE_DEFAULT = {grs:25, grr:50, vgm:50, vgf:50, shr:50, shd:25, nrd:50};                 // the sliders whose resting place is not 0
+const TONE_DEFAULT = {grs:25, grr:50, vgm:50, vgf:50, shr:50, shd:25, nrd:50, gsc:100};                 // the sliders whose resting place is not 0
 // nested settings: key in DEV.ops -> name in the develop settings. They are replaced as a whole (never changed in place), so History keeps its copies.
-const NESTK = {crv:'curve', crp:'curve_p', mix:'mixer', bwm:'bwmix', grd:'grading', cal:'calib'};
+const NESTK = {crv:'curve', crp:'curve_p', mix:'mixer', bwm:'bwmix', grd:'grading', cal:'calib', sp:'spots', rey:'redeye', lut:'lut', mk:'masks'};
 const BANDS = ['red','orange','yellow','green','aqua','blue','purple','magenta'];
 const BAND_RGB = ['#e0453a','#e8943a','#e6d43a','#4fbf4f','#3ac4c4','#3a6fe0','#8a4fd9','#d94fb8'];
 const BAND_NAME = {red:t('Red'), orange:t('Orange'), yellow:t('Yellow'), green:t('Green'), aqua:t('Aqua'), blue:t('Blue'), purple:t('Purple'), magenta:t('Magenta')};
 const nestedActive = (k, v) => {
   if(!v) return false;
   if(k==='crp') return v.some(x=>x);
+  if(k==='sp' || k==='rey' || k==='mk') return v.length>0;
+  if(k==='lut') return !!v.name;
   if(k==='crv') return Object.values(v).some(pts=>pts && pts.some(p=>Math.abs(p[0]-p[1])>1e-4));
   if(k==='grd') return ['shadows','mid','high'].some(r=>v[r] && (v[r][1] || v[r][2]));
   return Object.values(v).some(x=>Array.isArray(x) ? x.some(y=>y) : x);
@@ -1536,7 +1540,7 @@ const toneApi = o => {
   for(const [k,n] of Object.entries(TONEK)){
     const d=TONE_DEFAULT[k]||0, master = STYLE_OF[k];
     if(master && ![].concat(master).some(m=>o[m])) continue;                                  // grain size / vignette handles mean nothing while their amount is 0
-    if(o[k]!=null && o[k]!==d) r[n] = k==='exp' ? o[k]/100 : o[k];
+    if(o[k]!=null && o[k]!==d && o[k]!==false) r[n] = k==='exp' ? o[k]/100 : o[k];
   }
   for(const [k,n] of Object.entries(NESTK)) if(nestedActive(k, o[k])) r[n] = o[k];
   return r;
@@ -1559,7 +1563,7 @@ const PRESETS = [
 ];
 async function devOpen(){
   const p=actPhoto();
-  DEV.crop=false; DEV.before=false; DEV.dirty=false;
+  DEV.crop=false; DEV.before=false; DEV.dirty=false; DEV.mi=null; DEV.mc=0; DEV.si=null; DEV.tool=null; DEV.origImg=null;
   if(!p){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); return; }
   if(p.is_video){ DEV.id=null; $('#dev-img').removeAttribute('src'); renderDevPanels(); toast(t('Editing is available for photos only')); return; }
   DEV.id=p.id;
@@ -1597,8 +1601,10 @@ function layoutDev(){
   const flip = !DEV.before && !DEV.crop && (o.fh || o.fv);                 // flips are applied last: mirror the picture around the visible centre
   cv.style.transformOrigin = `${(c[0]+c[2])/2*cw}px ${(c[1]+c[3])/2*ch}px`;
   cv.style.transform = flip ? `scale(${o.fh?-1:1},${o.fv?-1:1})` : '';
+  const tint=$('#mask-tint'); if(tint){ Object.assign(tint.style, {width:img.style.width, height:img.style.height, left:img.style.left, top:img.style.top, transform:img.style.transform}); }
+  toolDraw();
   $('#dev-badge').classList.toggle('hidden', !DEV.before);
-  const ov=$('#crop-ov'); ov.classList.toggle('hidden', !DEV.crop);
+  const ov=$('#crop-ov'); ov.classList.toggle('hidden', !DEV.crop); ov.dataset.ovl = DEV.ovl || pref.get('cropOverlay','thirds');
   if(DEV.crop){ const k=o.crop; Object.assign(ov.style, {left:left+k[0]*cw+'px', top:top+k[1]*ch+'px', width:(k[2]-k[0])*cw+'px', height:(k[3]-k[1])*ch+'px'});
     ov._box={left, top, cw, ch}; if(!ov.children.length) ov.innerHTML=['nw','n','ne','e','se','s','sw','w'].map(h=>`<i data-h="${h}"></i>`).join(''); }
 }
@@ -1627,6 +1633,38 @@ async function devPreview(force){
 }
 let _pvTimer=null;
 const devPreviewSoon = ()=>{ clearTimeout(_pvTimer); _pvTimer=setTimeout(devPreview, 160); };
+const ASPECTS = [['free',t('Free')],['original',t('Original')],['1:1','1:1'],['4:5','4:5'],['5:7','5:7'],['2:3','2:3'],['3:2','3:2'],['4:3','4:3'],['3:4','3:4'],['16:9','16:9'],['16:10','16:10']];
+const OVERLAYS = [['thirds',t('Rule of thirds')],['grid',t('Grid')],['golden',t('Golden ratio')],['none',t('No guide')]];
+// size of the turned picture in its own pixels (what the crop fractions are fractions of)
+function devBoxDims(){
+  const img=$('#dev-img'), th=(DEV.ops?.rot||0)*Math.PI/180, C=Math.abs(Math.cos(th)), Sn=Math.abs(Math.sin(th)), w=img.naturalWidth||1, h=img.naturalHeight||1;
+  return [w*C+h*Sn, w*Sn+h*C];
+}
+function aspectRatio(){
+  const a=DEV.aspect; if(!a || a==='free') return 0;
+  if(a==='original'){ const img=$('#dev-img'); return (img.naturalWidth||1)/(img.naturalHeight||1); }
+  const [x,y]=a.split(':').map(Number); return x/y;
+}
+// the biggest crop of this ratio, centred on the middle of the present crop and inside the picture
+function devFitAspect(){
+  const r=aspectRatio(); if(!r || DEV.id==null) return;
+  const [BW,BH]=devBoxDims(), c=DEV.ops.crop; let cx=(c[0]+c[2])/2, cy=(c[1]+c[3])/2;
+  let w=c[2]-c[0], h=w*BW/r/BH; if(h>c[3]-c[1]){ h=c[3]-c[1]; w=h*BH*r/BW; }
+  w=Math.min(w,1); h=Math.min(h,1); cx=clamp(cx,w/2,1-w/2); cy=clamp(cy,h/2,1-h/2);
+  devSet({crop:[cx-w/2,cy-h/2,cx+w/2,cy+h/2]}, `${t('Crop')} ${DEV.aspect==='original'?t('Original'):DEV.aspect}`);
+}
+// keeps the ratio while a handle is dragged: h = the handle, c = [x1,y1,x2,y2] already moved
+function enforceAspect(h, c){
+  const r=aspectRatio(); if(!r) return c; const [BW,BH]=devBoxDims();
+  let [x1,y1,x2,y2]=c; const horiz=h.includes('e')||h.includes('w'), vert=h.includes('n')||h.includes('s');
+  if(horiz){ const hh=(x2-x1)*BW/r/BH; if(h.includes('n')) y1=y2-hh; else if(h.includes('s')) y2=y1+hh; else { const m=(y1+y2)/2; y1=m-hh/2; y2=m+hh/2; } }
+  else if(vert){ const ww=(y2-y1)*BH*r/BW, m=(x1+x2)/2; x1=m-ww/2; x2=m+ww/2; }
+  // inside the picture: shrink about the corner that stays put
+  const ax = h.includes('w')?x2:h.includes('e')?x1:(x1+x2)/2, ay = h.includes('n')?y2:h.includes('s')?y1:(y1+y2)/2;
+  let k=1; for(const [v,a_,lim] of [[x1,ax,0],[x2,ax,1],[y1,ay,0],[y2,ay,1]]){ if((lim===0 && v<0) || (lim===1 && v>1)){ const d=v-a_; if(d) k=Math.min(k,(lim-a_)/d); } }
+  if(k<1){ x1=ax+(x1-ax)*k; x2=ax+(x2-ax)*k; y1=ay+(y1-ay)*k; y2=ay+(y2-ay)*k; }
+  return [x1,y1,x2,y2];
+}
 function renderDevPanels(){
   const o=DEV.ops || NEUTRAL(), dis = DEV.id==null ? 'disabled' : '';
   const sl=(k,label,cls,min=-100,max=100)=>`<div class="dsl ${cls}"><label for="d-${k}">${label}</label><input id="d-${k}" data-k="${k}" type="range" min="${min}" max="${max}" step="1" value="${o[k]}" ${dis} title="${t("Double-click to reset")}"><output>${dfmt(k,o[k])}</output></div>`;
@@ -1653,7 +1691,9 @@ function renderDevPanels(){
     <div class="dsl"><label for="d-straight">${t("Straighten")}</label><input id="d-straight" data-k="straight" type="range" min="-45" max="45" step="0.5" value="${fine}" ${dis}><output>${fine>0?'+':''}${fine}°</output></div>
     <div class="btnrow90"><button data-rot="-90" ${dis}>${I('rotl')} 90°</button><button data-rot="90" ${dis}>90° ${I('rotr')}</button></div>
     <div class="btnrow90"><button data-flip="h" class="${o.fh?'on':''}" ${dis}>${t("Flip horizontally")}</button><button data-flip="v" class="${o.fv?'on':''}" ${dis}>${t("Flip vertically")}</button></div>
-    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('Done Cropping (Enter)'):t('Crop (R)')}</button><button data-t="cropreset" ${dis}>${t("Reset Crop")}</button></div>`;
+    <div class="btnrow90"><button data-t="crop" ${dis}>${I('crop')} ${DEV.crop?t('Done Cropping (Enter)'):t('Crop (R)')}</button><button data-t="cropreset" ${dis}>${t("Reset Crop")}</button></div>
+    <div class="btnrow90"><select data-aspect ${dis} title="${t('Aspect ratio of the crop')}">${ASPECTS.map(([k,n])=>`<option value="${k}" ${DEV.aspect===k?'selected':''}>${n}</option>`).join('')}</select>
+      <select data-overlay ${dis} title="${t('Crop guide')}">${OVERLAYS.map(([k,n])=>`<option value="${k}" ${(DEV.ovl||pref.get('cropOverlay','thirds'))===k?'selected':''}>${n}</option>`).join('')}</select></div>`;
   $('#p-presets').innerHTML = PRESETS.map(([n],i)=>`<div class="row" data-preset="${i}">${I('dev')}<span class="nm">${n}</span></div>`).join('');
   $('#p-history').innerHTML = DEV.hist.map((h,i)=>`<div class="row ${i===DEV.hist.length-1?'':''}" data-hist="${i}"><span class="nm">${esc(h.t)}</span></div>`).reverse().join('') || '<div class="hint">—</div>';
   $$('#dev-tools [data-tool]').forEach(b=>b.classList.toggle('on', DEV.crop));
@@ -1661,20 +1701,25 @@ function renderDevPanels(){
 // ---- the advanced panels: tone curve, colour mixer / black & white mix, colour grading, calibration (issue #6) + white balance helpers
 const WB_PRESET_LIST = [[t('As Shot'),0,0],[t('Cloudy'),18,6],[t('Shade'),32,8],[t('Tungsten'),-45,6],[t('Fluorescent'),-12,24],[t('Flash'),6,2]];
 const nGet = (path, d) => { let v=DEV.ops; for(const k of path){ v = v==null ? v : v[k]; } return v==null ? d : v; };
-const nDefault = path => path[0]==='grd' && path[1]==='blend' ? 50 : 0;
+const nDefault = path => (path[0]==='grd' && path[1]==='blend') || (path[0]==='mk' && path[path.length-1]==='amount') ? (path[0]==='mk' ? 100 : 50) : (path[0]==='mk' && path[path.length-1]==='smooth') ? 40 : (path[0]==='mk' && path[path.length-1]==='tol') ? 40 : (path[0]==='mk' && path[path.length-1]==='feather') ? 50 : (path[0]==='mk' && path[path.length-1]==='hi') ? 1 : 0;
 // replaces DEV.ops[path[0]] by an edited copy (History keeps the old objects)
 function nPut(path, val){
   const root = JSON.parse(JSON.stringify(DEV.ops[path[0]])); let node = root;
   for(let i=1;i<path.length-1;i++){
-    if(node[path[i]]==null) node[path[i]] = (path[0]==='cal' ? [0,0] : [0,0,0]);
+    if(node[path[i]]==null) node[path[i]] = path[0]==='mk' ? (typeof path[i+1]==='number' ? [] : {}) : (path[0]==='cal' ? [0,0] : [0,0,0]);
     node = node[path[i]];
   }
   node[path[path.length-1]] = val; DEV.ops[path[0]] = root;
 }
 const nfmt = (v, hue) => hue ? v+'°' : (v>0?'+':'')+v;
+// a slider for a nested setting: path = ['mk', 0, 'adj', 'exposure']; opt.sc = the page shows value*sc (stored value = shown / sc)
+const mkNsl = dis => (path, label, min, max, opt={}) => {
+  const sc = opt.sc || 1, raw = nGet(path, nDefault(path)), v = Math.round(raw*sc), id = 'n-'+path.join('-');
+  const out = opt.dec ? ((v>0?'+':'')+(v/sc).toFixed(opt.dec)) : opt.plain ? v : nfmt(v, opt.hue);
+  return `<div class="dsl ${opt.cls||''}" ${opt.track?`style="--track:${opt.track}"`:''}><label for="${id}" title="${label}">${label}</label><input id="${id}" data-n="${path.join('.')}" data-l="${esc(opt.lab||label)}" ${opt.hue?'data-hue="1"':''} ${opt.plain?'data-plain="1"':''} ${sc!==1?`data-sc="${sc}"`:''} ${opt.dec?`data-dec="${opt.dec}"`:''} type="range" min="${min}" max="${max}" step="1" value="${v}" ${dis} title="${t('Double-click to reset')}"><output>${out}</output></div>`;
+};
 function renderAdvPanels(o, dis, sl){
-  const nsl = (path, label, min, max, opt={}) => { const v = nGet(path, nDefault(path)), id = 'n-'+path.join('-');
-    return `<div class="dsl ${opt.cls||''}" ${opt.track?`style="--track:${opt.track}"`:''}><label for="${id}" title="${label}">${label}</label><input id="${id}" data-n="${path.join('.')}" data-l="${esc(opt.lab||label)}" ${opt.hue?'data-hue="1"':''} type="range" min="${min}" max="${max}" step="1" value="${v}" ${dis} title="${t('Double-click to reset')}"><output>${opt.plain?v:nfmt(v, opt.hue)}</output></div>`; };
+  const nsl = mkNsl(dis);
   // tone curve
   const ch = DEV.curveCh || 'rgb', crp = o.crp || [0,0,0,0];
   $('#p-curve').innerHTML = `<div class="treat curve-ch">${[['rgb',t('RGB')],['r',t('Red')],['g',t('Green')],['b',t('Blue')]].map(([k,n])=>`<a data-cch="${k}" class="${ch===k?'on':''}">${n}</a>`).join('')}</div>
@@ -1696,10 +1741,21 @@ function renderAdvPanels(o, dis, sl){
   const reg = (key, name) => `<div class="dsec">${name}</div>` + nsl(['grd',key,0], t('Hue'), 0, 360, {track:hueTrack, hue:1, lab:`${name} · ${t('Hue')}`}) + nsl(['grd',key,1], t('Saturation'), 0, 100, {plain:1, lab:`${name} · ${t('Saturation')}`}) + nsl(['grd',key,2], t('Luminance'), -100, 100, {cls:'exp', lab:`${name} · ${t('Luminance')}`});
   $('#p-grading').innerHTML = reg('shadows', t('Shadows')) + reg('mid', t('Midtones')) + reg('high', t('Highlights')) +
     `<div class="dsec">${t('Blend and balance')}</div>` + nsl(['grd','blend'], t('Blend'), 0, 100, {plain:1}) + nsl(['grd','balance'], t('Balance'), -100, 100);
+  // lens corrections, geometry
+  $('#p-lens').innerHTML = `${sl('lnd',t('Distortion'),'')}${sl('lnv',t('Lens vignetting'),'exp')}
+    <div class="dsec">${t('Chromatic aberration')}</div>
+    <label class="chk"><input type="checkbox" data-chk="caa" ${o.caa?'checked':''} ${dis}> ${t('Remove automatically')}</label>
+    ${sl('car',t('Red / cyan fringe'),'')}${sl('cab',t('Blue / yellow fringe'),'')}${sl('dfr',t('Defringe'),'',0,100)}`;
+  $('#p-geo').innerHTML = `<div class="dsec">${t('Upright')}</div>
+    <div class="btnrow90"><button data-up="auto" ${dis}>${t('Auto')}</button><button data-up="level" ${dis}>${t('Level')}</button></div>
+    <div class="btnrow90"><button data-up="vertical" ${dis}>${t('Vertical')}</button><button data-up="full" ${dis}>${t('Full')}</button></div>
+    <div class="dsec">${t('Manual')}</div>
+    ${sl('pv',t('Vertical'),'')}${sl('ph',t('Horizontal'),'')}${sl('gas',t('Aspect'),'')}${sl('gsc',t('Scale'),'',100,200)}${sl('gx',t('X offset'),'')}${sl('gy',t('Y offset'),'')}`;
   // calibration
   const cs = (key, name, c) => `<div class="dsec">${name}</div>` + nsl(['cal',key,0], t('Hue'), -100, 100, {lab:`${name} · ${t('Hue')}`}) + nsl(['cal',key,1], t('Saturation'), -100, 100, {track:`linear-gradient(90deg,#808080,${c})`, lab:`${name} · ${t('Saturation')}`});
   $('#p-calib').innerHTML = `<div class="dsec">${t('Shadows')}</div>` + nsl(['cal','shadow_tint'], t('Tint'), -100, 100, {cls:'tint'}) +
     cs('red', t('Red primary'), '#e0453a') + cs('green', t('Green primary'), '#4fbf4f') + cs('blue', t('Blue primary'), '#3a6fe0');
+  renderToolPanels(o, dis, sl, nsl);
 }
 // the curve editor: the same monotone curve the server draws (Fritsch-Carlson), points are dragged with the mouse, double-click removes one
 function pchipJs(xs, ys, x){
@@ -1751,9 +1807,9 @@ document.addEventListener('dblclick', e=>{
 const nPath = el => el.dataset.n.split('.').map(x=>/^\d+$/.test(x) ? +x : x);
 $('#right').addEventListener('input', e=>{
   const n = e.target.dataset.n; if(!n || DEV.id==null) return;
-  const path = nPath(e.target), v = +e.target.value; nPut(path, v);
-  e.target.nextElementSibling.textContent = e.target.dataset.hue ? v+'°' : /^grd\.(\w+\.1|blend)$/.test(n) ? v : nfmt(v);
-  DEV.dirty = true; devPreviewSoon();
+  const path = nPath(e.target), v = +e.target.value, sc = +e.target.dataset.sc || 1; nPut(path, v / sc);
+  e.target.nextElementSibling.textContent = e.target.dataset.dec ? (v>0?'+':'')+(v/sc).toFixed(+e.target.dataset.dec) : e.target.dataset.hue ? v+'°' : (e.target.dataset.plain || /^grd\.(\w+\.1|blend)$/.test(n)) ? v : nfmt(v);
+  DEV.dirty = true; devPreviewSoon(); if(path[0]==='mk') maskTintSoon();
 });
 $('#right').addEventListener('change', e=>{ if(e.target.dataset.n && DEV.id!=null) devSet({}, `${e.target.dataset.l} ${e.target.value}`); });
 $('#right').addEventListener('dblclick', e=>{
@@ -1764,12 +1820,28 @@ $('#right').addEventListener('click', e=>{
   if(S.mod!=='develop' || DEV.id==null) return;
   const cc = e.target.closest('[data-cch]'); if(cc){ DEV.curveCh = cc.dataset.cch; renderDevPanels(); return; }
   const mx = e.target.closest('[data-mix]'); if(mx){ DEV.mixTab = +mx.dataset.mix; renderDevPanels(); return; }
+  const up = e.target.closest('[data-up]'); if(up){ devUpright(up.dataset.up); return; }
   if(e.target.closest('[data-t="curvereset"]')) devSet({crv:{}, crp:[0,0,0,0]}, t('Reset Curve'));
   if(e.target.closest('[data-t="wbpick"]')) wbPickToggle();
 });
 $('#right').addEventListener('change', e=>{
+  if(e.target.dataset.aspect != null && DEV.id!=null){ DEV.aspect = e.target.value; devFitAspect(); return; }
+  if(e.target.dataset.overlay != null){ DEV.ovl = e.target.value; pref.set('cropOverlay', DEV.ovl); layoutDev(); return; }
+});
+$('#right').addEventListener('change', e=>{
   if(e.target.dataset.wb == null || DEV.id==null) return;
   const [n, tp, ti] = WB_PRESET_LIST[+e.target.value]; devSet({temp:tp, tint:ti}, `${t('White Balance')}: ${n}`);
+});
+async function devUpright(mode){
+  if(DEV.id==null) return;
+  toast(t('Looking for straight lines…'), 1500);
+  let r; try{ r = await api(`/api/photo/${DEV.id}/upright?mode=${mode}`); }catch(e){ return; }
+  devSet({...(mode==='level' ? {} : {pv:r.persp_v||0, ph:mode==='full'||mode==='auto' ? (r.persp_h||0) : DEV.ops.ph}), rot:Math.round(DEV.ops.rot/90)*90 + (r.rotate||0)}, `${t('Upright')}: ${({auto:t('Auto'), level:t('Level'), vertical:t('Vertical'), full:t('Full')})[mode]}`);
+  if(!r.persp_v && !r.persp_h && !r.rotate) toast(t('The lines are already straight'));
+}
+document.addEventListener('change', e=>{
+  const k = e.target.dataset && e.target.dataset.chk; if(!k || DEV.id==null) return;
+  devSet({[k]: e.target.checked}, `${t('Chromatic aberration')}: ${e.target.checked ? t('On') : t('Off')}`);
 });
 // white balance eyedropper: the colour under the click (read from the original file) is made neutral grey -- same formula as the server's wb_from_neutral
 function wbPickToggle(){
@@ -1795,6 +1867,231 @@ $('#v-develop').addEventListener('click', e=>{
   DEV.pick = false; $('#v-develop').classList.remove('picking');
   devSet({temp:clamp(Math.round(tp*100), -100, 100), tint:clamp(Math.round(ti*100), -100, 100)}, t('White Balance'));
 }, true);
+// ---- local adjustments (masks), spot removal and red eye: panels, the drawing on the photo and the mouse (issue #6)
+const MK_KINDS = [['brush',t('Brush')],['linear',t('Linear gradient')],['radial',t('Radial gradient')],['luminance',t('Luminance range')],['color',t('Color range')],['sky',t('Sky')],['subject',t('Subject')],['background',t('Background')]];
+const MK_NAME = Object.fromEntries(MK_KINDS);
+const MK_DEFAULT = {
+  brush:{strokes:[]}, linear:{x1:.3,y1:.5,x2:.7,y2:.5}, radial:{cx:.5,cy:.5,rx:.25,ry:.2,rot:0,feather:50}, luminance:{lo:.6,hi:1,smooth:40}, color:{color:[128,128,128],tol:40}, sky:{}, subject:{}, background:{}};
+// the local adjustments: [key, label, min, max, scale]
+const MK_ADJ = [['exposure',t('Exposure'),-400,400,100],['temp',t('Temperature'),-100,100,1],['tint',t('Tint'),-100,100,1],['contrast',t('Contrast'),-100,100,1],['highlights',t('Highlights'),-100,100,1],
+  ['shadows',t('Shadows'),-100,100,1],['whites',t('Whites'),-100,100,1],['blacks',t('Blacks'),-100,100,1],['texture',t('Texture'),-100,100,1],['clarity',t('Clarity'),-100,100,1],['dehaze',t('Dehaze'),-100,100,1],
+  ['hue',t('Hue'),-100,100,1],['saturation',t('Saturation'),-100,100,1],['sharpness',t('Sharpness'),-100,100,1],['noise',t('Noise'),0,100,1]];
+if(!DEV.brush) DEV.brush = {size:.06, feather:50, flow:100, erase:false, ...pref.get('brush', {})};
+const mkOf = () => DEV.ops && DEV.ops.mk ? DEV.ops.mk[DEV.mi] : null;
+const mcOf = () => { const m = mkOf(); return m ? m.comps[DEV.mc] : null; };
+function mkCommit(mk, label){ devSet({mk}, label); }
+function mkClone(){ return JSON.parse(JSON.stringify(DEV.ops.mk)); }
+function mkAdd(kind){
+  const mk = mkClone(); if(mk.length >= 8) return toast(t('At most 8 masks'));
+  mk.push({name:`${MK_NAME[kind]} ${mk.length+1}`, amount:100, adj:{}, comps:[{kind, op:'add', invert:false, ...JSON.parse(JSON.stringify(MK_DEFAULT[kind]))}]});
+  DEV.mi = mk.length-1; DEV.mc = 0; DEV.tool = 'mask'; mkCommit(mk, `${t('Mask')}: ${MK_NAME[kind]}`);
+}
+function mkAddComp(kind){
+  const mk = mkClone(), m = mk[DEV.mi]; if(!m) return; if(m.comps.length >= 6) return toast(t('At most 6 components'));
+  m.comps.push({kind, op:'add', invert:false, ...JSON.parse(JSON.stringify(MK_DEFAULT[kind]))}); DEV.mc = m.comps.length-1; mkCommit(mk, `${t('Mask')}: ${MK_NAME[kind]}`);
+}
+function renderToolPanels(o, dis, sl, nsl){
+  const mk = o.mk || [], m = mk[DEV.mi] || null;
+  if(DEV.mi >= mk.length){ DEV.mi = mk.length ? mk.length-1 : null; DEV.mc = 0; }
+  const kinds = fn => MK_KINDS.map(([k,n])=>`<button ${fn}="${k}" ${dis}>+ ${n}</button>`).join('');
+  let h = `<div class="mkadd">${kinds('data-mkadd')}</div>`;
+  h += `<div class="rows mkl">${mk.map((x,i)=>`<div class="row ${i===DEV.mi?'on':''}" data-mk="${i}"><span class="nm">${esc(x.name || `${t('Mask')} ${i+1}`)}</span><button data-mkdel="${i}" title="${t('Delete')}">✕</button></div>`).join('')}</div>`;
+  const me = (DEV.mi!=null && m) ? DEV.mi : null;
+  if(m){
+    const c = m.comps[DEV.mc] || m.comps[0], ci = m.comps.indexOf(c);
+    h += `<div class="dsec">${t('Components')}</div><div class="rows mkl">${m.comps.map((cc,j)=>`<div class="row ${j===ci?'on':''}" data-mc="${j}"><span class="nm">${MK_NAME[cc.kind]}</span>${j?`<select data-mcop="${j}"><option value="add" ${cc.op==='add'?'selected':''}>${t('Add')}</option><option value="subtract" ${cc.op==='subtract'?'selected':''}>${t('Subtract')}</option><option value="intersect" ${cc.op==='intersect'?'selected':''}>${t('Intersect')}</option></select>`:''}<label title="${t('Invert')}"><input type="checkbox" data-mcinv="${j}" ${cc.invert?'checked':''}> ${t('Invert')}</label>${m.comps.length>1?`<button data-mcdel="${j}" title="${t('Delete')}">✕</button>`:''}</div>`).join('')}</div>
+      <div class="btnrow90"><select data-mcadd ${dis}><option value="">${t('Add a component…')}</option>${MK_KINDS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select></div>`;
+    const P = k => ['mk', DEV.mi, 'comps', ci, k];
+    if(c.kind==='brush') h += `<div class="dsec">${t('Brush')}</div>${brushSliders(dis)}<div class="btnrow90"><button data-brush="erase" class="${DEV.brush.erase?'on':''}" ${dis}>${t('Erase')}</button><button data-brush="clear" ${dis}>${t('Clear strokes')}</button></div>`;
+    else if(c.kind==='radial') h += nsl(P('feather'), t('Feather'), 0, 100, {plain:1}) + nsl(P('rot'), t('Rotate'), -180, 180);
+    else if(c.kind==='luminance') h += nsl(P('lo'), t('From'), 0, 100, {sc:100, plain:1, cls:'exp'}) + nsl(P('hi'), t('To'), 0, 100, {sc:100, plain:1, cls:'exp'}) + nsl(P('smooth'), t('Smoothness'), 0, 100, {plain:1});
+    else if(c.kind==='color') h += `<div class="btnrow90"><button data-t="mkpick" class="${DEV.pickMk?'on':''}" ${dis}>${I('pick')} ${t('Pick a color')}</button><span class="swatch" style="background:rgb(${c.color.map(Math.round).join(',')})"></span></div>` + nsl(P('tol'), t('Range'), 0, 100, {plain:1});
+    h += `<div class="dsec">${t('Adjustments')}</div>` + nsl(['mk', DEV.mi, 'amount'], t('Amount'), 0, 100, {plain:1});
+    h += MK_ADJ.map(([k,n,lo,hi,sc])=>nsl(['mk', DEV.mi, 'adj', k], n, lo, hi, sc===100 ? {sc:100, dec:2, cls:'exp', lab:`${n} (${m.name})`} : {cls:k==='temp'?'temp':k==='tint'?'tint':k==='saturation'||k==='hue'?'sat':'', lab:`${n} (${m.name})`})).join('');
+    h += `<label class="chk"><input type="checkbox" data-mkshow ${DEV.showMask!==false?'checked':''}> ${t('Show the mask')}</label><div class="btnrow90"><button data-t="tooldone" ${dis}>${DEV.tool==='mask'?t('Done'):t('Edit on the photo')}</button></div>`;
+  }
+  $('#p-mask').innerHTML = h;
+  // spot removal and red eye
+  const sp = o.sp || [], re_ = o.rey || [], S = DEV.spot || (DEV.spot = {mode:'heal', r:.025, feather:50, opacity:100});
+  $('#p-spot').innerHTML = `<div class="btnrow90"><button data-tool="spot" class="${DEV.tool==='spot'?'on':''}" ${dis}>${t('Spot removal')}</button><button data-tool="redeye" class="${DEV.tool==='redeye'?'on':''}" ${dis}>${t('Red eye')}</button></div>
+    <div class="btnrow90"><select data-spotmode ${dis}><option value="heal" ${S.mode==='heal'?'selected':''}>${t('Heal')}</option><option value="clone" ${S.mode==='clone'?'selected':''}>${t('Clone')}</option></select></div>
+    <div class="dsl"><label for="sp-r">${t('Size')}</label><input id="sp-r" data-spot="r" type="range" min="3" max="120" value="${Math.round(S.r*1000)}" ${dis}><output>${Math.round(S.r*1000)}</output></div>
+    <div class="dsl"><label for="sp-f">${t('Feather')}</label><input id="sp-f" data-spot="feather" type="range" min="0" max="100" value="${S.feather}" ${dis}><output>${S.feather}</output></div>
+    <div class="dsl"><label for="sp-o">${t('Opacity')}</label><input id="sp-o" data-spot="opacity" type="range" min="0" max="100" value="${S.opacity}" ${dis}><output>${S.opacity}</output></div>
+    <div class="rows mkl">${sp.map((x,i)=>`<div class="row ${i===DEV.si?'on':''}" data-sp="${i}"><span class="nm">${x.mode==='clone'?t('Clone'):t('Heal')} ${i+1}</span><button data-spdel="${i}" title="${t('Delete')}">✕</button></div>`).join('')}${re_.map((x,i)=>`<div class="row"><span class="nm">${t('Red eye')} ${i+1}</span><button data-redel="${i}" title="${t('Delete')}">✕</button></div>`).join('')}</div>
+    <div class="hint" style="padding:2px 12px">${t('Click the photo to remove a spot; drag the dotted circle to choose where it is copied from.')}</div>`;
+  toolDraw(); maskTintSoon();
+}
+function brushSliders(dis){
+  const b = DEV.brush;
+  return `<div class="dsl"><label for="br-s">${t('Size')}</label><input id="br-s" data-brs="size" type="range" min="1" max="300" value="${Math.round(b.size*1000)}" ${dis}><output>${Math.round(b.size*1000)}</output></div>
+    <div class="dsl"><label for="br-f">${t('Feather')}</label><input id="br-f" data-brs="feather" type="range" min="0" max="100" value="${b.feather}" ${dis}><output>${b.feather}</output></div>
+    <div class="dsl"><label for="br-fl">${t('Flow')}</label><input id="br-fl" data-brs="flow" type="range" min="1" max="100" value="${b.flow}" ${dis}><output>${b.flow}</output></div>`;
+}
+// ---- maps between the picture (0..1) and the editing area (pixels inside #v-develop), through the same turn / mirror the picture is shown with
+function devGeom(){
+  const img=$('#dev-img'), cv=$('#dev-canvas'), o=DEV.ops; if(!img.naturalWidth || !o) return null;
+  const c=o.crop, cw=parseFloat(cv.style.width), ch=parseFloat(cv.style.height);
+  return {iw:parseFloat(img.style.width), ih:parseFloat(img.style.height), cx:parseFloat(img.style.left)+parseFloat(img.style.width)/2, cy:parseFloat(img.style.top)+parseFloat(img.style.height)/2,
+    ox:parseFloat(cv.style.left), oy:parseFloat(cv.style.top), cw, ch, c, a:(DEV.before?0:o.rot)*Math.PI/180, fh:o.fh, fv:o.fv};
+}
+function imgToStage(u, v, g){
+  g = g || devGeom(); if(!g) return [0,0];
+  const x=(u-.5)*g.iw, y=(v-.5)*g.ih, cs=Math.cos(g.a), sn=Math.sin(g.a);
+  let px=g.cx + x*cs - y*sn, py=g.cy + x*sn + y*cs;
+  if(g.fh && !DEV.crop) px=(g.c[0]+g.c[2])*g.cw - px; if(g.fv && !DEV.crop) py=(g.c[1]+g.c[3])*g.ch - py;
+  return [g.ox+px, g.oy+py];
+}
+function stageToImg(sx, sy, g){
+  g = g || devGeom(); if(!g) return [0,0];
+  let px=sx-g.ox, py=sy-g.oy;
+  if(g.fh && !DEV.crop) px=(g.c[0]+g.c[2])*g.cw - px; if(g.fv && !DEV.crop) py=(g.c[1]+g.c[3])*g.ch - py;
+  const dx=px-g.cx, dy=py-g.cy, cs=Math.cos(g.a), sn=Math.sin(g.a);
+  return [((dx*cs + dy*sn)+g.iw/2)/g.iw, ((-dx*sn + dy*cs)+g.ih/2)/g.ih];
+}
+const stagePt = e => { const r=$('#v-develop').getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+const imgPt = e => { const [x,y]=stagePt(e); return stageToImg(x,y); };
+// ---- what is drawn on the photo
+function toolDraw(){
+  const svg=$('#tool-ov'); if(!svg) return;
+  const g=devGeom(), live = !!(DEV.tool && g && DEV.id!=null && !DEV.crop);
+  svg.classList.toggle('hidden', !live); svg.classList.toggle('live', live && (DEV.tool!=='mask' || (mcOf()&&['brush','linear','radial','color'].includes(mcOf().kind))));
+  if(!live){ svg.innerHTML=''; return; }
+  const P=(u,v)=>imgToStage(u,v,g).map(x=>x.toFixed(1)).join(','), big=Math.max(g.iw,g.ih);
+  let h='';
+  if(DEV.tool==='mask'){
+    const c=mcOf();
+    if(c && c.kind==='linear'){
+      const [x1,y1]=imgToStage(c.x1,c.y1,g), [x2,y2]=imgToStage(c.x2,c.y2,g), dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1, nx=-dy/L*9999, ny=dx/L*9999;
+      h+=`<line class="tl" x1="${x1-nx}" y1="${y1-ny}" x2="${x1+nx}" y2="${y1+ny}"/><line class="tg" x1="${x2-nx}" y1="${y2-ny}" x2="${x2+nx}" y2="${y2+ny}"/>
+        <circle class="th" data-h="p1" cx="${x1}" cy="${y1}" r="6"/><circle class="th" data-h="p2" cx="${x2}" cy="${y2}" r="6"/>`;
+    } else if(c && c.kind==='radial'){
+      const [cx,cy]=imgToStage(c.cx,c.cy,g), rx=c.rx*big, ry=c.ry*big, th=(c.rot||0)+DEV.ops.rot;
+      h+=`<g transform="rotate(${th} ${cx} ${cy})"><ellipse class="tl" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/><ellipse class="tg" cx="${cx}" cy="${cy}" rx="${rx*(1-(c.feather||50)/100*.9)}" ry="${ry*(1-(c.feather||50)/100*.9)}"/>
+        <circle class="th" data-h="move" cx="${cx}" cy="${cy}" r="6"/><circle class="th" data-h="rx" cx="${cx+rx}" cy="${cy}" r="5"/><circle class="th" data-h="ry" cx="${cx}" cy="${cy+ry}" r="5"/></g>`;
+    } else if(c && c.kind==='brush'){
+      h+=`<circle class="tb" id="brush-cur" cx="-50" cy="-50" r="${DEV.brush.size*big/2}"/>`;
+    }
+  } else if(DEV.tool==='spot' || DEV.tool==='redeye' || (DEV.ops.sp.length||DEV.ops.rey.length)){
+    (DEV.ops.sp||[]).forEach((s,i)=>{
+      const [x,y]=imgToStage(s.x,s.y,g), r=s.r*big;
+      h+=`<circle class="ts ${i===DEV.si?'sel':''}" data-sp="${i}" cx="${x}" cy="${y}" r="${r}"/>`;
+      if(i===DEV.si){ const src = s.sx!=null ? [s.sx,s.sy] : (DEV.spotSrc && DEV.spotSrc[i]); if(src){ const [a,b]=imgToStage(src[0],src[1],g); h+=`<line class="tg" x1="${x}" y1="${y}" x2="${a}" y2="${b}"/><circle class="ts" data-h="src" data-sp="${i}" stroke-dasharray="4 3" cx="${a}" cy="${b}" r="${r}"/>`; } }
+    });
+    (DEV.ops.rey||[]).forEach(s=>{ const [x,y]=imgToStage(s.x,s.y,g); h+=`<circle class="ts" cx="${x}" cy="${y}" r="${s.r*big}" stroke="#ff5a5a"/>`; });
+  }
+  svg.innerHTML=h;
+}
+// the red picture of the selected mask
+let _tintTimer=null, _tintSeq=0;
+const maskTintSoon = () => { clearTimeout(_tintTimer); _tintTimer=setTimeout(maskTint, 220); };
+async function maskTint(){
+  const im=$('#mask-tint'); if(!im) return;
+  const m=mkOf(), show = DEV.id!=null && DEV.tool==='mask' && m && m.comps.length && DEV.showMask!==false;
+  if(!show){ im.classList.add('hidden'); return; }
+  const seq=++_tintSeq, id=DEV.id;
+  try{
+    const r=await fetch(`/api/photo/${id}/mask-overlay`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({masks:DEV.ops.mk, index:DEV.mi})});
+    if(!r.ok || seq!==_tintSeq || DEV.id!==id) return;
+    const url=URL.createObjectURL(await r.blob()); if(DEV.tintUrl) URL.revokeObjectURL(DEV.tintUrl); DEV.tintUrl=url; im.src=url; im.classList.remove('hidden'); layoutDev();
+  }catch(e){}
+}
+// ---- panel clicks
+document.addEventListener('click', e=>{
+  if(S.mod!=='develop' || DEV.id==null || !e.target.closest('#right')) return;
+  const t_=e.target;
+  let q;
+  if((q=t_.closest('[data-mkadd]'))){ mkAdd(q.dataset.mkadd); return; }
+  if((q=t_.closest('[data-mkdel]'))){ const mk=mkClone(); mk.splice(+q.dataset.mkdel,1); DEV.mi = mk.length ? Math.min(DEV.mi, mk.length-1) : null; if(!mk.length) DEV.tool=null; mkCommit(mk, t('Delete mask')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-mk]')) && !t_.closest('button')){ DEV.mi=+q.dataset.mk; DEV.mc=0; DEV.tool='mask'; renderDevPanels(); return; }
+  if((q=t_.closest('[data-mcdel]'))){ const mk=mkClone(); mk[DEV.mi].comps.splice(+q.dataset.mcdel,1); DEV.mc=0; mkCommit(mk, t('Delete component')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-mc]')) && !t_.closest('button,select,input,label')){ DEV.mc=+q.dataset.mc; renderDevPanels(); return; }
+  if((q=t_.closest('[data-mcinv]'))){ const mk=mkClone(); mk[DEV.mi].comps[+q.dataset.mcinv].invert=q.checked; mkCommit(mk, t('Invert')); return; }
+  if(t_.closest('[data-t="tooldone"]')){ DEV.tool = DEV.tool==='mask' ? null : 'mask'; renderDevPanels(); return; }
+  if((q=t_.closest('[data-brush]'))){
+    if(q.dataset.brush==='erase'){ DEV.brush.erase=!DEV.brush.erase; pref.set('brush', DEV.brush); renderDevPanels(); }
+    else { const mk=mkClone(), c=mk[DEV.mi].comps[DEV.mc]; if(c && c.kind==='brush'){ c.strokes=[]; mkCommit(mk, t('Clear strokes')); } }
+    return;
+  }
+  if(t_.closest('[data-t="mkpick"]')){ DEV.pickMk=!DEV.pickMk; renderDevPanels(); return; }
+  if((q=t_.closest('[data-tool]'))){ const k=q.dataset.tool; DEV.tool = DEV.tool===k ? null : k; renderDevPanels(); return; }
+  if((q=t_.closest('[data-spdel]'))){ const sp=JSON.parse(JSON.stringify(DEV.ops.sp)); sp.splice(+q.dataset.spdel,1); DEV.si=null; devSet({sp}, t('Delete spot')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-redel]'))){ const r=JSON.parse(JSON.stringify(DEV.ops.rey)); r.splice(+q.dataset.redel,1); devSet({rey:r}, t('Delete red eye')); e.stopPropagation(); return; }
+  if((q=t_.closest('[data-sp]')) && !t_.closest('button')){ DEV.si=+q.dataset.sp; DEV.tool=DEV.tool||'spot'; renderDevPanels(); return; }
+});
+document.addEventListener('change', e=>{
+  if(DEV.id==null) return; const d=e.target.dataset||{};
+  if(d.mcop!=null){ const mk=mkClone(); mk[DEV.mi].comps[+d.mcop].op=e.target.value; mkCommit(mk, t('Mask')); }
+  else if(d.mcadd!=null && e.target.value){ mkAddComp(e.target.value); }
+  else if(d.mkshow!=null){ DEV.showMask = e.target.checked; maskTint(); }
+  else if(d.spotmode!=null){ DEV.spot.mode=e.target.value; }
+});
+$('#right').addEventListener('input', e=>{
+  const d=e.target.dataset||{}; const v=+e.target.value;
+  if(d.brs){ DEV.brush[d.brs]= d.brs==='size' ? v/1000 : v; pref.set('brush', DEV.brush); e.target.nextElementSibling.textContent=v; toolDraw(); }
+  if(d.spot){ DEV.spot[d.spot]= d.spot==='r' ? v/1000 : v; e.target.nextElementSibling.textContent=v; }
+});
+// ---- the mouse on the photo
+function mkSetComp(fn, live){ const mk = DEV.ops.mk.map(x=>x); const m = JSON.parse(JSON.stringify(mk[DEV.mi])); fn(m.comps[DEV.mc]); mk[DEV.mi]=m; DEV.ops.mk=mk; DEV.dirty=true; if(live){ toolDraw(); maskTintSoon(); devPreviewSoon(); } }
+$('#tool-ov').addEventListener('mousedown', e=>{
+  if(DEV.id==null || e.button) return; e.preventDefault();
+  const g=devGeom(), [u,v]=imgPt(e), big=Math.max(g.iw,g.ih), dh=e.target.dataset?.h;
+  const done = label => { devSet({}, label); };
+  const track = (mv, up) => { const m_=ev=>mv(ev), u_=ev=>{ removeEventListener('mousemove',m_); removeEventListener('mouseup',u_); up(ev); }; addEventListener('mousemove',m_); addEventListener('mouseup',u_); };
+  if(DEV.tool==='mask'){
+    const c=mcOf(); if(!c) return;
+    if(c.kind==='color' && DEV.pickMk){ pickColorAt(e, col=>{ mkSetComp(cc=>{ cc.color=col; }); DEV.pickMk=false; done(t('Color range')); }); return; }
+    if(c.kind==='brush'){
+      const pts=[[u,v]]; const st={pts, size:DEV.brush.size, feather:DEV.brush.feather, flow:DEV.brush.flow, erase:!!DEV.brush.erase};
+      mkSetComp(cc=>{ cc.strokes.push(st); }, false);
+      track(ev=>{ const [a,b]=imgPt(ev); if(pts.length<400) pts.push([+a.toFixed(4),+b.toFixed(4)]); const mk=DEV.ops.mk.map(x=>x), m=JSON.parse(JSON.stringify(mk[DEV.mi])); m.comps[DEV.mc].strokes[m.comps[DEV.mc].strokes.length-1].pts=pts.map(p=>[...p]); mk[DEV.mi]=m; DEV.ops.mk=mk; maskTintSoon(); },
+            ()=>done(t('Brush')));
+      return;
+    }
+    if(c.kind==='linear'){
+      const nu = dh==='p2' ? null : dh==='p1' ? null : [u,v];
+      if(nu) mkSetComp(cc=>{ cc.x1=u; cc.y1=v; cc.x2=u; cc.y2=v; }, true);
+      track(ev=>{ const [a,b]=imgPt(ev); mkSetComp(cc=>{ if(dh==='p1'){ cc.x1=a; cc.y1=b; } else { cc.x2=a; cc.y2=b; } }, true); }, ()=>done(t('Linear gradient')));
+      return;
+    }
+    if(c.kind==='radial'){
+      const create = !dh;
+      if(create) mkSetComp(cc=>{ cc.cx=u; cc.cy=v; cc.rx=.01; cc.ry=.01; }, true);
+      const sx=u, sy=v;
+      track(ev=>{ const [a,b]=imgPt(ev); mkSetComp(cc=>{
+          if(dh==='move'){ cc.cx=a; cc.cy=b; }
+          else if(dh==='rx') cc.rx=Math.max(.01, Math.hypot((a-cc.cx)*g.iw,(b-cc.cy)*g.ih)/big);
+          else if(dh==='ry') cc.ry=Math.max(.01, Math.hypot((a-cc.cx)*g.iw,(b-cc.cy)*g.ih)/big);
+          else { cc.rx=Math.max(.01, Math.abs(a-sx)*g.iw/big); cc.ry=Math.max(.01, Math.abs(b-sy)*g.ih/big); } }, true); }, ()=>done(t('Radial gradient')));
+      return;
+    }
+  }
+  if(DEV.tool==='spot'){
+    const sp=e.target.closest && e.target.closest('[data-sp]');
+    if(sp){                                                                        // drag a spot or its source
+      const i=+sp.dataset.sp; DEV.si=i;
+      track(ev=>{ const [a,b]=imgPt(ev); const arr=JSON.parse(JSON.stringify(DEV.ops.sp)); if(dh==='src'){ arr[i].sx=a; arr[i].sy=b; } else { arr[i].x=a; arr[i].y=b; } DEV.ops.sp=arr; DEV.dirty=true; toolDraw(); devPreviewSoon(); }, ()=>done(t('Spot removal')));
+      return;
+    }
+    const arr=JSON.parse(JSON.stringify(DEV.ops.sp)); if(arr.length>=60) return toast(t('At most 60 spots'));
+    arr.push({x:+u.toFixed(4), y:+v.toFixed(4), r:DEV.spot.r, mode:DEV.spot.mode, feather:DEV.spot.feather, opacity:DEV.spot.opacity}); DEV.si=arr.length-1;
+    devSet({sp:arr}, t('Spot removal')); return;
+  }
+  if(DEV.tool==='redeye'){
+    const arr=JSON.parse(JSON.stringify(DEV.ops.rey)); arr.push({x:+u.toFixed(4), y:+v.toFixed(4), r:DEV.spot.r, amount:100});
+    devSet({rey:arr}, t('Red eye')); return;
+  }
+});
+$('#tool-ov').addEventListener('mousemove', e=>{
+  const c=$('#brush-cur'); if(c){ const [x,y]=stagePt(e); c.setAttribute('cx',x); c.setAttribute('cy',y); }
+});
+// the colour under a click, read from the original file (for the colour range)
+function pickColorAt(e, cb){
+  const g=devGeom(), [u,v]=imgPt(e);
+  const take = im => { const cvs=document.createElement('canvas'); cvs.width=cvs.height=7; const x=cvs.getContext('2d');
+    x.drawImage(im, Math.round(u*im.naturalWidth)-3, Math.round(v*im.naturalHeight)-3, 7, 7, 0, 0, 7, 7); const d=x.getImageData(0,0,7,7).data; let r=0,gg=0,b=0,n=0; for(let i=0;i<d.length;i+=4){ r+=d[i]; gg+=d[i+1]; b+=d[i+2]; n++; } cb([Math.round(r/n),Math.round(gg/n),Math.round(b/n)]); };
+  if(DEV.origImg) take(DEV.origImg); else { const im=new Image(); im.onload=()=>{ DEV.origImg=im; take(im); }; im.src=DEV.orig; }
+}
 // Straightening leaves empty corners: while the crop is untouched (full, or the one made here) it follows the largest rectangle that fits inside the turned picture
 function devAutoCrop(deg){
   const img=$('#dev-img'), o=DEV.ops, c=o.crop, full=c.every((x,i)=>Math.abs(x-[0,0,1,1][i])<1e-3);
@@ -1807,6 +2104,7 @@ function devAutoCrop(deg){
 const dfmt = (k,v)=>k==='exp' ? (v>0?'+':'')+(v/100).toFixed(2) : (v>0?'+':'')+v;
 const DLABEL = {bri:t('Brightness'), con:t('Contrast'), sat:t('Saturation'), exp:t('Exposure'), hi:t('Highlights'), sh:t('Shadows'), temp:t('Temperature'), tint:t('Tint'), vib:t('Vibrance'), cla:t('Clarity'), shp:t('Sharpness'), blr:t('Blur'), vig:t('Vignette'), sep:t('Sepia'),
   wht:t('Whites'), blk:t('Blacks'), tex:t('Texture'), dhz:t('Dehaze'), grn:t('Grain'), grs:t('Grain size'), grr:t('Grain roughness'), vgm:t('Vignette midpoint'), vgf:t('Vignette feather'), vgr:t('Vignette roundness'), vgh:t('Vignette highlights'),
+  lnd:t('Distortion'), lnv:t('Lens vignetting'), car:t('Red / cyan fringe'), cab:t('Blue / yellow fringe'), dfr:t('Defringe'), pv:t('Vertical'), ph:t('Horizontal'), gas:t('Aspect'), gsc:t('Scale'), gx:t('X offset'), gy:t('Y offset'),
   shr:t('Sharpening radius'), shd:t('Sharpening detail'), shm:t('Sharpening masking'), nrl:t('Luminance noise reduction'), nrc:t('Color noise reduction'), nrd:t('Noise reduction detail')};
 $('#right').addEventListener('input', e=>{
   const k=e.target.dataset.k; if(!k || DEV.id==null) return;
@@ -1852,7 +2150,7 @@ $('#crop-ov').addEventListener('mousedown', e=>{
     if(h==='move'){ const w=x2-x1, hh=y2-y1; x1=clamp(x1+dx,0,1-w); y1=clamp(y1+dy,0,1-hh); x2=x1+w; y2=y1+hh; }
     else { if(h.includes('w')) x1=clamp(x1+dx,0,x2-MIN); if(h.includes('e')) x2=clamp(x2+dx,x1+MIN,1);
            if(h.includes('n')) y1=clamp(y1+dy,0,y2-MIN); if(h.includes('s')) y2=clamp(y2+dy,y1+MIN,1); }
-    DEV.ops.crop=[x1,y1,x2,y2]; DEV.dirty=true; layoutDev();
+    DEV.ops.crop = h==='move' ? [x1,y1,x2,y2] : enforceAspect(h, [x1,y1,x2,y2]); DEV.dirty=true; layoutDev();
   };
   const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); renderToolbar(); };
   addEventListener('mousemove',mv); addEventListener('mouseup',up);
