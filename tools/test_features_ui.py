@@ -155,6 +155,10 @@ try:
         pg.keyboard.press("Control+z")
         pg.wait_for_timeout(1000)
         check("Ctrl+Z brings it back from the trash", len(photos()) == n_all and len(photos(trashed=1)) == 0)
+        try:
+            pg.wait_for_function(f"S.act === {tid} && S.sel.has(S.act)", timeout=8000)       # the list is reloaded first: on a slow machine it takes more than the second above
+        except Exception:
+            pass
         check("...and selects it again", int(pg.evaluate("S.act")) == tid and pg.evaluate("S.sel.has(S.act)"))
         pg.keyboard.press("Control+Shift+z")
         pg.wait_for_timeout(1000)
