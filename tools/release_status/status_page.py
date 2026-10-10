@@ -241,9 +241,11 @@ def collect():
                 pass
         stale = newest > prog["finished"] + 1
     local_eff = "todo" if (stale and local_state == "done") else local_state
+    if jobs and local_eff == "fail":          # the release is already building on GitHub, which runs the same tests and publishes nothing if they fail: the old local failure is not a failure of this release
+        local_eff = "done"
     stages = [
         {"name": "בודקים שהכול עובד אצלך במחשב", "plain": "מריצים אוטומטית עשרות בדיקות על התוכנה כדי לוודא ששום דבר לא נשבר.", "state": local_eff,
-         "note": local_now or ("הורצו לפני השינויים האחרונים — צריך להריץ שוב" if local_eff != local_state else "")},
+         "note": local_now or ("הורצו לפני השינויים האחרונים — צריך להריץ שוב" if (stale and local_state == "done") else "")},
         {"name": "שומרים את השינויים", "plain": "שומרים את העבודה בהיסטוריה של הפרויקט (זה נקרא commit).", "state": "done" if dirty == 0 else "todo",
          "note": "" if dirty == 0 else f"{dirty} קבצים עוד לא נשמרו"},
         {"name": "מעלים ל-GitHub", "plain": "שולחים את הקוד לאינטרנט כדי שאפשר יהיה לבנות ממנו גרסה (זה נקרא push).", "state": "done" if pushed else "todo", "note": ""},
@@ -282,7 +284,7 @@ def collect():
     gh_frac = 1.0 if (published or gh_state == "done") else (got / tot if tot else (sum(1 for j in jobs if j["state"] == "done") / len(jobs) if jobs else 0.0))
     pct = 100 if published else min(99.99, 100 * (0.25 * local_frac + 0.03 * (stages[1]["state"] == "done") + 0.03 * (stages[2]["state"] == "done")
                                                   + 0.04 * (stages[3]["state"] == "done") + 0.65 * gh_frac))
-    local_need = local_total if local_eff != local_state else local_left      # old results: all of them have to run again
+    local_need = local_total if (stale and local_state == "done") else local_left      # old results: all of them have to run again
     left = (local_need if local_eff != "done" else 0.0) + gh_left
     failing = [s["name"] for s in stages if s["state"] == "fail"]
     bad_jobs = [j for j in jobs if j["state"] == "fail"]          # one failed job on GitHub already means this release will not go out: the timer stops at once
@@ -486,7 +488,7 @@ function render(){
   const act = D.stages.find(s => s.state === 'run') || D.stages.find(s => s.state === 'fail') || D.stages.find(s => s.state === 'todo');
   setText($('explain'), act ? 'מה קורה בשלב הזה: ' + act.plain : '');
   const lt = D.local || [], ltBad = lt.some(t => t.state === 'fail'), ltRun = lt.some(t => t.state === 'run'), ltDone = lt.filter(t => t.state === 'done').length;
-  const showLocal = lt.length && (ltBad || ltRun);               // only when something is running or failed
+  const showLocal = lt.length && (ltRun || (ltBad && !(D.jobs || []).length));               // only while running, or failed and no release started yet (once GitHub is building, the old local failures are history)
   $('localsec').style.display = showLocal ? '' : 'none';
   $('localok').style.display = lt.length && !showLocal ? '' : 'none';
   setText($('localok'), lt.length && !showLocal ? (ltDone === lt.length ? `✓ כל ${lt.length} הבדיקות במחשב עברו` : `הבדיקות במחשב: ${ltDone} מתוך ${lt.length} עברו`) + (D.local_stale ? ' — הורצו לפני השינויים האחרונים, צריך להריץ שוב' : '') : '');
