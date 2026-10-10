@@ -101,7 +101,7 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: python tools/test_geotag_ui.py
 
-  # The same code on Linux and macOS (issue #3): the tests that do not need Windows. test_update_rollback needs powershell.exe and the
+  # The same code on Linux and macOS (issue #3): the tests that do not need Windows (the browser tests of Linux are in unix-ui below, in parts). test_update_rollback needs powershell.exe and the
   # *_ui tests need Edge; both stay on the Windows job above.
   unix:
     strategy:
@@ -130,16 +130,36 @@ jobs:
           for t in test_import_stats test_takeout_parts test_server_security test_port_instance test_library_default test_backup_media_sets test_compress_backup test_auto_import test_backup_verify test_update_blocked test_code_update test_runtime_lock test_ref_folder test_backup_reduced test_smart_features test_onedrive test_exif_search test_face_suggest test_pool test_aitag test_window_close test_storage_breakdown test_triplan test_burst_stack test_export_zip test_export_xmp test_export_html test_lrcat_candidates test_import_xmp_recovery test_digikam_import test_social_import test_backup_no_pil test_beta_channel test_exif_full test_nondestructive_edit test_edit_ops_v2 test_version_scheme test_export_meta test_platform_dirs test_opener test_keystore test_backup_unix test_unix_run test_msix test_portable test_fileassoc test_viewer test_backup_external test_release_notes test_background test_backup_locked_dir test_power test_geotag test_slidevideo test_send_small test_viewer_handoff test_msi test_themes_ui test_develop_ops test_develop_local test_merge test_merge_api test_dates_from_names test_originals_untouched test_new_media; do
             echo "=== $t"; python tools/$t.py || exit 1
           done
-      - name: Chromium for the UI tests (Linux)
-        if: runner.os == 'Linux'
+
+  # The browser (Chromium) tests of Linux, in three parts at the same time (they were one step of the job above: 4.6 of its 8 minutes).
+  unix-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: System libraries
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-0
+      - run: python -m pip install -r requirements.txt pyyaml==6.0.1 playwright==1.63.0
+      - name: Chromium for the UI tests
         run: |
           python -m playwright install --with-deps chromium
           echo "PHOTAG_TEST_BROWSER=$(python -c 'from playwright.sync_api import sync_playwright as s; p=s().start(); print(p.chromium.executable_path); p.stop()')" >> "$GITHUB_ENV"
-      - name: UI tests on Linux (Chromium instead of Edge)
-        if: runner.os == 'Linux'
+      - name: UI tests on Linux (Chromium instead of Edge), part ${{ matrix.part }} of 3
         env:
           PYTHONIOENCODING: utf-8
         run: |
+          i=0
           for t in ui_smoke test_help_search_history test_surprise_compare test_place_search test_smart_ui test_develop_ui test_prerelease_ui test_trash_menu test_auto_update test_features_ui test_viewer_ui test_background_ui test_geotag_ui test_develop_adv_ui test_develop_local_ui test_develop_tools_ui test_report test_report_news test_gif_loupe test_thumb_shape test_delete_key test_activity_rows test_new_features_ui; do
+            i=$((i+1))
+            [ $(( i % 3 )) -eq $(( ${{ matrix.part }} % 3 )) ] || continue
             echo "=== $t"; python tools/$t.py || exit 1
           done
