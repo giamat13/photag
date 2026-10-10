@@ -78,3 +78,57 @@ push straight to `main`.
 ## Problem reports
 "Help > Report a problem…" (app/report.py) creates an issue through a bot account whose token is the repository secret `REPORT_TOKEN`; the
 release workflow writes it into `app/_report_token.py` (never committed). Setup and limits: docs/BUG_REPORTS.md. Do not put a token in the code.
+
+## How to work with the user (from the sessions so far)
+- The user writes Hebrew and has ADHD: answer in Hebrew, first line = the next action, numbered steps, concrete time estimates, no preamble or closing
+  phrases. **In every message say the estimated time until the release** while a release is being prepared.
+- Run every Bash / PowerShell call with `run_in_background: true` (global CLAUDE.md). A long wait = a background command that polls and exits
+  when done or on the first failure (the exit code wakes you up). Never poll by hand.
+- All GitHub issue reports come from the user: solve every open issue, release, then comment on it with the version and close it
+  (`POST /issues/N/comments`, `PATCH /issues/N {"state":"closed","state_reason":"completed"}`, token via `git credential fill`, never printed).
+- Keep the **dashboard** up to date at every step (below). If a test fails: tell the user at once (the test runner also shows a message box).
+- Never start a second run of the tests while one is running (they share ports and the progress file) and never restart one that is running.
+
+## The release dashboard (live page for the user)
+Files in `tools/release_status/` (the generated ones -- status.html, status-data.js, local-tests*.json, activity.json, cycle.json, archive/ -- are git-ignored):
+- `status_page.py` -- the generator. Start it as an independent, hidden process (it keeps running until the version of `app/version.py` is published; a lock
+  prevents a second copy; it reloads itself when its own file is edited): `py -3.12 toolselease_status\status_page.py` (PowerShell: `Start-Process -WindowStyle Hidden`).
+  The user opens `http://127.0.0.1:5501/tools/release_status/status.html` (VS Code Live Server on the repository root) or the file itself.
+  It shows: percent, time left, what is happening now, the pipeline stages, a live log, the task list, the GitHub jobs and the local tests (only while running or
+  failed). The timer stops at the first failed job. It resets itself when a release is out and new work begins (`reset.py` does it by hand).
+- `todo.json` -- the user's task card: `[{"text": "...", "state": "todo|run|done"}]` (Hebrew texts). Rewrite it whenever a task starts or ends.
+- `log.py "text"` -- one line in the live log ("what I am doing now"). Call it at each step.
+- `run_local_tests.py` -- the local tests (below); it writes `local-tests.json`, which the page shows.
+Check that the generator is alive (e.g. `status-data.js` modified in the last minute) at the start of a session and start it if not.
+
+## Local tests (before every push and release)
+`PYTHONIOENCODING=utf-8 py -3.12 tools/release_status/run_local_tests.py [names...]` runs the `DEFAULT` list (about 27 suites; add every new test to it **and** to
+`.github/workflows/tests.yml`). All tests that do not share a fixed port run **at the same time** (the ports are read from each test file;
+`--parallel N` limits, `--serial` = one by one); the whole set takes about 2.5 minutes. When a test fails a message box pops up on the user's screen and the
+exit code is 1. Tests start real servers on fixed ports with throw-away profiles (`APPDATA` etc. in a temp folder); run one test alone with
+`PYTHONIOENCODING=utf-8 py -3.12 tools/test_x.py`. UI tests drive Edge (Playwright, `channel="msedge"`; on CI Chromium via `PHOTAG_TEST_BROWSER`).
+Rules learned the hard way:
+- Tests of the server must use a real subprocess server (`tools/_client.py`: `start_server`, `Client`); CI has no fastapi `TestClient` (no httpx2).
+- A UI test must wait for what it checks (`wait_for_function`), never rely on a fixed pause: CI machines are slower.
+- A test that ends must make sure its server is gone; the runner waits until a test's ports are free before the next test on the same port.
+- `tools/test_runtime_lock.py`: new **top-level imports** in `app/*.py` (even stdlib, even `from __future__`) change the packaged runtime and fail it. Avoid them
+  (write the few lines yourself) or bump `RUNTIME` in `codeboot.py` and run `py -3.12 tools/test_runtime_lock.py --update`.
+- Every new UI / backend-error string needs the 16 locales: write a small script (see git history, `addtr_*.py` style: dict code -> list in key order, `json.dumps(..., ensure_ascii=False, indent=1)`,
+  keep CRLF), then `py -3.12 tools/i18n.py extract` and `check`. `tools/test_originals_untouched.py` must stay green (rule number one).
+- Edit files with python scripts written to a file (or the Edit tool); a heredoc with backslashes or backticks silently damages the text (a `` became a backspace character once).
+  Files in the repository are CRLF: keep the line endings (`newline=''` when reading and writing).
+
+## CI and the release procedure, in practice
+- `tests.yml` jobs run in parallel: `test` (Windows, 2 halves), `ui` (Windows, Edge), `unix` (Linux + macOS, tests without a browser), `unix-ui` (Linux, Chromium, 3 parts).
+  A whole release takes about 5-6 minutes. The Windows build is a dependent chain (PyInstaller -> installer -> MSI): splitting it would save about a minute.
+- Release = bump `app/version.py`, write `docs/release-notes-vX.Y.Z.md`, run the local tests, commit, push to `main`, wait until the push is on the server
+  (`git status -sb` without "ahead"), check the tag does not exist (`GET /git/ref/tags/vX.Y.Z` = 404), then
+  `POST /actions/workflows/release.yml/dispatches {"ref":"main","inputs":{"prerelease":"false"}}` (204). Watch `GET /actions/workflows/release.yml/runs?per_page=1` and the
+  jobs of that run every 30 seconds, stop at the first `failure` (read its log: `GET /actions/jobs/<id>/logs`), cancel the run (`POST /actions/runs/<id>/cancel`), fix, push, dispatch again.
+  The release has 9 files when it succeeded. Then comment on and close the issues, update the dashboard.
+- The "health check" prompt of the user (list the last 5 runs and 3 releases, report in Hebrew in 2 lines) is read-only: do not push or release.
+
+## State at the end of the last session (2026-10-10)
+- Published: **20.1.0** (20.0.0 before it). All GitHub issues up to #31 are closed.
+- Ideas not done: a loading screen in the **window itself** before the server answers (needs a change in `photag.py`, which a code update does not replace -- only a full
+  installer does); splitting the Windows build job in CI; "Merge two people" and the other 20.0.0 features have tests but no screenshots in the docs.
