@@ -1639,5 +1639,10 @@
  "The end must be after the start": "结束时间必须晚于开始时间",
  "The file was not found": "找不到文件",
  "Photo not found": "找不到照片",
- "A named person can only be merged into another named person": "有名字的人只能合并到另一个有名字的人"
+ "A named person can only be merged into another named person": "有名字的人只能合并到另一个有名字的人",
+ "Starting photag…": "正在启动 photag…",
+ "Loading your photos, albums and people…": "正在加载您的照片、相册和人物…",
+ "{0} photos loaded": "已加载 {0} 张照片",
+ "Loading albums, people and keywords…": "正在加载相册、人物和关键词…",
+ "Preparing the view…": "正在准备视图…"
 }

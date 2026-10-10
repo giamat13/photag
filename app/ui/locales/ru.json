@@ -1639,5 +1639,10 @@
  "The end must be after the start": "Конец должен быть после начала",
  "The file was not found": "Файл не найден",
  "Photo not found": "Фото не найдено",
- "A named person can only be merged into another named person": "Именованного человека можно объединить только с другим именованным человеком"
+ "A named person can only be merged into another named person": "Именованного человека можно объединить только с другим именованным человеком",
+ "Starting photag…": "Запуск photag…",
+ "Loading your photos, albums and people…": "Загрузка фото, альбомов и людей…",
+ "{0} photos loaded": "Загружено фото: {0}",
+ "Loading albums, people and keywords…": "Загрузка альбомов, людей и ключевых слов…",
+ "Preparing the view…": "Подготовка вида…"
 }

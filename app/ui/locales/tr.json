@@ -1639,5 +1639,10 @@
  "The end must be after the start": "Bitiş, başlangıçtan sonra olmalıdır",
  "The file was not found": "Dosya bulunamadı",
  "Photo not found": "Fotoğraf bulunamadı",
- "A named person can only be merged into another named person": "Adı olan bir kişi yalnızca adı olan başka bir kişiyle birleştirilebilir"
+ "A named person can only be merged into another named person": "Adı olan bir kişi yalnızca adı olan başka bir kişiyle birleştirilebilir",
+ "Starting photag…": "photag başlatılıyor…",
+ "Loading your photos, albums and people…": "Fotoğraflarınız, albümleriniz ve kişileriniz yükleniyor…",
+ "{0} photos loaded": "{0} fotoğraf yüklendi",
+ "Loading albums, people and keywords…": "Albümler, kişiler ve anahtar kelimeler yükleniyor…",
+ "Preparing the view…": "Görünüm hazırlanıyor…"
 }

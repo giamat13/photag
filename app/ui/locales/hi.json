@@ -1639,5 +1639,10 @@
  "The end must be after the start": "अंत शुरुआत के बाद होना चाहिए",
  "The file was not found": "फ़ाइल नहीं मिली",
  "Photo not found": "फ़ोटो नहीं मिली",
- "A named person can only be merged into another named person": "नाम वाले व्यक्ति को केवल किसी दूसरे नाम वाले व्यक्ति में ही मिलाया जा सकता है"
+ "A named person can only be merged into another named person": "नाम वाले व्यक्ति को केवल किसी दूसरे नाम वाले व्यक्ति में ही मिलाया जा सकता है",
+ "Starting photag…": "photag शुरू हो रहा है…",
+ "Loading your photos, albums and people…": "आपकी फ़ोटो, एल्बम और लोग लोड हो रहे हैं…",
+ "{0} photos loaded": "{0} फ़ोटो लोड हुईं",
+ "Loading albums, people and keywords…": "एल्बम, लोग और कीवर्ड लोड हो रहे हैं…",
+ "Preparing the view…": "दृश्य तैयार हो रहा है…"
 }

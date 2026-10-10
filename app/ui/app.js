@@ -1176,7 +1176,7 @@ $('#loupe-media').addEventListener('mousedown', e=>{   // drag to pan when zoome
 });
 $('#v-loupe').addEventListener('dblclick', e=>{ if(e.target.closest('.vp')) return; if(!$('#loupe-media').classList.contains('zoom')) setView('grid'); });
 
-let CMP_CAND=null;
+let CMP_CAND=null, CMP_FOR=null;
 // synchronized pan/zoom: wheel on either image zooms both the same way, and dragging either pans both together
 const CMPZ = {scale:1, x:0, y:0};
 function cmpApply(){
@@ -1189,14 +1189,17 @@ function cmpApply(){
 function cmpResetZoom(){ CMPZ.scale=1; CMPZ.x=0; CMPZ.y=0; cmpApply(); }
 function renderCompare(){
   const a=actPhoto(); if(!a){ $('#v-compare').innerHTML=''; return; }
-  let b = CMP_CAND && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : ([...S.sel].find(id=>id!==a.id) ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
-  CMP_CAND=b;
+  // The candidate belongs to the photo it was chosen for (CMP_FOR): after you pick another photo the old candidate is forgotten and the
+  // other selected photo (or else the next one in the list) is the new candidate -- it used to stay and compare against a photo you had left.
+  const other = [...S.sel].find(id=>id!==a.id);
+  let b = CMP_CAND && CMP_FOR===a.id && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : (other ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
+  CMP_CAND=b; CMP_FOR=a.id;
   const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}</div>`:'<div class="cmp"></div>';
   const prevIds = [...$$('#v-compare .cmp')].map(c=>c.dataset.id).join(',');
   $('#v-compare').innerHTML = pane(a,t('Selection'),'sel') + pane(S.byId.get(b)||S.base.find(x=>x.id===b),t('Candidate'),'');
   if(`${a.id},${b}`!==prevIds) cmpResetZoom(); else cmpApply();
 }
-$('#v-compare').addEventListener('click', e=>{ if(CMPZ.scale>1.001) return; const c=e.target.closest('.cmp:not(.sel)'); if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; renderCompare(); } });
+$('#v-compare').addEventListener('click', e=>{ if(CMPZ.scale>1.001) return; const c=e.target.closest('.cmp:not(.sel)'); if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; CMP_FOR=S.act; renderCompare(); } });
 $('#v-compare').addEventListener('wheel', e=>{
   if(!e.target.closest('.cmp')) return;
   e.preventDefault();
@@ -1216,8 +1219,8 @@ $('#v-compare').addEventListener('pointermove', e=>{
   CMPZ.x = CMP_DRAG.sx + (e.clientX-CMP_DRAG.x); CMPZ.y = CMP_DRAG.sy + (e.clientY-CMP_DRAG.y); cmpApply();
 });
 ['pointerup','pointercancel'].forEach(ev=>$('#v-compare').addEventListener(ev, e=>{ CMP_DRAG=null; e.target.classList?.remove('dragging'); }));
-function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; renderCompare(); }
-function compareSwap(){ const a=S.act, b=CMP_CAND; if(b==null) return; selectOnly(b); CMP_CAND=a; renderCompare(); }
+function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; CMP_FOR=S.act; renderCompare(); }
+function compareSwap(){ const a=S.act, b=CMP_CAND; if(b==null) return; selectOnly(b); CMP_CAND=a; CMP_FOR=S.act; renderCompare(); }
 let SURPRISE_LAST=null;
 function surpriseMe(){
   if(!S.list.length) return toast(t('No photos to choose from'));
@@ -4190,6 +4193,14 @@ document.addEventListener('contextmenu', e=>{
   const ar = e.target.closest('[data-src^="album:"]');
   if(ar){ e.preventDefault(); const a=S.albums.find(x=>'album:'+x.id===ar.dataset.src); if(a) openContextMenu(e.clientX, e.clientY, albumMenuItems(a)); return; }
   const c = e.target.closest('.cell, .fc');
+  const big = !c && e.target.closest('#v-loupe, #v-compare, #slideshow');          // the picture shown large (loupe, compare, slideshow): the same menu as in the grid
+  if(big){
+    e.preventDefault();
+    const id = big.id==='slideshow' && SS.list[SS.i] ? SS.list[SS.i].id : S.act;
+    if(id==null) return;
+    if(!S.sel.has(id)) selectOnly(id); else S.act = id;
+    openContextMenu(e.clientX, e.clientY); return;
+  }
   if(!c || !c.dataset.id){ if(!e.target.closest('input,textarea')) e.preventDefault(); return; }
   e.preventDefault();
   const id=+c.dataset.id;
@@ -5058,13 +5069,19 @@ function oneDriveNotice(force){
 }
 
 // ---------- boot ----------
+const splashSay = msg => { const m = $('#sp-msg'); if(m) m.textContent = msg; };
+const splashEnd = () => { const sp = $('#splash'); if(!sp) return; sp.classList.add('gone'); setTimeout(()=>sp.remove(), 500); };
+splashSay(t('Starting photag…'));
 (async function boot(){
   try{ const v = await api('/api/viewer/startup'); if(v && v.token){ location.replace('viewer.html?t=' + encodeURIComponent(v.token)); return; } }catch(e){}   // started by "Open with" of an older launcher: show that picture
-  await Promise.all([loadCatalog(), loadSide()]);
+  splashSay(t('Loading your photos, albums and people…'));
+  await Promise.all([loadCatalog().then(()=>splashSay(t('{0} photos loaded', [num(S.all.length)]) + ' · ' + t('Loading albums, people and keywords…'))), loadSide()]);
   renderCatalog();                       // the side lists may have been drawn before the photos arrived (a slow start): draw them again with the photos
+  splashSay(t('Preparing the view…'));
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
+  splashEnd();
   setTimeout(reportNews, 7000); setInterval(reportNews, 2*3600*1000);
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
   setTimeout(backupHealthNotice, 8000);

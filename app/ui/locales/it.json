@@ -1639,5 +1639,10 @@
  "The end must be after the start": "La fine deve essere dopo l'inizio",
  "The file was not found": "File non trovato",
  "Photo not found": "Foto non trovata",
- "A named person can only be merged into another named person": "Una persona con nome può essere unita solo a un'altra persona con nome"
+ "A named person can only be merged into another named person": "Una persona con nome può essere unita solo a un'altra persona con nome",
+ "Starting photag…": "Avvio di photag…",
+ "Loading your photos, albums and people…": "Caricamento di foto, album e persone…",
+ "{0} photos loaded": "{0} foto caricate",
+ "Loading albums, people and keywords…": "Caricamento di album, persone e parole chiave…",
+ "Preparing the view…": "Preparazione della vista…"
 }

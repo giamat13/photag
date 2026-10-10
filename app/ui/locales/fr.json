@@ -1639,5 +1639,10 @@
  "The end must be after the start": "La fin doit être après le début",
  "The file was not found": "Fichier introuvable",
  "Photo not found": "Photo introuvable",
- "A named person can only be merged into another named person": "Une personne nommée ne peut être fusionnée qu’avec une autre personne nommée"
+ "A named person can only be merged into another named person": "Une personne nommée ne peut être fusionnée qu’avec une autre personne nommée",
+ "Starting photag…": "Démarrage de photag…",
+ "Loading your photos, albums and people…": "Chargement de vos photos, albums et personnes…",
+ "{0} photos loaded": "{0} photos chargées",
+ "Loading albums, people and keywords…": "Chargement des albums, des personnes et des mots-clés…",
+ "Preparing the view…": "Préparation de l’affichage…"
 }

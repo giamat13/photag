@@ -1639,5 +1639,10 @@
  "The end must be after the start": "終了は開始より後にしてください",
  "The file was not found": "ファイルが見つかりません",
  "Photo not found": "写真が見つかりません",
- "A named person can only be merged into another named person": "名前のある人物は、名前のある別の人物にのみ統合できます"
+ "A named person can only be merged into another named person": "名前のある人物は、名前のある別の人物にのみ統合できます",
+ "Starting photag…": "photag を起動しています…",
+ "Loading your photos, albums and people…": "写真、アルバム、人物を読み込んでいます…",
+ "{0} photos loaded": "{0} 枚の写真を読み込みました",
+ "Loading albums, people and keywords…": "アルバム、人物、キーワードを読み込んでいます…",
+ "Preparing the view…": "表示を準備しています…"
 }

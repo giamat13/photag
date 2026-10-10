@@ -1,0 +1,77 @@
+[Suggestion] לאפשר לחיצה ימנית עלתמונה גם כשהתמונה במסך מלא
+
+
+
+---
+<details><summary>Technical details</summary>
+
+```
+photag 20.0.0 (packaged)
+System: Windows 11 (10.0.26200) AMD64, 14 CPUs
+Python: 3.12.10
+Libraries: numpy 2.5.3, scipy 1.18.1, onnxruntime 1.30.0, insightface 2.0
+Running for: 1 min
+Language: en
+Photos in the catalog: 4005
+Videos: 347
+Edited photos: 0
+Edits kept in the catalog: True
+Library disk: 250 GB free of 930 GB
+
+End of the previous session's log:
+2026-10-09 12:26:03 ---- start
+2026-10-09 12:29:44 ---- start
+2026-10-09 12:45:27 ---- start
+2026-10-09 12:49:54 ---- start
+2026-10-09 12:51:14 ---- start
+2026-10-09 12:51:18 ---- start
+2026-10-09 12:52:34 ---- start
+2026-10-09 13:45:37 ---- start
+2026-10-09 13:54:31 ---- start
+2026-10-09 15:16:45 ---- start
+2026-10-09 15:20:15 Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+2026-10-09 15:20:15 handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+2026-10-09 15:20:15 Traceback (most recent call last):
+2026-10-09 15:20:15   File "asyncio\events.py", line 88, in _run
+2026-10-09 15:20:15   File "asyncio\proactor_events.py", line 165, in _call_connection_lost
+2026-10-09 15:20:15 ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2026-10-09 15:35:50 Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+2026-10-09 15:35:50 handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+2026-10-09 15:35:50 Traceback (most recent call last):
+2026-10-09 15:35:50   File "asyncio\events.py", line 88, in _run
+2026-10-09 15:35:50   File "asyncio\proactor_events.py", line 165, in _call_connection_lost
+2026-10-09 15:35:50 ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2026-10-09 17:43:20 ---- start
+2026-10-09 19:09:57 ---- start
+2026-10-09 19:47:59 ---- start
+2026-10-09 20:26:31 ---- start
+2026-10-09 20:57:53 Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+2026-10-09 20:57:53 handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+2026-10-09 20:57:53 Traceback (most recent call last):
+2026-10-09 20:57:53   File "asyncio\events.py", line 88, in _run
+2026-10-09 20:57:53   File "asyncio\proactor_events.py", line 165, in _call_connection_lost
+2026-10-09 20:57:53 ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2026-10-09 21:00:00 Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+2026-10-09 21:00:00 handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+2026-10-09 21:00:00 Traceback (most recent call last):
+2026-10-09 21:00:00   File "asyncio\events.py", line 88, in _run
+2026-10-09 21:00:00   File "asyncio\proactor_events.py", line 165, in _call_connection_lost
+2026-10-09 21:00:00 ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2026-10-09 22:16:38 ---- start
+2026-10-10 09:43:36 ---- start
+```
+</details>
+
+<details><summary>Window details</summary>
+
+```
+Window: 1264x821, screen 2560x1440 @1x
+Browser: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/<ip> Safari/537.36 Edg/<ip>
+Module / view: library / loupe
+Theme: slate, language: en
+Photos in the list: 3899, selected: 1
+Edit module open on a photo: false
+```
+</details>
+
+_Sent from photag 20.0.0 with “Report a problem or suggest a feature” (feature suggestion)._

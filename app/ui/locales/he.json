@@ -1639,5 +1639,10 @@
  "The end must be after the start": "הסיום חייב להיות אחרי ההתחלה",
  "The file was not found": "הקובץ לא נמצא",
  "Photo not found": "התמונה לא נמצאה",
- "A named person can only be merged into another named person": "אדם בעל שם אפשר למזג רק לאדם אחר בעל שם"
+ "A named person can only be merged into another named person": "אדם בעל שם אפשר למזג רק לאדם אחר בעל שם",
+ "Starting photag…": "photag מתחיל…",
+ "Loading your photos, albums and people…": "טוען את התמונות, האלבומים והאנשים שלך…",
+ "{0} photos loaded": "{0} תמונות נטענו",
+ "Loading albums, people and keywords…": "טוען אלבומים, אנשים ומילות מפתח…",
+ "Preparing the view…": "מכין את התצוגה…"
 }

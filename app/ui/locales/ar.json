@@ -1639,5 +1639,10 @@
  "The end must be after the start": "يجب أن تكون النهاية بعد البداية",
  "The file was not found": "لم يُعثر على الملف",
  "Photo not found": "لم يُعثر على الصورة",
- "A named person can only be merged into another named person": "لا يمكن دمج شخص مُسمّى إلا مع شخص مُسمّى آخر"
+ "A named person can only be merged into another named person": "لا يمكن دمج شخص مُسمّى إلا مع شخص مُسمّى آخر",
+ "Starting photag…": "جارٍ تشغيل photag…",
+ "Loading your photos, albums and people…": "جارٍ تحميل صورك وألبوماتك والأشخاص…",
+ "{0} photos loaded": "تم تحميل {0} صورة",
+ "Loading albums, people and keywords…": "جارٍ تحميل الألبومات والأشخاص والكلمات المفتاحية…",
+ "Preparing the view…": "جارٍ تجهيز العرض…"
 }
