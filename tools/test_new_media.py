@@ -20,11 +20,10 @@ os.environ.update({"APPDATA": str(tmp / "appdata"), "LOCALAPPDATA": str(tmp / "l
                    "HOME": str(tmp / "home"), "PHOTAG_NO_OPEN": "1"})
 sys.path.insert(0, str(ROOT))
 
-from fastapi.testclient import TestClient  # noqa: E402
+import _client  # noqa: E402  (tools/_client.py)
 from PIL import Image  # noqa: E402
 
 from app import db, ffmpeg, extras  # noqa: E402
-from app.server import app  # noqa: E402
 
 res = []
 
@@ -39,7 +38,7 @@ def fp(folder: Path):
 
 
 db.init_db()
-cl = TestClient(app, base_url="http://127.0.0.1:8000")
+srv, cl = _client.start_server(8807, {**os.environ, "PYTHONIOENCODING": "utf-8", "PHOTAG_BACKUP_START_DELAY": "9999"})
 src = tmp / "src"
 Image.new("RGB", (600, 200), (10, 40, 220)).save(src / "wide_blue.jpg")            # a panorama (3:1), blue
 Image.new("RGB", (300, 300), (220, 30, 30)).save(src / "red.jpg")
@@ -132,4 +131,5 @@ check("'New in library' counts what came in", s["total"] >= 7 and s["videos"] >=
 
 # ---- rule number one
 check("rule number one: the files everything started from are untouched", fp(src) == before)
+srv.terminate()
 sys.exit(0 if all(res) else 1)

@@ -16,10 +16,9 @@ os.environ.update({"APPDATA": str(tmp / "appdata"), "LOCALAPPDATA": str(tmp / "l
                    "HOME": str(tmp / "home"), "PHOTAG_NO_OPEN": "1"})
 sys.path.insert(0, str(ROOT))
 
-from fastapi.testclient import TestClient  # noqa: E402
+import _client  # noqa: E402  (tools/_client.py)
 
 from app import db  # noqa: E402
-from app.server import app  # noqa: E402
 
 res = []
 
@@ -46,7 +45,7 @@ c = add("c", "holiday.jpg", None)                      # no date, nothing in the
 d = add("d", "Screenshot_20240101-101530.png", 0)      # date 0 counts as no date
 con.commit()
 
-cl = TestClient(app, base_url="http://127.0.0.1:8000")
+srv, cl = _client.start_server(8806, {**os.environ, "PYTHONIOENCODING": "utf-8", "PHOTAG_BACKUP_START_DELAY": "9999"})
 r = cl.post("/api/dates/from-names", json={"apply": False}).json()
 check("preview counts only the photos without a date whose name has one", r["count"] == 2 and not r["applied"], r)
 
@@ -62,4 +61,5 @@ check("the photo without a date got the date from its name", taken(a) and taken(
 check("a photo that already had a date (even a different one) is untouched", taken(b) == 1700000000, taken(b))
 check("a photo with no date in its name is untouched", taken(c) in (None, 0), taken(c))
 check("after applying there is nothing left to fix", cl.post("/api/dates/from-names", json={"apply": False}).json()["count"] == 0)
+srv.terminate()
 sys.exit(0 if all(res) else 1)
