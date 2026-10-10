@@ -6,7 +6,8 @@ exts, minMB, maxMB, place, cameras, lenses, minFocal, maxFocal) keep working, as
 (q + qf 'any'|'name', flags ['pick'|'none'|'rej'], rating + ratingOp, colors, edited, months ['01'..'12'], orients
 ['landscape'|'portrait'|'square'|'unknown']), and more: keywords (comma text) + keywordsAll, kw / gps / faces ('has'|'none'),
 fav, persons [ids], albumIds [ids], weekdays [0 = Sunday .. 6], hourFrom / hourTo, minMP / maxMP (megapixels), addedFrom /
-addedTo (when it came into the library), score (quality, at least). None of them makes a search a smart collection. A place is a circle
+addedTo (when it came into the library), score (quality, at least), pano (panoramas: twice as wide as tall, or tall),
+dominant [colour names] (the colour most of the picture is made of: see extras.COLORS). None of them makes a search a smart collection. A place is a circle
 (lat, lng, km) or a box [south, north, west, east] (a city / country found by name, or an area drawn on the map). The smart keys are:
   people [ids] + peopleAll   photos of these people (detected faces or Google people tags); any of them, or all
   tags [names] + tagsAll     keywords (any / all), case-insensitive
@@ -18,6 +19,8 @@ minFocal/maxFocal compare the real focal length in mm.
 import json
 import math
 import time
+
+from . import extras
 
 SMART_KEYS = ("people", "tags", "years", "minRating", "favorite", "flag", "labels", "minScore", "hasPlace", "text")
 
@@ -60,6 +63,12 @@ def query_ids(con, c: dict) -> list[int]:
         where.append("p.taken_at<=?"); args.append(_ts(c["to"], True)); ruled = True
     if c.get("kind") in ("photo", "video"):
         where.append("p.is_video=?"); args.append(1 if c["kind"] == "video" else 0); ruled = True
+    if c.get("pano"):                                    # panoramas: at least twice as wide as tall (or tall)
+        where.append("p.is_video=0 AND p.width>0 AND p.height>0 AND (p.width>=2.0*p.height OR p.height>=2.0*p.width)"); ruled = True
+    dom = [x for x in (c.get("dominant") or []) if x in extras.COLORS]
+    if dom:                                              # the colour most of the picture is made of
+        extras.fill_colors(con, budget=3.0)
+        where.append(f"p.id IN (SELECT photo_id FROM photo_color WHERE name IN ({','.join('?' * len(dom))}))"); args += dom; ruled = True
     exts = [str(x).lower().lstrip(".") for x in (c.get("exts") or []) if str(x).strip()]
     if exts:
         where.append("(" + " OR ".join("LOWER(p.filename) LIKE ?" for _ in exts) + ")")

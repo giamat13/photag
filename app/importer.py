@@ -27,15 +27,13 @@ SUPP_RE = re.compile(r"\.supplemental[\w-]*\.json$", re.I)
 def delete_forever(con, rows) -> int:
     """Permanently delete these photos (rows with id, sha256, rel_path, orig_backup): their media / thumb / backup
     files and every DB row referencing them. Only used on photos that are already in the trash.
-    A photo that lives in the user's own folder (photag only references it) has its file sent to the Windows Recycle Bin,
-    never deleted outright; if that is not possible the photo stays in the trash (nothing is lost) and is not counted."""
+    A photo that lives in the user's own folder (photag only references it) is only removed from the catalog: its file is never
+    touched (rule number one)."""
     from . import refmode
     rows = list(rows)
     done = 0
     for r in rows:
         if refmode.is_external(r["rel_path"]):
-            if not refmode.recycle(r["rel_path"]):
-                continue
             images.thumb_path(r["sha256"]).unlink(missing_ok=True)
         else:
             for p in (PATHS.media / r["rel_path"], images.thumb_path(r["sha256"])):

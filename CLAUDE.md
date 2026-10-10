@@ -1,5 +1,10 @@
 # Working on photag
 
+## Rule number one: never touch the user's original files
+photag never modifies, renames, moves or deletes a user's **original** files -- the files they import from, the files of reference mode
+(`refmode.is_external()`), the pictures opened in the viewer -- except when they run an **Export**, which writes a copy elsewhere.
+Every new feature works on the catalog or on copies. `tools/test_originals_untouched.py` checks it and must stay green.
+
 ## Task tracking
 Keep the TODO list (TaskCreate / TaskUpdate) current for your own work, not just the user's
 original requests. Add a task when you start something, mark it `in_progress` when you begin it,

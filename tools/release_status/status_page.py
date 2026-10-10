@@ -23,6 +23,8 @@ ROOT = HERE.parent.parent
 PAGE = HERE / "status.html"
 DATA = HERE / "status-data.js"
 PROGRESS = HERE / "local-tests.json"
+CYCLE = HERE / "cycle.json"          # {"closed": "v19.0.0"}: the last release whose page was put away
+ARCHIVE = HERE / "archive"
 ACTIVITY = HERE / "activity.json"   # the live log: [{"at": epoch, "text": "..."}], written by log.py
 TODO = HERE / "todo.json"          # the coding tasks, written by whoever is writing the code: [{"text": "...", "state": "todo|run|done"}]
 REPO = "giamat13/photag"
@@ -148,16 +150,24 @@ def collect():
         prog = None
     local, local_left, local_state, local_now = [], 0.0, "todo", ""
     if prog:
+        lefts, running = [], []
         for i, t in enumerate(prog["tests"]):
             left = 0.0
             if t["state"] == "run":
                 left = max(0.0, t["estimate"] - (now - t["began"]))
-                local_now = f"בדיקה {i + 1} מתוך {len(prog['tests'])}: {t['name']}"
+                running.append(t["name"])
             elif t["state"] == "todo":
                 left = t["estimate"]
-            local_left += left
+            if left:
+                lefts.append(left)
             local.append({"name": t["name"], "state": t["state"], "summary": t.get("summary", ""), "seconds": t.get("seconds"),
                           "estimate": t["estimate"], "began": t.get("began"), "detail": t.get("detail", ""), "live": t.get("live")})
+        # tests run several at a time: what is left is the longest one, or all of it divided among the workers, whichever is more
+        workers = max(1, int(prog.get("workers") or 1))
+        local_left = max(max(lefts), sum(lefts) / workers) if lefts else 0.0
+        if running:
+            done_n = sum(1 for t in prog["tests"] if t["state"] == "done")
+            local_now = f"{done_n} מתוך {len(prog['tests'])} הסתיימו · רצות עכשיו: " + ", ".join(running[:4]) + (f" (+{len(running) - 4})" if len(running) > 4 else "")
         sts = [t["state"] for t in prog["tests"]]
         local_state = "fail" if "fail" in sts else ("done" if all(s == "done" for s in sts) else "run")
 
@@ -174,6 +184,18 @@ def collect():
     prev = [r for r in rel_runs if r["status"] == "completed" and r["conclusion"] == "success"][:3]
     typical = sum(epoch(r["updated_at"]) - epoch(r["created_at"]) for r in prev) / len(prev) if prev else DEFAULT_GH_SECONDS
     published = any(r["tag_name"] == target and not r["draft"] for r in rels)
+    # a release that is out and a page that is done: when new work begins (files changed) or after a quarter of an hour, start clean
+    try:
+        closed = json.loads(CYCLE.read_text("utf-8")).get("closed")
+    except (OSError, ValueError):
+        closed = None
+    pub_at = next((epoch(r["published_at"]) for r in rels if r["tag_name"] == target and not r["draft"]), None)
+    if published and target != closed and (dirty > 0 or (pub_at and now - pub_at > 900)):
+        reset(target)
+        closed = target
+    next_mode = target == closed                         # this version is already out and its page was put away: this is the page of the next one
+    if next_mode:
+        published = False
     gh_state = "done" if published else (state_of(cur) if cur else "todo")
     cur_began = epoch(cur["created_at"]) if cur else None
     if published or gh_state == "fail":
@@ -279,7 +301,7 @@ def collect():
     running_eta = not (published or failing or (pushed and not cur and local_state != "run"))
     pct_rate = max(0.0, (99.5 - pct) / max(left, 5.0)) if running_eta else 0.0      # percent per second: it reaches ~99.5% when the release is expected to end
     return {
-        "pct_rate": pct_rate, "at": now, "target": target, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
+        "pct_rate": pct_rate, "at": now, "target": target, "next": next_mode, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
         "waiting": bool(not published and not failing and pushed and not cur and local_state != "run"),
         "todo": todo, "activity": activity,
         "eta_end": None if (published or failing or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
@@ -371,6 +393,20 @@ h2{font-size:12px;margin:8px 2px 3px}
 .job pre.live{color:var(--mut);font-size:10.5px;line-height:1.35;margin:4px 0 0;max-height:2.8em;overflow:hidden;white-space:pre-wrap;word-break:break-word}
 footer{margin-top:6px;font-size:11px;line-height:1.4}
 .ringtxt b{font-size:15px;font-variant-numeric:tabular-nums}.ready .ring .fg{transition:stroke-dashoffset .3s linear}
+/* wide screens: the whole width is used, three columns (numbers + steps | log + tasks | GitHub + local tests) */
+@media (min-width:1100px){
+main{max-width:none;width:100%;display:grid;gap:10px 16px;align-items:start;padding:10px 18px 12px;
+  grid-template-columns:minmax(300px,.85fr) minmax(340px,1fr) minmax(380px,1.35fr);
+  grid-template-areas:"top top top" "stale stale stale" "kpis duo gh" "pipe duo gh" "foot foot foot"}
+.top{grid-area:top;margin:0}#stale{grid-area:stale}.kpis{grid-area:kpis;grid-template-columns:1fr 1fr;margin:0}
+.pipe{grid-area:pipe;flex-direction:column;margin:0}.pipe .stg{flex:none}
+.duo{grid-area:duo;grid-template-columns:1fr;margin:0;gap:10px}#ghcol{grid-area:gh;min-width:0}footer{grid-area:foot;margin:0}
+.log-card .now{font-size:16px}.todo-card li,.log-card li{font-size:13.5px;padding:2px 0}
+.tile{padding:12px 14px}.ring{width:84px;height:84px}.eta-tile .big{font-size:34px}.nowtxt{font-size:16px}
+.stg{padding:8px 12px}.stg .t{font-size:13.5px}
+h2{font-size:13px;margin:0 2px 6px}#ghcol .grid+#localsec h2,#localsec h2{margin-top:14px}
+.job{padding:9px 12px}.job .nm{font-size:14px}.job .cur{font-size:12.5px}
+}
 </style></head><body><main>
 <header class="top"><div><div class="ttl" id="title">שחרור photag</div><div class="mut">לוח בקרה לשחרור גרסה חדשה</div></div>
 <div class="live" id="live"><span class="dot"></span><span id="livetxt">טוען…</span></div></header>
@@ -385,10 +421,10 @@ footer{margin-top:6px;font-size:11px;line-height:1.4}
 <div class="explain" id="explain"></div>
 <div class="duo"><section class="log-card" id="logcard" style="display:none"><div class="lbl">יומן חי — מה קורה עכשיו</div><div class="now"><span id="lognow"></span><span class="ago" id="logago"></span></div><div class="stalemsg" id="logstale"></div><ul id="loglist"></ul></section>
 <section class="todo-card" id="todocard" style="display:none"><h3><span>משימות</span><span class="mut" id="todocount"></span></h3><div class="bar"><i id="todobar" style="width:0"></i></div><ul id="todolist"></ul></section></div>
-<h2>GitHub <span class="mut" style="text-transform:none;font-weight:400">— מה נבנה ונבדק עכשיו</span></h2>
+<div id="ghcol"><h2>GitHub <span class="mut" style="text-transform:none;font-weight:400">— מה נבנה ונבדק עכשיו</span></h2>
 <div class="grid" id="jobs"></div>
 <div id="localsec" style="display:none"><h2>בדיקות במחשב שלך <span class="mut" style="text-transform:none;font-weight:400">— מה נבדק עכשיו</span> <span id="stale-local" class="mut" style="text-transform:none;color:var(--warn)"></span></h2><div class="grid" id="local"></div></div>
-<div class="mut" id="localok" style="display:none;margin:6px 2px"></div>
+<div class="mut" id="localok" style="display:none;margin:6px 2px"></div></div>
 <footer id="foot"></footer>
 </main><script src="status-data.js"></script><script>
 const $ = id => document.getElementById(id);
@@ -409,7 +445,7 @@ function render(){
   if(!D) return;
   const st = D.published ? 'done' : D.failed ? 'fail' : 'run';
   document.title = (D.published ? '✓ ' : D.failed ? '✕ ' : Math.floor(D.percent) + '% · ') + D.target.replace('v','') + ' · photag';
-  setText($('title'), 'שחרור גרסה ' + D.target.replace('v',''));
+  setText($('title'), D.next ? 'השחרור הבא (הקודם, ' + D.target.replace('v','') + ', כבר באוויר)' : 'שחרור גרסה ' + D.target.replace('v',''));
   $('ringfg').style.stroke = D.failed ? 'var(--bad)' : 'var(--ok)';
   $('nowtile').className = 'tile now-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
   $('etatile').className = 'tile eta-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
@@ -527,6 +563,24 @@ setInterval(load, 2000); setInterval(tick, 1000); setInterval(animPct, 250);
 </script></body></html>"""
 
 
+def reset(target):
+    """Put the page of a finished release away (archive/<version>-<time>/) and start clean: no log, no tasks, no test results.
+    Called by the page itself when the release is out and new work begins, or by hand: py -3.12 tools/release_status/reset.py"""
+    ARCHIVE.mkdir(exist_ok=True)
+    keep = ARCHIVE / (target + time.strftime("-%Y%m%d-%H%M%S"))
+    for f in (TODO, ACTIVITY, PROGRESS):
+        try:
+            if f.exists():
+                keep.mkdir(exist_ok=True)
+                (keep / f.name).write_bytes(f.read_bytes())
+        except OSError:
+            pass
+    TODO.write_text("[]", "utf-8")
+    ACTIVITY.write_text("[]", "utf-8")
+    PROGRESS.unlink(missing_ok=True)
+    CYCLE.write_text(json.dumps({"closed": target}), "utf-8")
+
+
 def stable(x, key=None):
     """Round every number: an epoch to a whole second, anything else to a tenth. A float that differs in its 12th digit between two
     updates made the page see a 'change', rebuild its cards and flicker."""
@@ -562,19 +616,18 @@ def main():
         write(collect())
         print(PAGE)
         return
-    end = time.time() + 3 * 3600
+    if not os.environ.pop("PHOTAG_STATUS_RELOAD", "") and DATA.exists() and time.time() - DATA.stat().st_mtime < 8:
+        print("another copy of the dashboard updater is already running: nothing to do", flush=True)      # one writer only
+        return
+    end = time.time() + 24 * 3600
     while time.time() < end:
         try:
-            d = collect()
-            write(d)
-            if d["published"]:
-                time.sleep(10)
-                write(collect())
-                break
+            write(collect())                                # it keeps running after the release is out: the page resets itself for the next one
         except Exception as e:
             print("error:", e, flush=True)
         if me.stat().st_mtime != born:                      # this program was edited: run the new version
             print("changed on disk: restarting", flush=True)
+            os.environ["PHOTAG_STATUS_RELOAD"] = "1"                 # the new copy is this one, not "another one"
             os.execv(sys.executable, [sys.executable, str(me)])
         time.sleep(LOCAL_EVERY)
 

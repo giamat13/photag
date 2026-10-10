@@ -98,7 +98,8 @@ input[type=range]:hover::-webkit-slider-thumb{background:#e6e6e6}
 .identity{display:flex;align-items:center;gap:11px;min-width:0}
 .lrmark{width:34px;height:34px;flex:none;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
 .idtext b{display:block;font-weight:400;font-size:15px;color:var(--t3);letter-spacing:.2px}
-.activity{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t3);margin-top:2px;cursor:pointer}
+.activity{display:flex;flex-direction:column;align-items:flex-start;gap:3px;font-size:11px;color:var(--t3);margin-top:2px;cursor:pointer}
+.act-row{display:flex;align-items:center;gap:8px}
 .act-bar{width:150px;height:5px;background:var(--raise2);border-radius:3px;overflow:hidden}
 .act-bar i{display:block;height:100%;width:0;background:#a8a8a8;transition:width .3s}
 .act-bar.indet i{width:30%;animation:indet 1.2s linear infinite}
@@ -908,3 +909,13 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
 .xbtn{margin-inline-start:auto;padding:0 6px;height:18px;line-height:16px;background:transparent;color:var(--t3);border:0}
 .xbtn:hover{color:var(--t1)}
 .rows .row.on{background:var(--pnl-h)}
+
+/* drop files on the window, merge people by dragging, colour swatches, "New in library" */
+#dropzone{display:none;position:fixed;inset:0;z-index:99999;background:rgba(40,90,170,.55);align-items:center;justify-content:center;pointer-events:none}
+#dropzone>div{padding:28px 44px;border:3px dashed #fff;border-radius:14px;font-size:1.5em;color:#fff;background:rgba(0,0,0,.35)}
+body.dropping #dropzone{display:flex}
+.pc[draggable=true]{cursor:grab}
+.pc.drop{outline:2px dashed var(--accent,#4a90d9);outline-offset:3px}
+.tg.sw{width:26px;height:22px;padding:0;background:var(--sw);border:2px solid transparent;border-radius:4px}
+.tg.sw.on{border-color:var(--accent,#4a90d9);box-shadow:0 0 0 1px #fff inset}
+.nl-row{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line,#3a3a3a)}

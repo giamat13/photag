@@ -1,6 +1,5 @@
 """Test: "photos stay in my folder" (app/refmode.py): photag lists the image files of a folder you already have, keeps the
-list up to date, and never writes to that folder -- except that deleting a photo from the trash sends its file to the
-Recycle Bin. Throw-away profile; the folder used here is created in a temp directory.
+list up to date, and never writes to that folder -- not even when a photo is deleted from the trash (only the catalog entry goes). Throw-away profile; the folder used here is created in a temp directory.
 
     py -3.12 tools/test_ref_folder.py
 """
@@ -178,23 +177,23 @@ try:
     check("...and not loose next to the library's own photos", mdir is not None and not any(p.parent == mdir for p in mdir.glob("*.jpg")))
     check("nothing in the folder changed by the backup", snapshot(mine) == after_scan)
 
-    # ---- trash: moving to the trash leaves the file; deleting from the trash sends it to the Recycle Bin
+    # ---- trash: moving to the trash leaves the file; deleting from the trash only removes it from the catalog
     f_d = mine / "misc" / "d.jpg"
     pid_d = next(p["id"] for p in ph if p["filename"] == "d.jpg")
     call("PATCH", "/api/photos", {"ids": [pid_d], "trashed": 1})
     check("moving to the trash does not touch the file", f_d.exists() and len(call("GET", "/api/photos?trashed=1&limit=99")[1]) == 1)
     code, r = call("POST", "/api/photos/delete-forever", {"ids": [pid_d]})
     check("deleting from the trash removes the photo from the catalog", code == 200 and r["deleted"] == 1 and not call("GET", f"/api/photo/{pid_d}")[0] == 200)
-    check("...and the file went to the Recycle Bin (it is no longer in your folder)", not f_d.exists())
+    check("...and the file stays in your folder (rule number one: photag never deletes your files)", f_d.exists())
     check("the other files are all still there", (mine / "2020" / "a.jpg").exists() and (mine / "2021" / "b_renamed.jpg").exists())
     call("POST", "/api/ref/scan")
     j = wait("refscan")
-    check("a scan after that finds nothing odd", j["state"] == "done" and (j["result"]["added"], j["result"]["removed"]) == (0, 0), j["result"])
+    check("a scan after that lists the (untouched) file again and finds nothing else", j["state"] == "done" and (j["result"]["added"], j["result"]["removed"]) == (1, 0), j["result"])
 
     # ---- turning it off keeps the photos, changes nothing
     call("POST", "/api/ref", {"enabled": False})
     check("turned off again: the photos stay in the catalog and in the folder",
-          len(call("GET", "/api/photos?limit=99")[1]) == 2 and (mine / "2020" / "a.jpg").exists() and call("GET", "/api/ref")[1]["enabled"] is False)
+          len(call("GET", "/api/photos?limit=99")[1]) == 3 and (mine / "2020" / "a.jpg").exists() and call("GET", "/api/ref")[1]["enabled"] is False)
 finally:
     srv.terminate()
     try:

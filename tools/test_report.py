@@ -85,7 +85,11 @@ def call(m, p, b=None, ok=True):
     except urllib.error.HTTPError as e:
         if ok:
             raise
-        return {"_status": e.code}
+        try:
+            detail = json.loads(e.read() or b"{}").get("detail")      # the message with its values, like the window gets it
+        except ValueError:
+            detail = None
+        return {"_status": e.code, "detail": detail}
 
 
 def start(env_extra):
@@ -115,17 +119,25 @@ try:
     check("the preview shows the details and that the program can send by itself", pv["can_send"] and pv["allowed"] and "photag " in pv["tech"] and "Language: he" in pv["tech"])
     logs = list((tmp / "appdata" / "photag" / "logs").glob("photag*.log")) + list((tmp / "cfg" / "photag" / "logs").glob("photag*.log")) + list((tmp / "home").rglob("photag.log"))
     check("the program keeps a log file of its messages next to its settings", bool(logs) and "---- start" in logs[0].read_text("utf-8"), [str(x) for x in logs][:2])
-    check("a report that is too short is refused", call("POST", "/api/report", {"description": "bug"}, ok=False).get("_status") == 400)
+    check("a report with no title and next to no text is refused", call("POST", "/api/report", {"description": "hi"}, ok=False).get("_status") == 400)
+    check("...also when both are empty", call("POST", "/api/report", {"description": "", "title": ""}, ok=False).get("_status") == 400)
     r = call("POST", "/api/report", {"description": "The crop tool freezes when I click twice. My mail is me@x.org", "include_tech": True, "language": "he"})
     check("a report is sent to GitHub (issue number comes back)", r == {"sent": True, "number": 42, "url": "https://github.com/giamat13/photag/issues/42"}, r)
     g = got[-1]
     check("...as an issue of the photag repository with the bot's token", g["path"] == "/repos/giamat13/photag/issues" and g["auth"] == "Bearer test-token", (g["path"], g["auth"]))
     check("...with the user-report label, a title, the text (e-mail removed) and the details", g["body"]["labels"] == ["user-report"] and g["body"]["title"].startswith("[Report] The crop tool") and "me@x.org" not in g["body"]["body"] and "<email>" in g["body"]["body"] and "Technical details" in g["body"]["body"])
+    r_title = call("POST", "/api/report", {"title": "Only a title, no description", "kind": "feature"})        # a title is enough, like on GitHub (#29)
+    check("a report with only a title (no description) is sent", r_title.get("sent") is True and got[-1]["body"]["title"] == "[Suggestion] Only a title, no description", (r_title, got[-1]["body"]["title"]))
     call("POST", "/api/report", {"description": "A second one, quite long enough.", "include_tech": False})
     check("without technical details none are sent", "Technical details" not in got[-1]["body"]["body"])
     call("POST", "/api/report", {"description": "Please add a button that does something useful.", "kind": "feature"})
     check("a feature suggestion is sent as [Suggestion] with the enhancement label", got[-1]["body"]["title"].startswith("[Suggestion] ") and got[-1]["body"]["labels"] == ["user-report", "enhancement"], got[-1]["body"]["labels"])
-    check("the fourth message within an hour is refused (rate limit)", call("POST", "/api/report", {"description": "A fourth one, long enough."}, ok=False).get("_status") == 429)
+    for i in range(6):                                     # 4 are sent so far (the title-only one included): up to the limit of 10 an hour
+        call("POST", "/api/report", {"description": f"Message number {i + 5}, long enough to be accepted."})
+    refused = call("POST", "/api/report", {"description": "An eleventh one, long enough."}, ok=False)
+    check("ten messages within an hour are sent and the eleventh is refused (rate limit)", refused.get("_status") == 429, refused)
+    mins = ((refused.get("detail") or {}).get("vars") or {}).get("minutes", 0)
+    check("...and the refusal says when a report can be sent again (in minutes, at most an hour)", "minutes" in str((refused.get("detail") or {}).get("key")) and 1 <= mins <= 61, refused)
     check("...and the preview says so", call("GET", "/api/report/preview")["allowed"] is False)
     # ---- the dialog in the window
     for f in tmp.rglob("report-times.json"):
@@ -156,7 +168,8 @@ try:
         check("...and shows what will be sent", "photag " in pg.inner_text("#rp-pre"), pg.inner_text("#rp-pre")[:80])
         pg.click("#rp-ok")
         pg.wait_for_timeout(300)
-        check("an empty report is not sent (a hint is shown)", "little more" in pg.inner_text("#rp-msg"))
+        check("an empty report is not sent (a hint asks for a title)", "write a title" in pg.inner_text("#rp-msg"))
+        check("the description is marked as optional", "optional" in pg.inner_text("#rp-lbl"))
         pg.evaluate("setTimeout(()=>{ throw new Error('test boom'); }, 0)")
         pg.wait_for_timeout(300)
         pg.fill("#rp-desc", "The Develop panel is empty when I open a video.")

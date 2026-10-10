@@ -9,12 +9,12 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, fileassoc, power, background as bgmode
+from . import geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, extras, fileassoc, power, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -1096,6 +1096,32 @@ def update_many(b: BatchIn):
     return {"ok": True, "n": len(b.ids)}
 
 
+# ---- dates from file names: photos already in the library whose date is not the one in their name (IMG-20240501-WA0003.jpg) ----
+class NameDatesIn(BaseModel):
+    apply: bool = False
+
+
+def _name_date_fixes(con) -> list[dict]:
+    """Photos / videos that have NO date at all and whose file name holds one. A date that is already there (from the picture's EXIF,
+    Takeout, the file's own time, or typed by the user) is never replaced, even when it differs from the name."""
+    out = []
+    for r in con.execute("SELECT id, filename FROM photos WHERE trashed=0 AND (taken_at IS NULL OR taken_at=0)"):
+        fd = images.date_from_filename(r["filename"] or "")
+        if fd:
+            out.append({"id": r["id"], "filename": r["filename"], "to": fd})
+    return out
+
+
+@app.post("/api/dates/from-names")
+def dates_from_names(b: NameDatesIn):
+    con = db.connect()
+    fixes = _name_date_fixes(con)
+    if b.apply and fixes:
+        con.executemany("UPDATE photos SET taken_at=? WHERE id=?", [(f["to"], f["id"]) for f in fixes])
+        con.commit()
+    return {"count": len(fixes), "applied": bool(b.apply and fixes), "items": fixes[:12]}
+
+
 # ---- places for photos without GPS (from a GPX track or from pictures taken at about the same time) ----
 class GeotagSuggestIn(BaseModel):
     mode: str = "photos"                 # "gpx" | "photos"
@@ -1474,8 +1500,8 @@ class MergeIn(BaseModel):
 
 @app.post("/api/merge")
 def start_merge(b: MergeIn):
-    """Photo merge: HDR (exposure fusion) or panorama; the result is added to the library as a new photo."""
-    if b.kind not in ("hdr", "pano"):
+    """Photo merge: HDR (exposure fusion), panorama or collage; the result is added to the library as a new photo."""
+    if b.kind not in ("hdr", "pano", "collage"):
         raise err(400, "Cannot edit")
     _start("merge", merge.run, b.ids, b.kind)
     return {"ok": True}
@@ -1483,7 +1509,7 @@ def start_merge(b: MergeIn):
 
 # ---- problem reports (Help > Report a problem): an issue on GitHub without the user needing an account (app/report.py) ----
 class ReportIn(BaseModel):
-    description: str
+    description: str = ""
     title: str = ""
     include_tech: bool = True
     kind: str = "problem"              # "problem" or "feature" (a suggestion)
@@ -1517,18 +1543,42 @@ def report_preview(language: str = ""):
 def report_send(b: ReportIn):
     desc = b.description.strip()
     kind = "feature" if b.kind == "feature" else "problem"
-    if len(desc) < report.MIN_DESC:
-        raise err(400, "Please write a little more")
+    if len(b.title.strip()) < report.MIN_TEXT and len(desc) < report.MIN_TEXT:       # a title is enough, like on GitHub (#29)
+        raise err(400, "Please write a title")
     if len(desc) > report.MAX_DESC:
         desc = desc[:report.MAX_DESC]
     if not report.allowed():
-        raise err(429, "You have sent several reports already. Please try again later.")
+        raise err(429, "You have sent several reports already. You can send again in about {minutes} minutes.", minutes=report.retry_in_minutes())
     title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind, report.redact(b.title)[:200])
     try:
         r = report.send(title, body, __version__, kind)
         return {"sent": True, "number": r["number"], "url": r["url"]}
     except report.ReportError:                        # never opens GitHub in the browser: the user is told it was not sent
         raise err(503, "The report could not be sent")
+
+
+class NewsAckIn(BaseModel):
+    numbers: list[int] = []
+
+
+@app.get("/api/report/news")
+def report_news(force: int = 0):
+    """Reports and suggestions of this installation that were dealt with (the issue is closed on GitHub) and the user was not told yet (#26)."""
+    return {"items": report.closed_news(bool(force))}
+
+
+@app.post("/api/report/news/ack")
+def report_news_ack(b: NewsAckIn):
+    report.ack_news(b.numbers)
+    return {"ok": True}
+
+
+@app.post("/api/report/news/open")
+def report_news_open(b: NewsAckIn):
+    """Open the GitHub page of one of the user's own issues (only a number is taken; the address is always this project's)."""
+    for n in b.numbers[:1]:
+        _open_url(f"https://github.com/{report.REPO}/issues/{int(n)}")
+    return {"ok": True}
 
 
 @app.get("/api/photo/{pid}/upright")
@@ -1942,36 +1992,10 @@ class ViewerFolderIn(BaseModel):
     folder: str
 
 
-@app.post("/api/viewer/{token}/rename")
-def viewer_rename(token: str, body: ViewerNameIn):
-    try:
-        return viewer.rename(token, body.name)
-    except (KeyError, FileNotFoundError):
-        raise HTTPException(404)
-    except viewer.NameNotAllowed:
-        raise err(400, "That name is not allowed")
-    except viewer.AlreadyExists:
-        raise err(409, "A file with that name already exists")
-    except OSError:
-        raise err(500, "The file could not be moved")
-
-
 @app.post("/api/viewer/{token}/copy")
 def viewer_copy(token: str, body: ViewerFolderIn):
     try:
         return viewer.copy_to(token, body.folder)
-    except (KeyError, FileNotFoundError):
-        raise HTTPException(404)
-    except viewer.NoFolder:
-        raise err(400, "The folder was not found")
-    except OSError:
-        raise err(500, "The file could not be moved")
-
-
-@app.post("/api/viewer/{token}/move")
-def viewer_move(token: str, body: ViewerFolderIn):
-    try:
-        return viewer.move_to(token, body.folder)
     except (KeyError, FileNotFoundError):
         raise HTTPException(404)
     except viewer.NoFolder:
@@ -2053,16 +2077,6 @@ def viewer_wallpaper(token: str):
     if not ok:
         raise err(500, "Windows could not be changed")
     return {"ok": True}
-
-
-@app.post("/api/viewer/{token}/trash")
-def viewer_trash(token: str):
-    try:
-        return viewer.trash(token)
-    except (KeyError, FileNotFoundError):
-        raise HTTPException(404)
-    except OSError:
-        raise err(500, "The file could not be moved to the Recycle Bin")
 
 
 @app.post("/api/viewer/{token}/edit")
@@ -2652,6 +2666,71 @@ def name_cluster(cid: int, body: RenameIn):
                 "ORDER BY det_score DESC LIMIT 1)) WHERE id=?", (cid, pid))
     con.commit()
     return {"id": pid}
+
+
+# ---- new media made from existing ones, drop / paste, merging people, "New in library" (app/extras.py) ----------------------
+def _extras(fn, *a, **k):
+    try:
+        return fn(*a, **k)
+    except extras.ExtrasError as e:
+        raise err(400, e.key, **e.vars)
+
+
+class FrameIn(BaseModel):
+    t: float = 0.0
+
+
+@app.post("/api/photo/{pid}/frame")
+def save_video_frame(pid: int, b: FrameIn):
+    """The video's picture at second t, saved as a NEW photo (the video itself is only read)."""
+    return _extras(extras.save_frame, pid, b.t)
+
+
+class TrimIn(BaseModel):
+    start: float = 0.0
+    end: float = 0.0
+    exact: bool = False
+
+
+@app.post("/api/photo/{pid}/trim")
+def trim_video(pid: int, b: TrimIn):
+    """A part of the video as a NEW video (the original is only read)."""
+    return _extras(extras.trim, pid, b.start, b.end, b.exact)
+
+
+@app.post("/api/import-upload")
+async def import_upload(request: Request, name: str = "", modified: float = 0.0):
+    """A file dropped on the window or pasted with Ctrl+V: the body is the file; it is copied into the library like any import."""
+    if int(request.headers.get("content-length") or 0) > extras.UPLOAD_MAX:
+        raise err(400, "The file is too big")
+    data = await request.body()
+    return _extras(extras.from_upload, name, data, modified / 1000.0 if modified > 1e11 else modified)
+
+
+class PeopleMergeIn(BaseModel):
+    src: dict
+    dst: dict
+
+
+@app.post("/api/people/merge")
+def people_merge(b: PeopleMergeIn):
+    """Two groups of the same person: {"person": id} or {"cluster": id} into {"person": id} (or a group into a group)."""
+    return _extras(extras.merge_people, b.src, b.dst)
+
+
+@app.get("/api/library/new")
+def library_new():
+    """What came in with the last import, for the "New in library" window (counts and what is still to do)."""
+    return extras.new_summary(db.connect())
+
+
+@app.get("/api/colors")
+def dominant_colors():
+    """The colour names of the colour search, and how many photos have each as their dominant colour."""
+    con = db.connect()
+    extras.fill_colors(con, budget=2.0)
+    have = {r["name"]: r["n"] for r in con.execute("SELECT name, COUNT(*) n FROM photo_color WHERE name<>'' GROUP BY name")}
+    return [{"name": c, "n": have.get(c, 0)} for c in extras.COLORS]
 
 
 # ---- static frontend (mounted last so /api wins) ---------------------------

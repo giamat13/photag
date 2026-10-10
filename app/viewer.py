@@ -190,23 +190,6 @@ def exif(token: str) -> dict:
     return {"exif": images.exif_full(p), "gps": {"lat": lat, "lng": lng} if lat is not None and lng is not None else None}
 
 
-def trash(token: str) -> dict:
-    """Sends the file to the Recycle Bin (Windows) / Trash. Returns the token to show next (the next picture, else the previous one) or None.
-    The catalog is not involved: the file was never in it. Raises OSError when the file could not be moved (it is then left where it is)."""
-    from . import refmode
-    p = path_of(token)
-    if not p.is_file():
-        raise FileNotFoundError(str(p))
-    i = info(token)
-    nxt = i["next"] or i["prev"]
-    if not refmode.recycle(str(p)):
-        raise OSError("not moved")
-    with _LOCK:
-        _PATH_OF.pop(token, None)
-        _TOKEN_OF.pop(str(p), None)
-    return {"next": nxt}
-
-
 def _clamp(v, lo, hi, default=1.0):
     try:
         return max(lo, min(hi, float(v)))
@@ -366,19 +349,6 @@ def _forget(token: str, path: Path):
         _TOKEN_OF.pop(str(path), None)
 
 
-def rename(token: str, name: str) -> dict:
-    p = path_of(token)
-    if not p.is_file():
-        raise FileNotFoundError(str(p))
-    new = p.with_name(clean_name(name, p.suffix))
-    if new.name != p.name:                          # Path equality ignores case on Windows: compare the spelling
-        if new.exists() and not (new.name.lower() == p.name.lower() and os.path.samefile(new, p)):
-            raise AlreadyExists(new.name)
-        os.rename(p, new)
-        _forget(token, p)
-    return {"token": token_for(new), "name": new.name}
-
-
 def _free_name(folder: Path, name: str) -> Path:
     """folder/name, or folder/name (2).ext ... when that exists: a copy never replaces a file."""
     out = folder / name
@@ -404,22 +374,6 @@ def copy_to(token: str, folder: str) -> dict:
     out = _free_name(_dest(folder), p.name)
     shutil.copy2(p, out)
     return {"name": out.name, "folder": str(out.parent)}
-
-
-def move_to(token: str, folder: str) -> dict:
-    """Moves the file to another folder (never over a file there). Returns the token to show next, like trash()."""
-    p = path_of(token)
-    if not p.is_file():
-        raise FileNotFoundError(str(p))
-    import shutil
-    d = _dest(folder)
-    i = info(token)
-    nxt = i["next"] or i["prev"]
-    out = _free_name(d, p.name) if d.resolve() != p.parent.resolve() else p
-    if out != p:
-        shutil.move(str(p), str(out))
-        _forget(token, p)
-    return {"next": nxt if out != p else token, "name": out.name, "folder": str(d)}
 
 
 # A program started by "Open with photag" of an older photag.exe (whose launcher does not know pictures; only the `app` package is

@@ -142,6 +142,18 @@ try:
         check("...and, tester OFF, it still mentions the newer pre-release (manual check) without offering it", "A newer pre-release is also available" in t and "99.0.0-beta.1" in t)
         ev("closeModal()")
 
+        # ---- an update that installs by itself also has an "Open on GitHub" button (issue #22); PHOTAG_NO_OPEN keeps the browser from opening
+        ev("updateDialog({latest:'98.0.0', current:'1.0.0', notes:'a note', can_install:true, frozen:true, prerelease:false, pre:null, page:'https://github.com/giamat13/photag/releases/tag/v98.0.0'})")
+        pg.wait_for_selector("#up-gh", timeout=5000)
+        check("an update that installs by itself has an 'Open on GitHub' button next to 'Update now'", "Open on GitHub" in text() and "Update now" in text())
+        posted = []
+        pg.on("request", lambda r: posted.append(r.url) if "/api/update/open-page" in r.url else None)
+        pg.click("#up-gh")
+        pg.wait_for_timeout(600)
+        check("...clicking it asks the program to open the release page", any(u.endswith("/api/update/open-page") for u in posted), posted)
+        check("...and the window stays open (nothing is installed)", ev("!!document.querySelector('#up-go') && !!document.querySelector('#up-gh')"))
+        ev("closeModal()")
+
         # ---- nothing at all
         STATE["pre"], STATE["stable"] = False, OLD
         ev("updateCheck(true)")

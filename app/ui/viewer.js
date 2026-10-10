@@ -325,15 +325,6 @@ async function loadMap() {
   c.textContent = `${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`;
   setTimeout(() => vmap && vmap.invalidateSize(), 60);
 }
-async function trash() {
-  if (!cur) return;
-  if (!confirm(t('Move this picture to the Recycle Bin?') + '\n' + cur.name)) return;
-  try {
-    const r = await api(`/api/viewer/${tok}/trash`, { method: 'POST' });
-    say(t('Moved to the Recycle Bin'));
-    if (r.next) show(r.next); else { pic.removeAttribute('src'); $('#name').textContent = ''; $('#meta').textContent = ''; say(t('Moved to the Recycle Bin'), 0); }
-  } catch (e) { say(t(e.message)); }
-}
 async function saveCopy() {
   try {
     const r = await api(`/api/viewer/${tok}/edit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opsBody()) });
@@ -341,7 +332,7 @@ async function saveCopy() {
   } catch (e) { say(t(e.message)); }
 }
 $('#b-edit').onclick = () => openPanel('edit'); $('#b-info').onclick = () => openPanel('info'); $('#b-map').onclick = () => openPanel('map');
-$('#b-del').onclick = trash; $('#pclose').onclick = closePanel;
+$('#pclose').onclick = closePanel;
 
 // ---- compare two pictures side by side (C): the same zoom and move on both; arrows change the right one, X swaps, C ends ----
 async function loadRight(token) {
@@ -443,7 +434,7 @@ async function setWallpaper() {
   catch (e) { say(t(e.message)); }
 }
 
-// ---- the "more" menu: rename, copy, move, print; the slideshow ----
+// ---- the "more" menu: copy, print; the slideshow ----
 function closeMenu() { $('#menu').classList.add('hidden'); }
 function openMenu(items, head) {
   const m = $('#menu');
@@ -452,21 +443,6 @@ function openMenu(items, head) {
   m.classList.remove('hidden');
 }
 function toggleMenu(items, head) { if (!$('#menu').classList.contains('hidden')) closeMenu(); else openMenu(items, head); }
-function askName(title, value, ok) {
-  $('#dlg-title').textContent = title; const inp = $('#dlg-input'); inp.value = value;
-  $('#dlg').classList.remove('hidden'); inp.focus();
-  const dot = value.lastIndexOf('.'); inp.setSelectionRange(0, dot > 0 ? dot : value.length);
-  const done = v => { inp.blur(); $('#dlg').classList.add('hidden'); if (v != null) ok(v); };
-  $('#dlg-ok').onclick = () => done(inp.value); $('#dlg-cancel').onclick = () => done(null);
-  inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') done(inp.value); else if (e.key === 'Escape') done(null); };
-}
-async function renameIt() {
-  if (!cur) return;
-  askName(t('Rename the picture'), cur.name, async name => {
-    try { const r = await api(`/api/viewer/${tok}/rename`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); await show(r.token); say(t('Renamed to {name}', { name: r.name })); }
-    catch (e) { say(t(e.message)); }
-  });
-}
 async function pickFolder(title) { const r = await api('/api/pick-file?kind=folder&title=' + encodeURIComponent(title)); return r.path || null; }
 async function copyIt() {
   if (!cur) return;
@@ -474,16 +450,6 @@ async function copyIt() {
   if (!f) return;
   try { const r = await api(`/api/viewer/${tok}/copy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: f }) }); say(t('Copied to {folder}', { folder: r.folder })); }
   catch (e) { say(t(e.message)); }
-}
-async function moveIt() {
-  if (!cur) return;
-  const f = await pickFolder(t('Choose the folder to move the picture to')).catch(e => { say(t(e.message)); return null; });
-  if (!f) return;
-  try {
-    const r = await api(`/api/viewer/${tok}/move`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: f }) });
-    say(t('Moved to {folder}', { folder: r.folder }));
-    if (r.next && r.next !== tok) show(r.next); else if (!r.next) { pic.removeAttribute('src'); $('#name').textContent = ''; $('#meta').textContent = ''; }
-  } catch (e) { say(t(e.message)); }
 }
 // Print: the picture as it is on screen (turned, and with the edit sliders) drawn on a canvas, so the printed page matches what you see.
 function printIt() {
@@ -506,7 +472,7 @@ function slideStart(sec) {
 }
 const slideMenu = () => toggleMenu([2, 4, 8, 15].map(n => [t('Every {n} seconds', { n }), () => slideStart(n)]), t('Slideshow'));
 const moreMenu = () => {
-  const it = [[t('Rename…'), renameIt], [t('Copy to folder…'), copyIt], [t('Move to folder…'), moveIt]];
+  const it = [[t('Copy to folder…'), copyIt]];
   if (cur && !cur.video) it.push([t('Copy picture'), copyPicture], [t('Print…'), printIt]);
   if (cur && cur.can_wallpaper) it.push([t('Set as desktop background'), setWallpaper]);
   toggleMenu(it);
@@ -536,8 +502,6 @@ window.addEventListener('keydown', e => {
   else if (k === '0') fit(); else if (k === '1') actual();
   else if (k === 'r' || k === 'R') rotate(e.shiftKey ? -90 : 90);
   else if (k === 'f' || k === 'F' || k === 'F11') full();
-  else if (k === 'Delete') trash();
-  else if (k === 'F2') renameIt();
   else if ((k === 'p' || k === 'P') && (e.ctrlKey || e.metaKey)) printIt();
   else if (k === 's' || k === 'S') { if (slide) slideStop(); else slideMenu(); }
   else if ((k === 'c' || k === 'C') && (e.ctrlKey || e.metaKey)) copyPicture();

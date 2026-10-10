@@ -7,7 +7,7 @@ falls back to opening GitHub's "new issue" page with the text filled in. The tok
 only the `public_repo` scope; the bot owns nothing, so a leaked token can do no more than open issues (rotate it and ship an update).
 
 Privacy: the issue is public. The dialog shows exactly what is sent; paths, user name, e-mail addresses and IP addresses are removed from the
-log lines. Rate limit: 3 reports an hour, 10 a day per installation.
+log lines. Rate limit: 10 reports an hour, 30 a day per installation.
 """
 import json
 import os
@@ -18,7 +18,8 @@ import time
 REPO = "giamat13/photag"
 API = "https://api.github.com"
 MAX_DESC = 4000
-MIN_DESC = 10
+MIN_TEXT = 3           # a title or a description of at least this many characters is enough: no description is needed (#29)
+PER_HOUR, PER_DAY = 10, 30         # reports one installation may send (the first limits, 3 an hour and 10 a day, were too small: #24)
 LOG_LINES = 120
 LOG_CHARS = 9000
 FALLBACK_URL_CHARS = 6500
@@ -209,9 +210,21 @@ def _recent_times() -> list[float]:
         return []
 
 
+def retry_in_minutes() -> int:
+    """How long until the limit lets one more report through (at least 1 minute)."""
+    now, t = time.time(), sorted(_recent_times())
+    hour = [x for x in t if now - x < 3600]
+    waits = []
+    if len(hour) >= PER_HOUR:
+        waits.append(hour[len(hour) - PER_HOUR] + 3600 - now)
+    if len(t) >= PER_DAY:
+        waits.append(t[len(t) - PER_DAY] + 86400 - now)
+    return max(1, int(max(waits or [60]) // 60) + 1)
+
+
 def allowed() -> bool:
     t = _recent_times()
-    return sum(1 for x in t if time.time() - x < 3600) < 3 and len(t) < 10
+    return sum(1 for x in t if time.time() - x < 3600) < PER_HOUR and len(t) < PER_DAY
 
 
 def _note_sent():
@@ -280,4 +293,71 @@ def send(title: str, body: str, version: str, kind: str = "problem") -> dict:
     except Exception as e:
         raise ReportError(str(e)[:120])
     _note_sent()
+    remember_issue(data.get("number"), title, kind)
     return {"number": data.get("number"), "url": data.get("html_url")}
+
+
+# ------------------------------------------------------------------------------------------------ "your suggestion was completed" (#26)
+def _issues_file():
+    from . import platform_dirs
+    return platform_dirs.roaming_base() / "photag" / "report-issues.json"
+
+
+def _load_issues() -> dict:
+    try:
+        d = json.loads(_issues_file().read_text("utf-8"))
+        return d if isinstance(d, dict) and isinstance(d.get("issues"), list) else {"issues": [], "checked_at": 0}
+    except (OSError, ValueError):
+        return {"issues": [], "checked_at": 0}
+
+
+def _save_issues(d: dict):
+    try:
+        f = _issues_file()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(d, ensure_ascii=False), "utf-8")
+    except OSError:
+        pass
+
+
+def remember_issue(number, title: str, kind: str):
+    """Keep the number of an issue this installation created, to tell the user when it has been dealt with."""
+    if not isinstance(number, int):
+        return
+    d = _load_issues()
+    d["issues"] = (d["issues"] + [{"number": number, "title": re.sub(r"^\[(Report|Suggestion)\]\s*", "", title)[:120], "kind": kind,
+                                   "at": time.time(), "closed": False, "notified": False}])[-100:]
+    _save_issues(d)
+
+
+def closed_news(force: bool = False, every: float = 3600.0) -> list[dict]:
+    """The issues of this installation that were closed on GitHub since the user last heard of them. GitHub is asked at most once an
+    `every` seconds (public data, no token); an unreachable GitHub just means no news now."""
+    import urllib.request
+    d = _load_issues()
+    open_ones = [x for x in d["issues"] if not x.get("closed") and time.time() - x.get("at", 0) < 365 * 86400]
+    if open_ones and (force or time.time() - d.get("checked_at", 0) >= every):
+        base = os.environ.get("PHOTAG_REPORT_API", API).rstrip("/")
+        from .net import ssl_context
+        ctx = ssl_context() if base.startswith("https") else None
+        for x in open_ones[:30]:
+            try:
+                req = urllib.request.Request(f"{base}/repos/{REPO}/issues/{x['number']}", headers={"Accept": "application/vnd.github+json", "User-Agent": "photag"})
+                with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+                    g = json.loads(r.read().decode("utf-8"))
+                if g.get("state") == "closed":
+                    x["closed"] = True
+                    x["url"] = g.get("html_url") or f"https://github.com/{REPO}/issues/{x['number']}"
+            except Exception:
+                break                                    # offline or rate limited: try again at the next check
+        d["checked_at"] = time.time()
+        _save_issues(d)
+    return [x for x in d["issues"] if x.get("closed") and not x.get("notified")]
+
+
+def ack_news(numbers) -> None:
+    d = _load_issues()
+    for x in d["issues"]:
+        if x["number"] in set(numbers):
+            x["notified"] = True
+    _save_issues(d)

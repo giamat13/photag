@@ -383,12 +383,25 @@ function makeCell(p, i){
   c.style.top = (8 + Math.floor(i/G.cols)*G.cw)+'px';
   c.style.insetInlineStart = (8 + (i%G.cols)*G.cw)+'px';
   const xp = S.cell==='xp', plain = S.cell==='plain';
-  const [w,h] = fitBox(p, G.cw*(plain?.84:.78), G.cw*(plain?.84:xp?.56:.65));
+  const bw = G.cw*(plain?.84:.78), bh = G.cw*(plain?.84:xp?.56:.65);
+  const [w,h] = fitBox(p, bw, bh);
   c.innerHTML = `<div class="idx">${i+1}</div>
     <div class="hdr"><span class="n">${i+1}</span><span class="f">${esc(p.filename)}</span><span>${p.width&&p.height?p.width+'×'+p.height:ext(p)}</span></div>
     <div class="ph"><img loading="lazy" decoding="async" draggable="false" width="${w}" height="${h}" style="width:${w}px;height:${h}px" src="${thumbUrl(p.id)}" alt="" onerror="this.parentElement.classList.add('noimg');this.remove()"></div>
     <span class="ov"></span>`;
   c._w=w; c._h=h;
+  // the stored size can be missing (videos, GIFs) or not the shape that is shown (a photo turned by its EXIF): the picture is drawn
+  // in the shape of the thumbnail itself, so it is never stretched (#25)
+  const img = c.querySelector('.ph img');
+  const trueShape = ()=>{
+    if(!img || !img.naturalWidth) return;
+    const [nw,nh] = fitBox({width:img.naturalWidth, height:img.naturalHeight}, bw, bh);
+    if(Math.abs(nw-c._w) > 1 || Math.abs(nh-c._h) > 1){
+      c._w=nw; c._h=nh; img.width=nw; img.height=nh; img.style.width=nw+'px'; img.style.height=nh+'px';
+      const j = +c.dataset.i; if(S.list[j]) fillCell(c, S.list[j], j);
+    }
+  };
+  if(img){ img.addEventListener('load', trueShape); if(img.complete) trueShape(); }
   fillCell(c, p, i);
   return c;
 }
@@ -411,7 +424,7 @@ function fillCell(c, p, i){
      <button class="rot r" data-a="rotr" title="${t("Rotate Right (Ctrl+])")}">${I('rotr')}</button>
      <div class="stars ${r?'':'none'}">${stars}</div>
      ${badges.length?`<div class="badges" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-end:${Math.round(bx+4)}px">${badges.map(b=>b.startsWith('<em')?b:`<i>${b}</i>`).join('')}</div>`:''}
-     ${p.is_video?`<span class="dur" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-start:${Math.round(bx+4)}px">${I('play')}${t("Video")}</span>`:''}`;
+     ${p.is_video?`<span class="dur" style="inset-block-start:${Math.round(by+c._h-18)}px;inset-inline-start:${Math.round(bx+4)}px">${I('play')}${ext(p)==='GIF' ? 'GIF' : t("Video")}</span>`:''}`;
 }
 function refreshCells(){ for(const [i,c] of G.cells){ const p=S.list[i]; if(p) fillCell(c,p,i); } }
 function scrollToAct(){
@@ -748,7 +761,7 @@ const SEARCH_RADII = [0.5, 1, 2, 5, 10, 25, 50, 100, 500];
 function searchEmpty(c){ return !c || !(c.from || c.to || (c.kind && c.kind!=='all') || (c.exts && c.exts.length) || c.minMB || c.maxMB || c.place || (c.cameras && c.cameras.length) || (c.lenses && c.lenses.length) || c.minFocal || c.maxFocal
   || (c.q||'').trim() || (c.flags && c.flags.length) || c.rating || (c.colors && c.colors.length) || c.edited || (c.months && c.months.length) || (c.orients && c.orients.length)
   || (c.keywords||'').trim() || c.kw || c.gps || c.faces || c.fav || (c.persons && c.persons.length) || (c.albumIds && c.albumIds.length) || (c.weekdays && c.weekdays.length)
-  || (c.hourFrom!=='' && c.hourFrom!=null) || (c.hourTo!=='' && c.hourTo!=null) || c.minMP || c.maxMP || c.addedFrom || c.addedTo || c.score); }
+  || (c.hourFrom!=='' && c.hourFrom!=null) || (c.hourTo!=='' && c.hourTo!=null) || c.minMP || c.maxMP || c.addedFrom || c.addedTo || c.score || c.pano || (c.dominant && c.dominant.length)); }
 // is the photo inside the place: a box (a city / country found by name or an area drawn on the map; it may cross the 180th meridian) or a circle
 function inPlace(p, pl){
   if(p.lat==null || p.lng==null) return false;
@@ -775,11 +788,13 @@ function parseCoords(q){
   if(m[4] && m[4].toUpperCase()==='W') lng = -Math.abs(lng);
   return Math.abs(lat)<=90 && Math.abs(lng)<=180 ? [lat, lng] : null;
 }
+const DOMCOLORS = [['red','#d33',()=>t('Red')],['orange','#e8892b',()=>t('Orange')],['yellow','#e6c619',()=>t('Yellow')],['green','#3a3',()=>t('Green')],['cyan','#2bb',()=>t('Cyan')],['blue','#36d',()=>t('Blue')],
+  ['purple','#82c',()=>t('Purple')],['pink','#e7a',()=>t('Pink')],['brown','#753',()=>t('Brown')],['black','#111',()=>t('Black')],['white','#f4f4f4',()=>t('White')],['gray','#888',()=>t('Gray')]];
 function advancedSearch(){
   const cur = S.src.kind==='search' ? S.src.crit : SEARCH_TMP;
   const c = {from:'', to:'', kind:'all', exts:[], minMB:'', maxMB:'', place:null, cameras:[], lenses:[], minFocal:'', maxFocal:'',
     q:'', qf:'any', flags:[], rating:'', ratingOp:'>=', colors:[], edited:false, months:[], orients:[], keywords:'', keywordsAll:false, kw:'', gps:'', faces:'', fav:false,
-    persons:[], albumIds:[], weekdays:[], hourFrom:'', hourTo:'', minMP:'', maxMP:'', addedFrom:'', addedTo:'', score:'', ...(cur||{})};
+    persons:[], albumIds:[], weekdays:[], hourFrom:'', hourTo:'', minMP:'', maxMP:'', addedFrom:'', addedTo:'', score:'', pano:false, dominant:[], ...(cur||{})};
   const chips = (id, items, sel) => `<div class="chips" id="${id}">${items.map(([v,l])=>`<button type="button" class="tg ${sel.map(String).includes(String(v))?'on':''}" data-x="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
   const opts = (items, cur) => items.map(([v,l])=>`<option value="${esc(v)}" ${String(cur)===String(v)?'selected':''}>${esc(l)}</option>`).join('');
   const hours = [['', '—'], ...Array.from({length:24}, (_,h)=>[String(h), String(h).padStart(2,'0')+':00'])];
@@ -828,6 +843,8 @@ function advancedSearch(){
         <select id="as-gps">${opts([['','—'],['has',t('With location')],['none',t('Without location')]], c.gps)}</select>
         <select id="as-faces">${opts([['','—'],['has',t('With faces')],['none',t('Without faces')]], c.faces)}</select></div></div></div>
     <div class="two"><div class="fld"><span>${t('Quality')}</span><div class="frow"><select id="as-score">${opts([['','—'],['40','40'],['60','60'],['80','80']], c.score)}</select><button type="button" class="tg ${c.fav?'on':''}" id="as-fav">${t('Favorites')}</button><button type="button" class="tg ${c.edited?'on':''}" id="as-edited">${t('Edited')}</button></div></div><div></div></div>
+    <div class="two"><div class="fld"><span>${t('Panoramas')}</span><div class="frow"><button type="button" class="tg ${c.pano?'on':''}" id="as-pano">${t('Only panoramas')}</button></div></div>
+      <div class="fld"><span>${t('Dominant color')}</span><div class="chips" id="as-dom">${DOMCOLORS.map(([v,col,nm])=>`<button type="button" class="tg sw ${c.dominant.includes(v)?'on':''}" data-x="${v}" title="${esc(nm())}" style="--sw:${col}"></button>`).join('')}</div></div></div>
     ${people.length ? `<div class="fld"><span>${t('People')}</span>${chips('as-persons', people.map(x=>[x.id,x.name]), c.persons)}</div>` : ''}
     ${albumsList.length ? `<div class="fld"><span>${t('Albums')}</span>${chips('as-albums', albumsList.map(x=>[x.id,x.name]), c.albumIds)}</div>` : ''}
     <div class="fld"><span>${t('Near a place on the map')}</span>
@@ -847,10 +864,10 @@ function advancedSearch(){
     colors:$$('#as-colors .on').map(b=>b.dataset.x), edited:$('#as-edited').classList.contains('on'), months:$$('#as-months .on').map(b=>b.dataset.x), orients:$$('#as-orients .on').map(b=>b.dataset.x),
     keywords:$('#as-kws').value.trim(), keywordsAll:$('#as-kwall').checked, kw:$('#as-kw').value, gps:$('#as-gps').value, faces:$('#as-faces').value, fav:$('#as-fav').classList.contains('on'),
     persons:$$('#as-persons .on').map(b=>+b.dataset.x), albumIds:$$('#as-albums .on').map(b=>+b.dataset.x), weekdays:$$('#as-weekdays .on').map(b=>b.dataset.x),
-    hourFrom:$('#as-h1').value, hourTo:$('#as-h2').value, minMP:+$('#as-mp1').value||'', maxMP:+$('#as-mp2').value||'', addedFrom:$('#as-add1').value, addedTo:$('#as-add2').value, score:$('#as-score').value});
+    hourFrom:$('#as-h1').value, hourTo:$('#as-h2').value, minMP:+$('#as-mp1').value||'', maxMP:+$('#as-mp2').value||'', addedFrom:$('#as-add1').value, addedTo:$('#as-add2').value, score:$('#as-score').value, pano:$('#as-pano').classList.contains('on'), dominant:$$('#as-dom .on').map(b=>b.dataset.x)});
   $('#as-exts').onclick = e=>{ const b=e.target.closest('[data-x]'); if(b) b.classList.toggle('on'); };
-  $('.mb.as').addEventListener('click', e=>{ const b=e.target.closest('#as-cams [data-x],#as-lenses [data-x],#as-flags [data-x],#as-colors [data-x],#as-months [data-x],#as-orients [data-x],#as-weekdays [data-x],#as-persons [data-x],#as-albums [data-x]'); if(b) b.classList.toggle('on'); });
-  $('#as-fav').onclick = e=>e.currentTarget.classList.toggle('on'); $('#as-edited').onclick = e=>e.currentTarget.classList.toggle('on');
+  $('.mb.as').addEventListener('click', e=>{ const b=e.target.closest('#as-cams [data-x],#as-lenses [data-x],#as-flags [data-x],#as-colors [data-x],#as-months [data-x],#as-orients [data-x],#as-weekdays [data-x],#as-dom [data-x],#as-persons [data-x],#as-albums [data-x]'); if(b) b.classList.toggle('on'); });
+  $('#as-fav').onclick = e=>e.currentTarget.classList.toggle('on'); $('#as-pano').onclick = e=>e.currentTarget.classList.toggle('on'); $('#as-edited').onclick = e=>e.currentTarget.classList.toggle('on');
   $('#as-km').onchange = ()=>{ if(c.place){ c.place.km = km(); draw(); } };
   const find = async ()=>{
     const q = $('#as-q').value.trim(); if(!q) return;
@@ -1125,7 +1142,7 @@ function renderLoupe(){
   if(m.dataset.id!=String(p.id) || m.dataset.v!=String(VER[p.id]||'')){
     m.dataset.id=p.id; m.dataset.v=VER[p.id]||''; m.classList.remove('zoom');
     vpDestroy();
-    if(p.is_video){ m.innerHTML=''; mountPlayer(m, p); histoFromThumb(); }
+    if(p.is_video && ext(p)!=='GIF'){ m.innerHTML=''; mountPlayer(m, p); histoFromThumb(); }       // a GIF is stored as a video but a <video> cannot play it: an <img> plays its animation (#23)
     else { m.innerHTML = `<img src="${mediaUrl(p.id)}" alt="" draggable="false">`; const img=m.querySelector('img'); if(img) img.onload=()=>drawHisto(img); }
   }
   const info=$('#loupe-info');
@@ -1232,6 +1249,7 @@ async function renderPeople(){
   S.people=people;
   const face = src => src ? `<img loading="lazy" src="${src}" alt="">` : I('people');
   el.innerHTML = `<h2>${t("Named People")} <span>${num(people.length)}</span></h2>
+    <div class="hint" style="padding:0 0 6px">${t('The same person twice? Drag one onto the other to merge them.')}</div>
     <div class="pgrid">${people.map(p=>`<div class="pc" data-person="${p.id}"><button class="tlbtn" data-timeline="${p.id}" title="${t('Face Timeline')}">${I('timeline')}</button><div class="face">${face(p.cover_face?'/face/'+p.cover_face:p.cover_photo?thumbUrl(p.cover_photo):'')}</div>
       <div class="nm" title="${t("Double-click to rename")}">${esc(p.name)}</div><div class="ct">${num((p.face_photos||0)+(p.tag_photos||0))}</div></div>`).join('') || ("<div class=\"hint\">"+t("There are no named people yet.")+"</div>")}</div>
     <h2>${t("Unnamed People")} <span>${num(clusters.length)}</span></h2>
@@ -3504,19 +3522,32 @@ async function reportProblem(){
     <p id="rp-msg" class="hint" style="padding:0"></p></div>
     <div class="mf"><button id="rp-no">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="rp-ok">${t('Send report')}</button></div>`);
   const kind = () => $('#modal-box input[name=rp-kind]:checked').value;
-  const relabel = ()=>{ const f = kind()==='feature'; $('#rp-lbl').textContent = f ? t('What would you like photag to do?') : t('What happened? What did you expect?'); $('#rp-ok').textContent = f ? t('Send suggestion') : t('Send report'); };
+  const relabel = ()=>{ const f = kind()==='feature'; $('#rp-lbl').textContent = (f ? t('What would you like photag to do?') : t('What happened? What did you expect?')) + ' (' + t('optional') + ')'; $('#rp-ok').textContent = f ? t('Send suggestion') : t('Send report'); };
+  relabel();
   $$('#modal-box input[name=rp-kind]').forEach(r=>r.onchange = relabel);
   $('#rp-no').onclick = closeModal;
   $('#rp-tech').onchange = ()=>{ $('#rp-det').style.display = $('#rp-tech').checked ? '' : 'none'; };
   $('#rp-ok').onclick = async ()=>{
     const desc=$('#rp-desc').value.trim(), msg=$('#rp-msg'), k=kind();
-    if(desc.length < 10){ msg.textContent = t('Please write a little more'); return; }
+    if($('#rp-title').value.trim().length < 3 && desc.length < 3){ msg.textContent = t('Please write a title'); return; }       // a title is enough, like on GitHub (#29)
     $('#rp-ok').disabled = true; msg.textContent = t('Sending…');
     try{
       const r = await send('POST', '/api/report', {description:desc, title:$('#rp-title').value.trim(), kind:k, include_tech:$('#rp-tech').checked, language:I18N.lang, client:clientInfo()});
       if(r.sent){ closeModal(); toast(k==='feature' ? t('Thank you! Your suggestion was sent (#{0}).', [r.number]) : t('Thank you! Your report was sent (#{0}).', [r.number]), 4500); }
     }catch(e){ msg.textContent = e.message || t('The report could not be sent'); $('#rp-ok').disabled = false; }
   };
+}
+// "Your suggestion was completed" (#26): the reports and suggestions this installation sent are remembered; when GitHub says one of them
+// was dealt with (the issue is closed) the user is told once, when the program is opened (and every two hours while it stays open).
+async function reportNews(){
+  if(!$('#modal').classList.contains('hidden')) return;            // never on top of another window; the next check tries again
+  let r; try{ r = await api('/api/report/news'); }catch{ return; }
+  if(!r.items || !r.items.length) return;
+  modal(`<h3>${t('Your reports and suggestions')}</h3><div class="mb">${r.items.map(x=>`<div class="rn-row" style="display:flex;gap:10px;align-items:baseline;padding:4px 0"><span style="flex:1" dir="auto">${x.kind==='feature' ? t('Your suggestion “{0}” was completed (#{1}).', [esc(x.title), x.number]) : t('Your report “{0}” was handled (#{1}).', [esc(x.title), x.number])}</span><button data-rn="${x.number}">${t('Open on GitHub')}</button></div>`).join('')}</div>
+    <div class="mf"><span class="spacer"></span><button class="primary" id="rn-ok">${t('Close')}</button></div>`);
+  send('POST', '/api/report/news/ack', {numbers: r.items.map(x=>x.number)}).catch(()=>{});      // told once, however the window is closed
+  $('#rn-ok').onclick = closeModal;
+  $$('#modal [data-rn]').forEach(b=>b.onclick = ()=>send('POST', '/api/report/news/open', {numbers:[+b.dataset.rn]}));
 }
 async function updateCheck(manual, force=manual){
   let info;
@@ -3555,7 +3586,7 @@ async function whatsNew(manual){
     ? `<p class="hint" style="padding:0">${t('Could not fetch the release notes from GitHub ({0}).', [n.error])}</p><button class="linkbtn" id="wn-page">${t('Open the release page')}</button>`
     : (n.notes && n.notes.trim() ? `<div class="upd-notes">${mdLite(n.notes)}</div>` : `<span class="hint" style="padding:0">${t('No details for this version.')}</span>`);
   const close = async ()=>{ closeModal(); if(!manual) await send('POST', '/api/update/whatsnew/ack'); };
-  const wire = ()=>{ $('#wn-close').onclick = close; if($('#wn-page')) $('#wn-page').onclick = ()=>send('POST', '/api/update/open-page'); };
+  const wire = ()=>{ $('#wn-close').onclick = close; ['wn-page', 'wn-gh'].forEach(id=>{ if($('#' + id)) $('#' + id).onclick = ()=>send('POST', '/api/update/open-page'); }); };
   if(!manual && r.failed){
     modal(`<h3>${t('Update not completed')}</h3><div class="mb upd">
       <p>${t('The update to version {0} didn\'t finish (for example, the computer shut down midway, or the installer was closed).', [ltr(String(r.failed.to || ''))])}</p>
@@ -3569,7 +3600,7 @@ async function whatsNew(manual){
       ${r.notes && r.notes.prerelease ? preBanner() : ''}
       <p>${t('The update has finished. Your photos and data are unchanged.')}</p>
       <div class="lbl-sub" style="padding:0">${t('What\'s new')}</div>${notesHtml(r.notes)}
-    </div><div class="mf"><span class="spacer"></span><button class="primary" id="wn-close">${t('Close')}</button></div>`);
+    </div><div class="mf"><span class="spacer"></span><button id="wn-gh">${t('Open on GitHub')}</button><button class="primary" id="wn-close">${t('Close')}</button></div>`);
     wire(); return true;
   }
   if(manual){
@@ -3603,9 +3634,10 @@ function updateDialog(info){
     <div id="up-prog" class="hidden"><div class="progress"><i id="up-bar"></i></div></div>
     <div class="hint" id="up-msg" style="padding:0;min-height:16px"></div>
   </div><div class="mf"><button id="up-skip">${t('Skip this version')}</button><span class="spacer"></span>
-    <button id="up-later">${t('Later')}</button><button id="up-go" class="primary">${auto ? t('Update now') : t('Open the release page')}</button></div>`);
+    ${auto ? `<button id="up-gh" title="${esc(info.page || '')}">${t('Open on GitHub')}</button>` : ''}<button id="up-later">${t('Later')}</button><button id="up-go" class="primary">${auto ? t('Update now') : t('Open the release page')}</button></div>`);
   const msg = (text, cls='') => { $('#up-msg').textContent = text; $('#up-msg').className = 'hint ' + cls; $('#up-msg').style.padding = '0'; };
-  const busy = on => ['up-skip', 'up-later', 'up-go'].forEach(id=>$('#' + id).disabled = on);
+  const busy = on => ['up-skip', 'up-later', 'up-go', 'up-gh'].forEach(id=>{ if($('#' + id)) $('#' + id).disabled = on; });
+  if($('#up-gh')) $('#up-gh').onclick = ()=>send('POST', '/api/update/open-page');
   $('#up-later').onclick = closeModal;
   $('#up-skip').onclick = async ()=>{ await send('POST', '/api/update/skip', {version:info.latest}); closeModal(); toast(t('This version will be skipped. You can always check manually in the Help menu.')); };
   $('#up-go').onclick = async ()=>{
@@ -3885,30 +3917,46 @@ $('#import').addEventListener('change', e=>{
 // ---------- background jobs (activity indicator in the identity plate) ----------
 async function mergePhotos(kind){
   const ids = targets(); if(ids.length < 2) return toast(t('Choose at least two photos to merge'));
-  runJob('/api/merge', 'merge', kind==='hdr' ? t('Merge to HDR') : t('Merge to panorama'), {ids, kind});
+  runJob('/api/merge', 'merge', kind==='hdr' ? t('Merge to HDR') : kind==='collage' ? t('Make a collage') : t('Merge to panorama'), {ids, kind});
 }
 async function runJob(url, name, label, body){ await send('POST', url, body); pollJob(name, label); }
+// the activity indicator: one row (label + bar) for every job that is running, so AI tagging and a backup show side by side
+// instead of one indicator that jumps from the one to the other (#28). Rows are updated in place, nothing is rebuilt.
+const ACT = new Map();
+function renderActivity(){
+  const act = $('#activity'), rows = [...ACT.values()];
+  act.classList.toggle('hidden', !rows.length);
+  while(act.children.length > rows.length) act.lastChild.remove();
+  rows.forEach((r, i)=>{
+    let el = act.children[i];
+    if(!el){ el = document.createElement('div'); el.className = 'act-row'; el.innerHTML = '<span class="act-label"></span><div class="act-bar"><i></i></div>'; act.appendChild(el); }
+    el.dataset.job = r.name; if(el.title !== r.title) el.title = r.title;
+    const lab = `${r.label}${r.pct!=null ? ` · ${r.pct}%` : '…'}`, sp = el.firstChild;
+    if(sp.textContent !== lab) sp.textContent = lab;
+    el.querySelector('.act-bar').classList.toggle('indet', r.pct==null);
+    el.querySelector('i').style.width = (r.pct ?? 0) + '%';
+  });
+}
+$('#activity').addEventListener('click', e=>{
+  const row = e.target.closest('.act-row'), r = row && ACT.get(row.dataset.job); if(!r) return;
+  if(r.name==='compress' && CPG.items && CPG.items.length) compressProgressOpen(CPG.items, true); else jobScreenOpen(r.name, r.label);
+});
 async function pollJob(name, label){
   let p; try{ p=await api('/api/job/'+name); }catch{ return; }
   if(name==='compress') compressProgressUpdate(p);
   jobScreenUpdate(name, p);
-  const act=$('#activity'), bar=$('.act-bar');
-  act.classList.remove('hidden');
   const pct = p.total ? Math.round(100*p.done/p.total) : null;
-  $('#act-label').textContent = `${label}${pct!=null?` · ${pct}%`:'…'}`;
-  bar.classList.toggle('indet', pct==null); $('#act-fill').style.width = (pct??0)+'%';
   const msg = p.parts ? p.parts.map(x=>t(x.key, x.vars)).join(' · ') : p.key ? t(p.key, p.vars) : (p.msg || p.state);
-  act.title = `${label}: ${msg}`;
-  act.onclick = ()=>{ if(name==='compress' && CPG.items && CPG.items.length) compressProgressOpen(CPG.items, true); else jobScreenOpen(name, label); };
+  if(['done','error','idle'].includes(p.state)) ACT.delete(name); else ACT.set(name, {name, label, pct, title:`${label}: ${msg}`});     // every running job has its own row (#28)
+  renderActivity();
   if(['done','error','idle'].includes(p.state)){
-    act.classList.add('hidden');
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
     if(['import','faces','aitag','compress','backup','refscan','analysis','merge'].includes(name)){
       await reloadAll();
       if(name==='merge' && p.state==='done' && p.result) selectOnly(p.result.id);
-      if(name==='import' && p.state==='done' && S.status.last_import) setSource(srcFromKey('prev'));
+      if(name==='import' && p.state==='done' && S.status.last_import){ setSource(srcFromKey('prev')); setTimeout(()=>newInLibrary(true), 700); }
       if(S.view==='people') renderPeople();
       if(name==='aitag' || name==='backup') renderRight();
       if(name==='analysis' && p.state==='done' && AFTER_JOB.analysis){ const f=AFTER_JOB.analysis; delete AFTER_JOB.analysis; f(); }
@@ -3971,6 +4019,8 @@ const MENUS = [
     [t('On This Day: Slideshow'), '', otdSlideshow],
     [t('Year in Review...'), '', yearReviewDialog],
     [t('Add places to photos without GPS...'), '', geotagDialog],
+    [t('Fix dates from file names')+'...', '', datesFromNamesDialog],
+    [t('New in library')+'...', '', ()=>newInLibrary(false)],
     [t('New Smart Collection...'), '', ()=>smartDialog()],
     sep,
     [t('Analyse Photo Quality'), '', analyseLibrary],
@@ -3985,6 +4035,7 @@ const MENUS = [
     [t('Add to Collection'), '', collectionItems],
     [t('Show in Explorer'), 'Ctrl+R', reveal],
     [t('Copy path'), '', copyPath],
+    [t('Copy picture'), '', copyPictureToClipboard],
     [t('Send (small copy)'), '', sendSmall],
     sep,
     [t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)],
@@ -4003,6 +4054,7 @@ const MENUS = [
     sep,
     [t('Merge to HDR…'), '', ()=>mergePhotos('hdr')],
     [t('Merge to panorama…'), '', ()=>mergePhotos('pano')],
+    [t('Make a collage…'), '', ()=>mergePhotos('collage')],
     sep,
     [t('Copy settings…'), 'Ctrl+Shift+C', ()=>copySettings('copy')],
     [t('Paste settings'), 'Ctrl+Shift+V', ()=>pasteSettings()],
@@ -4073,6 +4125,7 @@ function collectionItems(){
     ...S.albums.filter(a=>a.kind==='album').map(a=>[a.name, '', ()=>addToCollection(a.id)])];
 }
 // right-click menu on photos: the same popup as the menu bar, placed at the pointer
+const isGifPhoto = () => { const p = actPhoto(); return !!p && ext(p)==='GIF'; };
 function photoMenuItems(){
   const trash = S.src.kind==='trash', n = targets().length, photos = targets().some(id=>!(S.byId.get(id)||{}).is_video);
   const sep = null;
@@ -4091,7 +4144,10 @@ function photoMenuItems(){
     [t('Add to Collection'), '', collectionItems],
     [t('Show in Explorer'), 'Ctrl+R', reveal],
     [t('Copy path'), '', copyPath],
+    ...(n===1 && photos ? [[t('Copy picture'), '', copyPictureToClipboard]] : []),
     [t('Send (small copy)'), '', sendSmall],
+    ...(n===1 && !photos && !isGifPhoto() ? [sep, [t('Save this frame as a photo'), '', saveVideoFrame], [t('Trim video…'), '', trimVideoDialog]] : []),
+    ...(n>1 && photos ? [[t('Make a collage…'), '', ()=>mergePhotos('collage')]] : []),
     sep,
     ...(photos ? [[t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)], [t('Rotate Right'), 'Ctrl+]', ()=>rotateSel(90)], sep] : []),
     [t('Flag: Pick'), 'P', ()=>setFlag(1)],
@@ -4156,6 +4212,122 @@ $('#menubar').addEventListener('mousedown', e=>{ const b=e.target.closest('[data
 $('#menubar').addEventListener('mouseover', e=>{ const b=e.target.closest('[data-menu]'); if(b && MENU_OPEN!=null && MENU_OPEN!==+b.dataset.menu) openMenu(+b.dataset.menu); });
 $('#menu-pop').addEventListener('mousedown', e=>{ e.stopPropagation(); const it=e.target.closest('[data-mi]'); if(!it) return; const f=MENU_ITEMS[+it.dataset.mi][2]; if(f===collectionItems){ openSubMenu(it); return; } closeMenu(); f(); });
 document.addEventListener('mousedown', ()=>{ if(MENU_OPEN!=null) closeMenu(); });
+
+// ---------- copy the picture to the clipboard (right-click) ----------
+async function copyPictureToClipboard(){
+  const p = actPhoto(); if(!p || p.is_video) return;
+  const load = src => new Promise((res, rej)=>{ const i = new Image(); i.onload = ()=>res(i); i.onerror = rej; i.src = src; });
+  try{
+    let im; try{ im = await load(mediaUrl(p.id)); }catch{ im = await load(thumbUrl(p.id)); }          // a RAW file has no picture of its own: its preview is copied
+    const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0);
+    const blob = await new Promise(r=>c.toBlob(r, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    toast(t('The picture was copied'), 1800);
+  }catch{ toast(t('The picture could not be copied'), 3500); }
+}
+
+// ---------- drop files on the window / paste with Ctrl+V: they are copied into the library (the originals stay where they are) ----------
+const DROP_RE = /\.(jpe?g|png|gif|webp|bmp|tiff?|heic|heif|avifs?|mp4|m4v|mov|webm|mkv|avi|3gp)$/i;
+async function uploadFiles(files){
+  files = [...files].filter(f=>DROP_RE.test(f.name) || /^(image|video)\//.test(f.type));
+  if(!files.length){ toast(t('This kind of file cannot be imported'), 3000); return; }
+  let ok = 0, bad = 0, last = null;
+  for(const f of files){
+    toast(t('Adding {0} files…', [num(files.length)]), 60000);
+    try{
+      const r = await fetch(`/api/import-upload?name=${encodeURIComponent(f.name)}&modified=${f.lastModified||0}`, {method:'POST', body:f});
+      if(!r.ok) throw 0;
+      last = (await r.json()).id; ok++;
+    }catch{ bad++; }
+  }
+  await reloadAll(); if(last) selectOnly(last);
+  toast(t('Added {0} files', [num(ok)]) + (bad ? ' · ' + t('{0} files could not be added', [num(bad)]) : ''), 4000);
+}
+$('#dropzone > div').textContent = t('Drop pictures and videos here to add them to photag');
+let DRAGN = 0;
+const dragHasFiles = e => !!(e.dataTransfer && [...(e.dataTransfer.types||[])].includes('Files'));
+addEventListener('dragenter', e=>{ if(dragHasFiles(e)){ DRAGN++; document.body.classList.add('dropping'); } });
+addEventListener('dragleave', e=>{ if(dragHasFiles(e) && --DRAGN <= 0){ DRAGN = 0; document.body.classList.remove('dropping'); } });
+addEventListener('dragover', e=>{ if(dragHasFiles(e)) e.preventDefault(); });
+addEventListener('drop', e=>{ DRAGN = 0; document.body.classList.remove('dropping'); if(!dragHasFiles(e)) return; e.preventDefault(); uploadFiles(e.dataTransfer.files); });
+document.addEventListener('paste', e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||'')) return;
+  const fs = [...(e.clipboardData ? e.clipboardData.files : [])];
+  if(fs.length){ e.preventDefault(); uploadFiles(fs); }
+});
+
+// ---------- video: save a frame as a photo, trim (both make a NEW file; the video itself is never changed) ----------
+const loupeVideo = () => S.view==='loupe' ? $('#loupe-media video') : null;
+async function saveVideoFrame(){
+  const p = actPhoto(); if(!p || !p.is_video) return;
+  let sec = loupeVideo() ? loupeVideo().currentTime : null;
+  if(sec == null){ const v = await promptBox(t('Second of the video'), '0'); if(v == null) return; sec = parseFloat(String(v).replace(',', '.')) || 0; }
+  try{ const r = await send('POST', `/api/photo/${p.id}/frame`, {t: sec}); await reloadAll(); selectOnly(r.id); toast(t('Frame saved as a new photo'), 2800); }
+  catch(e){ toast(e.message, 3500); }
+}
+function trimVideoDialog(){
+  const p = actPhoto(); if(!p || !p.is_video) return;
+  const v = loupeVideo(), dur = v && isFinite(v.duration) ? v.duration : 0;
+  modal(`<h3>${t('Trim video')}</h3><div class="mb as">
+    <div class="hint" style="padding:0">${t('The part you choose is saved as a new video. The original is not changed.')}</div>
+    <div class="two"><label class="fld"><span>${t('Start (seconds)')}</span><input type="number" id="tv-s" min="0" step="0.1" dir="ltr" value="0"></label>
+      <label class="fld"><span>${t('End (seconds)')}</span><input type="number" id="tv-e" min="0" step="0.1" dir="ltr" value="${dur ? dur.toFixed(1) : ''}"></label></div>
+    <label class="fld"><span><input type="checkbox" id="tv-x"> ${t('Cut exactly (slower, the video is re-encoded)')}</span></label>
+  </div><div class="mf"><button id="tv-no">${t('Cancel')}</button><span class="spacer"></span><button class="primary" id="tv-go">${t('Save as a new video')}</button></div>`);
+  $('#tv-no').onclick = closeModal;
+  $('#tv-go').onclick = async ()=>{
+    const start = +$('#tv-s').value || 0, end = +$('#tv-e').value || 0, exact = $('#tv-x').checked;
+    $('#tv-go').disabled = true; toast(t('Working…'), 600000);
+    try{ const r = await send('POST', `/api/photo/${p.id}/trim`, {start, end, exact}); closeModal(); await reloadAll(); selectOnly(r.id); toast(t('Video saved as a new video'), 3000); }
+    catch(e){ $('#tv-go').disabled = false; toast(e.message, 4000); }
+  };
+}
+
+// ---------- merge two people: drag one onto the other ----------
+let PDRAG = null;
+const pcRef = pc => pc.dataset.person ? {person:+pc.dataset.person} : {cluster:+pc.dataset.cluster};
+const pcName = r => r.person ? ((S.people||[]).find(x=>x.id===r.person)||{}).name || '' : t('Unnamed person');
+function canMergeInto(src, dst){ return !!src && !!dst && !(src.person && src.person===dst.person) && !(src.cluster && src.cluster===dst.cluster) && !(src.person && dst.cluster); }
+$('#v-people').addEventListener('dragstart', e=>{
+  const pc = e.target.closest && e.target.closest('.pc'); if(!pc) return;
+  PDRAG = pcRef(pc); e.dataTransfer.setData('text/plain', 'photag-person'); e.dataTransfer.effectAllowed = 'move';
+});
+$('#v-people').addEventListener('dragend', ()=>{ PDRAG = null; $$('#v-people .pc.drop').forEach(x=>x.classList.remove('drop')); });
+$('#v-people').addEventListener('dragover', e=>{
+  const pc = e.target.closest && e.target.closest('.pc');
+  if(PDRAG && pc && canMergeInto(PDRAG, pcRef(pc))){ e.preventDefault(); pc.classList.add('drop'); }
+});
+$('#v-people').addEventListener('dragleave', e=>{ const pc = e.target.closest && e.target.closest('.pc'); if(pc && !pc.contains(e.relatedTarget)) pc.classList.remove('drop'); });
+$('#v-people').addEventListener('drop', async e=>{
+  const pc = e.target.closest && e.target.closest('.pc'); if(!pc || !PDRAG) return;
+  const src = PDRAG, dst = pcRef(pc); PDRAG = null; $$('#v-people .pc.drop').forEach(x=>x.classList.remove('drop'));
+  if(!canMergeInto(src, dst)) return;
+  e.preventDefault();
+  if(!await confirmBox(t('Merge these into one person?'), t('All the faces of “{0}” will move to “{1}”.', [esc(pcName(src)), esc(pcName(dst))]), t('Merge'))) return;
+  try{ await send('POST', '/api/people/merge', {src, dst}); toast(t('Merged'), 2000); await loadSide(); renderPeople(); }
+  catch(err){ toast(err.message, 3500); }
+});
+
+// ---------- "New in library": what the last import brought, and what is still to do ----------
+async function newInLibrary(auto){
+  let s; try{ s = await api('/api/library/new'); }catch{ return; }
+  if(auto && s.total < 20) return;                                                                  // only a big import deserves a window of its own
+  if(!s.total){ toast(t('Nothing new in the library yet'), 2500); return; }
+  const row = (n, text, btn, id)=> n ? `<div class="nl-row"><span style="flex:1">${text}</span><button id="${id}">${btn}</button></div>` : '';
+  modal(`<h3>${t('New in library')}</h3><div class="mb as">
+    <div style="font-size:1.1em;margin-bottom:8px">${t('{0} new items: {1} photos, {2} videos', [num(s.total), num(s.photos), num(s.videos)])}</div>
+    ${row(s.no_place, t('{0} have no place', [num(s.no_place)]), t('Add places…'), 'nl-geo')}
+    ${row(s.no_date, t('{0} have no date', [num(s.no_date)]), t('Fix dates from file names'), 'nl-date')}
+    ${row(s.unanalyzed, t('{0} are not analyzed yet', [num(s.unanalyzed)]), t('Analyze'), 'nl-an')}
+    ${row(s.no_faces, t('{0} have not been checked for faces', [num(s.no_faces)]), t('Find faces'), 'nl-faces')}
+  </div><div class="mf"><button id="nl-close">${t('Close')}</button><span class="spacer"></span><button class="primary" id="nl-show">${t('Show them')}</button></div>`);
+  $('#nl-close').onclick = closeModal;
+  $('#nl-show').onclick = ()=>{ closeModal(); setSource(srcFromKey('prev')); setView('grid'); };
+  const on = (id, f)=>{ const b = $('#'+id); if(b) b.onclick = ()=>{ closeModal(); f(); }; };
+  on('nl-geo', geotagDialog); on('nl-date', datesFromNamesDialog);
+  on('nl-an', ()=>runJob('/api/analysis/run', 'analysis', t('Photo analysis'), {eyes:true}));
+  on('nl-faces', ()=>runJob('/api/faces', 'faces', t('Face Detection')));
+}
 
 // ---------- buttons ----------
 $('#btn-import').onclick = ()=>openImport('folder');
@@ -4229,7 +4401,7 @@ document.addEventListener('keydown', e=>{
     case 'F6': e.preventDefault(); togglePanel('film'); return;
     case 'F7': e.preventDefault(); togglePanel('left'); return;
     case 'F8': e.preventDefault(); togglePanel('right'); return;
-    case 'Delete': case 'Backspace': trashSelected(); return;
+    case 'Delete': trashSelected(); return;          // not Backspace: after Enter in a keywords / caption field the focus leaves it, and the next Backspace deleted the photo (#27)
     case 'Enter': if(S.mod==='develop' && DEV.crop){ devCropToggle(); return; } if(S.view==='grid' && S.act!=null) setView('loupe'); return;
     case 'Escape':
       if(MENU_OPEN!=null){ closeMenu(); return; }
@@ -4678,6 +4850,23 @@ async function slideVideoDialog(){
 }
 
 // ---------- places for photos without GPS ----------
+// ---------- dates from file names: photos already in the library whose date is not the one in their name ----------
+async function datesFromNamesDialog(){
+  let r;
+  try{ r = await send('POST', '/api/dates/from-names', {apply:false}); }catch(e){ toast(e.message); return; }
+  if(!r.count){ toast(t('No photo without a date has a date in its file name'), 3500); return; }
+  const when = ts => new Date(ts*1000).toISOString().slice(0,10);
+  modal(`<h3>${t('Fix dates from file names')}</h3><div class="mb as">
+    <div class="hint" style="padding:0">${t('{0} photos have no date, but their file name holds one (like IMG-20240501-WA0003).', [num(r.count)])}</div>
+    <div style="border:1px solid var(--line,#444);border-radius:4px;margin:6px 0;max-height:240px;overflow:auto">${r.items.map(i=>`<div style="padding:2px 8px;display:flex;gap:8px"><span dir="auto" style="flex:1">${esc(i.filename)}</span><span dir="ltr">${when(i.to)}</span></div>`).join('')}${r.count>r.items.length ? `<div class="hint">${t('and {0} more', [num(r.count - r.items.length)])}</div>` : ''}</div>
+  </div><div class="mf"><button id="dn-close">${t('Close')}</button><span class="spacer"></span><button class="primary" id="dn-go">${t('Fix {0} dates', [num(r.count)])}</button></div>`);
+  $('#dn-close').onclick = closeModal;
+  $('#dn-go').onclick = async ()=>{
+    $('#dn-go').disabled = true;
+    const a = await send('POST', '/api/dates/from-names', {apply:true});
+    closeModal(); toast(t('Dates fixed: {0}', [num(a.count)]), 3500); await reloadAll();
+  };
+}
 async function geotagDialog(){
   const st = {mode:'photos', gpx:'', items:[], sel:new Set(), total:0};
   const when = ts => ts ? new Date(ts*1000).toISOString().replace('T',' ').slice(0,16) : '';
@@ -4874,6 +5063,7 @@ function oneDriveNotice(force){
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
+  setTimeout(reportNews, 7000); setInterval(reportNews, 2*3600*1000);
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
   setTimeout(backupHealthNotice, 8000);
   setTimeout(otdNotice, 4500);

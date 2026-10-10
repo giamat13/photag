@@ -4,6 +4,8 @@ Both work on the pictures as they are (the edits of a photo are included), line 
 no rotation or lens model: handheld bracketing and a level pan work, anything harder does not), and write one JPEG that is added to the
 library. Exposure fusion needs no tone-mapping step: every pixel is taken from the shot where it is best exposed, sharp and colourful.
 """
+import math
+
 import numpy as np
 
 MAX_HDR, MAX_PANO = 9, 12
@@ -206,6 +208,25 @@ def pano(paths, progress=None):
     return np.clip(out, 0, 1)
 
 
+MAX_COLLAGE = 12
+
+
+def collage(paths, cell: int = 900, gap: int = 12):
+    """The photos in a tidy grid (as square as it gets, each cropped to fill its cell, white gaps). Only reads the photos."""
+    from PIL import Image, ImageOps
+    n = len(paths)
+    cols = math.ceil(math.sqrt(n))
+    rows = math.ceil(n / cols)
+    sheet = Image.new("RGB", (cols * cell + (cols + 1) * gap, rows * cell + (rows + 1) * gap), (255, 255, 255))
+    for i, p in enumerate(paths):
+        with Image.open(p) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            im = ImageOps.fit(im, (cell, cell), Image.LANCZOS)
+        r, c = divmod(i, cols)
+        sheet.paste(im, (gap + c * (cell + gap), gap + r * (cell + gap)))
+    return np.asarray(sheet, dtype=np.float32) / 255.0
+
+
 def run(ids, kind, progress):
     """Background job (see server._start): merge the chosen photos and add the result to the library."""
     import tempfile
@@ -223,7 +244,7 @@ def run(ids, kind, progress):
                 if p and Path(p).exists():
                     paths.append(Path(p))
                     names.append(r["filename"])
-        lo, hi = (2, MAX_HDR) if kind == "hdr" else (2, MAX_PANO)
+        lo, hi = (2, MAX_HDR) if kind == "hdr" else (2, MAX_COLLAGE) if kind == "collage" else (2, MAX_PANO)
         if len(paths) < lo:
             progress.fail("Choose at least two photos to merge")
             return
@@ -234,7 +255,7 @@ def run(ids, kind, progress):
         progress.say("Lining the photos up…")
         progress.done = 1
         try:
-            out = hdr(paths, progress) if kind == "hdr" else pano(paths, progress)
+            out = hdr(paths, progress) if kind == "hdr" else collage(paths) if kind == "collage" else pano(paths, progress)
         except ValueError as e:
             progress.fail("The photos could not be merged: {why}", why=str(e))
             return
@@ -242,7 +263,7 @@ def run(ids, kind, progress):
         progress.say("Adding the result to the library…")
         with tempfile.TemporaryDirectory(prefix="photag-merge-") as td:
             stem = Path(names[0]).stem
-            f = Path(td) / f"{stem}-{'HDR' if kind == 'hdr' else 'Pano'}.jpg"
+            f = Path(td) / f"{stem}-{ {'hdr': 'HDR', 'collage': 'Collage'}.get(kind, 'Pano') }.jpg"
             Image.fromarray((np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8)).save(f, "JPEG", quality=94)
             taken = con.execute("SELECT taken_at FROM photos WHERE id=?", (ids[0],)).fetchone()
             pid, _new = importer._ingest_file(con, f, taken=taken["taken_at"] if taken else None)

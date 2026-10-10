@@ -10,5 +10,5 @@ The program can create a GitHub issue for the user, who then needs no GitHub acc
 Without the secret nothing breaks: the button opens GitHub's own "new issue" page with the text filled in (the user needs a GitHub account to finish it).
 
 * The issues appear as opened by the bot, titled `[Report] …` (a problem) or `[Suggestion] …` (a feature suggestion, also labelled `enhancement`), labelled `user-report` (GitHub ignores the label when the bot may not label; the title says it anyway).
-* The token can be extracted from the program by someone who tries. It can only open issues, so the worst case is spam: delete the token, make a new one, update the secret and release. Each installation sends at most 3 reports an hour and 10 a day.
+* The token can be extracted from the program by someone who tries. It can only open issues, so the worst case is spam: delete the token, make a new one, update the secret and release. Each installation sends at most 10 reports an hour and 30 a day.
 * Reports are public: the dialog says so, shows the exact text, and removes folders, the user name, e-mail and IP addresses from the log lines.
