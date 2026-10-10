@@ -23,16 +23,11 @@ jobs:
     uses: ./.github/workflows/unix-build.yml
     secrets: inherit                      # the Linux / macOS builds get the same REPORT_TOKEN as the Windows one
   build:
-    # runs at the same time as the Linux / macOS builds (it used to wait for them: about 3 minutes longer); the publish job below joins them
+    # 1/3 of the Windows build: the programs (PyInstaller) and their signature. The installer and the other packages are built from them by the
+    # two jobs below, AT THE SAME TIME (this used to be one long chain: about a minute longer)
     runs-on: windows-latest
     timeout-minutes: 60
     env:
-      # Code signing (SignPath) is OFF until it is configured: it needs the repository variables SIGNPATH_ORGANIZATION_ID and
-      # SIGNPATH_PROJECT_SLUG and the secret SIGNPATH_API_TOKEN (see docs/CODE_SIGNING_POLICY.md). Without them every step below
-      # that mentions signing is skipped and the build is exactly what it was before.
-      # Microsoft Store package (MSIX): built only when the three repository variables from the app's Partner Center page exist
-      # (STORE_IDENTITY_NAME, STORE_PUBLISHER, STORE_PUBLISHER_NAME); it is kept as a workflow artifact to upload to Partner Center by hand.
-      STORE: ${{ (vars.STORE_IDENTITY_NAME != '' && vars.STORE_PUBLISHER != '' && vars.STORE_PUBLISHER_NAME != '') && 'true' || 'false' }}
       SIGNING: ${{ (vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' && secrets.SIGNPATH_API_TOKEN != '') && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
@@ -89,6 +84,40 @@ jobs:
         if: env.SIGNING == 'true'
         shell: pwsh
         run: python tools/signing.py install-programs signed_programs
+      - name: "Keep the built programs for the installer job and the packages job"
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-app
+          path: dist
+          compression-level: 1
+          if-no-files-found: error
+          retention-days: 1
+
+  installer:
+    # 2/3: photagSetup.exe (Inno Setup), its signature and the copy of it in a ZIP
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      SIGNING: ${{ (vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' && secrets.SIGNPATH_API_TOKEN != '') && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tag matches app/version.py
+        shell: bash
+        run: |
+          v=$(python -c "from app.version import __version__ as v; print(v)")
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != version v$v"; exit 1; }
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          echo "TAG=v$v" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: built-app
+          path: dist
       - run: choco install innosetup --no-progress -y
       - name: Build the installer
         shell: cmd
@@ -119,6 +148,53 @@ jobs:
       - name: "Put a copy of the installer in a ZIP too (an extra download, NOT instead of the .exe -- the in-app update still uses photagSetup.exe)"
         shell: pwsh
         run: Compress-Archive -Path installer_output/photagSetup.exe -DestinationPath "dist/windows-photagSetup-$env:VERSION.zip" -CompressionLevel Optimal
+      - name: Keep the release files for the publish job
+        shell: bash
+        run: |
+          mkdir release_files
+          cp installer_output/photagSetup.exe dist/windows-photagSetup-*.zip release_files/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-installer
+          path: release_files/*
+          if-no-files-found: error
+          retention-days: 1
+
+  packages:
+    # 3/3: the code update, the portable ZIP, the install scripts, the MSI and the Store package
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      # Microsoft Store package (MSIX): built only when the three repository variables from the app's Partner Center page exist
+      # (STORE_IDENTITY_NAME, STORE_PUBLISHER, STORE_PUBLISHER_NAME); it is kept as a workflow artifact to upload to Partner Center by hand.
+      STORE: ${{ (vars.STORE_IDENTITY_NAME != '' && vars.STORE_PUBLISHER != '' && vars.STORE_PUBLISHER_NAME != '') && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Tag matches app/version.py
+        shell: bash
+        run: |
+          v=$(python -c "from app.version import __version__ as v; print(v)")
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != version v$v"; exit 1; }
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          echo "TAG=v$v" >> "$GITHUB_ENV"
+      - name: "Reports: let the program create issues (only when the REPORT_TOKEN secret exists)"
+        shell: bash
+        env:
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+        run: python tools/write_report_token.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: built-app
+          path: dist
       - name: "Build the code update (a small zip of the app code - updates run without an installer, so Smart App Control cannot block them)"
         run: python tools/make_code_zip.py
       - name: "Build the portable ZIP (no installer - runs from a USB stick or any folder)"
@@ -146,36 +222,40 @@ jobs:
           name: photag-store-msix
           path: dist/photag-*.msix
           retention-days: 30
-      - name: Collect the release files
+      - name: Keep the release files for the publish job
         shell: bash
         run: |
           mkdir release_files
-          cp installer_output/photagSetup.exe dist/windows-photagSetup-*.zip dist/photag-code-*.zip dist/windows-photag-*-portable.zip dist/windows-photag-install.bat dist/windows-photag-install.ps1 release_files/
+          cp dist/photag-code-*.zip dist/windows-photag-*-portable.zip dist/windows-photag-install.bat dist/windows-photag-install.ps1 release_files/
           cp dist/windows-photag-*.msi release_files/ 2>/dev/null || echo "no MSI this time (its step failed): the release goes on without it"
           ls -la release_files
-      - name: Keep the release files for the publish job
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: release-windows
+          name: release-windows-packages
           path: release_files/*
           if-no-files-found: error
           retention-days: 1
 
   publish:
     # joins the Windows build and the Linux / macOS builds and creates the GitHub release (its body is the "what is new" text inside the app)
-    needs: [tests, unix, build]
+    needs: [tests, unix, build, installer, packages]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Take the Windows files and the Linux and macOS builds
+      - name: Take the Windows files (installer job + packages job) and the Linux and macOS builds
         uses: actions/download-artifact@v4
         with:
+          pattern: release-windows-*
+          path: parts
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: photag-@(Linux|macOS)
           path: parts
       - name: Put them together
         shell: bash
         run: |
           mkdir release_files
-          cp parts/release-windows/* release_files/
+          cp parts/release-windows-installer/* parts/release-windows-packages/* release_files/
           cp $(find parts -name 'photag-*-linux-x64.tar.gz' -o -name 'photag-*-macos-*.zip') release_files/
           ls -la release_files
       - name: Publish the release (the release body is the "what is new" text inside the app)
