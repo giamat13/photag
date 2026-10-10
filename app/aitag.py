@@ -352,8 +352,9 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
 
         ok = fails = kws = 0
         last_err = ""
+        failures = []                  # "file: reason", shown on the progress screen
         handled = set()
-        progress.extra = {"ok": 0, "failed": 0, "keywords": 0, "model": model, "last_error": ""}      # live numbers for the progress screen
+        progress.extra = {"ok": 0, "failed": 0, "keywords": 0, "model": model, "last_error": "", "failures": []}      # live numbers for the progress screen
         with cf.ThreadPoolExecutor(WORKERS) as ex:
             futs = {ex.submit(work, r): r for r in todo}
             try:
@@ -366,16 +367,16 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                             continue
                         _set_ai_tags(con, row["id"], names); ok += 1; kws += len(names)
                     except AIError as e:
-                        fails += 1; last_err = str(e)
+                        fails += 1; last_err = str(e); failures.append(f"{os.path.basename(row['rel_path'])}: {last_err[:80]}")
                         if e.status in (401, 403) or (ok == 0 and fails >= 3):
                             for g in futs:
                                 g.cancel()
                             con.commit()
                             return progress.fail("AI tagging stopped: {error}", error=last_err)
                     except Exception as e:                      # a photo we couldn't read: skip it
-                        fails += 1; last_err = str(e)
+                        fails += 1; last_err = str(e); failures.append(f"{os.path.basename(row['rel_path'])}: {last_err[:80]}")
                     progress.done = ok + fails
-                    progress.extra = {"ok": ok, "failed": fails, "keywords": kws, "model": model, "last_error": last_err[:160]}
+                    progress.extra = {"ok": ok, "failed": fails, "keywords": kws, "model": model, "last_error": last_err[:160], "failures": failures[-20:]}
                     progress.say("Tagging with {model} · {done}/{total}", model=model, done=progress.done, total=len(todo))
                     con.commit()                                # each photo's tags are visible to the window right away, not only at the end
                     if cancelled():

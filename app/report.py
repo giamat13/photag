@@ -446,7 +446,7 @@ def edit_issue(number: int, title: str, description: str) -> None:
 def set_state(number: int, closed: bool) -> None:
     """Withdraw (close) one of the user's own reports, or open it again."""
     _mine(number)
-    _call("PATCH", f"/issues/{number}", {"state": "closed" if closed else "open", **({"state_reason": "not_planned"} if closed else {})}, auth=True)
+    _call("PATCH", f"/issues/{number}", {"state": "closed" if closed else "open", **({"state_reason": "completed"} if closed else {})}, auth=True)
     d = _load_issues()
     for y in d["issues"]:
         if y["number"] == number:

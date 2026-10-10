@@ -37,7 +37,7 @@ def load(p, default):
 
 def notify_failure(name, detail):
     """A message box on the user's screen the moment a test fails (the run goes on; the box is its own process, so it stays up)."""
-    if sys.platform != "win32":
+    if sys.platform != "win32" or not os.environ.get("PHOTAG_TEST_POPUP"):   # no box on the user's screen (they asked): the failure shows on the dashboard; set PHOTAG_TEST_POPUP=1 to get it back
         return
     code = "import ctypes,sys; ctypes.windll.user32.MessageBoxW(0, sys.argv[1], 'photag: a test failed', 0x10 | 0x40000)"   # error icon, topmost
     try:

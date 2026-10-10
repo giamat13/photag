@@ -3381,7 +3381,7 @@ function jobScreenUpdate(name, p){
   const speed = fin => JOB_UNIT[name] === 'bytes' ? mbs(fin ? avgB : rateB) : ltr(((fin ? avgF : rateF) * mul).toFixed(1) + ' ' + unit) + (bytes ? ' · ' + mbs(fin ? avgB : rateB) : '');
   // each point = the speed over a trailing window (30 s, or 3 min for a slow job), so a slow job gives a readable curve and not spikes
   const S0 = JOBSCR.samples, gw = slow ? 180000 : 30000, bytesJob = JOB_UNIT[name] === 'bytes', col = bytesJob ? 1 : 2, pts = [];
-  S0.forEach((s, i) => { let j = i; while(j > 0 && s[0] - S0[j - 1][0] <= gw) j--; const dt = (s[0] - S0[j][0]) / 1000; if(i && dt > 0) pts.push(Math.max(0, (s[col] - S0[j][col]) / dt)); });
+  S0.forEach((s, i) => { let j = i; while(j > 0 && s[0] - S0[j - 1][0] <= gw) j--; const dt = (s[0] - S0[j][0]) / 1000; if(i && dt >= gw / 3) pts.push(Math.max(0, (s[col] - S0[j][col]) / dt)); });
   const cards = [];
   if(total && JOB_UNIT[name] !== 'bytes') cards.push([t('Progress'), t('{0} of {1}', [num(done), num(total)]), '']);
   else cards.push([t('Progress'), finished ? '100%' : Math.floor(pct) + '%', '']);
@@ -3414,7 +3414,7 @@ function jobScreenUpdate(name, p){
   const lbl = $('#ims-sparklbl');
   if(lbl) lbl.innerHTML = shown.length ? `<span dir="ltr">${(pk / div).toFixed(pk / div >= 10 ? 0 : 1)} ${bytesJob ? 'MB/s' : unit}</span><span>${t('Speed over time')}</span><span>${fmtDur((now - S0[0][0]) / 1000)}</span>` : '';
   const fl = x.failures || [];
-  $('#ims-fail').innerHTML = fl.length ? `${t('Files that could not be imported')}: ${fl.slice(0, 6).map(n => `<bdi>${esc(n)}</bdi>`).join(', ')}${fl.length > 6 ? ' …' : ''}` : '';
+  $('#ims-fail').innerHTML = fl.length ? `${name === 'aitag' ? t('Failed') : t('Files that could not be imported')}: ${fl.slice(0, 6).map(n => `<bdi>${esc(n)}</bdi>`).join(', ')}${fl.length > 6 ? ' …' : ''}` : '';
   if(finished && !document.getElementById('ims-close')){
     $('.mf').innerHTML = `<span class="spacer"></span>${isImport && x.added ? `<button id="ims-show">${t('Show the imported photos')}</button>` : ''}<button class="primary" id="ims-close">${t('Close')}</button>`;
     $('#ims-close').onclick = ()=>{ JOBSCR.open = false; closeModal(); };
