@@ -68,7 +68,7 @@ def ensure_models(progress, cancelled=lambda: False):
     progress.state = "downloading"
     for name, remote in MODEL_FILES.items():
         _download(HF + remote, d / name, progress, cancelled)
-    _sessions.cache_clear()
+    _load_sessions.cache_clear()
 
 
 # ---------- CLIP BPE tokenizer (pure Python, matches the HF tokenizers' output) ----------
@@ -127,12 +127,33 @@ class Tokenizer:
 
 
 # ---------- models ----------
-@lru_cache(maxsize=1)
+_LAST_USE = 0.0
+
+
 def _sessions():
+    global _LAST_USE
+    import time
+    _LAST_USE = time.time()
+    return _load_sessions()
+
+
+def release_if_idle(seconds: float = 300.0) -> bool:
+    """Unload the search models (hundreds of MB) when nothing has used them for `seconds`; they load again on the next use."""
+    import time
+    if _load_sessions.cache_info().currsize and time.time() - _LAST_USE > seconds:
+        _load_sessions.cache_clear()
+        return True
+    return False
+
+
+@lru_cache(maxsize=1)
+def _load_sessions():
     import onnxruntime as ort
     d = models_dir()
     opt = ort.SessionOptions()
     opt.intra_op_num_threads = max(1, (os.cpu_count() or 4) - 1)
+    opt.enable_cpu_mem_arena = False             # the arena keeps the biggest buffer ever needed; without it the memory goes back after each run
+    opt.enable_mem_pattern = False
     mk = lambda f: ort.InferenceSession(str(d / f), opt, providers=["CPUExecutionProvider"])
     return mk("vision.onnx"), mk("text.onnx"), Tokenizer.from_file(d / "tokenizer.json")
 

@@ -1572,7 +1572,7 @@ function renderMeta(ids, d){
     ${!multi && (d.camera_model || d.lens || d.focal_length) ? `<div class="kv"><span>${t("Camera")}</span><span>${esc([d.camera_make, d.camera_model].filter(Boolean).join(' ')) || '—'}</span></div>
     ${d.lens ? `<div class="kv"><span>${t("Lens")}</span><span>${esc(d.lens)}</span></div>` : ''}
     ${d.focal_length ? `<div class="kv"><span>${t("Focal Length")}</span><span dir="ltr">${ltr(d.focal_length+' mm')}${d.focal_length_35mm?' '+ltr('('+d.focal_length_35mm+' mm '+t('equiv.')+')'):''}</span></div>` : ''}` : ''}
-    ${multi?'':`<details class="exif-all" id="m-exifall"><summary>${t("All EXIF tags")}</summary><div class="hint" id="m-exifbox">${t("Loading…")}</div></details>`}
+    ${multi?'':`<div id="m-shoot"></div><div class="meta-sub">${t("All EXIF tags")}</div><div class="hint" id="m-exifbox">${t("Loading…")}</div>`}
     <div class="meta-sub">${t("Location")}</div>
     ${multi?`<div class="kv"><span>GPS</span>${MIX}</div><div class="btnrow"><button id="m-showmap">${I('pin')} ${t('Show the selected photos on the map')}</button></div>`:`
     <div class="kv"><span>${t("Latitude")}</span><input id="m-lat" type="number" step="any" dir="ltr" value="${d.lat??''}"></div>
@@ -1585,7 +1585,7 @@ function renderMeta(ids, d){
     <div class="kv"><span>${t("Imported")}</span>${fdate(d.imported_at)}</div>
     <div class="btnrow"><button id="m-exif" title="${t("Write the description, date and location into the JPG file (Ctrl+S)")}">${t("Save Metadata to File")}</button><button id="m-reveal" title="Ctrl+R">${t("Show in Explorer")}</button></div>`}`;
   if(!multi && d.lat!=null && $('#mini-map')) drawMiniMap(d);
-  const ex=$('#m-exifall'); if(ex) ex.addEventListener('toggle', ()=>{ if(ex.open) loadExif(d.id); }, {once:true});
+  if(!multi) loadExif(d.id);
 }
 // Every EXIF tag of the photo: from the catalog database (read from the file once and kept), or straight from the file when
 // the catalog mode is switched off in Preferences.
@@ -1595,6 +1595,16 @@ async function loadExif(id){
   if(!$('#m-exifbox') || DETAIL?.id!==id) return;
   const groups = Object.entries(r.exif||{}).filter(([,v])=>v && Object.keys(v).length);
   const fmtv = v => Array.isArray(v) ? v.join(', ') : (v!==null && typeof v==='object') ? JSON.stringify(v) : String(v);
+  // the shooting settings, straight under the camera and lens rows
+  const ex2 = Object.assign({}, (r.exif||{}).Image, (r.exif||{}).Exif), shoot = [];
+  const et = Number(ex2.ExposureTime), fn = Number(ex2.FNumber), bias = Number(ex2.ExposureBiasValue);
+  if(et > 0) shoot.push([t('Shutter Speed'), et < 1 ? '1/'+Math.round(1/et)+' s' : et+' s']);
+  if(fn > 0) shoot.push([t('Aperture'), 'f/'+(Math.round(fn*10)/10)]);
+  const iso = ex2.ISOSpeedRatings ?? ex2.PhotographicSensitivity; if(iso!=null && iso!=='') shoot.push(['ISO', fmtv(iso)]);
+  if(ex2.ExposureBiasValue!=null && !isNaN(bias)) shoot.push([t('Exposure Bias'), (bias>0?'+':'')+(Math.round(bias*100)/100)+' EV']);
+  if(ex2.Flash!=null) shoot.push([t('Flash'), (Number(ex2.Flash)&1) ? '✓' : '—']);
+  const shootBox = $('#m-shoot');
+  if(shootBox) shootBox.innerHTML = shoot.map(([k,v])=>`<div class="kv"><span>${esc(k)}</span><span dir="ltr">${esc(v)}</span></div>`).join('');
   $('#m-exifbox').outerHTML = `<div id="m-exifbox">
     <div class="hint" style="padding:0">${r.source==='catalog' ? t('From the catalog') : t('Read from the file')}</div>
     ${groups.length ? groups.map(([g,tags])=>`<div class="lbl-sub" style="padding:0">${esc(g)}</div>`+Object.entries(tags).map(([k,v])=>`<div class="kv exif-kv"><span title="${esc(k)}">${esc(k)}</span><span dir="ltr" title="${esc(fmtv(v))}">${esc(fmtv(v))}</span></div>`).join('')).join('') : `<div class="hint" style="padding:0">${t('No EXIF information available')}</div>`}</div>`;
@@ -3330,6 +3340,7 @@ function jobScreenOpen(name, label){
     <div class="cpg-bar"><i id="ims-fill"></i><span id="ims-pct">0%</span></div>
     <div class="ims-grid" id="ims-grid"></div>
     <svg class="ims-spark" id="ims-spark" viewBox="0 0 300 44" preserveAspectRatio="none"></svg>
+    <div class="ims-sparklbl" id="ims-sparklbl"></div>
     <div class="hint" id="ims-fail" style="padding:0"></div>
   </div><div class="mf"><span class="spacer"></span><button id="ims-bg">${t('Continue in background')}</button>${JOB_CANCEL[name] ? `<button id="ims-cancel" class="danger">${t('Cancel')}</button>` : ''}</div>`);
   $('#ims-bg').onclick = ()=>{ JOBSCR.open = false; closeModal(); };
@@ -3347,15 +3358,17 @@ function jobScreenUpdate(name, p){
   if(finished && !JOBSCR.fin[name]) JOBSCR.fin[name] = now;
   const t0 = isImport && x.t0 ? x.t0 * 1000 : JOBSCR.t0[name], el = Math.max(0.001, ((JOBSCR.fin[name] || now) - t0) / 1000);
   const total = p.total || 0, done = p.done || 0, bytes = isImport ? (x.bytes || 0) : (JOB_UNIT[name] === 'bytes' ? done : 0), btotal = isImport ? (x.bytes_total || 0) : (JOB_UNIT[name] === 'bytes' ? total : 0);
-  if(!finished && total) JOBSCR.samples.push([now, bytes, done]);
-  JOBSCR.samples = JOBSCR.samples.slice(-90);
-  // speed over the last ~10 seconds (falls back to the average since the start)
-  const recent = JOBSCR.samples.filter(s => now - s[0] <= 10000), a = recent[0], b = recent[recent.length - 1];
-  const win = a && b && b[0] > a[0] ? (b[0] - a[0]) / 1000 : 0;
-  const rateB = win ? (b[1] - a[1]) / win : bytes / el, rateF = win ? (b[2] - a[2]) / win : done / el;
+  const lastS = JOBSCR.samples[JOBSCR.samples.length - 1];
+  if(!finished && total && (!lastS || lastS[2] !== done || lastS[1] !== bytes || now - lastS[0] >= 5000)) JOBSCR.samples.push([now, bytes, done]);   // a slow job (one photo a minute) keeps its whole history
+  JOBSCR.samples = JOBSCR.samples.slice(-1500);
   const avgB = bytes / el, avgF = done / el;
+  // speed over the last ~10 seconds; a slow job (under one per 2 s) looks back up to 5 minutes, so the number is not 0 between two photos
+  const slow = JOB_UNIT[name] !== 'bytes' && avgF < 0.5, span = slow ? 300000 : 10000;
+  const recent = JOBSCR.samples.filter(s => now - s[0] <= span), a = recent[0], b = recent[recent.length - 1];
+  const win = a && b && b[0] > a[0] ? (b[0] - a[0]) / 1000 : 0;
+  const rateB = win ? (b[1] - a[1]) / win : avgB, rateF = win ? (b[2] - a[2]) / win : avgF;
   const pct = total ? Math.min(100, done / total * 100) : 0;
-  const left = !finished && pct > 1 ? (btotal && rateB > 0 ? (btotal - bytes) / rateB : (rateF > 0 ? (total - done) / rateF : null)) : null;
+  const left = !finished && done > 0 ? (btotal && rateB > 0 ? (btotal - bytes) / rateB : (total - done) / (rateF > 0 ? rateF : avgF > 0 ? avgF : Infinity)) : null;     // also right after the first photo (AI tagging is slow: 1% can take 40 minutes)
   const src = {takeout: t('Import from Google Takeout'), folder: t('Import from a folder or memory card'), lightroom: t('Import from Lightroom')}[x.source] || JOBSCR.label;
   const cancelled = finished && p.msg && /cancel/i.test(p.msg);
   $('#ims-title').textContent = p.state === 'error' ? `${JOBSCR.label}: ${t('Failed')}` : finished ? `${JOBSCR.label}: ${cancelled ? t('Cancelled') : t('Done')}` : (isImport ? src : JOBSCR.label);
@@ -3363,16 +3376,30 @@ function jobScreenUpdate(name, p){
   $('#ims-pct').textContent = !total && !finished ? '…' : (finished ? '' : Math.floor(pct) + '%');
   const msg = p.error_key ? t(p.error_key, p.vars) : p.parts ? p.parts.map(q => t(q.key, q.vars)).join(' · ') : p.key ? t(p.key, p.vars) : (p.msg || '');
   $('#ims-cur').innerHTML = finished || !isImport ? esc(msg) : `${x.album ? `<bdi>${esc(x.album)}</bdi> · ` : ''}<bdi>${esc(x.current || msg)}</bdi>`;
-  const unit = {files: t('files/s'), photos: t('photos/s'), bytes: ''}[JOB_UNIT[name] || 'files'];
+  const unit = {files: slow ? t('files/min') : t('files/s'), photos: slow ? t('photos/min') : t('photos/s'), bytes: ''}[JOB_UNIT[name] || 'files'], mul = slow ? 60 : 1;     // slow jobs are shown per minute
   const mbs = v => ltr((v / 1048576).toFixed(v >= 10485760 ? 1 : 2) + ' MB/s');
-  const speed = fin => JOB_UNIT[name] === 'bytes' ? mbs(fin ? avgB : rateB) : ltr((fin ? avgF : rateF).toFixed(1) + ' ' + unit) + (bytes ? ' · ' + mbs(fin ? avgB : rateB) : '');
+  const speed = fin => JOB_UNIT[name] === 'bytes' ? mbs(fin ? avgB : rateB) : ltr(((fin ? avgF : rateF) * mul).toFixed(1) + ' ' + unit) + (bytes ? ' · ' + mbs(fin ? avgB : rateB) : '');
+  // each point = the speed over a trailing window (30 s, or 3 min for a slow job), so a slow job gives a readable curve and not spikes
+  const S0 = JOBSCR.samples, gw = slow ? 180000 : 30000, bytesJob = JOB_UNIT[name] === 'bytes', col = bytesJob ? 1 : 2, pts = [];
+  S0.forEach((s, i) => { let j = i; while(j > 0 && s[0] - S0[j - 1][0] <= gw) j--; const dt = (s[0] - S0[j][0]) / 1000; if(i && dt > 0) pts.push(Math.max(0, (s[col] - S0[j][col]) / dt)); });
   const cards = [];
   if(total && JOB_UNIT[name] !== 'bytes') cards.push([t('Progress'), t('{0} of {1}', [num(done), num(total)]), '']);
   else cards.push([t('Progress'), finished ? '100%' : Math.floor(pct) + '%', '']);
   if(isImport || btotal) cards.push([t('Data'), btotal ? `${fsize(bytes)} / ${fsize(btotal)}` : fsize(bytes), '']);
   cards.push([t('Speed'), finished ? t('Average: {0}', [speed(true)]) : speed(false), '']);
   cards.push([t('Time elapsed'), fmtDur(el), '']);
-  cards.push([finished ? t('Total time') : t('Estimated time left'), finished ? fmtDur(el) : left == null ? '…' : '~' + fmtDur(left), '']);
+  cards.push([finished ? t('Total time') : t('Estimated time left'), finished ? fmtDur(el) : left == null || !isFinite(left) ? '…' : '~' + fmtDur(left), '']);
+  if(!isImport && total && JOB_UNIT[name] !== 'bytes'){          // statistics for every job (not only the import)
+    if(done > 0) cards.push([t('Average per item'), ltr((el / done).toFixed(el / done < 10 ? 2 : 1) + ' s'), '']);
+    const pkv = Math.max(0, ...pts) * (slow ? 60 : 1);
+    if(pkv > 0) cards.push([t('Peak speed'), ltr(pkv.toFixed(1) + ' ' + unit), '']);
+  }
+  if(name === 'aitag' && x.model){          // AI tagging: what was sent, what came back
+    cards.push([t('Tagged'), num(x.ok || 0), 'ok']);
+    cards.push([t('Keywords added'), num(x.keywords || 0), '']);
+    cards.push([t('Failed'), num(x.failed || 0), x.failed ? 'bad' : '']);
+    cards.push([t('Model'), `<bdi>${esc(x.model)}</bdi>`, '']);
+  }
   if(isImport){
     cards.push([t('Added'), num(x.added || 0), 'ok']);
     cards.push([t('Already in catalog'), num(x.duplicates || 0), '']);
@@ -3380,9 +3407,12 @@ function jobScreenUpdate(name, p){
   }
   $('#ims-grid').innerHTML = cards.map(([k, v, c]) => `<div class="ims-card ${c}"><span>${k}</span><b>${v}</b></div>`).join('');
   // speed over time
-  const pts = JOBSCR.samples.map((s, i, arr) => i ? Math.max(0, (s[1] ? s[1] - arr[i - 1][1] : s[2] - arr[i - 1][2]) / Math.max(0.2, (s[0] - arr[i - 1][0]) / 1000)) : 0).slice(1);
-  const mx = Math.max(1, ...pts);
-  $('#ims-spark').innerHTML = pts.length > 1 ? `<polyline fill="none" stroke="var(--blue)" stroke-width="1.5" vector-effect="non-scaling-stroke" points="${pts.map((v, i) => `${(i / (pts.length - 1) * 300).toFixed(1)},${(42 - v / mx * 40).toFixed(1)}`).join(' ')}"/>` : '';
+  // each point = the speed over a trailing window (30 s, or 3 min for a slow job), so a slow job gives a readable curve and not spikes
+  const pk = Math.max(1e-9, ...pts), div = bytesJob ? 1048576 : 1 / mul, shown = pts.length > 1 ? pts : [];
+  const X = i => (i / Math.max(1, shown.length - 1) * 300).toFixed(1), Y = v => (42 - v / pk * 38).toFixed(1);
+  $('#ims-spark').innerHTML = shown.length ? `<line x1="0" y1="2" x2="300" y2="2" stroke="var(--t3,#888)" stroke-dasharray="3 3" stroke-width=".6" vector-effect="non-scaling-stroke" opacity=".5"/><polygon fill="var(--blue)" opacity=".18" points="0,42 ${shown.map((v, i) => `${X(i)},${Y(v)}`).join(' ')} 300,42"/><polyline fill="none" stroke="var(--blue)" stroke-width="1.5" vector-effect="non-scaling-stroke" points="${shown.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}"/>` : '';
+  const lbl = $('#ims-sparklbl');
+  if(lbl) lbl.innerHTML = shown.length ? `<span dir="ltr">${(pk / div).toFixed(pk / div >= 10 ? 0 : 1)} ${bytesJob ? 'MB/s' : unit}</span><span>${t('Speed over time')}</span><span>${fmtDur((now - S0[0][0]) / 1000)}</span>` : '';
   const fl = x.failures || [];
   $('#ims-fail').innerHTML = fl.length ? `${t('Files that could not be imported')}: ${fl.slice(0, 6).map(n => `<bdi>${esc(n)}</bdi>`).join(', ')}${fl.length > 6 ? ' …' : ''}` : '';
   if(finished && !document.getElementById('ims-close')){
@@ -3540,6 +3570,28 @@ async function reportProblem(){
       if(r.sent){ closeModal(); toast(k==='feature' ? t('Thank you! Your suggestion was sent (#{0}).', [r.number]) : t('Thank you! Your report was sent (#{0}).', [r.number]), 4500); }
     }catch(e){ msg.textContent = e.message || t('The report could not be sent'); $('#rp-ok').disabled = false; }
   };
+}
+// "Your reports and suggestions" (#34): everything this installation sent, with its state on GitHub; the text and title can be edited, a report withdrawn.
+async function myReports(){
+  modal(`<h3>${t('Your reports and suggestions')}</h3><div class="mb"><div class="hint" style="padding:0">${t('Loading…')}</div></div><div class="mf"><span class="spacer"></span><button class="primary" id="mr-ok">${t('Close')}</button></div>`);
+  $('#mr-ok').onclick = closeModal;
+  let r; try{ r = await api('/api/report/mine'); }catch(e){ $('#modal-box .mb').textContent = e.message; return; }
+  const list = ()=>{
+    $('#modal-box .mb').innerHTML = r.items.length ? r.items.map(x=>`<div class="rn-row" style="display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line)"><span style="flex:1" dir="auto"><b>#${x.number}</b> ${esc(x.title)}<br><span class="hint" style="padding:0">${x.kind==='feature' ? t('A feature suggestion') : t('A problem')} · ${x.state==='closed' ? t('Closed') : t('Open')}</span></span><button data-mr-edit="${x.number}">${t('Edit')}</button><button data-mr-open="${x.number}">${t('Open on GitHub')}</button></div>`).join('') : `<div class="hint" style="padding:0">${t('No reports sent yet.')}</div>`;
+    $$('#modal [data-mr-open]').forEach(b=>b.onclick = ()=>send('POST', '/api/report/news/open', {numbers:[+b.dataset.mrOpen]}));
+    $$('#modal [data-mr-edit]').forEach(b=>b.onclick = ()=>edit(r.items.find(x=>x.number===+b.dataset.mrEdit)));
+  };
+  const edit = x=>{
+    $('#modal-box .mb').innerHTML = `<p><b>#${x.number}</b></p><label for="mr-title">${t('Title')}</label><input id="mr-title" type="text" maxlength="200" style="width:100%;box-sizing:border-box" value="${esc(x.title)}">
+      <label for="mr-desc">${t('Description')}</label><textarea id="mr-desc" rows="7" maxlength="4000" style="width:100%;box-sizing:border-box">${esc(x.description||'')}</textarea>
+      ${r.can_edit ? '' : `<p class="hint" style="padding:0">${t('The report could not be sent')}</p>`}<p id="mr-msg" class="hint" style="padding:0"></p>`;
+    $('#modal-box .mf').innerHTML = `<button id="mr-back">${t('Back')}</button><button id="mr-close" class="danger">${x.state==='closed' ? t('Reopen') : t('Withdraw')}</button><span class="spacer"></span><button class="primary" id="mr-save" ${r.can_edit ? '' : 'disabled'}>${t('Save')}</button>`;
+    $('#mr-back').onclick = ()=>{ $('#modal-box .mf').innerHTML = `<span class="spacer"></span><button class="primary" id="mr-ok">${t('Close')}</button>`; $('#mr-ok').onclick = closeModal; list(); };
+    const go = async (url, body, done)=>{ $('#mr-msg').textContent = t('Sending…'); try{ await send('POST', url, body); done(); toast(t('Saved'), 1500); $('#mr-back').onclick(); }catch(e){ $('#mr-msg').textContent = e.message || t('The report could not be sent'); } };
+    $('#mr-save').onclick = ()=>go('/api/report/edit', {number:x.number, title:$('#mr-title').value.trim(), description:$('#mr-desc').value.trim()}, ()=>{ x.title = $('#mr-title').value.trim(); x.description = $('#mr-desc').value.trim(); });
+    $('#mr-close').onclick = ()=>go('/api/report/state', {number:x.number, closed:x.state!=='closed'}, ()=>{ x.state = x.state==='closed' ? 'open' : 'closed'; });
+  };
+  list();
 }
 // "Your suggestion was completed" (#26): the reports and suggestions this installation sent are remembered; when GitHub says one of them
 // was dealt with (the issue is closed) the user is told once, when the program is opened (and every two hours while it stays open).
@@ -4105,6 +4157,7 @@ const MENUS = [
     [t('Check for Updates...'), '', ()=>updateCheck(true)],
     [t('What\'s new in this version...'), '', ()=>whatsNew(true)],
     [t('Report a problem or suggest a feature…'), '', reportProblem],
+    [t('Your reports and suggestions'), '', myReports],
     [t('About photag'), '', ()=>modal(`<h3>photag</h3><div class="mb"><p class="hint" style="padding:0">${t('Version {0}', [ltr(S.status?.version || '')])}</p><p>${t("Local photo management and storage: catalog, collections, flags, ratings, color labels, keywords, face detection and non-destructive editing — the original is always preserved.")}</p><p class="hint" style="padding:0">${t("Lightroom is a trademark of Adobe; photag is not affiliated with Adobe.")}</p><p class="hint" style="padding:0">${t("Free software under the GPL-3.0 license, with no warranty. You may modify and redistribute it under the license terms.")}</p></div><div class="mf"><button class="primary" onclick="closeModal()">${t("Close")}</button></div>`)],
   ]],
 ];

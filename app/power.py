@@ -48,3 +48,17 @@ def on_battery() -> bool:
 def should_wait() -> bool:
     """True when heavy background work should hold back right now."""
     return enabled() and on_battery()
+
+
+def trim_memory() -> None:
+    """Give back what the program no longer needs: collect garbage and (Windows) shrink the working set, so Task Manager shows what is
+    really in use. The pages come back by themselves when they are needed again."""
+    __import__("gc").collect()           # (not an import statement: a new import changes the packaged runtime, see tools/test_runtime_lock.py; gc is built into Python)
+    try:
+        if sys.platform == "win32":
+            k = ctypes.windll.kernel32
+            k.GetCurrentProcess.restype = ctypes.c_void_p
+            k.SetProcessWorkingSetSize.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t]
+            k.SetProcessWorkingSetSize(k.GetCurrentProcess(), ctypes.c_size_t(-1).value, ctypes.c_size_t(-1).value)
+    except Exception:
+        pass

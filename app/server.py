@@ -140,6 +140,19 @@ def _edit_migrate_loop():
         time.sleep(float(os.environ.get("PHOTAG_MIGRATE_TICK", 1)))
 
 
+def _memory_loop():
+    """Every couple of minutes: unload the AI models nobody has used for 5 minutes and give the freed memory back (#33)."""
+    while True:
+        time.sleep(float(os.environ.get("PHOTAG_MEMORY_TICK", 120)))
+        try:
+            if not _other_job_running():
+                semantic.release_if_idle(300)
+                faces.release_if_idle(300)
+            power.trim_memory()
+        except Exception as e:
+            print(f"memory trim failed: {e!r}", file=sys.stderr, flush=True)
+
+
 @app.on_event("startup")
 def _start_trash_purge():
     db.init_db()  # run schema migrations before the first request
@@ -148,6 +161,7 @@ def _start_trash_purge():
     except Exception:
         pass
     threading.Thread(target=_backup_loop, daemon=True).start()
+    threading.Thread(target=_memory_loop, daemon=True).start()
     threading.Thread(target=_ref_loop, daemon=True).start()
     threading.Thread(target=_exif_loop, daemon=True).start()
     threading.Thread(target=_edit_migrate_loop, daemon=True).start()
@@ -1578,6 +1592,43 @@ def report_news_open(b: NewsAckIn):
     """Open the GitHub page of one of the user's own issues (only a number is taken; the address is always this project's)."""
     for n in b.numbers[:1]:
         _open_url(f"https://github.com/{report.REPO}/issues/{int(n)}")
+    return {"ok": True}
+
+
+@app.get("/api/report/mine")
+def report_mine(refresh: int = 1):
+    """The reports and suggestions this installation sent, with their state on GitHub (#34)."""
+    return {"items": report.my_issues(bool(refresh)), "can_edit": report.can_send()}
+
+
+class ReportEditIn(BaseModel):
+    number: int
+    title: str = ""
+    description: str = ""
+
+
+@app.post("/api/report/edit")
+def report_edit(b: ReportEditIn):
+    if len(b.title.strip()) < report.MIN_TEXT:
+        raise err(400, "Please write a title")
+    try:
+        report.edit_issue(b.number, b.title, b.description[:report.MAX_DESC])
+    except report.ReportError:
+        raise err(503, "The report could not be sent")
+    return {"ok": True}
+
+
+class ReportStateIn(BaseModel):
+    number: int
+    closed: bool = True
+
+
+@app.post("/api/report/state")
+def report_state(b: ReportStateIn):
+    try:
+        report.set_state(b.number, b.closed)
+    except report.ReportError:
+        raise err(503, "The report could not be sent")
     return {"ok": True}
 
 

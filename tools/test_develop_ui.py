@@ -99,8 +99,7 @@ try:
 
         # ---- the EXIF section of the info panel: from the catalog
         cell("a_dark.jpg")
-        check("the info panel has an 'All EXIF tags' section", pg.locator("#m-exifall summary").count() == 1)
-        pg.click("#m-exifall summary")
+        check("the info panel has an 'All EXIF tags' section", pg.locator("#m-exifbox").count() == 1)
         pg.wait_for_selector("#m-exifbox .exif-kv", timeout=10000)
         txt = pg.inner_text("#m-exifbox")
         check("opened, it lists the tags (Make = UiMake)", "UiMake" in txt and "Make" in txt, txt[:120])
@@ -112,7 +111,6 @@ try:
         con.close()
         cell("b_normal.jpg")
         cell("a_dark.jpg")
-        pg.click("#m-exifall summary")
         pg.wait_for_selector("#m-exifbox .exif-kv", timeout=10000)
         check("the panel shows what the DATABASE holds (not the file)", "FROM_THE_DATABASE" in pg.inner_text("#m-exifbox"))
 
@@ -127,7 +125,6 @@ try:
         pg.evaluate("closeModal()")
         cell("b_normal.jpg")
         cell("a_dark.jpg")
-        pg.click("#m-exifall summary")
         pg.wait_for_selector("#m-exifbox .exif-kv", timeout=10000)
         t2 = pg.inner_text("#m-exifbox")
         check("with the switch off the panel reads the FILE (real Make, says so)", "UiMake" in t2 and "Read from the file" in t2 and "FROM_THE_DATABASE" not in t2, t2[:100])

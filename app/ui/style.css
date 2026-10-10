@@ -666,6 +666,7 @@ body.lights-off .v-loupe,body.lights-off .v-develop{background:#000}
 .ims-card span{color:var(--t3);font-size:11px}.ims-card b{color:var(--t1);font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ims-card.ok b{color:var(--green)}.ims-card.bad b{color:var(--red)}
 .ims-spark{width:100%;height:44px;background:var(--raise1);border:1px solid var(--line);border-radius:3px}
+.ims-sparklbl{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--t2);margin-top:2px}
 .cpg{display:flex;flex-direction:column;gap:10px;min-width:420px}
 .cpg-file{font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cpg-bar{position:relative;height:24px;background:var(--raise1);border:1px solid var(--line);border-radius:3px;overflow:hidden}

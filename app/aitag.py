@@ -350,9 +350,10 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                 raise AIError(0, "no thumbnail")
             return _tag_with_retry((provider, cfg["base_url"], key, model, tp.read_bytes(), cfg["language"]), cancelled)
 
-        ok = fails = 0
+        ok = fails = kws = 0
         last_err = ""
         handled = set()
+        progress.extra = {"ok": 0, "failed": 0, "keywords": 0, "model": model, "last_error": ""}      # live numbers for the progress screen
         with cf.ThreadPoolExecutor(WORKERS) as ex:
             futs = {ex.submit(work, r): r for r in todo}
             try:
@@ -363,7 +364,7 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                         names = f.result()
                         if names is None:       # skipped because of a cancel
                             continue
-                        _set_ai_tags(con, row["id"], names); ok += 1
+                        _set_ai_tags(con, row["id"], names); ok += 1; kws += len(names)
                     except AIError as e:
                         fails += 1; last_err = str(e)
                         if e.status in (401, 403) or (ok == 0 and fails >= 3):
@@ -374,6 +375,7 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                     except Exception as e:                      # a photo we couldn't read: skip it
                         fails += 1; last_err = str(e)
                     progress.done = ok + fails
+                    progress.extra = {"ok": ok, "failed": fails, "keywords": kws, "model": model, "last_error": last_err[:160]}
                     progress.say("Tagging with {model} · {done}/{total}", model=model, done=progress.done, total=len(todo))
                     con.commit()                                # each photo's tags are visible to the window right away, not only at the end
                     if cancelled():

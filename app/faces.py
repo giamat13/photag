@@ -8,12 +8,23 @@ from . import cloud, db, images
 from .config import PATHS, FACE_MODEL, FACE_CLUSTER_THRESHOLD, FACE_SUGGEST_THRESHOLD
 
 _APP = None
+_LAST_USE = 0.0
+
+
+def release_if_idle(seconds: float = 300.0) -> bool:
+    """Unload the face model (~300 MB in memory) when nothing has used it for `seconds`; it loads again on the next use."""
+    global _APP
+    if _APP is not None and time.time() - _LAST_USE > seconds:
+        _APP = None
+        return True
+    return False
 
 
 def _app():
     """Lazy singleton. Downloads buffalo_l (~300MB) on first use. CPU by default;
     picks up onnxruntime-gpu automatically if installed."""
-    global _APP
+    global _APP, _LAST_USE
+    _LAST_USE = time.time()
     if _APP is None:
         from insightface.app import FaceAnalysis
         _APP = FaceAnalysis(name=FACE_MODEL)

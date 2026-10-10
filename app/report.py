@@ -361,3 +361,95 @@ def ack_news(numbers) -> None:
         if x["number"] in set(numbers):
             x["notified"] = True
     _save_issues(d)
+
+
+# ------------------------------------------------------------------------------------------------ "My reports": see, edit and withdraw them (#34)
+def _api_base() -> str:
+    return os.environ.get("PHOTAG_REPORT_API", API).rstrip("/")
+
+
+def _call(method: str, path: str, payload: dict | None = None, auth: bool = False) -> dict:
+    """One GitHub API call. Raises ReportError. Only this project's issues are ever touched (the path is built by the callers)."""
+    import urllib.error
+    import urllib.request
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "photag", "X-GitHub-Api-Version": "2022-11-28"}
+    if auth:
+        tok = token()
+        if not tok:
+            raise ReportError("no token")
+        headers["Authorization"] = f"Bearer {tok}"
+    data = None
+    if payload is not None:
+        headers["Content-Type"] = "application/json"
+        data = json.dumps(payload).encode("utf-8")
+    from .net import ssl_context
+    base = _api_base()
+    try:
+        req = urllib.request.Request(f"{base}/repos/{REPO}{path}", data=data, method=method, headers=headers)
+        with urllib.request.urlopen(req, timeout=15, context=ssl_context() if base.startswith("https") else None) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise ReportError(f"GitHub answered {e.code}")
+    except Exception as e:
+        raise ReportError(str(e)[:120])
+
+
+def split_body(body: str) -> tuple[str, str]:
+    """(what the user wrote, everything after it: technical details and the "Sent from" line) of an issue body made by compose()."""
+    i = (body or "").find("\n\n---\n")
+    return (body, "") if i < 0 else (body[:i], body[i:])
+
+
+def my_issues(refresh: bool = True) -> list[dict]:
+    """The issues of this installation, newest first: number, title, kind, state ("open"/"closed"), description, url, comments.
+    The state, title and text are re-read from GitHub (public data); offline, the remembered ones are returned."""
+    d = _load_issues()
+    items = list(reversed(d["issues"]))
+    if refresh:
+        for x in items[:30]:
+            try:
+                g = _call("GET", f"/issues/{int(x['number'])}")
+            except ReportError:
+                break
+            x["closed"] = g.get("state") == "closed"
+            x["title"] = re.sub(r"^\[(Report|Suggestion)\]\s*", "", g.get("title") or x["title"])[:120]
+            x["description"] = split_body(g.get("body") or "")[0]
+            x["comments"] = g.get("comments", 0)
+        _save_issues(d)
+    return [{"number": x["number"], "title": x["title"], "kind": x.get("kind", "problem"), "state": "closed" if x.get("closed") else "open",
+             "description": x.get("description", ""), "comments": x.get("comments", 0), "at": x.get("at", 0)} for x in items]
+
+
+def _mine(number: int) -> dict:
+    for x in _load_issues()["issues"]:
+        if x["number"] == number:
+            return x
+    raise ReportError("not your report")                  # the bot's token never edits an issue this installation did not create
+
+
+def edit_issue(number: int, title: str, description: str) -> None:
+    """Change the title and the text the user wrote; the technical details below it stay."""
+    x = _mine(number)
+    g = _call("GET", f"/issues/{number}")
+    kind = x.get("kind", "problem")
+    new_title = ("[Suggestion] " if kind == "feature" else "[Report] ") + re.sub(r"\s+", " ", title.strip())[:200]
+    new_body = redact(description.strip()) + split_body(g.get("body") or "")[1]
+    _call("PATCH", f"/issues/{number}", {"title": new_title, "body": new_body}, auth=True)
+    x["title"] = title.strip()[:120]
+    d = _load_issues()
+    for y in d["issues"]:
+        if y["number"] == number:
+            y["title"] = x["title"]
+    _save_issues(d)
+
+
+def set_state(number: int, closed: bool) -> None:
+    """Withdraw (close) one of the user's own reports, or open it again."""
+    _mine(number)
+    _call("PATCH", f"/issues/{number}", {"state": "closed" if closed else "open", **({"state_reason": "not_planned"} if closed else {})}, auth=True)
+    d = _load_issues()
+    for y in d["issues"]:
+        if y["number"] == number:
+            y["closed"] = closed
+            y["notified"] = True if closed else False
+    _save_issues(d)
