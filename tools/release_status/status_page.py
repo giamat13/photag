@@ -281,11 +281,14 @@ def collect():
     local_need = local_total if local_eff != local_state else local_left      # old results: all of them have to run again
     left = (local_need if local_eff != "done" else 0.0) + gh_left
     failing = [s["name"] for s in stages if s["state"] == "fail"]
+    bad_jobs = [j for j in jobs if j["state"] == "fail"]          # one failed job on GitHub already means this release will not go out: the timer stops at once
+    if bad_jobs and not published and not failing:
+        failing = ["GitHub"]
     if published:
         hero, sub = f"הגרסה {target} באוויר! ✓", "אפשר לעדכן מתוך photag (עזרה ← חיפוש עדכונים)."
     elif failing:
         bad = [t["name"] for t in local if t["state"] == "fail"]
-        hero = ("בדיקה מקומית נכשלה: " + ", ".join(bad)) if bad else "משהו נכשל"
+        hero = ("בדיקה מקומית נכשלה: " + ", ".join(bad)) if bad else (("ב-GitHub נכשל: " + ", ".join(str(j.get("name", "")) for j in bad_jobs[:3])) if bad_jobs else "משהו נכשל")
         sub = activity[0]["text"] if activity else "הסעיף האדום למטה מראה איפה."
     elif local_state == "run":
         hero, sub = "עכשיו: בודקים שהכול עובד במחשב שלך", local_now

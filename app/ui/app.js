@@ -326,6 +326,7 @@ async function rotateSel(deg){
 }
 async function reloadAll(){
   await Promise.all([loadCatalog(), loadSide()]);
+  renderCatalog();                       // the side lists may have been drawn before the photos arrived (On This Day and the counts come from them)
   await fetchSource();
 }
 
@@ -5060,6 +5061,7 @@ function oneDriveNotice(force){
 (async function boot(){
   try{ const v = await api('/api/viewer/startup'); if(v && v.token){ location.replace('viewer.html?t=' + encodeURIComponent(v.token)); return; } }catch(e){}   // started by "Open with" of an older launcher: show that picture
   await Promise.all([loadCatalog(), loadSide()]);
+  renderCatalog();                       // the side lists may have been drawn before the photos arrived (a slow start): draw them again with the photos
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   setView('grid');
