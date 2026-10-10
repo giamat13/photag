@@ -288,7 +288,12 @@ def collect():
     bad_jobs = [j for j in jobs if j["state"] == "fail"]          # one failed job on GitHub already means this release will not go out: the timer stops at once
     if bad_jobs and not published and not failing:
         failing = ["GitHub"]
-    if published:
+    # the last release is out, the page was put away and nothing is being worked on (no tests running, no release run, the task card is empty or done):
+    # there is no release on its way, so no countdown (the stale local tests and the new commit would otherwise make it promise a release in ~7 minutes)
+    idle = next_mode and local_state != "run" and not cur and not todo_open and not failing
+    if idle:
+        hero, sub = f"אין שחרור בעבודה כרגע — הגרסה האחרונה ({target}) כבר באוויר", "כשמתחילים עבודה חדשה העמוד יתחיל לספור מחדש."
+    elif published:
         hero, sub = f"הגרסה {target} באוויר! ✓", "אפשר לעדכן מתוך photag (עזרה ← חיפוש עדכונים)."
     elif failing:
         bad = [t["name"] for t in local if t["state"] == "fail"]
@@ -305,13 +310,13 @@ def collect():
     else:
         hero, sub = "עכשיו: GitHub בונה את הגרסה", hero_run
 
-    running_eta = not (published or failing or (pushed and not cur and local_state != "run"))
+    running_eta = not (idle or published or failing or (pushed and not cur and local_state != "run"))
     pct_rate = max(0.0, (99.5 - pct) / max(left, 5.0)) if running_eta else 0.0      # percent per second: it reaches ~99.5% when the release is expected to end
     return {
         "pct_rate": pct_rate, "at": now, "target": target, "next": next_mode, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
-        "waiting": bool(not published and not failing and pushed and not cur and local_state != "run"),
+        "waiting": bool(not idle and not published and not failing and pushed and not cur and local_state != "run"), "idle": idle,
         "todo": todo, "activity": activity,
-        "eta_end": None if (published or failing or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
+        "eta_end": None if (idle or published or failing or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
         "percent": pct, "stages": stages, "local": local, "local_stale": stale, "jobs": jobs, "gh_began": cur_began,
         "error": gh["error"], "recent": [r["tag_name"] for r in rels[:3]],
     }
@@ -450,6 +455,7 @@ const timeOf = x => x.state === 'done' || x.state === 'fail' ? (x.took ? `<span>
   : (x.est ? `<span>~${mmss(x.est)}</span>` : '');
 function render(){
   if(!D) return;
+  if(D.idle){ D.published = true; D.percent = 100; }       // nothing is being released: show it as finished, with no countdown
   const st = D.published ? 'done' : D.failed ? 'fail' : 'run';
   document.title = (D.published ? '✓ ' : D.failed ? '✕ ' : Math.floor(D.percent) + '% · ') + D.target.replace('v','') + ' · photag';
   setText($('title'), D.next ? 'השחרור הבא (הקודם, ' + D.target.replace('v','') + ', כבר באוויר)' : 'שחרור גרסה ' + D.target.replace('v',''));
