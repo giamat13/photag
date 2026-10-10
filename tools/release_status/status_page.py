@@ -63,7 +63,9 @@ def version():
 
 # ---- plain-language names of what GitHub does (job names and step names come from .github/workflows)
 JOBS = {
-    "build": ("בניית התוכנה להתקנה (Windows)", "בונה את התוכנה עצמה, את קובץ ההתקנה, את גרסת ה-ZIP, את ה-MSI ואת חבילת החנות"),
+    "build": ("בניית התוכנה (Windows) — חלק 1 מ-3", "בונה את התוכנה עצמה (photag.exe) וחותמת עליה; משם ממשיכים שני שלבים במקביל"),
+    "installer": ("קובץ ההתקנה (Windows) — חלק 2 מ-3", "בונה את קובץ ההתקנה (photagSetup.exe), חותם עליו ואורז אותו גם ב-ZIP; רץ במקביל לחבילות"),
+    "packages": ("החבילות (Windows) — חלק 3 מ-3", "בונה את עדכון הקוד, את הגרסה הניידת, את סקריפטי ההתקנה, את ה-MSI ואת חבילת החנות; רץ במקביל לקובץ ההתקנה"),
     "tests / unix (ubuntu-latest)": ("בדיקות ב-Linux", "מוודא שהתוכנה עובדת גם על Linux"),
     "tests / unix (macos-latest)": ("בדיקות ב-Mac", "מוודא שהתוכנה עובדת גם על Mac"),
     "tests / test (1)": ("בדיקות שרת וייבוא (חלק 1 מ-2)", "מריץ בדיקות על ייבוא, גיבוי, עדכון וספרייה"),
@@ -183,6 +185,8 @@ def collect():
     rel_runs = [r for r in gh["runs"] if r["name"] == "release"]
     prev = [r for r in rel_runs if r["status"] == "completed" and r["conclusion"] == "success"][:3]
     typical = sum(epoch(r["updated_at"]) - epoch(r["created_at"]) for r in prev) / len(prev) if prev else DEFAULT_GH_SECONDS
+    if "installer" not in Cache.hist.get("jobs", {}):          # the runs it learns from are from before the Windows build was split into 3 jobs: the split saves about a minute
+        typical = max(60.0, typical - 60.0)
     published = any(r["tag_name"] == target and not r["draft"] for r in rels)
     # a release that is out and a page that is done: when new work begins (files changed) or after a quarter of an hour, start clean
     try:
