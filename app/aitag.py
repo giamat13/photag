@@ -45,7 +45,7 @@ def get_settings() -> dict:
     c = config.get_ai()
     keys = c.get("keys", {})
     return {"provider": c.get("provider", "openai"), "model": c.get("model", ""), "language": c.get("language", "en"),
-            "base_url": c.get("base_url", ""),
+            "base_url": c.get("base_url", ""), "rank_mode": get_rank_mode(), "configured": _configured(),
             "providers": {p: {"has_key": p in keys, "hint": keys.get(p, {}).get("hint", "")} for p in PROVIDERS}}
 
 
@@ -254,6 +254,118 @@ def _tag_with_retry(args, cancel):
         except AIError as e:
             transient = e.status in (0, 408, 429, 500, 502, 503, 504, 529)
             if not transient or attempt == 3 or cancel():
+                raise
+            time.sleep(min(e.retry_after or 2 ** attempt, 20))
+
+
+# ---------------------------------------------------------------- which photo is the best (#45)
+RANK_MODES = ("ask", "always", "off")
+MAX_COMPARE = 6                      # photos sent to the AI at once (each one costs tokens)
+
+
+def _configured() -> bool:
+    """The AI of AI tagging is set up: a saved key, or a custom (local) server."""
+    c = config.get_ai()
+    return c.get("provider", "openai") == "custom" or c.get("provider", "openai") in c.get("keys", {})
+
+
+def get_rank_mode() -> str:
+    """What Rank / Compare do about the AI: "ask" every time, "always" use it, or "off". Nothing chosen yet: ask when the AI is set up, else off."""
+    m = config.get_ai().get("rank_mode")
+    return m if m in RANK_MODES else ("ask" if _configured() else "off")
+
+
+def set_rank_mode(mode: str):
+    if mode not in RANK_MODES:
+        raise ValueError("unknown mode")
+    c = config.get_ai()
+    c["rank_mode"] = mode
+    config.set_ai(c)
+
+
+def _compare_prompt(n: int, language: str) -> str:
+    lang = LANG_NAMES.get(language, "English")
+    return (f"You are helping a person choose the best photo among {n} photos of the same scene or subject, numbered 1 to {n} in the order they are given. "
+            "Judge sharpness, exposure, composition, expressions (eyes open, natural smiles) and overall appeal. Answer with ONLY a JSON object of the form "
+            f'{{"best": <the number of the best photo>, "reason": "<one or two short sentences in {lang} saying why it is the best>"}}.')
+
+
+def parse_pick(text: str, n: int) -> dict:
+    best, reason = None, ""
+    m = re.search(r"\{.*\}", text, re.S)
+    if m:
+        try:
+            j = json.loads(m.group(0))
+            best, reason = int(j.get("best")), str(j.get("reason", ""))
+        except Exception:
+            best = None
+    if best is None:
+        mm = re.search(r"\b([1-9])\b", text)
+        best = int(mm.group(1)) if mm else None
+        reason = reason or text
+    if best is None or not 1 <= best <= n:
+        raise AIError(0, "the answer did not name one of the photos")
+    return {"best": best, "reason": re.sub(r"\s+", " ", reason).strip()[:500]}
+
+
+def compare_images(provider: str, base_url: str, key: str, model: str, jpegs: list[bytes], language: str) -> dict:
+    kind, base, h = PROVIDERS[provider]["kind"], _base(provider, base_url), _headers(PROVIDERS[provider]["kind"], key)
+    text, b64s = _compare_prompt(len(jpegs), language), [base64.b64encode(j).decode() for j in jpegs]
+    if kind == "anthropic":
+        content = []
+        for i, b in enumerate(b64s, 1):
+            content += [{"type": "text", "text": f"Photo {i}:"}, {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b}}]
+        r = _http("POST", f"{base}/messages", h, {"model": model, "max_tokens": 400, "messages": [{"role": "user", "content": content + [{"type": "text", "text": text}]}]}, secret=key)
+        out = "".join(b.get("text", "") for b in r.get("content", []) if b.get("type") == "text")
+    elif kind == "gemini":
+        parts = []
+        for i, b in enumerate(b64s, 1):
+            parts += [{"text": f"Photo {i}:"}, {"inline_data": {"mime_type": "image/jpeg", "data": b}}]
+        r = _http("POST", f"{base}/models/{model}:generateContent", h, {"contents": [{"role": "user", "parts": parts + [{"text": text}]}],
+                                                                     "generationConfig": {"responseMimeType": "application/json"}}, secret=key)
+        out = "".join(p.get("text", "") for p in ((r.get("candidates") or [{}])[0].get("content") or {}).get("parts", []))
+    else:
+        content = []
+        for i, b in enumerate(b64s, 1):
+            img = {"url": f"data:image/jpeg;base64,{b}"}
+            if provider == "openai":
+                img["detail"] = "low"
+            content += [{"type": "text", "text": f"Photo {i}:"}, {"type": "image_url", "image_url": img}]
+        r = _http("POST", f"{base}/chat/completions", h, {"model": model, "messages": [{"role": "user", "content": content + [{"type": "text", "text": text}]}]}, secret=key)
+        c = ((r.get("choices") or [{}])[0].get("message") or {}).get("content", "")
+        out = c if isinstance(c, str) else "".join(p.get("text", "") for p in c)
+    return parse_pick(out, len(jpegs))
+
+
+def pick_best(ids: list[int]) -> dict:
+    """Ask the AI (the same provider, key and model as AI tagging) which of these photos is the best, and why."""
+    cfg = get_settings()
+    provider = cfg["provider"]
+    key = _key(provider)
+    if provider != "custom" and not key:
+        raise AIError(401, "No API key is set for the selected provider")
+    model = cfg["model"] or pick_auto(provider, list_models(provider, key, cfg["base_url"]))
+    if not model:
+        raise AIError(0, "No suitable model found. Choose a model manually in AI tagging settings")
+    con, jpegs, used = db.connect(), [], []
+    for pid in ids[:MAX_COMPARE]:
+        row = con.execute("SELECT id, sha256, rel_path, orig_backup, edited, edit_ops FROM photos WHERE id=? AND is_video=0", (pid,)).fetchone()
+        if not row:
+            continue
+        tp = images.thumb_path(row["sha256"])
+        if not tp.exists():
+            images.make_thumb(render.current_path(row), row["sha256"])
+        if tp.exists():
+            jpegs.append(tp.read_bytes())
+            used.append(pid)
+    if len(jpegs) < 2:
+        raise AIError(0, "no thumbnail")
+    for attempt in range(4):
+        try:
+            r = compare_images(provider, cfg["base_url"], key, model, jpegs, cfg["language"])
+            return {"best_id": used[r["best"] - 1], "reason": r["reason"], "model": model}
+        except AIError as e:
+            if e.status not in (0, 408, 429, 500, 502, 503, 504, 529) or attempt == 3:
                 raise
             time.sleep(min(e.retry_after or 2 ** attempt, 20))
 

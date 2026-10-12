@@ -807,6 +807,29 @@ def ai_models(body: AiProbeIn):
     return _ai_call(aitag.probe, body.provider, body.base_url, body.api_key)
 
 
+class AiRankModeIn(BaseModel):
+    mode: str = "ask"
+
+
+@app.post("/api/ai/rank-mode")
+def ai_rank_mode(body: AiRankModeIn):
+    """What Rank / Compare do about the AI: ask every time (when the AI is set up), always use it, or never (#45)."""
+    _ai_call(aitag.set_rank_mode, body.mode)
+    return {"mode": aitag.get_rank_mode()}
+
+
+class AiPickIn(BaseModel):
+    ids: list[int]
+
+
+@app.post("/api/ai/pick")
+def ai_pick(body: AiPickIn):
+    """Which of these photos (Compare / Rank) is the best, and why, according to the AI of AI tagging (#45)."""
+    if len(set(body.ids)) < 2:
+        raise err(400, "Select at least two photos to rank")
+    return _ai_call(aitag.pick_best, list(dict.fromkeys(body.ids)))
+
+
 @app.post("/api/aitag")
 def start_aitag(body: AiTagIn):
     if not body.ids and not body.only_untagged:
@@ -1138,6 +1161,9 @@ def _apply_meta(con, ids: list[int], m: MetaIn):
     if fields:
         con.execute(f"UPDATE photos SET {', '.join(f'{k}=?' for k in fields)} WHERE id IN ({q})",
                     (*fields.values(), *ids))
+    if m.add_tags or m.remove_tag_ids:
+        ids = analysis.series_members(con, ids)           # photos of a series (similar, within 2 minutes) share their keywords (#42)
+        q = ",".join("?" * len(ids))
     for t in (m.add_tags or []):
         t = t.strip()
         if not t:
@@ -2586,6 +2612,12 @@ def analysis_groups(dup: int = analysis.DUP_DIST, sim: int = analysis.SIM_DIST, 
 def analysis_cleanup():
     con = db.connect()
     return {**analysis.cleanup_report(con), **analysis.pending_counts(con)}
+
+
+@app.get("/api/analysis/series")
+def analysis_series():
+    """Similar photos taken within 2 minutes of each other (#42): the grid marks them and Compare opens them."""
+    return {"series": analysis.find_series(db.connect())}
 
 
 @app.get("/api/analysis/bursts")

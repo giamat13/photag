@@ -107,6 +107,27 @@ try:
     cl.post("/api/time-rules", json={"rules": []})
     check("no rules: no automatic keywords are left", "day" not in names(p12) and names(late) == [], (names(p12), names(late)))
     check("keywords the user typed are untouched by all of this", "red" in names(p12), names(p12))
+
+    # ---- #42 series: similar photos taken within 2 minutes of each other are one series and share their keywords
+    base = at(10)
+
+    def add_an(sha, offset, phash):
+        con.execute("INSERT INTO photos(sha256,filename,rel_path,mime,is_video,width,height,bytes,taken_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (sha, sha + ".jpg", sha + ".jpg", "image/jpeg", 0, 10, 10, 1, base + offset))
+        pid = con.execute("SELECT id FROM photos WHERE sha256=?", (sha,)).fetchone()["id"]
+        con.execute("INSERT INTO photo_analysis(photo_id, phash, score, eyes_closed) VALUES(?,?,?,0)", (pid, phash, 50))
+        con.commit()
+        return pid
+
+    s1, s2, s4, s3 = add_an("s1", 0, 0), add_an("s2", 60, 0), add_an("s4", 100, -1), add_an("s3", 600, 0)
+    series = cl.get("/api/analysis/series").json()["series"]
+    check("two similar photos a minute apart are one series; a different one and a similar one 10 minutes later are not",
+          len(series) == 1 and sorted(series[0]["members"]) == sorted([s1, s2]), series)
+    patch({"ids": [s1], "add_tags": ["sunset"]})
+    check("a keyword added to one photo of the series is on the other too", names(s2) == ["sunset"] and names(s1) == ["sunset"], (names(s1), names(s2)))
+    check("...and not on photos outside the series", names(s3) == [] and names(s4) == [], (names(s3), names(s4)))
+    patch({"ids": [s2], "remove_tag_ids": [tag_id("sunset")]})
+    check("a keyword removed from one photo of the series goes from the other too", names(s1) == [] and names(s2) == [], (names(s1), names(s2)))
 finally:
     srv.terminate()
 sys.exit(0 if all(res) else 1)

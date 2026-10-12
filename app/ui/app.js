@@ -328,6 +328,7 @@ async function reloadAll(){
   await Promise.all([loadCatalog(), loadSide()]);
   renderCatalog();                       // the side lists may have been drawn before the photos arrived (On This Day and the counts come from them)
   await fetchSource();
+  loadSeries();
 }
 
 // ---------- rendering: everything ----------
@@ -415,9 +416,9 @@ function fillCell(c, p, i){
   const r=p.rating||0;
   const stars = [1,2,3,4,5].map(n=>`<b data-r="${n}" class="${n<=r?'':'off'}">${n<=r?'★':'•'}</b>`).join('');
   const bx = (G.cw - c._w)/2, by = S.cell==='xp' ? G.cw*.22 + (G.cw*.58 - c._h)/2 : G.cw*.15 + (G.cw*.65 - c._h)/2;
-  const stack = S.stackBursts && S.bursts && S.bursts.get(p.id);
+  const stack = S.bursts && S.bursts.get(p.id);
   const badges = [p.has_kw && I('kw'), p.edited && I('dev'), p.score!=null && `<em class="scb ${p.score>=70?'hi':p.score>=40?'mid':'lo'}" title="${t('Quality score: {0}', [p.score])}">${p.score}</em>`,
-    stack && stack.n>1 && `<em class="scb stb" data-a="stack" title="${t('{0} photos in this burst — click to see them all', [stack.n])}">${stack.n}×</em>`].filter(Boolean);
+    stack && stack.n>1 && `<em class="scb stb" data-a="stack" title="${esc(t('{0} similar photos taken within 2 minutes: click to compare them', [stack.n]))}">${stack.n}×</em>`].filter(Boolean);
   c.querySelector('.ov').innerHTML =
     `<button class="flag ${p.flag===1?'pick':p.flag===-1?'rej':''}" data-a="flag" title="${t("Flag (P / X / U)")}">${I(p.flag===-1?'reject':'flag')}</button>
      <button class="qc ${p.quick?'on':''}" data-a="qc" title="${t("Quick Collection (B)")}">${I('dot')}</button>
@@ -451,7 +452,7 @@ $('#grid-inner').addEventListener('mousedown', e=>{
     else if(a==='qc') toggleQuick();
     else if(a==='rotl') rotateSel(-90);
     else if(a==='rotr') rotateSel(90);
-    else if(a==='stack'){ const b=S.bursts && S.bursts.get(id); if(b){ S.sel=new Set(b.members); S.act=id; onSelChange(); setView('survey'); } }
+    else if(a==='stack'){ const b=S.bursts && S.bursts.get(id); if(b){ S.sel=new Set(b.members); S.act=b.best; S.anchor=b.best; onSelChange(); setView('compare'); } }      // the series in Compare, with the score of every photo
     else if(star){ const n=+star.dataset.r, p=S.byId.get(id); setAttr({rating: p.rating===n?0:n}, targets()); }
     return;
   }
@@ -1196,16 +1197,17 @@ function renderCompare(){
   let b = CMP_CAND && CMP_FOR===a.id && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : (other ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
   CMP_CAND=b; CMP_FOR=a.id;
   // every selected photo is shown, as many as you select (#49); with one or two selected the second is the candidate (the arrows step it)
-  const cands = S.sel.size>2 ? S.list.map(p=>p.id).filter(id=>S.sel.has(id) && id!==a.id) : [b];      // up to two selected: the second is the candidate you can step with the arrows
+  const cands = S.sel.size>2 ? [...S.sel].filter(id=>id!==a.id && (S.byId.has(id) || S.base.some(x=>x.id===id))) : [b];      // up to two selected: the second is the candidate you can step with the arrows
   CMP_SHOWN = [a.id, ...cands];
   const key = [...CMP_SHOWN].sort((x,y)=>x-y).join(','); CMPR.cur = key;
   if(S.sel.size>2 && CMPR.key===key) cands.sort((x,y)=>(CMPR.byId.get(x)||{rank:99}).rank - (CMPR.byId.get(y)||{rank:99}).rank);      // the best one first, like the Rank window used to
-  const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}${CMPR.key===key && CMPR.best===p.id ? ' best' : ''}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}<div class="cmp-score" data-sc="${p.id}" title="${esc(t('The score (1-100) combines sharpness, exposure and contrast, and drops when someone has closed eyes.'))}">${cmpScoreHtml(p.id)}</div></div>`:'<div class="cmp"></div>';
+  const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}${CMPR.key===key && CMPR.best===p.id ? ' best' : ''}${CMPR.ai && CMPR.ai.key===key && CMPR.ai.best===p.id ? ' ai' : ''}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}<div class="cmp-score" data-sc="${p.id}" title="${esc(t('The score (1-100) combines sharpness, exposure and contrast, and drops when someone has closed eyes.'))}">${cmpScoreHtml(p.id)}</div></div>`:'<div class="cmp"></div>';
   const prevIds = [...$$('#v-compare .cmp')].map(c=>c.dataset.id).join(',');
   const n = cands.length+1, cols = n<=3 ? n : Math.ceil(Math.sqrt(n)), el=$('#v-compare');
   el.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`; el.style.gridTemplateRows = `repeat(${Math.ceil(n/cols)},minmax(0,1fr))`;
   $('#v-compare').innerHTML = pane(a,t('Selection'),'sel') + cands.map(id=>pane(S.byId.get(id)||S.base.find(x=>x.id===id),t('Candidate'),'')).join('');
   if([a.id,...cands].join(',')!==prevIds) cmpResetZoom(); else cmpApply();
+  if(CMPR.ai && CMPR.ai.key===key) el.insertAdjacentHTML('beforeend', cmpAiHtml());
   cmpRank(key, CMP_SHOWN);
 }
 // Rank and Compare are one screen (#43): every photo shows its score (and rank, and closed eyes); the best one is marked; with three or more
@@ -1250,6 +1252,19 @@ $('#v-compare').addEventListener('pointermove', e=>{
 });
 ['pointerup','pointercancel'].forEach(ev=>$('#v-compare').addEventListener(ev, e=>{ CMP_DRAG=null; e.target.classList?.remove('dragging'); }));
 function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; CMP_FOR=S.act; renderCompare(); }
+// #45: the AI (the provider, key and model of AI tagging) says which photo is best and why: its choice is the photo "Pick this" keeps
+function cmpAiHtml(){ const a = CMPR.ai; return `<div class="cmp-ai"><b>${t('The AI chose')}</b> · <bdi>${esc(a.model)}</bdi>: ${esc(a.reason)}</div>`; }
+async function compareAI(){
+  if(CMP_SHOWN.length<2) return;
+  const cfg = await api('/api/ai/settings');
+  if(!cfg.configured){ toast(t('The AI is not set up yet: set it up in the AI tagging settings first'), 4000); aiSettings(); return; }
+  const key = [...CMP_SHOWN].sort((x,y)=>x-y).join(','), shown = [...CMP_SHOWN];
+  toast(t('The AI is choosing…'), 2500);
+  let r; try{ r = await send('POST', '/api/ai/pick', {ids: shown}); }catch(e){ toast(e.message, 5000); return; }
+  CMPR.ai = {key, best:r.best_id, reason:r.reason, model:r.model};
+  if(S.sel.size>2){ S.act = r.best_id; S.anchor = r.best_id; onSelChange(); }
+  else { const other = shown.find(id=>id!==r.best_id); selectOnly(r.best_id); CMP_CAND = other; CMP_FOR = r.best_id; renderCompare(); renderToolbar(); }
+}
 async function comparePick(){
   const keep = S.act, others = CMP_SHOWN.filter(id=>id!==keep);
   if(keep==null || !others.length) return;
@@ -1442,7 +1457,7 @@ function renderToolbar(){
       <button class="tb-btn" data-t="surprise" title="${t('Surprise Me')} — ${t('Jump to a random photo from the current list (Shift+R)')}">${I('spark')}</button>
       <label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
-  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span>${CMP_SHOWN.length>1 ? `<button class="tb-btn" data-t="cmppick" title="${esc(t('Mark the shown photo as Pick and the other compared photos as Rejected'))}">${t('Pick this, reject the others')}</button>` : ''}<button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
+  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span>${CMP_SHOWN.length>1 ? `<button class="tb-btn" data-t="cmpai" title="${esc(t('Ask the AI which photo is best and why'))}">${I('spark')} ${t('Ask AI')}</button><button class="tb-btn" data-t="cmppick" title="${esc(t('Mark the shown photo as Pick and the other compared photos as Rejected'))}">${t('Pick this, reject the others')}</button>` : ''}<button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
   else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} photos in Survey", [num(S.sel.size)])}</span>`;
   else if(S.view==='map') h += `<button class="tb-btn ${FLY.running?'on':''}" data-t="flythrough" title="${t('Fly through these photos on the map, oldest to newest')}">${I('play')} ${t('Flythrough')}</button><span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
   else if(S.view==='timeline') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t('{0} photos', [num(S.list.length)])}</span>`;
@@ -1460,7 +1475,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='rotl') rotateSel(-90); else if(tg==='rotr') rotateSel(90);
   else if(tg==='asc'){ S.asc=!S.asc; pref.set('asc',S.asc); applyFilter(); }
   else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
-  else if(tg==='cmppick') comparePick(); else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
+  else if(tg==='cmpai') compareAI(); else if(tg==='cmppick') comparePick(); else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
   else if(tg==='rank') rankSelected(); else if(tg==='scoreall') scoreAll(); else if(tg==='surprise') surpriseMe(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
   else if(tg==='before') devBefore(); else if(tg==='viewside') devView('side'); else if(tg==='viewsplit') devView('split'); else if(tg==='crop') devCropToggle();
   else if(tg==='flythrough') mapFlythrough();
@@ -1564,11 +1579,14 @@ function renderKwList(selKws, nSel){
   selKws = selKws || el._sel || []; nSel = nSel ?? el._n ?? 0; el._sel=selKws; el._n=nSel;
   const on = new Map(selKws.map(k=>[k.id,k.n]));
   const tags = S.tags.filter(tg=>!KWF || tg.name.toLowerCase().includes(KWF));
-  el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="${t("Keyword Filter")}" value="${esc(KWF)}"><button id="kw-links" class="tb-btn" title="${esc(t('Linked keywords'))}" aria-label="${esc(t('Linked keywords'))}">=</button><button id="kw-rules" class="tb-btn" title="${esc(t('Automatic keywords by time'))}" aria-label="${esc(t('Automatic keywords by time'))}">⏰</button></div>
-    <div class="kwrows">${tags.slice(0,800).map(tg=>{ const c=on.get(tg.id)||0;
+  const rowsHtml = tags.slice(0,800).map(tg=>{ const c=on.get(tg.id)||0;
       return `<div class="row" data-kw="${tg.id}"><input type="checkbox" ${nSel&&c===nSel?'checked':''} ${nSel?'':'disabled'} data-part="${c&&c<nSel?1:0}" title="${nSel?t('Add/remove for selected photos'):''}"><span class="nm">${esc(tg.name)}</span>
         <button class="go" data-go="${tg.id}" title="${t("Show photos with this keyword")}">${I('next')}</button><span class="n">${num(tg.n)}</span></div>`; }).join('')
-      || ("<div class=\"hint\">"+t("No keywords yet. Tag photos or run Smart Tagging.")+"</div>")}</div>`;
+      || ("<div class=\"hint\">"+t("No keywords yet. Tag photos or run Smart Tagging.")+"</div>");
+  const box = el.querySelector('.kwrows');
+  if(box && el.querySelector('#kw-filter')) box.innerHTML = rowsHtml;      // typing in the filter only redraws the rows: the box you type in is never replaced (a key typed at that moment was lost)
+  else el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="${t("Keyword Filter")}" value="${esc(KWF)}"><button id="kw-links" class="tb-btn" title="${esc(t('Linked keywords'))}" aria-label="${esc(t('Linked keywords'))}">=</button><button id="kw-rules" class="tb-btn" title="${esc(t('Automatic keywords by time'))}" aria-label="${esc(t('Automatic keywords by time'))}">⏰</button></div>
+    <div class="kwrows">${rowsHtml}</div>`;
   $$('#p-kwlist [data-part="1"]').forEach(c=>c.indeterminate=true);
 }
 $('#p-kwlist').addEventListener('input', debounce(e=>{ if(e.target.id==='kw-filter'){ KWF=e.target.value.toLowerCase(); renderKwList(); const f=$('#kw-filter'); f.focus(); f.setSelectionRange(f.value.length, f.value.length); } }, 150));
@@ -2693,13 +2711,18 @@ function cycleLights(){ S.lights=(S.lights+1)%3; document.body.classList.toggle(
 async function toggleStackBursts(){
   S.stackBursts = !S.stackBursts;
   pref.set('stackBursts', S.stackBursts);
-  if(S.stackBursts && !S.bursts){
-    const r = await api('/api/analysis/bursts');
-    const m = new Map();
-    for(const b of r.bursts) for(const id of b.members) m.set(id, {best:b.best, n:b.members.length, members:b.members});
-    S.bursts = m;
-  }
+  if(!S.bursts) await loadSeries();
   applyFilter();
+}
+// series (#42): similar photos taken within 2 minutes of each other: a badge on the thumbnails, a click compares them, and they share their keywords
+async function loadSeries(){
+  try{
+    const r = await api('/api/analysis/series');
+    const m = new Map();
+    for(const b of r.series) for(const id of b.members) m.set(id, {best:b.best, n:b.members.length, members:b.members});
+    S.bursts = m;
+  }catch{ return; }
+  if(S.stackBursts) applyFilter(); else refreshCells();
 }
 // ---------- themes (the engine is themes.js; this is the picker) ----------
 function toggleTheme(){                    // View > Light Theme: the Light theme, and back to the last dark one
@@ -2923,11 +2946,12 @@ async function aiSettings(){
       <label class="check" style="padding:0"><input type="radio" name="ai-m" value="manual"> ${t('Choose manually')}</label>
       <div class="frow"><input type="text" id="ai-model" list="ai-models" dir="ltr" autocomplete="off" spellcheck="false" placeholder="model-id"><datalist id="ai-models"></datalist><button id="ai-load">${t('Load model list')}</button></div></div>
     <label class="fld"><span>${t('Keyword language')}</span><select id="ai-lang">${LANGS.map(([c,n])=>`<option value="${c}" ${c===s.language?'selected':''}>${n}</option>`).join('')}</select></label>
+    <label class="fld"><span>${t('Choosing the best photo with the AI (Rank and Compare)')}</span><select id="ai-rank-mode"><option value="ask">${t('Ask every time')}</option><option value="always">${t('Always use the AI')}</option><option value="off">${t('Never')}</option></select></label>
     <div class="hint" id="ai-status" style="min-height:18px;padding:0"></div>
   </div><div class="mf"><button id="ai-close">${t('Close')}</button><button id="ai-save" class="primary">${t('Save')}</button></div>`);
   const q = id => $('#'+id), radio = v => $(`input[name=ai-m][value=${v}]`);
   const status = (msg, cls='') => { q('ai-status').textContent = msg; q('ai-status').className = 'hint ' + cls; };
-  radio(s.model ? 'manual' : 'auto').checked = true; q('ai-model').value = s.model;
+  radio(s.model ? 'manual' : 'auto').checked = true; q('ai-model').value = s.model; q('ai-rank-mode').value = s.rank_mode || 'off';
   const refresh = ()=>{
     const p = q('ai-provider').value, info = s.providers[p] || {};
     q('ai-base-row').classList.toggle('hidden', p!=='custom');
@@ -2953,6 +2977,7 @@ async function aiSettings(){
     if(manual && !model) return status(t('Type a model ID, or choose Automatic'), 'err');
     try{
       await send('POST', '/api/ai/settings', {...probe(), model: manual ? model : '', language: q('ai-lang').value});
+      await send('POST', '/api/ai/rank-mode', {mode: q('ai-rank-mode').value});
       closeModal(); toast(t('Settings saved'));
     }catch(e){ status(e.message, 'err'); }
   };
@@ -4624,6 +4649,13 @@ async function rankSelected(){
   cmpSetRank([...shown].sort((x,y)=>x-y).join(','), {ranked: r.ranked.filter(x=>shown.includes(x.id)), eyes_checked: r.eyes_checked});
   S.sel = new Set(shown); S.act = best; S.anchor = best; CMP_CAND = null; CMP_FOR = null;
   onSelChange(); setView('compare');                       // Compare, with the score of every photo and the best one first and marked
+  let useAI = false;                                       // #45: the AI's choice instead of the algorithm's, when it is set up: ask every time, always, or never (AI tagging settings)
+  try{
+    const cfg = await api('/api/ai/settings');
+    if(cfg.configured && cfg.rank_mode==='always') useAI = true;
+    else if(cfg.configured && cfg.rank_mode==='ask') useAI = await confirmBox(t('Use the AI to choose the best photo?'), t('A small thumbnail of each photo will be sent to the AI provider you set up for AI tagging.'), t('Use the AI'));
+  }catch{}
+  if(useAI) await compareAI();
 }
 function previewPhoto(id){
   const o = document.createElement('div'); o.className='pv-over'; o.innerHTML = `<img src="${mediaUrl(id)}" alt="">`;
@@ -5210,6 +5242,7 @@ splashSay(t('Starting photag…'));
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
   try{ S.startView = (await api('/api/start-view')).view; }catch{ S.startView = 'grid'; }     // saved in the catalog: the window forgets its own storage when it closes
+  loadSeries();
   setView(S.startView==='timeline' ? 'timeline' : 'grid');       // the Timeline as the opening view when the user chose it (View menu)
   splashEnd();
   setTimeout(reportNews, 7000); setInterval(reportNews, 2*3600*1000);

@@ -26,6 +26,8 @@ TIME_WINDOW = 600             # seconds: shots this close in time belong to one 
 PLACE_M = 150                 # metres: shots this close belong to one place
 BURST_WINDOW = 2              # seconds: a camera's burst/continuous-shooting cadence
 BURST_SIM_DIST = 10           # hash bits that may differ between one burst photo and the next
+SERIES_WINDOW = 120            # seconds: a photo taken within 2 minutes of the one before it, and similar to it, is the same shot taken again (#42)
+SERIES_DIST = SIM_DIST         # hash bits that may differ inside such a series
 BURST_MIN = 3                 # a run shorter than this isn't worth collapsing into a stack
 EAR_CLOSED = 0.2              # eye height / width below this = closed
 LEFT_EYE = [35, 41, 40, 42, 39, 37, 33, 36]       # InsightFace 2d106 landmark indices
@@ -406,7 +408,7 @@ def find_groups(con, dup_dist: int = DUP_DIST, sim_dist: int = SIM_DIST, window:
     return out
 
 
-def find_bursts(con) -> list[dict]:
+def find_bursts(con, window: int = BURST_WINDOW, dist: int = BURST_SIM_DIST, min_size: int = BURST_MIN) -> list[dict]:
     """Rapid-fire sequences (a camera's burst/continuous-shooting mode): runs of BURST_MIN+ photos taken
     back to back, each within BURST_WINDOW seconds and BURST_SIM_DIST hash bits of the one before it --
     so a slow pan across a scene still chains together even though the first and last frame differ a lot.
@@ -420,7 +422,7 @@ def find_bursts(con) -> list[dict]:
     chain: list = []
 
     def flush():
-        if len(chain) >= BURST_MIN:
+        if len(chain) >= min_size:
             best = max(chain, key=lambda r: (r["score"] or 0, 0 if r["eyes_closed"] else 1,
                                              (r["width"] or 0) * (r["height"] or 0), r["bytes"] or 0))
             out.append({"best": best["id"], "members": [r["id"] for r in chain]})
@@ -428,14 +430,29 @@ def find_bursts(con) -> list[dict]:
     for r in rows:
         if chain:
             prev = chain[-1]
-            same_run = (r["taken_at"] - prev["taken_at"] <= BURST_WINDOW
-                        and hamming(r["phash"] & 0xFFFFFFFFFFFFFFFF, prev["phash"] & 0xFFFFFFFFFFFFFFFF) <= BURST_SIM_DIST)
+            same_run = (r["taken_at"] - prev["taken_at"] <= window
+                        and hamming(r["phash"] & 0xFFFFFFFFFFFFFFFF, prev["phash"] & 0xFFFFFFFFFFFFFFFF) <= dist)
             if not same_run:
                 flush()
                 chain = []
         chain.append(r)
     flush()
     return out
+
+
+def find_series(con) -> list[dict]:
+    """Series (#42): two or more similar photos, each taken within SERIES_WINDOW seconds of the one before it -- the same thing photographed
+    several times. They are shown as a series, can be compared, and share their keywords."""
+    return find_bursts(con, SERIES_WINDOW, SERIES_DIST, 2)
+
+
+def series_members(con, ids) -> list[int]:
+    """ids and every photo that is in a series with one of them."""
+    out = set(ids)
+    for g in find_series(con):
+        if out.intersection(g["members"]):
+            out.update(g["members"])
+    return sorted(out)
 
 
 # ------------------------------------------------------------------ library cleanup report
