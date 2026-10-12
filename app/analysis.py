@@ -243,6 +243,30 @@ def run_eyes(con, ids: list[int], progress=None, cancelled=lambda: False) -> int
     return done
 
 
+def run_pending(con, limit: int = 8, skip: set | None = None) -> int:
+    """A few photos that have no (current) analysis, analysed on the spot: new photos get their score on their own (#48), in the background.
+    Unreadable files and files that are only in the cloud are put in `skip`, so they are not tried again and again."""
+    skip = skip if skip is not None else set()
+    done = 0
+    for r in _todo(con):
+        if done >= limit:
+            break
+        if r["id"] in skip:
+            continue
+        if cloud.is_online_only(PATHS.media / r["rel_path"]):
+            skip.add(r["id"])
+            continue
+        try:
+            m = analyze_file(PATHS.media / r["rel_path"], r["filename"] or "", r["width"] or 0, r["height"] or 0)
+        except Exception:
+            skip.add(r["id"])
+            continue
+        _store(con, r["id"], r["sha256"], m)
+        done += 1
+    con.commit()
+    return done
+
+
 def run_analysis(eyes: bool, progress):
     """Analyse every photo that has no (current) analysis; then, when the face model is installed, check eyes."""
     con = db.init_db()

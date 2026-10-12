@@ -4189,6 +4189,7 @@ const MENUS = [
     [t('New Smart Collection...'), '', ()=>smartDialog()],
     sep,
     [t('Analyse Photo Quality'), '', analyseLibrary],
+    [t('Score New Photos Automatically'), '', toggleAutoScore, null, ()=>S.autoScore],
     [t('Find Duplicates and Similar Photos...'), '', openDups],
     [t('Library Cleanup...'), '', openCleanup],
     [t('Stop analysis'), '', ()=>send('POST','/api/analysis/cancel')],
@@ -4636,7 +4637,12 @@ async function withAnalysis(go){
 // ---------- score all (#48): analyse every photo that has no score yet; the scores show on the thumbnails and the list is sorted by them ----------
 async function scoreAll(){
   const show = ()=>{ S.sort='quality'; S.asc=false; pref.set('sort', S.sort); pref.set('asc', S.asc); applyFilter(); renderToolbar(); toast(t('Every photo has a score now: the list is sorted by Quality Score'), 4500); };
-  await analyseLibrary(show);
+  AFTER_JOB.analysis = show;                                       // Score All always scores everything again, also when every photo already has a score
+  await runJob('/api/analysis/run', 'analysis', t('Photo analysis'), {eyes:true, redo:true});
+}
+async function toggleAutoScore(){
+  const on = !S.autoScore;
+  try{ await send('POST', '/api/auto-score', {enabled:on}); S.autoScore = on; toast(on ? t('New photos will get their score automatically') : t('New photos will not be scored automatically'), 2500); }catch(e){ toast(e.message); }
 }
 // ---------- rank the selected photos ----------
 async function rankSelected(){
@@ -5241,6 +5247,7 @@ splashSay(t('Starting photag…'));
   splashSay(t('Preparing the view…'));
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
+  try{ S.autoScore = (await api('/api/auto-score')).enabled; }catch{ S.autoScore = true; }
   try{ S.startView = (await api('/api/start-view')).view; }catch{ S.startView = 'grid'; }     // saved in the catalog: the window forgets its own storage when it closes
   loadSeries();
   setView(S.startView==='timeline' ? 'timeline' : 'grid');       // the Timeline as the opening view when the user chose it (View menu)

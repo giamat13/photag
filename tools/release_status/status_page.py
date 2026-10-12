@@ -467,7 +467,7 @@ function render(){
   if(!D) return;
   if(D.idle){ D.published = true; D.percent = 100; }       // nothing is being released: show it as finished, with no countdown
   const st = D.published ? 'done' : D.failed ? 'fail' : 'run';
-  document.title = (D.published ? '✓ ' : D.failed ? '✕ ' : Math.floor(D.percent) + '% · ') + D.target.replace('v','') + ' · photag';
+  document.title = (D.published ? '✓ ' : D.failed ? '✕ ' : D.percent.toFixed(2) + '% · ') + D.target.replace('v','') + ' · photag';
   setText($('title'), D.next ? 'השחרור הבא (הקודם, ' + D.target.replace('v','') + ', כבר באוויר)' : 'שחרור גרסה ' + D.target.replace('v',''));
   $('ringfg').style.stroke = D.failed ? 'var(--bad)' : 'var(--ok)';
   $('nowtile').className = 'tile now-tile ' + (D.published ? 'done' : D.failed ? 'fail' : '');
@@ -538,6 +538,7 @@ function animPct(){
   else if(target > PCT.shown) PCT.shown += (target - PCT.shown) * 0.2;
   const v = D.published ? 100 : PCT.shown;
   setText($('ringpct'), v.toFixed(2) + '%');
+  if(!D.published && !D.failed) document.title = v.toFixed(2) + '% · ' + D.target.replace('v','') + ' · photag';      // the tab shows the same hundredths of a percent as the ring
   const off = (RING * (1 - v / 100)).toFixed(2);
   if($('ringfg').style.strokeDashoffset !== off) $('ringfg').style.strokeDashoffset = off;
 }

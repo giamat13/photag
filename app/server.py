@@ -118,6 +118,26 @@ def _exif_loop():
         time.sleep(float(os.environ.get("PHOTAG_EXIF_TICK", 1)))
 
 
+def _score_loop():
+    """New photos get their quality score on their own (#48): a few at a time, in the background, never while another task runs and never on
+    battery. The measurement is the program's own (sharpness, exposure, contrast): no AI. Preferences / the Library menu switch it off."""
+    time.sleep(float(os.environ.get("PHOTAG_SCORE_DELAY", 45)))
+    skip: set = set()
+    while True:
+        wait = float(os.environ.get("PHOTAG_SCORE_IDLE", 120))
+        try:
+            if power.should_wait():
+                time.sleep(float(os.environ.get("PHOTAG_BATTERY_WAIT", 300)))
+                continue
+            con = db.connect()
+            if db.get_setting(con, "auto_score", "1") == "1" and not _other_job_running():
+                if analysis.run_pending(con, 8, skip):
+                    wait = float(os.environ.get("PHOTAG_SCORE_TICK", 2))     # more may be waiting: carry on soon
+        except Exception:
+            pass
+        time.sleep(wait)
+
+
 def _edit_migrate_loop():
     """Photos edited by an older version keep a pristine copy next to a re-saved working file. In the background, a few at a
     time and never while another task runs, put the original back in the library and keep only the settings (render.py)."""
@@ -165,6 +185,7 @@ def _start_trash_purge():
     threading.Thread(target=_ref_loop, daemon=True).start()
     threading.Thread(target=_exif_loop, daemon=True).start()
     threading.Thread(target=_edit_migrate_loop, daemon=True).start()
+    threading.Thread(target=_score_loop, daemon=True).start()
     threading.Thread(target=_auto_import_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
@@ -2573,12 +2594,33 @@ def analysis_status():
 
 class AnalysisIn(BaseModel):
     eyes: bool = True
+    redo: bool = False          # score every photo again, not only the ones without a score (Score All)
 
 
 @app.post("/api/analysis/run")
 def analysis_run(body: AnalysisIn):
+    if body.redo:                                         # every photo counts as not analysed (its old score stays until the new one is made)
+        con = db.connect()
+        con.execute("UPDATE photo_analysis SET version=0")
+        con.commit()
     _start("analysis", analysis.run_analysis, body.eyes)
     return {"ok": True}
+
+
+class AutoScoreIn(BaseModel):
+    enabled: bool = True
+
+
+@app.get("/api/auto-score")
+def auto_score_get():
+    return {"enabled": db.get_setting(db.connect(), "auto_score", "1") == "1"}
+
+
+@app.post("/api/auto-score")
+def auto_score_set(b: AutoScoreIn):
+    """New photos get their quality score by themselves (no AI: the same measurement as Score All); this switches it off or on (#48)."""
+    db.set_setting(db.connect(), "auto_score", "1" if b.enabled else "0")
+    return {"enabled": b.enabled}
 
 
 @app.post("/api/analysis/cancel")
