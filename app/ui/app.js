@@ -1194,18 +1194,18 @@ function renderCompare(){
   const other = [...S.sel].find(id=>id!==a.id);
   let b = CMP_CAND && CMP_FOR===a.id && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : (other ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
   CMP_CAND=b; CMP_FOR=a.id;
-  // more than one candidate (issue #49): the first is the one stepped with the arrows; the others are the other selected photos, then the
-  // photos that follow it in the list. Up to 3 candidates (4 photos in all), set with the + / - buttons.
-  const nc = clamp(+pref.get('cmpN',1)||1, 1, 3), cands=[b];
-  for(const id of S.sel){ if(cands.length>=nc) break; if(id!==a.id && !cands.includes(id) && S.idx.has(id)) cands.push(id); }
-  for(let k=1, i=S.idx.get(b)??S.idx.get(a.id); cands.length<nc && k<S.list.length; k++){ const id=S.list[(i+k)%S.list.length].id; if(id!==a.id && !cands.includes(id)) cands.push(id); }
+  // every selected photo is shown, as many as you select (#49); with a single photo selected the candidate is the one picked above
+  const cands=[b];
+  for(const id of S.list.map(p=>p.id)){ if(S.sel.has(id) && id!==a.id && id!==b) cands.push(id); }
+  if(cands.length>1 && !S.sel.has(b)) cands.shift();
   const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}</div>`:'<div class="cmp"></div>';
   const prevIds = [...$$('#v-compare .cmp')].map(c=>c.dataset.id).join(',');
-  $('#v-compare').dataset.n = cands.length;
+  const n = cands.length+1, cols = n<=3 ? n : Math.ceil(Math.sqrt(n)), el=$('#v-compare');
+  el.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`; el.style.gridTemplateRows = `repeat(${Math.ceil(n/cols)},minmax(0,1fr))`;
   $('#v-compare').innerHTML = pane(a,t('Selection'),'sel') + cands.map(id=>pane(S.byId.get(id)||S.base.find(x=>x.id===id),t('Candidate'),'')).join('');
   if([a.id,...cands].join(',')!==prevIds) cmpResetZoom(); else cmpApply();
 }
-$('#v-compare').addEventListener('click', e=>{ if(CMPZ.scale>1.001) return; const c=e.target.closest('.cmp:not(.sel)'); if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; CMP_FOR=S.act; renderCompare(); } });
+$('#v-compare').addEventListener('click', e=>{ if(CMPZ.scale>1.001) return; const c=e.target.closest('.cmp:not(.sel)'); if(c && S.sel.size>1){ S.act=+c.dataset.id; onSelChange(); return; } if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; CMP_FOR=S.act; renderCompare(); } });
 $('#v-compare').addEventListener('wheel', e=>{
   if(!e.target.closest('.cmp')) return;
   e.preventDefault();
@@ -1226,7 +1226,6 @@ $('#v-compare').addEventListener('pointermove', e=>{
 });
 ['pointerup','pointercancel'].forEach(ev=>$('#v-compare').addEventListener(ev, e=>{ CMP_DRAG=null; e.target.classList?.remove('dragging'); }));
 function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; CMP_FOR=S.act; renderCompare(); }
-function compareMore(d){ pref.set('cmpN', clamp((+pref.get('cmpN',1)||1)+d, 1, 3)); renderCompare(); if(typeof renderToolbar==="function") renderToolbar(); }
 function compareSwap(){ const a=S.act, b=CMP_CAND; if(b==null) return; selectOnly(b); CMP_CAND=a; CMP_FOR=S.act; renderCompare(); }
 let SURPRISE_LAST=null;
 function surpriseMe(){
@@ -1412,7 +1411,7 @@ function renderToolbar(){
       <button class="tb-btn" data-t="surprise" title="${t('Surprise Me')} — ${t('Jump to a random photo from the current list (Shift+R)')}">${I('spark')}</button>
       <label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
-  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="cmp-less" title="${esc(t('Compare fewer photos'))}">−</button><button class="tb-btn" data-t="cmp-more" title="${esc(t('Compare more photos'))}">+</button><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
+  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
   else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} photos in Survey", [num(S.sel.size)])}</span>`;
   else if(S.view==='map') h += `<button class="tb-btn ${FLY.running?'on':''}" data-t="flythrough" title="${t('Fly through these photos on the map, oldest to newest')}">${I('play')} ${t('Flythrough')}</button><span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
   else if(S.view==='timeline') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t('{0} photos', [num(S.list.length)])}</span>`;
@@ -1430,7 +1429,7 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='rotl') rotateSel(-90); else if(tg==='rotr') rotateSel(90);
   else if(tg==='asc'){ S.asc=!S.asc; pref.set('asc',S.asc); applyFilter(); }
   else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
-  else if(tg==='cmp-more') compareMore(1); else if(tg==='cmp-less') compareMore(-1); else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
+  else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
   else if(tg==='rank') rankSelected(); else if(tg==='surprise') surpriseMe(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
   else if(tg==='before') devBefore(); else if(tg==='viewside') devView('side'); else if(tg==='viewsplit') devView('split'); else if(tg==='crop') devCropToggle();
   else if(tg==='flythrough') mapFlythrough();
