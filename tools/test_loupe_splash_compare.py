@@ -191,8 +191,8 @@ try:
         pg.evaluate("setView('grid')")
         pg.evaluate("albumFromFolder(%s)" % json.dumps(folder if folder is not None else ""))
         pg.wait_for_function("S.src.kind === 'album'", timeout=15000)
-        check("'Make a collection from this folder' creates a collection and opens it with the photos of that folder",
-              pg.evaluate("S.albums.some(a => a.id === S.src.id && a.n > 0)") and pg.evaluate("S.list.length") > 0, folder)
+        pg.wait_for_function("S.albums.some(a => a.id === S.src.id && a.n > 0) && S.list.length > 0", timeout=15000)      # the side list is reloaded a moment after the album is made
+        check("'Make a collection from this folder' creates a collection and opens it with the photos of that folder", True, folder)
         pg.evaluate("setSource({kind:'all', name:'All'})")
         # ---- issue #41: open with the Timeline when the user chose it (saved in the catalog: the window forgets its own storage when it closes)
         pg.evaluate("send('POST', '/api/start-view', {view: 'timeline'})")
