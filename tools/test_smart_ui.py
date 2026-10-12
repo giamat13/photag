@@ -131,17 +131,18 @@ try:
         pg.click(".cell >> nth=3", modifiers=["Control"])
         sel = pg.evaluate("[...S.sel]")
         pg.click("[data-t=rank]")
-        pg.wait_for_selector(".rk-row .rk")
-        cards = pg.locator(".rk-row .rk")
-        check("the ranking shows both photos, the best marked", cards.count() == 2 and "Best" in cards.nth(0).inner_text(), cards.count())
+        pg.wait_for_function("S.view === 'compare' && document.querySelectorAll('#v-compare .cmp').length === 2 && [...document.querySelectorAll('#v-compare .cmp-score')].every(e => e.textContent.includes('/ 100'))", timeout=60000)
+        check("the ranking is the Compare screen: both photos with a score, the best marked", pg.locator("#v-compare .cmp.best").count() == 1 and "Best" in pg.locator("#v-compare .cmp.best .cmp-score").inner_text(), pg.locator("#v-compare .cmp").count())
         shot("ranking")
-        scores = [int(x) for x in pg.locator(".rk .scv").all_inner_texts()]
+        scores = [int(x) for x in pg.locator("#v-compare .cmp-score .scv").all_inner_texts()]
         check("the best has the higher score", scores[0] >= scores[1], scores)
-        best_id = int(pg.evaluate("document.querySelector('.rk.best').dataset.id"))
-        pg.click("#rk-flag")
-        pg.wait_for_timeout(800)
+        best_id = int(pg.evaluate("document.querySelector('#v-compare .cmp.best').dataset.id"))
+        pg.click("[data-t=cmppick]")
+        pg.wait_for_function(f"S.byId.get({best_id}).flag === 1 && [...S.sel].filter(id => id !== {best_id}).every(id => S.byId.get(id).flag === -1)", timeout=10000)
         fl = {p["id"]: p["flag"] for p in call("GET", "/api/photos?limit=999")}
-        check("'Pick the best, reject the rest' flags them", fl[best_id] == 1 and all(fl[i] == -1 for i in sel if i != best_id), fl)
+        check("'Pick this, reject the others' flags them", fl[best_id] == 1 and all(fl[i] == -1 for i in sel if i != best_id), fl)
+        pg.evaluate("setView('grid')")
+        pg.wait_for_function("!document.querySelector('#v-grid').classList.contains('hidden')", timeout=5000)
 
         # ---- duplicates and similar
         menu("Library", "Find Duplicates and Similar Photos")

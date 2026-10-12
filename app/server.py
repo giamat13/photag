@@ -323,9 +323,45 @@ def set_trash_days(body: TrashDaysIn):
     return {"days": days, "deleted": n}
 
 
+# ---- the view photag opens with (#41): saved in the catalog, not in the window (the window forgets its own storage when it closes) ----
+class StartViewIn(BaseModel):
+    view: str = "grid"
+
+
+@app.get("/api/start-view")
+def start_view_get():
+    v = db.get_setting(db.connect(), "start_view", "grid")
+    return {"view": v if v in ("grid", "timeline") else "grid"}
+
+
+@app.post("/api/start-view")
+def start_view_set(b: StartViewIn):
+    if b.view not in ("grid", "timeline"):
+        raise err(400, "Unknown view")
+    db.set_setting(db.connect(), "start_view", b.view)
+    return {"view": b.view}
+
+
 # ---- status / settings -----------------------------------------------------
+def _code_is_good():
+    """Whoever asks for /api/status gets a server that is up: the downloaded code (codeboot.py) works. codeboot counts every start and puts the previous
+    code back after three starts that were never confirmed -- but a window opened while photag is already running never starts a server, so it never
+    confirmed anything: three such windows rolled the code back while the server was still running from that folder, and the windows showed
+    {"detail":"Not Found"} and the program came back as a very old version (#50). Every launch asks for /api/status, so it is confirmed here."""
+    try:
+        import codeboot
+        a = codeboot.active()
+        if a is not None:
+            f = a / ".boots"
+            if f.read_text().strip() != "0":
+                f.write_text("0")
+    except Exception:
+        pass
+
+
 @app.get("/api/status")
 def status():
+    _code_is_good()
     con = db.init_db()
     c = lambda q: con.execute(q).fetchone()[0]
     return {

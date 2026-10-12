@@ -1176,7 +1176,8 @@ $('#loupe-media').addEventListener('mousedown', e=>{   // drag to pan when zoome
 });
 $('#v-loupe').addEventListener('dblclick', e=>{ if(e.target.closest('.vp')) return; if(!$('#loupe-media').classList.contains('zoom')) setView('grid'); });
 
-let CMP_CAND=null, CMP_FOR=null;
+let CMP_CAND=null, CMP_FOR=null, CMP_SHOWN=[];
+const CMPR = {key:'', cur:'', want:'', byId:new Map(), best:null, eyes:true};      // the ranking of the photos on screen: score, rank, closed eyes (#43)
 // synchronized pan/zoom: wheel on either image zooms both the same way, and dragging either pans both together
 const CMPZ = {scale:1, x:0, y:0};
 function cmpApply(){
@@ -1196,12 +1197,37 @@ function renderCompare(){
   CMP_CAND=b; CMP_FOR=a.id;
   // every selected photo is shown, as many as you select (#49); with one or two selected the second is the candidate (the arrows step it)
   const cands = S.sel.size>2 ? S.list.map(p=>p.id).filter(id=>S.sel.has(id) && id!==a.id) : [b];      // up to two selected: the second is the candidate you can step with the arrows
-  const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}</div>`:'<div class="cmp"></div>';
+  CMP_SHOWN = [a.id, ...cands];
+  const key = [...CMP_SHOWN].sort((x,y)=>x-y).join(','); CMPR.cur = key;
+  if(S.sel.size>2 && CMPR.key===key) cands.sort((x,y)=>(CMPR.byId.get(x)||{rank:99}).rank - (CMPR.byId.get(y)||{rank:99}).rank);      // the best one first, like the Rank window used to
+  const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}${CMPR.key===key && CMPR.best===p.id ? ' best' : ''}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}<div class="cmp-score" data-sc="${p.id}" title="${esc(t('The score (1-100) combines sharpness, exposure and contrast, and drops when someone has closed eyes.'))}">${cmpScoreHtml(p.id)}</div></div>`:'<div class="cmp"></div>';
   const prevIds = [...$$('#v-compare .cmp')].map(c=>c.dataset.id).join(',');
   const n = cands.length+1, cols = n<=3 ? n : Math.ceil(Math.sqrt(n)), el=$('#v-compare');
   el.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`; el.style.gridTemplateRows = `repeat(${Math.ceil(n/cols)},minmax(0,1fr))`;
   $('#v-compare').innerHTML = pane(a,t('Selection'),'sel') + cands.map(id=>pane(S.byId.get(id)||S.base.find(x=>x.id===id),t('Candidate'),'')).join('');
   if([a.id,...cands].join(',')!==prevIds) cmpResetZoom(); else cmpApply();
+  cmpRank(key, CMP_SHOWN);
+}
+// Rank and Compare are one screen (#43): every photo shows its score (and rank, and closed eyes); the best one is marked; with three or more
+// photos the best comes first. The score comes from /api/analysis/rank (it analyses the photos that were not analysed yet).
+function cmpScoreHtml(id){
+  if(CMPR.key!==CMPR.cur) return '';
+  const x = CMPR.byId.get(id); if(!x) return '';
+  return `<div>${CMPR.best===id ? '<b>★ ' + t('Best') + '</b> · ' : ''}#${x.rank} · <b class="scv ${scoreCls(x.score)}">${x.score}</b> / 100</div><div class="bar"><i class="${scoreCls(x.score)}" style="width:${x.score}%"></i></div>`
+    + `<div class="sub">${x.eyes_closed ? `<span class="warn">${t('Closed eyes: {0}', [x.eyes_closed])}</span> · ` : ''}${t('Sharpness {0}', [ltr(String(x.sharp))])}</div>`;
+}
+function cmpSetRank(key, r){ CMPR.key = key; CMPR.byId = new Map(r.ranked.map(x=>[x.id, x])); CMPR.best = r.ranked[0] ? r.ranked[0].id : null; CMPR.eyes = r.eyes_checked; }
+function cmpDecorate(){
+  $$('#v-compare .cmp').forEach(c=>{ const id=+c.dataset.id; c.classList.toggle('best', CMPR.key===CMPR.cur && CMPR.best===id); const sc=c.querySelector('.cmp-score'); if(sc) sc.innerHTML = cmpScoreHtml(id); });
+}
+async function cmpRank(key, ids){
+  if(CMPR.key===key || ids.length<2 || ids.length>12) { cmpDecorate(); return; }
+  const vids = ids.filter(id=>!(S.byId.get(id)||{}).is_video); if(vids.length<2) return;
+  CMPR.want = key;
+  let r; try{ r = await send('POST', '/api/analysis/rank', {ids: vids}); }catch{ return; }
+  if(CMPR.want!==key || S.view!=='compare' || !r.ranked || r.ranked.length<2) return;
+  cmpSetRank(key, r);
+  if(S.sel.size>2) renderCompare(); else cmpDecorate();
 }
 $('#v-compare').addEventListener('click', e=>{ if(CMPZ.scale>1.001) return; const c=e.target.closest('.cmp:not(.sel)'); if(c && S.sel.size>1){ S.act=+c.dataset.id; onSelChange(); return; } if(c){ const a=S.act; selectOnly(+c.dataset.id); CMP_CAND=a; CMP_FOR=S.act; renderCompare(); } });
 $('#v-compare').addEventListener('wheel', e=>{
@@ -1225,7 +1251,7 @@ $('#v-compare').addEventListener('pointermove', e=>{
 ['pointerup','pointercancel'].forEach(ev=>$('#v-compare').addEventListener(ev, e=>{ CMP_DRAG=null; e.target.classList?.remove('dragging'); }));
 function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; CMP_FOR=S.act; renderCompare(); }
 async function comparePick(){
-  const keep = S.act, others = [...S.sel].filter(id=>id!==keep);
+  const keep = S.act, others = CMP_SHOWN.filter(id=>id!==keep);
   if(keep==null || !others.length) return;
   await setAttr({flag:1}, [keep]); await setAttr({flag:-1}, others);
   toast(t('Marked the best photo as Pick and the other {0} as Rejected', [num(others.length)]));
@@ -1416,7 +1442,7 @@ function renderToolbar(){
       <button class="tb-btn" data-t="surprise" title="${t('Surprise Me')} — ${t('Jump to a random photo from the current list (Shift+R)')}">${I('spark')}</button>
       <label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
-  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span>${S.sel.size>1 ? `<button class="tb-btn" data-t="cmppick" title="${esc(t('Mark the shown photo as Pick and the other compared photos as Rejected'))}">${t('Pick this, reject the others')}</button>` : ''}<button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
+  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span>${CMP_SHOWN.length>1 ? `<button class="tb-btn" data-t="cmppick" title="${esc(t('Mark the shown photo as Pick and the other compared photos as Rejected'))}">${t('Pick this, reject the others')}</button>` : ''}<button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
   else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} photos in Survey", [num(S.sel.size)])}</span>`;
   else if(S.view==='map') h += `<button class="tb-btn ${FLY.running?'on':''}" data-t="flythrough" title="${t('Fly through these photos on the map, oldest to newest')}">${I('play')} ${t('Flythrough')}</button><span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
   else if(S.view==='timeline') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t('{0} photos', [num(S.list.length)])}</span>`;
@@ -4200,7 +4226,7 @@ const MENUS = [
     sep,
     [t('Cycle Grid Cell Style'), 'J', cycleCellStyle],
     [t('Stack Bursts'), '', toggleStackBursts, null, ()=>S.stackBursts],
-    [t('Open with the Timeline'), '', ()=>{ pref.set('startTimeline', !pref.get('startTimeline', false)); toast(pref.get('startTimeline', false) ? t('photag will open with the Timeline') : t('photag will open with the Grid'), 2500); }, null, ()=>pref.get('startTimeline', false)],
+    [t('Open with the Timeline'), '', async ()=>{ const v = S.startView==='timeline' ? 'grid' : 'timeline'; try{ await send('POST', '/api/start-view', {view:v}); S.startView = v; toast(v==='timeline' ? t('photag will open with the Timeline') : t('photag will open with the Grid'), 2500); }catch(e){ toast(e.message); } }, null, ()=>S.startView==='timeline'],
     [t('Loupe Info'), 'I', ()=>{ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }, null, ()=>S.loupeInfo],
     sep,
     [t('Hide/Show Side Panels'), 'Tab', toggleSides],
@@ -4593,27 +4619,11 @@ async function rankSelected(){
   if(ids.length<2){ toast(t('Select at least two photos to rank')); return; }
   toast(t('Scoring the selected photos…'), 1500);
   const r = await send('POST', '/api/analysis/rank', {ids});
-  const rk = r.ranked; if(rk.length<2){ toast(t('Could not read these photos')); return; }
-  let best = rk[0];                       // the photo the buttons act on: the highest score, or the one the user clicked instead (#43)
-  const card = x => { const p = S.byId.get(x.id) || {filename:''};
-    return `<div class="rk ${x.id===best.id?'best':''}" data-id="${x.id}"><div class="rk-n">${x.id===best.id?'★ '+(x.rank===1?t('Best'):t('Your pick')):'#'+x.rank}</div>
-      <img src="${thumbUrl(x.id)}" alt=""><div class="rk-bar"><i class="${scoreCls(x.score)}" style="width:${x.score}%"></i></div>
-      <div class="rk-s"><b class="scv ${scoreCls(x.score)}">${x.score}</b> / 100</div>
-      <div class="rk-m"><bdi>${esc(p.filename)}</bdi></div>
-      <div class="rk-m">${x.eyes_closed ? `<span class="warn">${t('Closed eyes: {0}', [x.eyes_closed])}</span> · ` : ''}${t('Sharpness {0}', [ltr(String(x.sharp))])}</div></div>`; };
-  modal(`<h3>${t('Ranking of the selected photos')}</h3><div class="mb">
-    <div class="rk-row">${rk.map(card).join('')}</div>
-    <div class="hint" style="padding:0">${t('The score (1-100) combines sharpness, exposure and contrast, and drops when someone has closed eyes.')}${r.eyes_checked ? '' : ' ' + t('Closed eyes were not checked: run Face Detection once to enable that.')} ${t('Click a photo to choose it instead; double-click to enlarge it.')}</div>
-  </div><div class="mf"><button id="rk-close">${t('Close')}</button><span class="spacer"></span>
-    <button id="rk-cmp">${t('Compare')}</button><button id="rk-sel">${t('Select the best only')}</button><button class="primary" id="rk-flag">${t('Pick the best, reject the rest')}</button></div>`);
-  $('#rk-close').onclick = closeModal;
-  $('#rk-sel').onclick = ()=>{ closeModal(); selectOnly(best.id); scrollToAct(); };
-  $('#rk-flag').onclick = async ()=>{ closeModal();
-    await setAttr({flag:1}, [best.id]); await setAttr({flag:-1}, rk.filter(x=>x.id!==best.id).map(x=>x.id));
-    toast(t('Marked the best photo as Pick and the other {0} as Rejected', [num(rk.length-1)])); };
-  $('#rk-cmp').onclick = ()=>{ closeModal(); S.sel = new Set(rk.map(x=>x.id)); S.act = best.id; S.anchor = best.id; onSelChange(); setView('compare'); };      // Rank and Compare in one flow
-  $('.rk-row').onclick = e=>{ const c=e.target.closest('.rk'); if(!c) return; best = rk.find(x=>x.id===+c.dataset.id); $('.rk-row').innerHTML = rk.map(card).join(''); };
-  $('.rk-row').ondblclick = e=>{ const c=e.target.closest('.rk'); if(c) previewPhoto(+c.dataset.id); };
+  if(!r.ranked || r.ranked.length<2){ toast(t('Could not read these photos')); return; }
+  const best = r.ranked[0].id, shown = r.ranked.slice(0, ids.length > 12 ? 12 : ids.length).map(x=>x.id);
+  cmpSetRank([...shown].sort((x,y)=>x-y).join(','), {ranked: r.ranked.filter(x=>shown.includes(x.id)), eyes_checked: r.eyes_checked});
+  S.sel = new Set(shown); S.act = best; S.anchor = best; CMP_CAND = null; CMP_FOR = null;
+  onSelChange(); setView('compare');                       // Compare, with the score of every photo and the best one first and marked
 }
 function previewPhoto(id){
   const o = document.createElement('div'); o.className='pv-over'; o.innerHTML = `<img src="${mediaUrl(id)}" alt="">`;
@@ -5199,7 +5209,8 @@ splashSay(t('Starting photag…'));
   splashSay(t('Preparing the view…'));
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
-  setView(pref.get('startTimeline', false) ? 'timeline' : 'grid');       // the Timeline as the opening view when the user chose it (View menu)
+  try{ S.startView = (await api('/api/start-view')).view; }catch{ S.startView = 'grid'; }     // saved in the catalog: the window forgets its own storage when it closes
+  setView(S.startView==='timeline' ? 'timeline' : 'grid');       // the Timeline as the opening view when the user chose it (View menu)
   splashEnd();
   setTimeout(reportNews, 7000); setInterval(reportNews, 2*3600*1000);
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);

@@ -104,6 +104,19 @@ try:
     check("a confirmed start resets the counter", out == "0", out)
     check("headless runs (the backup task) use the code but are not counted as starts",
           run_boot(install, count=False)[1] == "9.1.0" and (install / "code" / ".boots").read_text() == "0")
+    # ---- #50: a window of a photag that is already open never confirms a start by itself; the server confirms when /api/status is asked
+    from app import server as app_server
+    codeboot._active = install / "code"
+    try:
+        (install / "code" / ".boots").write_text("2")
+        app_server._code_is_good()
+        check("asking /api/status counts as a good start: the counter goes back to 0 (three windows no longer roll the code back)",
+              (install / "code" / ".boots").read_text() == "0")
+        codeboot._active = None
+        app_server._code_is_good()                                  # running from the built-in code: nothing to do, no error
+        check("with no downloaded code in use it does nothing", True)
+    finally:
+        codeboot._active = None
 
     # ---- things that must be refused, leaving the installed code as it was
     before = (install / "code" / "manifest.json").read_text()

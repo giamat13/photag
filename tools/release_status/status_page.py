@@ -177,7 +177,10 @@ def collect():
     dirty = len([l for l in git("status", "--porcelain").splitlines() if l.strip()])
     head = git("rev-parse", "HEAD")
     remote = git("ls-remote", "origin", "refs/heads/main").split("\t")[0] if time.time() - Cache.gh_at >= GITHUB_EVERY else Cache.gh.get("remote", "")
-    pushed = bool(remote) and remote == head and dirty == 0      # files that are not saved yet are not on GitHub: the run of the last release is not this work's run
+    # this version is on GitHub when the remote is the commit that is checked out AND that commit holds this version's number: the run of the last
+    # release (an older version) is not this work's run, and edits made while this version is building (a fix for the next one) change nothing here
+    remote_ver = re.search(r'__version__\s*=\s*"([^"]+)"', git("show", f"{remote}:app/version.py")) if (remote and remote == head) else None
+    pushed = bool(remote) and remote == head and bool(remote_ver) and ("v" + remote_ver.group(1)) == target
 
     # ---- GitHub
     gh = github(remote if pushed else "")
@@ -239,15 +242,15 @@ def collect():
                 newest = max(newest, (ROOT / rel).stat().st_mtime)
             except OSError:
                 pass
-        stale = newest > prog["finished"] + 1
+        stale = (not pushed) and newest > prog["finished"] + 1       # once this version is on GitHub, edits for the next one do not make its tests old
     local_eff = "todo" if (stale and local_state == "done") else local_state
     if jobs and local_eff == "fail":          # the release is already building on GitHub, which runs the same tests and publishes nothing if they fail: the old local failure is not a failure of this release
         local_eff = "done"
     stages = [
         {"name": "בודקים שהכול עובד אצלך במחשב", "plain": "מריצים אוטומטית עשרות בדיקות על התוכנה כדי לוודא ששום דבר לא נשבר.", "state": local_eff,
          "note": local_now or ("הורצו לפני השינויים האחרונים — צריך להריץ שוב" if (stale and local_state == "done") else "")},
-        {"name": "שומרים את השינויים", "plain": "שומרים את העבודה בהיסטוריה של הפרויקט (זה נקרא commit).", "state": "done" if dirty == 0 else "todo",
-         "note": "" if dirty == 0 else f"{dirty} קבצים עוד לא נשמרו"},
+        {"name": "שומרים את השינויים", "plain": "שומרים את העבודה בהיסטוריה של הפרויקט (זה נקרא commit).", "state": "done" if (dirty == 0 or pushed) else "todo",
+         "note": "" if (dirty == 0 or pushed) else f"{dirty} קבצים עוד לא נשמרו"},
         {"name": "מעלים ל-GitHub", "plain": "שולחים את הקוד לאינטרנט כדי שאפשר יהיה לבנות ממנו גרסה (זה נקרא push).", "state": "done" if pushed else "todo", "note": ""},
         {"name": "מבקשים מ-GitHub לבנות גרסה", "plain": "לוחצים על \"שחרר\": GitHub מתחיל לעבוד לבד.", "state": "done" if cur else "todo", "note": ""},
         {"name": "GitHub בודק ובונה", "plain": "מריצים את הבדיקות שוב על שרתים של GitHub, ובונים את כל קובצי ההתקנה.",

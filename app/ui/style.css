@@ -312,6 +312,14 @@ body.mod-library .dev-only,body.mod-develop .lib-only{display:none!important}
 .v-compare.zoomed .cmp img.dragging{cursor:grabbing}
 .cmp .lab{position:absolute;inset-block-start:7px;inset-inline-start:12px;color:var(--st3);font-size:12px;z-index:1}
 .cmp.sel .lab{color:#fff}
+.cmp.best{outline:2px solid #f9c74f;outline-offset:-2px}
+.cmp-score{position:absolute;inset-inline-start:10px;inset-block-end:10px;min-width:150px;max-width:70%;background:rgba(0,0,0,.62);color:#fff;border-radius:8px;padding:5px 10px;font-size:12px;z-index:1;pointer-events:none}
+.cmp-score:empty{display:none}
+.cmp-score .bar{height:5px;background:rgba(255,255,255,.25);border-radius:3px;margin:3px 0}
+.cmp-score .bar i{display:block;height:100%;border-radius:3px}
+.cmp-score .bar i.hi{background:#43a047}.cmp-score .bar i.mid{background:#f9a825}.cmp-score .bar i.lo{background:#e53935}
+.cmp-score .sub{opacity:.85;font-size:11px}
+.cmp-score .warn{color:#ffb74d}
 .cmp-zoom{position:absolute;inset-block-end:8px;inset-inline-end:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;z-index:1;pointer-events:none}
 .v-survey{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:10px;padding:14px;overflow:auto}
 .sv{position:relative;display:flex;align-items:center;justify-content:center;padding:8px;background:var(--cell);border:1px solid #2c2c2c}
