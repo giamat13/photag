@@ -107,6 +107,17 @@ try:
     check("an edit changes the title (prefix kept) and the text", got["title"] == "[Suggestion] Add a dark theme" and got["body"].startswith("A dark theme please"), got)
     check("...and the technical details and the 'Sent from' line stay", "Technical details" in got["body"] and "Sent from photag" in got["body"], got["body"][-200:])
 
+    # issue #53: a suggestion can be turned into a problem report and back
+    call("POST", "/api/report/edit", {"number": a["number"], "title": "Add a dark theme", "description": "A dark theme please", "kind": "problem"})
+    got = ISSUES[a["number"]]
+    check("changing the type to 'problem' changes the title prefix and the 'Sent from' line", got["title"] == "[Report] Add a dark theme" and "(problem)" in got["body"] and "(feature suggestion)" not in got["body"], got)
+    check("...the list shows the new type", {x["number"]: x["kind"] for x in call("GET", "/api/report/mine")["items"]}[a["number"]] == "problem")
+    call("POST", "/api/report/edit", {"number": a["number"], "title": "Add a dark theme", "description": "A dark theme please", "kind": "feature"})
+    got = ISSUES[a["number"]]
+    check("...and back to a suggestion", got["title"] == "[Suggestion] Add a dark theme" and "(feature suggestion)" in got["body"], got)
+    call("POST", "/api/report/edit", {"number": a["number"], "title": "Add a dark theme", "description": "A dark theme please"})
+    check("an edit without a type keeps it", ISSUES[a["number"]]["title"].startswith("[Suggestion] "))
+
     call("POST", "/api/report/state", {"number": b["number"], "closed": True})
     check("withdrawing closes the issue on GitHub", ISSUES[b["number"]]["state"] == "closed")
     check("...and the list shows it as closed", {x["number"]: x["state"] for x in call("GET", "/api/report/mine")["items"]}[b["number"]] == "closed")

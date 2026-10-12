@@ -1605,6 +1605,7 @@ class ReportEditIn(BaseModel):
     number: int
     title: str = ""
     description: str = ""
+    kind: str = ""
 
 
 @app.post("/api/report/edit")
@@ -1612,7 +1613,7 @@ def report_edit(b: ReportEditIn):
     if len(b.title.strip()) < report.MIN_TEXT:
         raise err(400, "Please write a title")
     try:
-        report.edit_issue(b.number, b.title, b.description[:report.MAX_DESC])
+        report.edit_issue(b.number, b.title, b.description[:report.MAX_DESC], b.kind)
     except report.ReportError:
         raise err(503, "The report could not be sent")
     return {"ok": True}

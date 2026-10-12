@@ -427,19 +427,31 @@ def _mine(number: int) -> dict:
     raise ReportError("not your report")                  # the bot's token never edits an issue this installation did not create
 
 
-def edit_issue(number: int, title: str, description: str) -> None:
-    """Change the title and the text the user wrote; the technical details below it stay."""
+def edit_issue(number: int, title: str, description: str, kind: str = "") -> None:
+    """Change the title and the text the user wrote; the technical details below it stay.
+    kind "problem" / "feature" turns a report into a suggestion and back (#53); "" keeps it."""
     x = _mine(number)
     g = _call("GET", f"/issues/{number}")
-    kind = x.get("kind", "problem")
+    old_kind = x.get("kind", "problem")
+    kind = kind if kind in ("problem", "feature") else old_kind
     new_title = ("[Suggestion] " if kind == "feature" else "[Report] ") + re.sub(r"\s+", " ", title.strip())[:200]
-    new_body = redact(description.strip()) + split_body(g.get("body") or "")[1]
+    tail = split_body(g.get("body") or "")[1]
+    if kind != old_kind:
+        tail = tail.replace("(feature suggestion)", "(problem)") if kind == "problem" else tail.replace("(problem)", "(feature suggestion)")
+    new_body = redact(description.strip()) + tail
     _call("PATCH", f"/issues/{number}", {"title": new_title, "body": new_body}, auth=True)
+    if kind != old_kind:                                  # the label "enhancement" follows the kind; the bot may not be allowed to label
+        labels = [n for n in ((l.get("name") if isinstance(l, dict) else l) for l in g.get("labels", [])) if n and n != "enhancement"]
+        try:
+            _call("PATCH", f"/issues/{number}", {"labels": labels + (["enhancement"] if kind == "feature" else [])}, auth=True)
+        except ReportError:
+            pass
     x["title"] = title.strip()[:120]
     d = _load_issues()
     for y in d["issues"]:
         if y["number"] == number:
             y["title"] = x["title"]
+            y["kind"] = kind
     _save_issues(d)
 
 
