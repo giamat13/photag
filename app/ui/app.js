@@ -738,6 +738,15 @@ $('#left').addEventListener('drop', async e=>{
   const aid=+r.dataset.src.split(':')[1];
   await send('POST', `/api/album/${aid}/add`, {ids}); toast(`${t("{0} photos added to “{1}”", [num(ids.length), esc(S.albums.find(a=>a.id===aid)?.name)])}`); loadSide();
 });
+// #54: a folder of the library as a collection (an album with the photos of that folder in it; the photos stay where they are)
+async function albumFromFolder(name){
+  const label = name || t('(root)');
+  let rows; try{ rows = await api('/api/photos?' + new URLSearchParams({limit:10000000, folder:name})); }catch(e){ toast(e.message); return; }
+  const ids = rows.map(r=>r.id);
+  if(!ids.length){ toast(t('This folder has no photos')); return; }
+  try{ const r = await send('POST', '/api/albums', {name:label, ids}); OPEN_SETS.add('album'); loadSide(); setSource({kind:'album', id:r.id, name:label}); toast(t('Collection “{0}” created from the folder: {1} photos', [label, num(ids.length)]), 3500); }
+  catch(e){ toast(e.message, 4000); }
+}
 async function newCollection(){
   const ids=[...S.sel];
   const n=await promptBox(t('Create Collection'), '', ids.length?`<label class="check" style="padding:0"><input type="checkbox" id="nc-sel" checked> ${t("Include the selected photos ({0})", [num(ids.length)])}</label>`:'');
@@ -2947,11 +2956,12 @@ async function aiSettings(){
       <div class="frow"><input type="text" id="ai-model" list="ai-models" dir="ltr" autocomplete="off" spellcheck="false" placeholder="model-id"><datalist id="ai-models"></datalist><button id="ai-load">${t('Load model list')}</button></div></div>
     <label class="fld"><span>${t('Keyword language')}</span><select id="ai-lang">${LANGS.map(([c,n])=>`<option value="${c}" ${c===s.language?'selected':''}>${n}</option>`).join('')}</select></label>
     <label class="fld"><span>${t('Choosing the best photo with the AI (Rank and Compare)')}</span><select id="ai-rank-mode"><option value="ask">${t('Ask every time')}</option><option value="always">${t('Always use the AI')}</option><option value="off">${t('Never')}</option></select></label>
+    <label class="fld"><span>${t('Who scores new photos automatically')}</span><select id="ai-score-mode"><option value="program">${t('The program (its own measurement, no AI)')}</option><option value="ai">${t('The AI (a thumbnail of every new photo is sent to the provider)')}</option></select></label>
     <div class="hint" id="ai-status" style="min-height:18px;padding:0"></div>
   </div><div class="mf"><button id="ai-close">${t('Close')}</button><button id="ai-save" class="primary">${t('Save')}</button></div>`);
   const q = id => $('#'+id), radio = v => $(`input[name=ai-m][value=${v}]`);
   const status = (msg, cls='') => { q('ai-status').textContent = msg; q('ai-status').className = 'hint ' + cls; };
-  radio(s.model ? 'manual' : 'auto').checked = true; q('ai-model').value = s.model; q('ai-rank-mode').value = s.rank_mode || 'off';
+  radio(s.model ? 'manual' : 'auto').checked = true; q('ai-model').value = s.model; q('ai-rank-mode').value = s.rank_mode || 'off'; api('/api/auto-score').then(a=>{ q('ai-score-mode').value = a.mode; }).catch(()=>{});
   const refresh = ()=>{
     const p = q('ai-provider').value, info = s.providers[p] || {};
     q('ai-base-row').classList.toggle('hidden', p!=='custom');
@@ -2978,6 +2988,7 @@ async function aiSettings(){
     try{
       await send('POST', '/api/ai/settings', {...probe(), model: manual ? model : '', language: q('ai-lang').value});
       await send('POST', '/api/ai/rank-mode', {mode: q('ai-rank-mode').value});
+      await send('POST', '/api/auto-score', {mode: q('ai-score-mode').value});
       closeModal(); toast(t('Settings saved'));
     }catch(e){ status(e.message, 'err'); }
   };
@@ -4354,6 +4365,8 @@ function albumMenuItems(a){
   ];
 }
 document.addEventListener('contextmenu', e=>{
+  const fr = e.target.closest('[data-src^="folder:"]');
+  if(fr){ e.preventDefault(); const fname = fr.dataset.src.slice(7); openContextMenu(e.clientX, e.clientY, [[t('Make a collection from this folder'), '', ()=>albumFromFolder(fname)]]); return; }
   const ar = e.target.closest('[data-src^="album:"]');
   if(ar){ e.preventDefault(); const a=S.albums.find(x=>'album:'+x.id===ar.dataset.src); if(a) openContextMenu(e.clientX, e.clientY, albumMenuItems(a)); return; }
   const c = e.target.closest('.cell, .fc');

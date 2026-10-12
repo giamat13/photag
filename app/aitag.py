@@ -309,8 +309,13 @@ def parse_pick(text: str, n: int) -> dict:
 
 
 def compare_images(provider: str, base_url: str, key: str, model: str, jpegs: list[bytes], language: str) -> dict:
+    return parse_pick(_vision(provider, base_url, key, model, jpegs, _compare_prompt(len(jpegs), language)), len(jpegs))
+
+
+def _vision(provider: str, base_url: str, key: str, model: str, jpegs: list[bytes], text: str) -> str:
+    """One request with these photos (numbered) and a question; the text of the answer."""
     kind, base, h = PROVIDERS[provider]["kind"], _base(provider, base_url), _headers(PROVIDERS[provider]["kind"], key)
-    text, b64s = _compare_prompt(len(jpegs), language), [base64.b64encode(j).decode() for j in jpegs]
+    b64s = [base64.b64encode(j).decode() for j in jpegs]
     if kind == "anthropic":
         content = []
         for i, b in enumerate(b64s, 1):
@@ -334,7 +339,42 @@ def compare_images(provider: str, base_url: str, key: str, model: str, jpegs: li
         r = _http("POST", f"{base}/chat/completions", h, {"model": model, "messages": [{"role": "user", "content": content + [{"type": "text", "text": text}]}]}, secret=key)
         c = ((r.get("choices") or [{}])[0].get("message") or {}).get("content", "")
         out = c if isinstance(c, str) else "".join(p.get("text", "") for p in c)
-    return parse_pick(out, len(jpegs))
+    return out
+
+
+_MODEL_CACHE: dict = {}
+
+
+def rate_prompt() -> str:
+    return ("Rate the quality of this photo for a personal photo library from 1 to 100: sharpness, exposure, composition, expressions (eyes open, natural smiles) "
+            'and overall appeal. Answer with ONLY a JSON object of the form {"score": <a whole number from 1 to 100>}.')
+
+
+def parse_score(text: str) -> int | None:
+    m = re.search(r'"?score"?\s*[:=]\s*(\d{1,3})', text) or re.search(r"\b(\d{1,3})\b", text)
+    n = int(m.group(1)) if m else 0
+    return n if 1 <= n <= 100 else None
+
+
+def rate_photo(row) -> int | None:
+    """The AI of AI tagging gives one photo a score from 1 to 100 (a thumbnail is sent). None when the AI is not set up or does not answer."""
+    cfg = get_settings()
+    provider = cfg["provider"]
+    key = _key(provider)
+    if provider != "custom" and not key:
+        return None
+    ck = (provider, cfg["model"], cfg["base_url"])
+    if ck not in _MODEL_CACHE:
+        _MODEL_CACHE[ck] = cfg["model"] or pick_auto(provider, list_models(provider, key, cfg["base_url"]))
+    model = _MODEL_CACHE[ck]
+    if not model:
+        return None
+    tp = images.thumb_path(row["sha256"])
+    if not tp.exists():
+        images.make_thumb(PATHS.media / row["rel_path"], row["sha256"])
+    if not tp.exists():
+        return None
+    return parse_score(_vision(provider, cfg["base_url"], key, model, [tp.read_bytes()], rate_prompt()))
 
 
 def pick_best(ids: list[int]) -> dict:

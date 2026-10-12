@@ -186,6 +186,14 @@ try:
         pg.wait_for_function("S.view === 'compare' && document.querySelectorAll('#v-compare .cmp').length === 3", timeout=60000)
         check("clicking the badge compares the whole series", pg.evaluate("S.act") == ids[0])
         pg.evaluate("setView('grid')")
+        # ---- issue #54: a folder of the library becomes a collection
+        folder = pg.evaluate("S.folders.folders.length ? S.folders.folders[0].name : null")
+        pg.evaluate("setView('grid')")
+        pg.evaluate("albumFromFolder(%s)" % json.dumps(folder if folder is not None else ""))
+        pg.wait_for_function("S.src.kind === 'album'", timeout=15000)
+        check("'Make a collection from this folder' creates a collection and opens it with the photos of that folder",
+              pg.evaluate("S.albums.some(a => a.id === S.src.id && a.n > 0)") and pg.evaluate("S.list.length") > 0, folder)
+        pg.evaluate("setSource({kind:'all', name:'All'})")
         # ---- issue #41: open with the Timeline when the user chose it (saved in the catalog: the window forgets its own storage when it closes)
         pg.evaluate("send('POST', '/api/start-view', {view: 'timeline'})")
         pg.wait_for_function("fetch('/api/start-view').then(r => r.json()).then(j => j.view === 'timeline')", timeout=5000)

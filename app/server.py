@@ -131,7 +131,9 @@ def _score_loop():
                 continue
             con = db.connect()
             if db.get_setting(con, "auto_score", "1") == "1" and not _other_job_running():
-                if analysis.run_pending(con, 8, skip):
+                state = _auto_score_state(con)
+                rate = aitag.rate_photo if (state["mode"] == "ai" and state["ai_ready"]) else None      # the AI only when it is chosen AND set up
+                if analysis.run_pending(con, 8, skip, rate):
                     wait = float(os.environ.get("PHOTAG_SCORE_TICK", 2))     # more may be waiting: carry on soon
         except Exception:
             pass
@@ -2608,19 +2610,33 @@ def analysis_run(body: AnalysisIn):
 
 
 class AutoScoreIn(BaseModel):
-    enabled: bool = True
+    enabled: bool | None = None
+    mode: str | None = None          # "program" (default: the program's own measurement) or "ai" (the AI of AI tagging scores every new photo)
+
+
+def _auto_score_state(con) -> dict:
+    mode = db.get_setting(con, "auto_score_mode", "program")
+    return {"enabled": db.get_setting(con, "auto_score", "1") == "1", "mode": mode if mode in ("program", "ai") else "program",
+            "ai_ready": aitag.get_settings()["configured"]}
 
 
 @app.get("/api/auto-score")
 def auto_score_get():
-    return {"enabled": db.get_setting(db.connect(), "auto_score", "1") == "1"}
+    return _auto_score_state(db.connect())
 
 
 @app.post("/api/auto-score")
 def auto_score_set(b: AutoScoreIn):
-    """New photos get their quality score by themselves (no AI: the same measurement as Score All); this switches it off or on (#48)."""
-    db.set_setting(db.connect(), "auto_score", "1" if b.enabled else "0")
-    return {"enabled": b.enabled}
+    """New photos get their quality score by themselves; this switches it off or on, and chooses who scores: the program's own measurement
+    (the default, no AI) or the AI of AI tagging (a thumbnail of each new photo goes to the provider) (#48)."""
+    con = db.connect()
+    if b.mode is not None:
+        if b.mode not in ("program", "ai"):
+            raise err(400, "Invalid setting: {error}", error=b.mode)
+        db.set_setting(con, "auto_score_mode", b.mode)
+    if b.enabled is not None:
+        db.set_setting(con, "auto_score", "1" if b.enabled else "0")
+    return _auto_score_state(con)
 
 
 @app.post("/api/analysis/cancel")

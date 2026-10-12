@@ -209,13 +209,13 @@ def pending_counts(con) -> dict:
 def _store(con, pid, sha, m):
     con.execute(
         f"INSERT INTO photo_analysis(photo_id,sha,version,{','.join(COLS)}) VALUES(?,?,?,{','.join('?' * len(COLS))}) "
-        f"ON CONFLICT(photo_id) DO UPDATE SET sha=excluded.sha, version=excluded.version, faces_n=NULL, eyes_closed=NULL, "
+        f"ON CONFLICT(photo_id) DO UPDATE SET sha=excluded.sha, version=excluded.version, faces_n=NULL, eyes_closed=NULL, ai_score=NULL, "
         + ",".join(f"{c}=excluded.{c}" for c in COLS), (pid, sha, ANALYSIS_VERSION, *[m[c] for c in COLS]))
 
 
 def _rescore(con, pid):
     r = con.execute("SELECT a.*, p.width, p.height FROM photo_analysis a JOIN photos p ON p.id=a.photo_id WHERE a.photo_id=?", (pid,)).fetchone()
-    if r:
+    if r and r["ai_score"] is None:                    # a score the AI gave stays as it is
         con.execute("UPDATE photo_analysis SET score=? WHERE photo_id=?",
                     (quality_score(dict(r), r["eyes_closed"], r["width"] or 0, r["height"] or 0), pid))
 
@@ -243,9 +243,10 @@ def run_eyes(con, ids: list[int], progress=None, cancelled=lambda: False) -> int
     return done
 
 
-def run_pending(con, limit: int = 8, skip: set | None = None) -> int:
+def run_pending(con, limit: int = 8, skip: set | None = None, rate=None) -> int:
     """A few photos that have no (current) analysis, analysed on the spot: new photos get their score on their own (#48), in the background.
-    Unreadable files and files that are only in the cloud are put in `skip`, so they are not tried again and again."""
+    Unreadable files and files that are only in the cloud are put in `skip`, so they are not tried again and again.
+    rate(row) -> 1..100 or None: the AI's score ("score new photos with the AI"); when it fails the program's own score stays."""
     skip = skip if skip is not None else set()
     done = 0
     for r in _todo(con):
@@ -263,6 +264,14 @@ def run_pending(con, limit: int = 8, skip: set | None = None) -> int:
             continue
         _store(con, r["id"], r["sha256"], m)
         done += 1
+        if rate is not None:
+            try:
+                ai = rate(r)
+            except Exception:
+                rate = None                             # the AI does not answer now: the rest of this round keeps the program's own scores
+                ai = None
+            if ai:
+                con.execute("UPDATE photo_analysis SET score=?, ai_score=? WHERE photo_id=?", (ai, ai, r["id"]))
     con.commit()
     return done
 

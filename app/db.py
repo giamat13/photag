@@ -149,6 +149,10 @@ def init_db():
             con.execute(f"ALTER TABLE photos ADD COLUMN {col}")
         except sqlite3.OperationalError:
             pass  # ponytail: column already exists on upgraded DBs
+    try:
+        con.execute("ALTER TABLE photo_analysis ADD COLUMN ai_score INTEGER")      # the score the AI gave (when "score new photos with the AI" is on); NULL = the program's own score counts
+    except sqlite3.OperationalError:
+        pass
     con.execute("CREATE INDEX IF NOT EXISTS ix_photos_camera ON photos(camera_model)")
     try:
         con.execute("ALTER TABLE albums ADD COLUMN is_trip INTEGER DEFAULT 0")   # photag x triplan, step 1

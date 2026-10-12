@@ -108,6 +108,7 @@ def state_of(o):
 
 
 class Cache:
+    prog = None            # the last good content of the local tests' progress file
     gh_at = 0.0
     gh = {}
     hist = {}              # the jobs (with their steps) of the last successful release run: how long each part usually takes
@@ -148,8 +149,11 @@ def collect():
     # ---- local tests
     try:
         prog = json.loads(PROGRESS.read_text("utf-8"))
+        Cache.prog = prog
     except (OSError, ValueError):
-        prog = None
+        prog = Cache.prog if PROGRESS.exists() else None          # the file was being replaced at that moment (Windows): keep the last good state, do not blink the tests away
+        if prog is None:
+            Cache.prog = None
     local, local_left, local_state, local_now = [], 0.0, "todo", ""
     if prog:
         lefts, running = [], []
