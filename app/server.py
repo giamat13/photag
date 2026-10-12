@@ -817,9 +817,40 @@ def people():
         "FROM people pe ORDER BY tag_photos DESC, face_photos DESC").fetchall()]
 
 
+# ---- automatic keywords by hour (#40) ----
+class TimeRulesIn(BaseModel):
+    rules: list[dict] = []
+
+
+@app.get("/api/time-rules")
+def time_rules_get():
+    return {"rules": db.time_rules(db.connect())}
+
+
+@app.post("/api/time-rules")
+def time_rules_set(b: TimeRulesIn):
+    con = db.connect()
+    clean = []
+    for r in b.rules[:20]:
+        try:
+            a, c, tag = int(r.get("from")), int(r.get("to")), str(r.get("tag", "")).strip()
+        except (TypeError, ValueError):
+            raise err(400, "Fill in the hours (0-23) and the keyword of every rule")
+        if not tag or not (0 <= a <= 23 and 0 <= c <= 23):
+            raise err(400, "Fill in the hours (0-23) and the keyword of every rule")
+        clean.append({"from": a, "to": c, "tag": tag[:60]})
+    con.execute("DELETE FROM photo_tags WHERE source='rule'")        # a changed or removed rule takes its old keywords away
+    db.set_setting(con, "time_rules", json.dumps(clean))
+    db.apply_time_rules(con)
+    con.commit()
+    return {"rules": clean}
+
+
 @app.get("/api/tags")
 def tags():
     con = db.connect()
+    db.apply_time_rules(con)                     # photos that came in since the last time get their keywords by hour
+    con.commit()
     return [dict(r) for r in con.execute(
         "SELECT t.id, t.name, COUNT(*) n FROM tags t JOIN photo_tags pt ON pt.tag_id=t.id "
         "GROUP BY t.id ORDER BY n DESC").fetchall()]
@@ -1079,9 +1110,59 @@ def _apply_meta(con, ids: list[int], m: MetaIn):
         tid = con.execute("SELECT id FROM tags WHERE name=?", (t,)).fetchone()["id"]
         con.executemany("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'manual')",
                         [(pid, tid) for pid in ids])
+    if m.add_tags:
+        db.apply_tag_links(con, ids)                      # linked keywords (#39): the photo gets the other one too
     for tid in (m.remove_tag_ids or []):
-        con.execute(f"DELETE FROM photo_tags WHERE tag_id=? AND photo_id IN ({q})", (tid, *ids))
+        for t2 in db.linked_ids(con, [tid]):              # ...and loses it together with it
+            con.execute(f"DELETE FROM photo_tags WHERE tag_id=? AND photo_id IN ({q})", (t2, *ids))
     con.commit()
+
+
+# ---- linked keywords (#39) ----
+def _tag_links(con):
+    return [{"a": r["a"], "a_name": r["an"], "b": r["b"], "b_name": r["bn"]} for r in con.execute(
+        "SELECT l.a, l.b, ta.name an, tb.name bn FROM tag_links l JOIN tags ta ON ta.id=l.a JOIN tags tb ON tb.id=l.b ORDER BY ta.name, tb.name").fetchall()]
+
+
+@app.get("/api/tag-links")
+def tag_links_list():
+    return {"links": _tag_links(db.connect())}
+
+
+class TagLinkIn(BaseModel):
+    a: str = ""
+    b: str = ""
+
+
+def _tag_id(con, name: str) -> int:
+    r = con.execute("SELECT id FROM tags WHERE name=? COLLATE NOCASE ORDER BY id LIMIT 1", (name,)).fetchone()
+    return r["id"] if r else con.execute("INSERT INTO tags(name) VALUES(?)", (name,)).lastrowid
+
+
+@app.post("/api/tag-links")
+def tag_links_add(b: TagLinkIn):
+    a_name, b_name = b.a.strip(), b.b.strip()
+    if not a_name or not b_name or a_name.lower() == b_name.lower():
+        raise err(400, "Choose two different keywords")
+    con = db.connect()
+    a, c = sorted((_tag_id(con, a_name), _tag_id(con, b_name)))
+    con.execute("INSERT OR IGNORE INTO tag_links(a,b) VALUES(?,?)", (a, c))
+    db.apply_tag_links(con)                               # photos that already have one of them get the other now
+    con.commit()
+    return {"links": _tag_links(con)}
+
+
+class TagLinkDelIn(BaseModel):
+    a: int
+    b: int
+
+
+@app.post("/api/tag-links/delete")
+def tag_links_delete(b: TagLinkDelIn):
+    con = db.connect()
+    con.execute("DELETE FROM tag_links WHERE (a=? AND b=?) OR (a=? AND b=?)", (b.a, b.b, b.b, b.a))
+    con.commit()
+    return {"links": _tag_links(con)}
 
 
 @app.patch("/api/photo/{pid}")

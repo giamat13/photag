@@ -312,6 +312,7 @@ def _set_ai_tags(con, pid: int, names: list[str]):
         else:
             tid = con.execute("INSERT INTO tags(name) VALUES(?)", (n,)).lastrowid
         con.execute("INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) VALUES(?,?, 'ai')", (pid, tid))
+    db.apply_tag_links(con, [pid])                       # linked keywords (#39)
 
 
 def run_aitag(ids: list[int] | None, only_untagged: bool, progress):

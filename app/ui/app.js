@@ -1224,6 +1224,12 @@ $('#v-compare').addEventListener('pointermove', e=>{
 });
 ['pointerup','pointercancel'].forEach(ev=>$('#v-compare').addEventListener(ev, e=>{ CMP_DRAG=null; e.target.classList?.remove('dragging'); }));
 function compareStep(d){ const i=S.idx.get(CMP_CAND??S.act); if(i==null) return; let j=i; do{ j=(j+d+S.list.length)%S.list.length; }while(S.list[j].id===S.act && S.list.length>1); CMP_CAND=S.list[j].id; CMP_FOR=S.act; renderCompare(); }
+async function comparePick(){
+  const keep = S.act, others = [...S.sel].filter(id=>id!==keep);
+  if(keep==null || !others.length) return;
+  await setAttr({flag:1}, [keep]); await setAttr({flag:-1}, others);
+  toast(t('Marked the best photo as Pick and the other {0} as Rejected', [num(others.length)]));
+}
 function compareSwap(){ const a=S.act, b=CMP_CAND; if(b==null) return; selectOnly(b); CMP_CAND=a; CMP_FOR=S.act; renderCompare(); }
 let SURPRISE_LAST=null;
 function surpriseMe(){
@@ -1406,10 +1412,11 @@ function renderToolbar(){
   if(S.view==='grid') h += `<div class="tb-sort"><span class="tb-lbl">${t("Sort:")}</span><button class="tb-btn" data-t="asc" title="${S.asc?t('Ascending'):t('Descending')}" style="${S.asc?'':'transform:scaleY(-1)'}">${I('sort')}</button>
       <select data-t="sort">${sortKeys().map(k=>`<option value="${k}" ${k===S.sort?'selected':''}>${SORTS[k][0]}</option>`).join('')}</select></div><span class="tb-sep"></span>` + tbAttrs() +
       `<button class="tb-btn" data-t="rank" title="${t('Score the selected photos and find the best one')}">${I('rank')} ${t('Rank')}</button>
+      <button class="tb-btn" data-t="scoreall" title="${esc(t('Score every photo and show the score on each thumbnail'))}">${I('rank')} ${t('Score All')}</button>
       <button class="tb-btn" data-t="surprise" title="${t('Surprise Me')} — ${t('Jump to a random photo from the current list (Shift+R)')}">${I('spark')}</button>
       <label class="tb-size"><span>${t("Thumbnails")}</span><input type="range" data-t="size" min="110" max="420" step="10" value="${S.cellsz}"></label>`;
   else if(S.view==='loupe') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn ${S.loupeInfo?'on':''}" data-t="info" title="${t("Info (I)")}">${t("Info")}</button>`;
-  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span><button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
+  else if(S.view==='compare') h += tbAttrs() + `<span class="spacer"></span>${S.sel.size>1 ? `<button class="tb-btn" data-t="cmppick" title="${esc(t('Mark the shown photo as Pick and the other compared photos as Rejected'))}">${t('Pick this, reject the others')}</button>` : ''}<button class="tb-btn" data-t="swap" title="${t("Swap Selection and Candidate")}">${t("Replace")}</button><button class="tb-btn" data-t="done" title="${t("Done (Esc)")}">${t("Done")}</button>`;
   else if(S.view==='survey') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t("{0} photos in Survey", [num(S.sel.size)])}</span>`;
   else if(S.view==='map') h += `<button class="tb-btn ${FLY.running?'on':''}" data-t="flythrough" title="${t('Fly through these photos on the map, oldest to newest')}">${I('play')} ${t('Flythrough')}</button><span class="spacer"></span><span class="tb-info" id="map-info">${MAPINFO}</span>`;
   else if(S.view==='timeline') h += tbAttrs() + `<span class="spacer"></span><span class="tb-info">${t('{0} photos', [num(S.list.length)])}</span>`;
@@ -1427,8 +1434,8 @@ $('#toolbar').addEventListener('click', e=>{
   else if(tg==='rotl') rotateSel(-90); else if(tg==='rotr') rotateSel(90);
   else if(tg==='asc'){ S.asc=!S.asc; pref.set('asc',S.asc); applyFilter(); }
   else if(tg==='info'){ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }
-  else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
-  else if(tg==='rank') rankSelected(); else if(tg==='surprise') surpriseMe(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
+  else if(tg==='cmppick') comparePick(); else if(tg==='swap') compareSwap(); else if(tg==='done') setView('loupe');
+  else if(tg==='rank') rankSelected(); else if(tg==='scoreall') scoreAll(); else if(tg==='surprise') surpriseMe(); else if(tg==='rvdone') setView(S.prevView==='review' ? 'grid' : S.prevView);
   else if(tg==='before') devBefore(); else if(tg==='viewside') devView('side'); else if(tg==='viewsplit') devView('split'); else if(tg==='crop') devCropToggle();
   else if(tg==='flythrough') mapFlythrough();
 });
@@ -1531,7 +1538,7 @@ function renderKwList(selKws, nSel){
   selKws = selKws || el._sel || []; nSel = nSel ?? el._n ?? 0; el._sel=selKws; el._n=nSel;
   const on = new Map(selKws.map(k=>[k.id,k.n]));
   const tags = S.tags.filter(tg=>!KWF || tg.name.toLowerCase().includes(KWF));
-  el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="${t("Keyword Filter")}" value="${esc(KWF)}"></div>
+  el.innerHTML = `<div class="kwlist-filter"><input id="kw-filter" type="search" placeholder="${t("Keyword Filter")}" value="${esc(KWF)}"><button id="kw-links" class="tb-btn" title="${esc(t('Linked keywords'))}" aria-label="${esc(t('Linked keywords'))}">=</button><button id="kw-rules" class="tb-btn" title="${esc(t('Automatic keywords by time'))}" aria-label="${esc(t('Automatic keywords by time'))}">⏰</button></div>
     <div class="kwrows">${tags.slice(0,800).map(tg=>{ const c=on.get(tg.id)||0;
       return `<div class="row" data-kw="${tg.id}"><input type="checkbox" ${nSel&&c===nSel?'checked':''} ${nSel?'':'disabled'} data-part="${c&&c<nSel?1:0}" title="${nSel?t('Add/remove for selected photos'):''}"><span class="nm">${esc(tg.name)}</span>
         <button class="go" data-go="${tg.id}" title="${t("Show photos with this keyword")}">${I('next')}</button><span class="n">${num(tg.n)}</span></div>`; }).join('')
@@ -1539,7 +1546,47 @@ function renderKwList(selKws, nSel){
   $$('#p-kwlist [data-part="1"]').forEach(c=>c.indeterminate=true);
 }
 $('#p-kwlist').addEventListener('input', debounce(e=>{ if(e.target.id==='kw-filter'){ KWF=e.target.value.toLowerCase(); renderKwList(); const f=$('#kw-filter'); f.focus(); f.setSelectionRange(f.value.length, f.value.length); } }, 150));
+// linked keywords (#39): "HP bus = Knight bus": a photo that has one of them gets the other too
+async function linkedKeywords(){
+  modal(`<h3>${t('Linked keywords')}</h3><div class="mb"><p class="hint" style="padding:0">${t('When a photo has one of two linked keywords it gets the other one too.')}</p><div id="lk-list"></div>
+    <div style="display:flex;gap:6px;align-items:center;padding-top:8px"><input id="lk-a" list="lk-names" placeholder="${esc(t('First keyword'))}" style="flex:1"><span>=</span><input id="lk-b" list="lk-names" placeholder="${esc(t('Second keyword'))}" style="flex:1"><button id="lk-add" class="primary">${t('Link')}</button></div>
+    <datalist id="lk-names">${S.tags.map(tg=>`<option value="${esc(tg.name)}">`).join('')}</datalist><p id="lk-msg" class="hint" style="padding:0"></p></div>
+    <div class="mf"><span class="spacer"></span><button class="primary" id="lk-ok">${t('Close')}</button></div>`);
+  $('#lk-ok').onclick = closeModal;
+  const draw = links=>{
+    $('#lk-list').innerHTML = links.length ? links.map(l=>`<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--line)"><span style="flex:1" dir="auto"><bdi>${esc(l.a_name)}</bdi> = <bdi>${esc(l.b_name)}</bdi></span><button data-lk-del="${l.a},${l.b}">${t('Remove')}</button></div>`).join('') : `<div class="hint" style="padding:0">${t('No linked keywords yet.')}</div>`;
+    $$('#lk-list [data-lk-del]').forEach(b=>b.onclick = async ()=>{ const [a,c]=b.dataset.lkDel.split(',').map(Number); draw((await send('POST','/api/tag-links/delete',{a, b:c})).links); });
+  };
+  try{ draw((await api('/api/tag-links')).links); }catch(e){ $('#lk-msg').textContent = e.message; }
+  $('#lk-add').onclick = async ()=>{
+    try{ const r = await send('POST','/api/tag-links',{a:$('#lk-a').value, b:$('#lk-b').value}); $('#lk-a').value=''; $('#lk-b').value=''; $('#lk-msg').textContent=''; draw(r.links); S.tags = await api('/api/tags'); renderKwList(); renderRight(); }
+    catch(e){ $('#lk-msg').textContent = e.message; }
+  };
+}
+// automatic keywords by time (#40): "7 to 17 = daytime": every photo taken in those hours gets the keyword (new photos too)
+async function timeRules(){
+  let rules = [];
+  modal(`<h3>${t('Automatic keywords by time')}</h3><div class="mb"><p class="hint" style="padding:0">${t('Photos taken between these hours (0-23, the hour of the day the photo was taken) get the keyword automatically, new photos too. A keyword you remove from a photo comes back: delete the rule instead. An "end" hour smaller than the "start" hour goes over midnight.')}</p><div id="tr-list"></div>
+    <p id="tr-msg" class="hint" style="padding:0"></p></div>
+    <div class="mf"><button id="tr-add">${t('Add a rule')}</button><span class="spacer"></span><button id="tr-cancel">${t('Cancel')}</button><button class="primary" id="tr-save">${t('Save and apply')}</button></div>`);
+  const draw = ()=>{
+    $('#tr-list').innerHTML = rules.length ? rules.map((r,i)=>`<div style="display:flex;gap:6px;align-items:center;padding:4px 0" data-tr="${i}"><span>${t('From')}</span><input type="number" min="0" max="23" data-f="from" value="${r.from}" style="width:56px"><span>${t('To')}</span><input type="number" min="0" max="23" data-f="to" value="${r.to}" style="width:56px"><span>=</span><input type="text" data-f="tag" maxlength="60" value="${esc(r.tag)}" style="flex:1" placeholder="${esc(t('Keyword'))}"><button data-tr-del="${i}">${t('Remove')}</button></div>`).join('') : `<div class="hint" style="padding:0">${t('No rules yet.')}</div>`;
+    $$('#tr-list [data-tr-del]').forEach(b=>b.onclick = ()=>{ read(); rules.splice(+b.dataset.trDel, 1); draw(); });
+  };
+  const read = ()=>{ $$('#tr-list [data-tr]').forEach(row=>{ const r = rules[+row.dataset.tr]; row.querySelectorAll('[data-f]').forEach(inp=>{ r[inp.dataset.f] = inp.dataset.f==='tag' ? inp.value : +inp.value; }); }); };
+  try{ rules = (await api('/api/time-rules')).rules; }catch(e){ $('#tr-msg').textContent = e.message; }
+  draw();
+  $('#tr-add').onclick = ()=>{ read(); rules.push({from:7, to:17, tag:''}); draw(); };
+  $('#tr-cancel').onclick = closeModal;
+  $('#tr-save').onclick = async ()=>{
+    read();
+    try{ await send('POST', '/api/time-rules', {rules}); S.tags = await api('/api/tags'); await reloadAll(); closeModal(); toast(t('Saved'), 1800); }
+    catch(e){ $('#tr-msg').textContent = e.message; }
+  };
+}
 $('#p-kwlist').addEventListener('click', e=>{
+  if(e.target.closest('#kw-links')){ linkedKeywords(); return; }
+  if(e.target.closest('#kw-rules')){ timeRules(); return; }
   const go=e.target.closest('[data-go]');
   if(go){ const tg=S.tags.find(x=>x.id==go.dataset.go); setSource({kind:'tag', id:tg.id, name:t('Keyword: ')+tg.name}); return; }
   const cb=e.target.closest('input[type=checkbox]');
@@ -4153,6 +4200,7 @@ const MENUS = [
     sep,
     [t('Cycle Grid Cell Style'), 'J', cycleCellStyle],
     [t('Stack Bursts'), '', toggleStackBursts, null, ()=>S.stackBursts],
+    [t('Open with the Timeline'), '', ()=>{ pref.set('startTimeline', !pref.get('startTimeline', false)); toast(pref.get('startTimeline', false) ? t('photag will open with the Timeline') : t('photag will open with the Grid'), 2500); }, null, ()=>pref.get('startTimeline', false)],
     [t('Loupe Info'), 'I', ()=>{ S.loupeInfo=!S.loupeInfo; renderLoupe(); renderToolbar(); }, null, ()=>S.loupeInfo],
     sep,
     [t('Hide/Show Side Panels'), 'Tab', toggleSides],
@@ -4534,6 +4582,11 @@ async function withAnalysis(go){
   $('#wa-go').onclick = ()=>{ closeModal(); analyseLibrary(go); };
 }
 
+// ---------- score all (#48): analyse every photo that has no score yet; the scores show on the thumbnails and the list is sorted by them ----------
+async function scoreAll(){
+  const show = ()=>{ S.sort='quality'; S.asc=false; pref.set('sort', S.sort); pref.set('asc', S.asc); applyFilter(); renderToolbar(); toast(t('Every photo has a score now: the list is sorted by Quality Score'), 4500); };
+  await analyseLibrary(show);
+}
 // ---------- rank the selected photos ----------
 async function rankSelected(){
   const ids = targets().filter(id=>!(S.byId.get(id)||{}).is_video);
@@ -4541,24 +4594,26 @@ async function rankSelected(){
   toast(t('Scoring the selected photos…'), 1500);
   const r = await send('POST', '/api/analysis/rank', {ids});
   const rk = r.ranked; if(rk.length<2){ toast(t('Could not read these photos')); return; }
-  const best = rk[0];
+  let best = rk[0];                       // the photo the buttons act on: the highest score, or the one the user clicked instead (#43)
   const card = x => { const p = S.byId.get(x.id) || {filename:''};
-    return `<div class="rk ${x.rank===1?'best':''}" data-id="${x.id}"><div class="rk-n">${x.rank===1?'★ '+t('Best'):'#'+x.rank}</div>
+    return `<div class="rk ${x.id===best.id?'best':''}" data-id="${x.id}"><div class="rk-n">${x.id===best.id?'★ '+(x.rank===1?t('Best'):t('Your pick')):'#'+x.rank}</div>
       <img src="${thumbUrl(x.id)}" alt=""><div class="rk-bar"><i class="${scoreCls(x.score)}" style="width:${x.score}%"></i></div>
       <div class="rk-s"><b class="scv ${scoreCls(x.score)}">${x.score}</b> / 100</div>
       <div class="rk-m"><bdi>${esc(p.filename)}</bdi></div>
       <div class="rk-m">${x.eyes_closed ? `<span class="warn">${t('Closed eyes: {0}', [x.eyes_closed])}</span> · ` : ''}${t('Sharpness {0}', [ltr(String(x.sharp))])}</div></div>`; };
   modal(`<h3>${t('Ranking of the selected photos')}</h3><div class="mb">
     <div class="rk-row">${rk.map(card).join('')}</div>
-    <div class="hint" style="padding:0">${t('The score (1-100) combines sharpness, exposure and contrast, and drops when someone has closed eyes.')}${r.eyes_checked ? '' : ' ' + t('Closed eyes were not checked: run Face Detection once to enable that.')}</div>
+    <div class="hint" style="padding:0">${t('The score (1-100) combines sharpness, exposure and contrast, and drops when someone has closed eyes.')}${r.eyes_checked ? '' : ' ' + t('Closed eyes were not checked: run Face Detection once to enable that.')} ${t('Click a photo to choose it instead; double-click to enlarge it.')}</div>
   </div><div class="mf"><button id="rk-close">${t('Close')}</button><span class="spacer"></span>
-    <button id="rk-sel">${t('Select the best only')}</button><button class="primary" id="rk-flag">${t('Pick the best, reject the rest')}</button></div>`);
+    <button id="rk-cmp">${t('Compare')}</button><button id="rk-sel">${t('Select the best only')}</button><button class="primary" id="rk-flag">${t('Pick the best, reject the rest')}</button></div>`);
   $('#rk-close').onclick = closeModal;
   $('#rk-sel').onclick = ()=>{ closeModal(); selectOnly(best.id); scrollToAct(); };
   $('#rk-flag').onclick = async ()=>{ closeModal();
-    await setAttr({flag:1}, [best.id]); await setAttr({flag:-1}, rk.slice(1).map(x=>x.id));
+    await setAttr({flag:1}, [best.id]); await setAttr({flag:-1}, rk.filter(x=>x.id!==best.id).map(x=>x.id));
     toast(t('Marked the best photo as Pick and the other {0} as Rejected', [num(rk.length-1)])); };
-  $('.rk-row').onclick = e=>{ const c=e.target.closest('.rk'); if(c) previewPhoto(+c.dataset.id); };
+  $('#rk-cmp').onclick = ()=>{ closeModal(); S.sel = new Set(rk.map(x=>x.id)); S.act = best.id; S.anchor = best.id; onSelChange(); setView('compare'); };      // Rank and Compare in one flow
+  $('.rk-row').onclick = e=>{ const c=e.target.closest('.rk'); if(!c) return; best = rk.find(x=>x.id===+c.dataset.id); $('.rk-row').innerHTML = rk.map(card).join(''); };
+  $('.rk-row').ondblclick = e=>{ const c=e.target.closest('.rk'); if(c) previewPhoto(+c.dataset.id); };
 }
 function previewPhoto(id){
   const o = document.createElement('div'); o.className='pv-over'; o.innerHTML = `<img src="${mediaUrl(id)}" alt="">`;
@@ -5144,7 +5199,7 @@ splashSay(t('Starting photag…'));
   splashSay(t('Preparing the view…'));
   S.hist=[S.src]; S.histPos=0;
   await fetchSource();
-  setView('grid');
+  setView(pref.get('startTimeline', false) ? 'timeline' : 'grid');       // the Timeline as the opening view when the user chose it (View menu)
   splashEnd();
   setTimeout(reportNews, 7000); setInterval(reportNews, 2*3600*1000);
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);

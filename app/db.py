@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS photo_tags(
   photo_id INTEGER, tag_id INTEGER, source TEXT,
   PRIMARY KEY(photo_id, tag_id)
 );
+-- linked keywords (#39): a photo that has one of the two has the other too
+CREATE TABLE IF NOT EXISTS tag_links(a INTEGER, b INTEGER, PRIMARY KEY(a, b));
 
 -- previous versions of a video, kept when it is compressed (or restored): the file under media/.originals
 CREATE TABLE IF NOT EXISTS video_backups(
@@ -163,9 +165,75 @@ def init_db():
     con.execute("DROP TABLE IF EXISTS autotag_rejected")
     if con.execute("SELECT 1 FROM photo_tags WHERE source LIKE 'ollama%' OR source IN ('auto','place') LIMIT 1").fetchone():
         con.execute("DELETE FROM photo_tags WHERE source LIKE 'ollama%' OR source IN ('auto','place')")
-        con.execute("DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM photo_tags)")
+        con.execute("DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM photo_tags) AND id NOT IN (SELECT a FROM tag_links UNION SELECT b FROM tag_links)")
     con.commit()
     return con
+
+
+def linked_ids(con, tag_ids) -> set:
+    """The keywords and every keyword linked to them, directly or through others (a = b, b = c)."""
+    seen, todo = set(tag_ids), list(tag_ids)
+    while todo:
+        t = todo.pop()
+        for r in con.execute("SELECT a, b FROM tag_links WHERE a=? OR b=?", (t, t)).fetchall():
+            for x in (r["a"], r["b"]):
+                if x not in seen:
+                    seen.add(x)
+                    todo.append(x)
+    return seen
+
+
+def apply_tag_links(con, photo_ids=None):
+    """Give every photo (or just photo_ids) the keywords linked to the ones it has. Does not commit."""
+    pairs = [(r["a"], r["b"]) for r in con.execute("SELECT a, b FROM tag_links").fetchall()]
+    if not pairs:
+        return
+    cond, args = "", []
+    if photo_ids is not None:
+        photo_ids = list(photo_ids)
+        if not photo_ids:
+            return
+        cond, args = f" AND photo_id IN ({','.join('?' * len(photo_ids))})", photo_ids
+    for _ in range(len(pairs) + 1):                       # a = b = c needs more than one round
+        before = con.total_changes
+        for a, b in pairs:
+            for x, y in ((a, b), (b, a)):
+                con.execute(f"INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) SELECT photo_id, ?, 'link' FROM photo_tags WHERE tag_id=?{cond}", (y, x, *args))
+        if con.total_changes == before:
+            break
+
+
+def time_rules(con) -> list:
+    """The automatic keywords by hour of the day (#40): [{"from": 7, "to": 17, "tag": "daytime"}, ...] (from > to goes over midnight)."""
+    import json
+    try:
+        rules = json.loads(get_setting(con, "time_rules", "") or "[]")
+    except ValueError:
+        return []
+    out = []
+    for r in rules if isinstance(rules, list) else []:
+        try:
+            a, b, tag = int(r["from"]), int(r["to"]), str(r["tag"]).strip()
+        except (KeyError, TypeError, ValueError):
+            continue
+        if tag and 0 <= a <= 23 and 0 <= b <= 23:
+            out.append({"from": a, "to": b, "tag": tag[:60]})
+    return out[:20]
+
+
+def apply_time_rules(con):
+    """Give every photo taken in the hours of a rule the rule's keyword (source 'rule'). Does not commit; cheap enough to run on every load."""
+    rules = time_rules(con)
+    if not rules:
+        return
+    hour = "CAST(strftime('%H', taken_at, 'unixepoch', 'localtime') AS INT)"
+    for r in rules:
+        row = con.execute("SELECT id FROM tags WHERE name=? COLLATE NOCASE ORDER BY id LIMIT 1", (r["tag"],)).fetchone()
+        tid = row["id"] if row else con.execute("INSERT INTO tags(name) VALUES(?)", (r["tag"],)).lastrowid
+        cond = f"({hour}>=? OR {hour}<=?)" if r["from"] > r["to"] else f"({hour}>=? AND {hour}<=?)"
+        con.execute(f"INSERT OR IGNORE INTO photo_tags(photo_id,tag_id,source) SELECT id, ?, 'rule' FROM photos "
+                    f"WHERE taken_at IS NOT NULL AND (trashed IS NULL OR trashed=0) AND {cond}", (tid, r["from"], r["to"]))
+    apply_tag_links(con)
 
 
 def get_setting(con, key, default=None):

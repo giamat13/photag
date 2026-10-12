@@ -177,7 +177,7 @@ def collect():
     dirty = len([l for l in git("status", "--porcelain").splitlines() if l.strip()])
     head = git("rev-parse", "HEAD")
     remote = git("ls-remote", "origin", "refs/heads/main").split("\t")[0] if time.time() - Cache.gh_at >= GITHUB_EVERY else Cache.gh.get("remote", "")
-    pushed = bool(remote) and remote == head
+    pushed = bool(remote) and remote == head and dirty == 0      # files that are not saved yet are not on GitHub: the run of the last release is not this work's run
 
     # ---- GitHub
     gh = github(remote if pushed else "")
@@ -293,7 +293,12 @@ def collect():
     # the last release is out, the page was put away and nothing is being worked on (no tests running, no release run, the task card is empty or done):
     # there is no release on its way, so no countdown (the stale local tests and the new commit would otherwise make it promise a release in ~7 minutes)
     idle = next_mode and local_state != "run" and not cur and not todo_open and not failing
-    if idle:
+    # still being written: the task card has open tasks and neither the tests nor a release have started -- no countdown (it used to promise "7 minutes" all day)
+    dev = not idle and not published and not failing and local_state != "run" and not cur and todo_open
+    if dev:
+        hero = "עדיין בפיתוח — אין הערכת זמן עד שהבדיקות והשחרור מתחילים"
+        sub = next((x["text"] for x in todo if x["state"] == "run"), "")
+    elif idle:
         hero, sub = f"אין שחרור בעבודה כרגע — הגרסה האחרונה ({target}) כבר באוויר", "כשמתחילים עבודה חדשה העמוד יתחיל לספור מחדש."
     elif published:
         hero, sub = f"הגרסה {target} באוויר! ✓", "אפשר לעדכן מתוך photag (עזרה ← חיפוש עדכונים)."
@@ -312,13 +317,13 @@ def collect():
     else:
         hero, sub = "עכשיו: GitHub בונה את הגרסה", hero_run
 
-    running_eta = not (idle or published or failing or (pushed and not cur and local_state != "run"))
+    running_eta = not (idle or dev or published or failing or (pushed and not cur and local_state != "run"))
     pct_rate = max(0.0, (99.5 - pct) / max(left, 5.0)) if running_eta else 0.0      # percent per second: it reaches ~99.5% when the release is expected to end
     return {
         "pct_rate": pct_rate, "at": now, "target": target, "next": next_mode, "hero": hero, "sub": sub, "published": published, "failed": bool(failing),
-        "waiting": bool(not idle and not published and not failing and pushed and not cur and local_state != "run"), "idle": idle,
+        "waiting": bool(dev or (not idle and not published and not failing and pushed and not cur and local_state != "run")), "idle": idle, "dev": dev,
         "todo": todo, "activity": activity,
-        "eta_end": None if (idle or published or failing or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
+        "eta_end": None if (idle or dev or published or failing or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
         "percent": pct, "stages": stages, "local": local, "local_stale": stale, "jobs": jobs, "gh_began": cur_began,
         "error": gh["error"], "recent": [r["tag_name"] for r in rels[:3]],
     }
@@ -554,7 +559,7 @@ function tick(){
     const left = D.eta_end - now;
     setText($('etabig'), left > 0 ? mmss(left) : 'עוד רגע…');
     setText($('etasub'), `בדיקות במחשב ~${mmss(D.local_left)} · בנייה ב-GitHub ~${mmss(D.gh_left)} · לפי שחרורים קודמים (~${mmss(D.typical)})`);
-  } else if(D.waiting){ setText($('etabig'), '—'); setText($('etasub'), 'הטיימר יתחיל כשיופעל שחרור ב-GitHub'); }
+  } else if(D.waiting){ setText($('etabig'), '—'); setText($('etasub'), D.dev ? 'הטיימר יתחיל כשהבדיקות יתחילו לרוץ' : 'הטיימר יתחיל כשיופעל שחרור ב-GitHub'); }
   else { setText($('etabig'), D.published ? '✓' : '✕'); setText($('etasub'), D.published ? 'הגרסה באוויר' : 'משהו נכשל — ראו בכרטיס האדום'); }
   document.querySelectorAll('[data-began][data-est]').forEach(e => setText(e, 'רץ ' + Math.round(now - e.dataset.began) + ' שנ׳ מתוך ~' + Math.round(e.dataset.est)));
   document.querySelectorAll('[data-began]:not([data-est])').forEach(e => setText(e, 'רץ ' + mmss(now - e.dataset.began)));
