@@ -43,6 +43,10 @@ push straight to `main`.
   raises the second and resets the third (`12.1.0`); a release with only fixes raises the third (`12.1.1`).
   A "feature" is an ordinary feature, not a huge one, and **several small features released together count as one feature**
   (decided with the user: three small additions in one release are `19.0.0`, not `18.4.0`);
+  **Only ONE number rises per release: the one of the biggest change in it** (decided with the user). Never fill both the fix cell and the
+  feature cell: if the release has a feature, the feature number rises (and the ones after it reset) -- the fixes in it do not raise the
+  third number as well; if it has a big feature, only that one rises; a small feature with fixes raises only the second number. The
+  third number rises only when the release has nothing but fixes (e.g. 21.1.0 + a feature + fixes = 22.0.0, never 22.0.1 or 21.2.1);
   pre-releases add `-beta.N`. **Always write all three parts** (never `9.1`): programs
   installed before the change only recognise a code update `photag-code-X.Y.Z-rtN.zip` with three parts, and
   without it they fall back to the full installer (which Smart App Control may block). `9.1` and `9.1.0`
