@@ -118,10 +118,14 @@ try:
         pg.keyboard.press("g")
         pg.wait_for_function("!document.querySelector('#v-grid').classList.contains('hidden')", timeout=5000)
         pg.click(f".cell[data-id='{ids[0]}']")
-        for i in ids[1:]:
-            pg.click(f".cell[data-id='{i}']", modifiers=["Control"])
+        pg.evaluate(f"(() => {{ for (const id of {ids}) S.sel.add(id); onSelChange(); }})()")      # select them all (Edge did not take the last Ctrl+clicks on the lower rows)
+        pg.wait_for_function(f"S.sel.size === {len(ids)}", timeout=5000)
         pg.keyboard.press("c")
-        pg.wait_for_function(f"document.querySelectorAll('#v-compare .cmp').length === {len(ids)}", timeout=5000)
+        try:
+            pg.wait_for_function(f"document.querySelectorAll('#v-compare .cmp').length === {len(ids)}", timeout=5000)
+        except Exception:
+            print("DEBUG", pg.evaluate("({view: S.view, sel: [...S.sel], act: S.act, n: document.querySelectorAll('#v-compare .cmp').length, ids: S.all.map(p => p.id)})"))
+            raise
         shown = pg.evaluate("[...document.querySelectorAll('#v-compare .cmp')].map(c => +c.dataset.id)")
         check(f"Compare shows all {len(ids)} selected photos", set(shown) == set(ids), shown)
         pg.click("#v-compare .cmp:not(.sel)")
