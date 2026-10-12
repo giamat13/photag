@@ -76,6 +76,10 @@ try:
         check("in every theme the text on the panels is readable (WCAG 4.5:1 for the main text) and the photo surface stays the same gray", not bad, bad[:3])
         errs0 = len(errs)
         ev("PhotagTheme.apply('hc-dark', {save: true})")
+        for _ in range(40):                      # a reload right away can cancel the save request: wait until the server has it (slow runners)
+            if call("GET", "/api/ui-theme").get("id") == "hc-dark":
+                break
+            pg.wait_for_timeout(250)
         pg.reload(); pg.wait_for_function("window.PhotagTheme", timeout=20000)
         check("the choice is kept after a reload", ev("document.documentElement.dataset.themeId") == "hc-dark")
         srv_theme = call("GET", "/api/ui-theme")

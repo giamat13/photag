@@ -1194,10 +1194,8 @@ function renderCompare(){
   const other = [...S.sel].find(id=>id!==a.id);
   let b = CMP_CAND && CMP_FOR===a.id && CMP_CAND!==a.id && S.idx.has(CMP_CAND) ? CMP_CAND : (other ?? S.list[(S.idx.get(a.id)+1)%S.list.length]?.id);
   CMP_CAND=b; CMP_FOR=a.id;
-  // every selected photo is shown, as many as you select (#49); with a single photo selected the candidate is the one picked above
-  const cands=[b];
-  for(const id of S.list.map(p=>p.id)){ if(S.sel.has(id) && id!==a.id && id!==b) cands.push(id); }
-  if(cands.length>1 && !S.sel.has(b)) cands.shift();
+  // every selected photo is shown, as many as you select (#49); with one or two selected the second is the candidate (the arrows step it)
+  const cands = S.sel.size>2 ? S.list.map(p=>p.id).filter(id=>S.sel.has(id) && id!==a.id) : [b];      // up to two selected: the second is the candidate you can step with the arrows
   const pane=(p,lab,cls)=>p?`<div class="cmp ${cls}" data-id="${p.id}"><span class="lab">${lab} · <bdi>${esc(p.filename)}</bdi> ${p.rating?'★'.repeat(p.rating):''}</span><img src="${mediaUrl(p.id)}" alt="" draggable="false">${cls==='sel'?`<span class="cmp-zoom">100%</span>`:''}</div>`:'<div class="cmp"></div>';
   const prevIds = [...$$('#v-compare .cmp')].map(c=>c.dataset.id).join(',');
   const n = cands.length+1, cols = n<=3 ? n : Math.ceil(Math.sqrt(n)), el=$('#v-compare');
