@@ -193,6 +193,75 @@ def pick_auto(provider: str, models: list[dict]) -> str | None:
 
 
 # ---------------------------------------------------------------- tagging a single image
+NEAR_SECONDS = 2 * 3600          # photos taken within this time of a photo are "close in time" (an event, a trip day)
+NEAR_PHOTOS = 12
+NEAR_KEYWORDS = 15
+
+
+def _kw(con, pid: int) -> list[str]:
+    return [r["name"] for r in con.execute("SELECT t.name FROM tags t JOIN photo_tags pt ON pt.tag_id=t.id WHERE pt.photo_id=?", (pid,))]
+
+
+def neighbour_keywords(con, pid: int, taken_at: int | None) -> list[str]:
+    """The keywords of the photos taken close in time to this one (other photos), the most common first: they say what the event is."""
+    if not taken_at:
+        return []
+    near = con.execute("SELECT id FROM photos WHERE id<>? AND is_video=0 AND trashed=0 AND taken_at BETWEEN ? AND ? "
+                       "ORDER BY ABS(taken_at-?) LIMIT ?", (pid, taken_at - NEAR_SECONDS, taken_at + NEAR_SECONDS, taken_at, NEAR_PHOTOS)).fetchall()
+    count: dict = {}
+    for n in near:
+        for k in _kw(con, n["id"]):
+            count[k] = count.get(k, 0) + 1
+    return [k for k, _ in sorted(count.items(), key=lambda kv: (-kv[1], kv[0]))][:NEAR_KEYWORDS]
+
+
+def photo_context(con, pid: int) -> str:
+    """What the catalog knows about a photo, as text for the AI: capture time, place, camera and exposure, caption, its own keywords,
+    the people in it, and the keywords of the photos taken close in time. Empty when there is nothing."""
+    import datetime
+    r = con.execute("SELECT filename, taken_at, lat, lng, description, camera_make, camera_model, lens, width, height, rating, exif_json "
+                    "FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r:
+        return ""
+    lines = []
+    if r["taken_at"]:
+        lines.append("Taken: " + datetime.datetime.utcfromtimestamp(r["taken_at"]).strftime("%Y-%m-%d %H:%M (%A)"))
+    if r["lat"] is not None and r["lng"] is not None:
+        lines.append(f"Location: {r['lat']:.4f}, {r['lng']:.4f}")
+    cam = " ".join(x for x in (r["camera_make"], r["camera_model"]) if x)
+    if cam or r["lens"]:
+        lines.append("Camera: " + ", ".join(x for x in (cam, r["lens"]) if x))
+    try:
+        ex = json.loads(r["exif_json"]) if r["exif_json"] else {}
+    except ValueError:
+        ex = {}
+    e = ex.get("Exif") or {}
+    shot = [f"{lbl} {e[k]}" for k, lbl in (("ExposureTime", "shutter"), ("FNumber", "f/"), ("ISOSpeedRatings", "ISO"), ("FocalLength", "focal length mm"),
+                                            ("Flash", "flash")) if e.get(k) not in (None, "")]
+    if shot:
+        lines.append("Exposure: " + ", ".join(shot))
+    if r["width"] and r["height"]:
+        lines.append(f"Size: {r['width']}x{r['height']}")
+    if r["description"]:
+        lines.append("Caption: " + str(r["description"])[:300])
+    own = _kw(con, pid)
+    if own:
+        lines.append("Keywords already on this photo: " + ", ".join(own[:20]))
+    people = [x["name"] for x in con.execute(
+        "SELECT DISTINCT pe.name FROM people pe WHERE pe.id IN (SELECT person_id FROM photo_people WHERE photo_id=? UNION SELECT person_id FROM faces WHERE photo_id=?) "
+        "AND pe.name IS NOT NULL", (pid, pid))]
+    if people:
+        lines.append("People in the photo: " + ", ".join(people[:10]))
+    near = neighbour_keywords(con, pid, r["taken_at"])
+    if near:
+        lines.append("Keywords of photos taken close in time: " + ", ".join(near))
+    return "\n".join(lines)
+
+
+def _with_context(prompt: str, context: str) -> str:
+    return prompt if not context else (prompt + "\n\nWhat is known about this photo (use it where it helps, but trust what you see in the picture):\n" + context)
+
+
 def _prompt(language: str) -> str:
     lang = LANG_NAMES.get(language, "English")
     return ("You tag photos for a personal photo library search. Look at the photo and answer with ONLY a JSON object "
@@ -222,9 +291,9 @@ def parse_keywords(text: str) -> list[str]:
     return out[:MAX_KEYWORDS]
 
 
-def tag_image(provider: str, base_url: str, key: str, model: str, jpeg: bytes, language: str) -> list[str]:
+def tag_image(provider: str, base_url: str, key: str, model: str, jpeg: bytes, language: str, context: str = "") -> list[str]:
     kind, base = PROVIDERS[provider]["kind"], _base(provider, base_url)
-    b64, text, h = base64.b64encode(jpeg).decode(), _prompt(language), _headers(kind, key)
+    b64, text, h = base64.b64encode(jpeg).decode(), _with_context(_prompt(language), context), _headers(kind, key)
     if kind == "anthropic":
         r = _http("POST", f"{base}/messages", h, {"model": model, "max_tokens": 300, "messages": [{"role": "user", "content": [
             {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
@@ -308,8 +377,12 @@ def parse_pick(text: str, n: int) -> dict:
     return {"best": best, "reason": re.sub(r"\s+", " ", reason).strip()[:500]}
 
 
-def compare_images(provider: str, base_url: str, key: str, model: str, jpegs: list[bytes], language: str) -> dict:
-    return parse_pick(_vision(provider, base_url, key, model, jpegs, _compare_prompt(len(jpegs), language)), len(jpegs))
+def compare_images(provider: str, base_url: str, key: str, model: str, jpegs: list[bytes], language: str, contexts: list[str] | None = None) -> dict:
+    text = _compare_prompt(len(jpegs), language)
+    facts = [f"Photo {i}:\n{c}" for i, c in enumerate(contexts or [], 1) if c]
+    if facts:
+        text += "\n\nWhat is known about the photos (camera settings, time, keywords, people - use it together with what you see):\n" + "\n\n".join(facts)
+    return parse_pick(_vision(provider, base_url, key, model, jpegs, text), len(jpegs))
 
 
 def _vision(provider: str, base_url: str, key: str, model: str, jpegs: list[bytes], text: str) -> str:
@@ -387,7 +460,7 @@ def pick_best(ids: list[int]) -> dict:
     model = cfg["model"] or pick_auto(provider, list_models(provider, key, cfg["base_url"]))
     if not model:
         raise AIError(0, "No suitable model found. Choose a model manually in AI tagging settings")
-    con, jpegs, used = db.connect(), [], []
+    con, jpegs, used, contexts = db.connect(), [], [], []
     for pid in ids[:MAX_COMPARE]:
         row = con.execute("SELECT id, sha256, rel_path, orig_backup, edited, edit_ops FROM photos WHERE id=? AND is_video=0", (pid,)).fetchone()
         if not row:
@@ -398,12 +471,82 @@ def pick_best(ids: list[int]) -> dict:
         if tp.exists():
             jpegs.append(tp.read_bytes())
             used.append(pid)
+            contexts.append(photo_context(con, pid))
     if len(jpegs) < 2:
         raise AIError(0, "no thumbnail")
     for attempt in range(4):
         try:
-            r = compare_images(provider, cfg["base_url"], key, model, jpegs, cfg["language"])
+            r = compare_images(provider, cfg["base_url"], key, model, jpegs, cfg["language"], contexts)
             return {"best_id": used[r["best"] - 1], "reason": r["reason"], "model": model}
+        except AIError as e:
+            if e.status not in (0, 408, 429, 500, 502, 503, 504, 529) or attempt == 3:
+                raise
+            time.sleep(min(e.retry_after or 2 ** attempt, 20))
+
+
+# ---------------------------------------------------------------- "AI Suggest": develop settings for one photo (#46)
+_EDIT_RANGES = {"exposure": (-2.0, 2.0), "contrast": (0.7, 1.4), "highlights": (-80, 60), "shadows": (-40, 80), "temperature": (-50, 50),
+                "tint": (-40, 40), "vibrance": (-30, 60), "sharpness": (0, 60)}
+
+
+def _edit_prompt(language: str) -> str:
+    lang = LANG_NAMES.get(language, "English")
+    return ("You are a careful photo editor. Look at this photo and suggest develop settings that improve it without overdoing it: "
+            "natural colours, recover blown highlights and dark shadows, correct a colour cast, keep the mood of the scene. Answer with ONLY a JSON object: "
+            '{"exposure": <stops, -2..2>, "contrast": <factor, 0.7..1.4, 1 = unchanged>, "highlights": <-80..60>, "shadows": <-40..80>, '
+            '"temperature": <-50..50, positive = warmer>, "tint": <-40..40, positive = more magenta>, "vibrance": <-30..60>, "sharpness": <0..60>, '
+            f'"reason": "<one or two short sentences in {lang} saying what you changed and why>"}}.')
+
+
+def parse_edit(text: str) -> dict:
+    """The suggested settings (clamped to safe ranges) and the reason, from the model's answer."""
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        raise AIError(0, "the answer did not contain settings")
+    try:
+        j = json.loads(m.group(0))
+    except Exception:
+        raise AIError(0, "the answer did not contain settings")
+    ops = {}
+    for k, (lo, hi) in _EDIT_RANGES.items():
+        try:
+            v = float(j.get(k, 1.0 if k == "contrast" else 0.0))
+        except (TypeError, ValueError):
+            v = 1.0 if k == "contrast" else 0.0
+        v = max(lo, min(hi, v))
+        ops[k] = round(v, 3) if k in ("contrast", "exposure") else int(round(v))
+    return {"ops": ops, "reason": re.sub(r"\s+", " ", str(j.get("reason", ""))).strip()[:400]}
+
+
+def suggest_edit(pid: int) -> dict:
+    """Ask the AI of AI tagging what this photo needs. Nothing is changed: the window puts the answer on the sliders as a preview."""
+    cfg = get_settings()
+    provider = cfg["provider"]
+    key = _key(provider)
+    if provider != "custom" and not key:
+        raise AIError(401, "No API key is set for the selected provider")
+    model = cfg["model"] or pick_auto(provider, list_models(provider, key, cfg["base_url"]))
+    if not model:
+        raise AIError(0, "No suitable model found. Choose a model manually in AI tagging settings")
+    con = db.connect()
+    row = con.execute("SELECT id, sha256, rel_path, orig_backup, edited, edit_ops FROM photos WHERE id=? AND is_video=0", (pid,)).fetchone()
+    if not row:
+        raise AIError(0, "no thumbnail")
+    src = PATHS.media / (row["orig_backup"] or row["rel_path"])          # the picture without edits: the suggestion is for the original look
+    try:
+        import io
+        im = images.open_image(src)
+        im.thumbnail((1024, 1024))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=85)
+        jpeg = buf.getvalue()
+    except Exception:
+        raise AIError(0, "no thumbnail")
+    text = _with_context(_edit_prompt(cfg["language"]), photo_context(con, pid))
+    for attempt in range(4):
+        try:
+            r = parse_edit(_vision(provider, cfg["base_url"], key, model, [jpeg], text))
+            return {**r, "model": model}
         except AIError as e:
             if e.status not in (0, 408, 429, 500, 502, 503, 504, 529) or attempt == 3:
                 raise
@@ -501,7 +644,15 @@ def run_aitag(ids: list[int] | None, only_untagged: bool, progress):
                 images.make_thumb(render.current_path(row), row["sha256"])
             if not tp.exists():
                 raise AIError(0, "no thumbnail")
-            return _tag_with_retry((provider, cfg["base_url"], key, model, tp.read_bytes(), cfg["language"]), cancelled)
+            try:                    # own connection (this runs in a worker thread); keywords given a moment ago to the photos taken close in time are seen too
+                wc = db.connect()
+                try:
+                    context = photo_context(wc, row["id"])
+                finally:
+                    wc.close()
+            except Exception:
+                context = ""
+            return _tag_with_retry((provider, cfg["base_url"], key, model, tp.read_bytes(), cfg["language"], context), cancelled)
 
         ok = fails = kws = 0
         last_err = ""

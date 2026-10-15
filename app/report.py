@@ -182,7 +182,7 @@ def tech_text(version: str, language: str = "", library: str = "", photos: int |
     return text[-LOG_CHARS:] if len(text) > LOG_CHARS else text
 
 
-def compose(description: str, tech: str | None, version: str, client: str = "", kind: str = "problem", title: str = "") -> tuple[str, str]:
+def compose(description: str, tech: str | None, version: str, client: str = "", kind: str = "problem", title: str = "", images: list[str] | None = None) -> tuple[str, str]:
     """(title, body) of the issue. kind: "problem" or "feature" (a suggestion). The title is the one the user wrote, else the first line of the text."""
     desc = description.strip()
     first = re.sub(r"\s+", " ", title.strip() or (desc.splitlines()[0] if desc else "")).strip()
@@ -193,6 +193,8 @@ def compose(description: str, tech: str | None, version: str, client: str = "", 
         if client.strip():
             body += "<details><summary>Window details</summary>\n\n```\n" + redact(client.strip()[:3500]).replace("```", "'''") + "\n```\n</details>\n\n"
     kind_name = "feature suggestion" if kind == "feature" else "problem"
+    if images:
+        body = body.replace("\n\n---\n", "\n\n" + "\n".join(f"![picture {i}]({u})" for i, u in enumerate(images, 1)) + "\n\n---\n", 1)
     body += f"_Sent from photag {version} with “Report a problem or suggest a feature” ({kind_name})._"
     return title, body
 
@@ -392,6 +394,49 @@ def _call(method: str, path: str, payload: dict | None = None, auth: bool = Fals
         raise ReportError(f"GitHub answered {e.code}")
     except Exception as e:
         raise ReportError(str(e)[:120])
+
+
+IMAGE_BRANCH = "report-images"       # the pictures people attach to a report are kept on this branch of the repository (GitHub's API cannot attach files to an issue)
+MAX_IMAGES = 3
+MAX_IMAGE_BYTES = 1_500_000
+
+
+def _ensure_image_branch() -> None:
+    try:
+        _call("GET", f"/git/ref/heads/{IMAGE_BRANCH}", auth=True)
+        return
+    except ReportError as e:
+        if "404" not in str(e):
+            raise
+    default = _call("GET", "", auth=True).get("default_branch") or "main"
+    sha = _call("GET", f"/git/ref/heads/{default}", auth=True)["object"]["sha"]
+    _call("POST", "/git/refs", {"ref": f"refs/heads/{IMAGE_BRANCH}", "sha": sha}, auth=True)
+
+
+def upload_images(data_urls: list[str]) -> tuple[list[str], int]:
+    """(addresses of the uploaded pictures, how many could not be uploaded). The pictures arrive as JPEG data addresses made by the window
+    (scaled down; re-encoding drops their metadata). Nothing here raises: a report is still sent without a picture that failed."""
+    import base64
+    urls, failed = [], 0
+    todo = [u for u in data_urls if isinstance(u, str)][:MAX_IMAGES]
+    if not todo:
+        return urls, 0
+    try:
+        _ensure_image_branch()
+    except ReportError:
+        return urls, len(todo)
+    for u in todo:
+        try:
+            m = re.fullmatch(r"data:image/jpeg;base64,([A-Za-z0-9+/=]+)", u)
+            raw = base64.b64decode(m.group(1)) if m else b""
+            if not raw.startswith(b"\xff\xd8") or len(raw) > MAX_IMAGE_BYTES:
+                raise ReportError("not a usable picture")
+            name = f"{time.strftime('%Y%m%d')}-{os.urandom(6).hex()}.jpg"
+            _call("PUT", f"/contents/{IMAGE_BRANCH}/{name}", {"message": "Picture attached to a report", "content": base64.b64encode(raw).decode(), "branch": IMAGE_BRANCH}, auth=True)
+            urls.append(f"https://raw.githubusercontent.com/{REPO}/{IMAGE_BRANCH}/{IMAGE_BRANCH}/{name}")
+        except Exception:
+            failed += 1
+    return urls, failed
 
 
 def split_body(body: str) -> tuple[str, str]:

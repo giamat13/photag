@@ -65,6 +65,13 @@ Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\shell\open\command
 Root: HKCU; Subkey: "Software\photag\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "photag"; Flags: uninsdeletekey; Tasks: openwith
 Root: HKCU; Subkey: "Software\photag\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "Photo manager and picture viewer: shows a picture without adding it to the catalog"; Tasks: openwith
 Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "photag"; ValueData: "Software\photag\Capabilities"; Flags: uninsdeletevalue; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\photag"; ValueType: string; ValueName: "MUIVerb"; ValueData: "photag"; Flags: uninsdeletekey; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\photag"; ValueType: string; ValueName: "Icon"; ValueData: """{app}\photag.exe"",0"; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\photag"; ValueType: string; ValueName: "SubCommands"; ValueData: ""; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\photag\shell\01import"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Import this folder into photag..."; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\photag\shell\01import\command"; ValueType: string; ValueData: """{app}\photag.exe"" --folder-action import ""%1"""; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\photag\shell\02collection"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Import this folder as a collection..."; Tasks: openwith
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\photag\shell\02collection\command"; ValueType: string; ValueData: """{app}\photag.exe"" --folder-action collection ""%1"""; Tasks: openwith
 Root: HKCU; Subkey: "Software\Classes\.jpg\OpenWithProgids"; ValueType: none; ValueName: "photag.Image"; Flags: uninsdeletevalue; Tasks: openwith
 Root: HKCU; Subkey: "Software\Classes\Applications\photag.exe\SupportedTypes"; ValueType: string; ValueName: ".jpg"; ValueData: ""; Tasks: openwith
 Root: HKCU; Subkey: "Software\photag\Capabilities\FileAssociations"; ValueType: string; ValueName: ".jpg"; ValueData: "photag.Image"; Tasks: openwith

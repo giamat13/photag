@@ -7,6 +7,7 @@ program make itself the default: the user picks photag for a picture type in Def
     HKCU\\Software\\Classes\\<.jpg ...>\\OpenWithProgids   photag.Image  (the "Open with" list)
     HKCU\\Software\\Classes\\Applications\\<exe name>\\...              (the "Open with > Choose another app" entry)
     HKCU\\Software\\photag\\Capabilities + HKCU\\Software\\RegisteredApplications   (Default apps)
+    HKCU\\Software\\Classes\\Directory\\shell\\photag   the "photag" sub-menu of a folder in Explorer (#60): photag.exe --folder-action <verb> "<folder>"
 
 The installer (installer.iss, task "openwith") writes the same keys; tests point the roots elsewhere (classes= / software=).
 """
@@ -33,11 +34,35 @@ def supported() -> bool:
     return sys.platform == "win32" and bool(exe())
 
 
-def plan(exe_path: str, classes: str = CLASSES, software: str = SOFTWARE) -> list[tuple[str, str, str, str]]:
+FOLDER_VERBS = (("import", "Import this folder into photag…"), ("collection", "Import this folder as a collection…"))       # photag.py --folder-action <verb> <folder>
+
+
+def folder_labels() -> dict:
+    """The sub-menu texts in the language chosen in the window (the registry cannot translate by itself)."""
+    try:
+        from . import background
+        return {"menu": "photag", "import": background.tr("Import this folder into photag…", {}),
+                "collection": background.tr("Import this folder as a collection…", {})}
+    except Exception:
+        return {"menu": "photag", **dict(FOLDER_VERBS)}
+
+
+def folder_rows(exe_path: str, classes: str = CLASSES, labels: dict | None = None) -> list[tuple[str, str, str, str]]:
+    """The right-click sub-menu of a folder in Explorer: photag > Import this folder... / Import this folder as a collection..."""
+    lb = labels or {"menu": "photag", **dict(FOLDER_VERBS)}
+    base = f"{classes}\\Directory\\shell\\photag"
+    rows = [(base, "MUIVerb", lb["menu"], "sz"), (base, "Icon", f'"{exe_path}",0', "sz"), (base, "SubCommands", "", "sz")]
+    for i, (verb, _) in enumerate(FOLDER_VERBS, 1):
+        rows += [(f"{base}\\shell\\{i:02d}{verb}", "MUIVerb", lb[verb], "sz"),
+                 (f"{base}\\shell\\{i:02d}{verb}\\command", "", f'"{exe_path}" --folder-action {verb} "%1"', "sz")]
+    return rows
+
+
+def plan(exe_path: str, classes: str = CLASSES, software: str = SOFTWARE, labels: dict | None = None) -> list[tuple[str, str, str, str]]:
     """Every registry value to write: (key under HKCU, value name ('' = the default value), data, 'sz' | 'none')."""
     name = Path(exe_path).name
     cmd = f'"{exe_path}" "%1"'
-    rows = [
+    rows = folder_rows(exe_path, classes, labels) + [
         (f"{classes}\\{PROGID}", "", "Picture", "sz"),
         (f"{classes}\\{PROGID}\\DefaultIcon", "", f'"{exe_path}",0', "sz"),
         (f"{classes}\\{PROGID}\\shell\\open", "FriendlyAppName", "photag", "sz"),
@@ -58,7 +83,7 @@ def plan(exe_path: str, classes: str = CLASSES, software: str = SOFTWARE) -> lis
 
 def _roots(classes: str, software: str):
     """Keys that are removed as a whole when switching off (the OpenWithProgids values are removed one by one)."""
-    return [f"{classes}\\{PROGID}", f"{software}\\photag"]
+    return [f"{classes}\\{PROGID}", f"{software}\\photag", f"{classes}\\Directory\\shell\\photag"]
 
 
 def register(exe_path: str | None = None, classes: str = CLASSES, software: str = SOFTWARE) -> None:
@@ -66,7 +91,7 @@ def register(exe_path: str | None = None, classes: str = CLASSES, software: str 
     p = exe_path or exe()
     if not p:
         raise RuntimeError("photag.exe not known")
-    for key, name, data, kind in plan(p, classes, software):
+    for key, name, data, kind in plan(p, classes, software, folder_labels() if classes == CLASSES else None):
         with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key) as k:
             winreg.SetValueEx(k, name, 0, winreg.REG_SZ if kind == "sz" else winreg.REG_NONE, data if kind == "sz" else b"")
     _notify()
@@ -167,12 +192,23 @@ def is_default() -> bool:
 def ensure() -> bool:
     """On by default: when photag starts (installed or portable, or after a code update) and is not yet in the "Open with" menu
     for this photag.exe, put it there -- unless the user switched it off. Returns True when it registered."""
-    if not supported() or opted_out() or is_registered():
+    if not supported() or opted_out() or (is_registered() and folder_menu_registered()):
         return False
     try:
         register()
         return True
     except OSError:
+        return False
+
+
+def folder_menu_registered(exe_path: str | None = None, classes: str = CLASSES) -> bool:
+    """True when the folder sub-menu exists and points at this photag.exe."""
+    import winreg
+    p = exe_path or exe()
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, f"{classes}\\Directory\\shell\\photag\\shell\\01import\\command") as k:
+            return winreg.QueryValueEx(k, "")[0] == f'"{p}" --folder-action import "%1"'
+    except (FileNotFoundError, OSError):
         return False
 
 

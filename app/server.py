@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, extras, fileassoc, power, background as bgmode
+from . import geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, extras, fileassoc, power, wallpaper, background as bgmode
 from .version import __version__
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -162,6 +162,17 @@ def _edit_migrate_loop():
         time.sleep(float(os.environ.get("PHOTAG_MIGRATE_TICK", 1)))
 
 
+def _wallpaper_loop():
+    """The desktop wallpaper that changes by itself (#55, Windows): every half minute see whether it is time."""
+    time.sleep(float(os.environ.get("PHOTAG_WALLPAPER_DELAY", 20)))
+    while True:
+        try:
+            wallpaper.tick(db.connect())
+        except Exception as e:
+            print(f"wallpaper change failed: {e!r}", file=sys.stderr, flush=True)
+        time.sleep(float(os.environ.get("PHOTAG_WALLPAPER_TICK", 30)))
+
+
 def _memory_loop():
     """Every couple of minutes: unload the AI models nobody has used for 5 minutes and give the freed memory back (#33)."""
     while True:
@@ -189,6 +200,7 @@ def _start_trash_purge():
     threading.Thread(target=_edit_migrate_loop, daemon=True).start()
     threading.Thread(target=_score_loop, daemon=True).start()
     threading.Thread(target=_auto_import_loop, daemon=True).start()
+    threading.Thread(target=_wallpaper_loop, daemon=True).start()
     try:
         updater.reconcile()   # settle an update that was started before this start (finished, or interrupted)
         updater.auto_enable_beta_if_prerelease()
@@ -1695,6 +1707,7 @@ class ReportIn(BaseModel):
     kind: str = "problem"              # "problem" or "feature" (a suggestion)
     language: str = ""
     client: str = ""          # what the window knows (screen, theme, its own errors)
+    images: list[str] = []    # up to 3 pictures as JPEG data addresses (#51)
 
 
 def _report_tech(language: str = "") -> str:
@@ -1729,10 +1742,11 @@ def report_send(b: ReportIn):
         desc = desc[:report.MAX_DESC]
     if not report.allowed():
         raise err(429, "You have sent several reports already. You can send again in about {minutes} minutes.", minutes=report.retry_in_minutes())
-    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind, report.redact(b.title)[:200])
+    urls, failed = report.upload_images(b.images) if (b.images and report.can_send()) else ([], 0)
+    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind, report.redact(b.title)[:200], urls)
     try:
         r = report.send(title, body, __version__, kind)
-        return {"sent": True, "number": r["number"], "url": r["url"]}
+        return {"sent": True, "number": r["number"], "url": r["url"], "images": len(urls), "images_failed": failed}
     except report.ReportError:                        # never opens GitHub in the browser: the user is told it was not sent
         raise err(503, "The report could not be sent")
 
@@ -1931,6 +1945,13 @@ def edit_auto(pid: int):
     """The "Auto" button: what this picture needs, worked out from the picture. Returned, not saved -- the page puts it
     on the sliders and applies it like any other edit (so it shows in History and can be undone)."""
     return {"ops": images.auto_ops(_original_path(db.connect(), pid))}
+
+
+@app.post("/api/photo/{pid}/ai-edit")
+def edit_ai(pid: int):
+    """The "AI" button of the Develop module (#46): the AI looks at the picture and suggests develop settings. Returned, not saved (like Auto)."""
+    _original_path(db.connect(), pid)
+    return _ai_call(aitag.suggest_edit, pid)
 
 
 @app.post("/api/photo/{pid}/revert")
@@ -2165,6 +2186,12 @@ def ui_theme_set(body: UiThemeIn):
         raise err(400, "Unknown theme")
     config.merge_settings({"ui_theme": {"id": body.id, "custom": custom}})
     return {"ok": True}
+
+
+@app.get("/api/ui-lang")
+def ui_lang_get():
+    """The language the user chose (kept here as well as in the window's own storage, which is lost when photag has to use another port)."""
+    return {"lang": config.read_all().get("ui_lang") or ""}
 
 
 @app.post("/api/ui-lang")
@@ -2678,6 +2705,24 @@ def analysis_series():
     return {"series": analysis.find_series(db.connect())}
 
 
+class SeriesIn(BaseModel):
+    ids: list[int]
+
+
+@app.post("/api/series")
+def series_make(body: SeriesIn):
+    """The chosen photos become one series by hand (#59)."""
+    if len(set(body.ids)) < 2:
+        raise err(400, "Choose at least two photos")
+    return {"ok": True, "series": analysis.make_series(db.connect(), body.ids)}
+
+
+@app.post("/api/series/remove")
+def series_remove(body: SeriesIn):
+    analysis.unseries(db.connect(), body.ids)
+    return {"ok": True}
+
+
 @app.get("/api/analysis/bursts")
 def analysis_bursts():
     """Rapid-fire sequences (burst/continuous-shooting mode), for the grid's optional stacking."""
@@ -2891,6 +2936,98 @@ def rename_person(pid: int, body: RenameIn):
     con.execute("UPDATE people SET name=? WHERE id=?", (body.name, pid))
     con.commit()
     return {"id": pid}
+
+
+class WallpaperIn(BaseModel):
+    enabled: bool | None = None
+    source: str | None = None
+    album_id: int | None = None
+    minutes: int | None = None
+    order: str | None = None
+
+
+@app.get("/api/wallpaper")
+def wallpaper_get():
+    cfg = wallpaper.get(db.connect())
+    return {**cfg, "supported": wallpaper.supported()}
+
+
+@app.post("/api/wallpaper")
+def wallpaper_set(b: WallpaperIn):
+    if not wallpaper.supported():
+        raise err(400, "The changing wallpaper works on Windows only")
+    cfg = wallpaper.save(db.connect(), b.model_dump(exclude_unset=True))
+    return {**cfg, "supported": True}
+
+
+@app.post("/api/wallpaper/now")
+def wallpaper_now():
+    if not wallpaper.supported():
+        raise err(400, "The changing wallpaper works on Windows only")
+    try:
+        pid = wallpaper.change_now(db.connect())
+    except Exception:
+        raise err(500, "The wallpaper could not be changed")
+    if pid is None:
+        raise err(400, "There are no photos for the wallpaper")
+    return {"ok": True, "id": pid}
+
+
+class FaceTagIn(BaseModel):
+    x1: float
+    y1: float
+    x2: float
+    y2: float          # the rectangle the user drew, as fractions (0-1) of the picture
+    name: str
+
+
+@app.post("/api/photo/{pid}/face")
+def tag_face_by_hand(pid: int, b: FaceTagIn):
+    """Tag a person by hand (#67): the user drew a rectangle around a face the detector missed (or got wrong). The face is saved with the person's name;
+    it has no embedding, so it is only a label (it is never grouped by the detector, and counts as a face of that person)."""
+    con = db.connect()
+    name = b.name.strip()[:80]
+    if not name:
+        raise err(400, "Empty name")
+    r = con.execute("SELECT rel_path, edited, edit_ops, is_video FROM photos WHERE id=?", (pid,)).fetchone()
+    if not r or r["is_video"]:
+        raise err(404, "Photo not found")
+    ops = None
+    try:
+        ops = json.loads(r["edit_ops"]) if r["edit_ops"] else None
+    except ValueError:
+        ops = None
+    if r["edited"] and ops and not render.is_neutral(ops):
+        raise err(400, "A face cannot be marked on an edited photo: mark it before editing, or reset the edit")
+    x1, x2 = sorted((max(0.0, min(1.0, b.x1)), max(0.0, min(1.0, b.x2))))
+    y1, y2 = sorted((max(0.0, min(1.0, b.y1)), max(0.0, min(1.0, b.y2))))
+    if x2 - x1 < 0.005 or y2 - y1 < 0.005:
+        raise err(400, "The rectangle is too small")
+    try:
+        w, h = images.open_image(PATHS.media / r["rel_path"]).size          # the upright size: the detector's boxes are in it too
+    except Exception:
+        raise err(400, "The picture could not be read")
+    con.execute("INSERT OR IGNORE INTO people(name,source) VALUES(?, 'manual')", (name,))
+    person = con.execute("SELECT id FROM people WHERE name=?", (name,)).fetchone()["id"]
+    fid = con.execute("INSERT INTO faces(photo_id,x1,y1,x2,y2,det_score,embedding,person_id) VALUES(?,?,?,?,?,1.0,NULL,?)",
+                      (pid, x1 * w, y1 * h, x2 * w, y2 * h, person)).lastrowid
+    con.execute("UPDATE people SET cover_face_id=COALESCE(cover_face_id, ?) WHERE id=?", (fid, person))
+    con.commit()
+    return {"id": fid, "person_id": person}
+
+
+@app.delete("/api/face/{fid}")
+def delete_hand_made_face(fid: int):
+    """Take away a face the user marked by hand (a detected face is not removed this way)."""
+    con = db.connect()
+    r = con.execute("SELECT id, person_id FROM faces WHERE id=? AND embedding IS NULL", (fid,)).fetchone()
+    if not r:
+        raise err(404, "Face not found")
+    con.execute("UPDATE people SET cover_face_id=NULL WHERE cover_face_id=?", (fid,))
+    con.execute("DELETE FROM faces WHERE id=?", (fid,))
+    con.commit()
+    (PATHS.thumbs / f"face_{fid}.jpg").unlink(missing_ok=True)
+    return {"ok": True}
 
 
 @app.get("/api/clusters")

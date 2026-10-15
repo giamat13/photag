@@ -39,6 +39,9 @@ class Client:
     def get(self, path):
         return self._do("GET", path)
 
+    def delete(self, path):
+        return self._do("DELETE", path)
+
     def post(self, path, json=None, content=None):
         if content is not None:
             return self._do("POST", path, content, "application/octet-stream")

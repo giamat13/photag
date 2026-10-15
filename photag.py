@@ -106,6 +106,24 @@ def _view_files(args) -> list[str]:
 
 VIEW_FILES = _view_files(sys.argv[1:])
 
+
+def _folder_action() -> str:
+    """photag.exe --folder-action <verb> "<folder>" (the photag sub-menu of a folder in Explorer, #60): the query that makes the window offer
+    that action on that folder when it opens ("" when not started that way)."""
+    a = sys.argv[1:]
+    try:
+        i = a.index("--folder-action")
+        verb, folder = a[i + 1], a[i + 2]
+    except (ValueError, IndexError):
+        return ""
+    if verb not in ("import", "collection") or not Path(folder).is_dir():
+        return ""
+    from urllib.parse import urlencode
+    return "?" + urlencode({"folder_action": verb, "folder": str(Path(folder).resolve())})
+
+
+FOLDER_QUERY = _folder_action()
+
 HOST = "127.0.0.1"
 BASE_PORT = int(os.environ.get("PHOTAG_BASE_PORT", 8756))
 
@@ -264,7 +282,7 @@ def main():
         if view_url:
             webview.create_window(f"{Path(VIEW_FILES[0]).name} - photag", view_url, width=1100, height=780)
         else:
-            webview.create_window("photag", URL, width=1280, height=860)
+            webview.create_window("photag", URL + FOLDER_QUERY, width=1280, height=860)
         _log("opening the window")
         webview.start(icon=str(ICON) if ICON.exists() else None)
         if view_url and not ALREADY_RUNNING:
@@ -272,7 +290,7 @@ def main():
     except Exception as e:
         if sys.platform != "win32":                    # Linux / macOS without a usable window toolkit (GTK / Qt): use the browser
             _log(f"no window ({type(e).__name__}: {e}); opening {view_url or URL} in the default browser instead")
-            _browser_mode(view_url)
+            _browser_mode(view_url or (URL + FOLDER_QUERY if FOLDER_QUERY else None))
             return
         _fatal("photag could not open its window", f"{type(e).__name__}: {e} (is the Microsoft Edge WebView2 runtime installed?)")
     _log("window closed, exiting")

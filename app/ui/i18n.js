@@ -16,6 +16,15 @@ const I18N = (() => {
   const codes = LANGS.map(l => l[0]);
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem('pm.lang')); } catch {}
+  if (!codes.includes(saved)) {
+    // The window's own storage is lost when photag has to use another port (after an update, for instance): the server keeps the choice as well
+    try {
+      const x = new XMLHttpRequest();
+      x.open('GET', '/api/ui-lang', false);
+      x.send();
+      if (x.status === 200) { const l = JSON.parse(x.responseText).lang; if (codes.includes(l)) { saved = l; try { localStorage.setItem('pm.lang', JSON.stringify(l)); } catch {} } }
+    } catch {}
+  }
   const lang = codes.includes(saved) ? saved : 'en';        // English unless the user picked another language (View > Language)
   let dict = {};
   if (lang !== 'en') {
@@ -42,6 +51,7 @@ function t(src, vars) {
 }
 function setLanguage(code) {
   try { localStorage.setItem('pm.lang', JSON.stringify(code)); } catch {}
+  try { const x = new XMLHttpRequest(); x.open('POST', '/api/ui-lang', false); x.setRequestHeader('Content-Type', 'application/json'); x.send(JSON.stringify({ lang: code })); } catch {}
   location.reload();
 }
 

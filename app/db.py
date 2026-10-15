@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS faces(
   person_id INTEGER
 );
 CREATE INDEX IF NOT EXISTS ix_faces_photo ON faces(photo_id);
+-- series the user made by hand (#59): series_id > 0 = members of one series; 0 = taken out of the automatic series
+CREATE TABLE IF NOT EXISTS manual_series(photo_id INTEGER PRIMARY KEY, series_id INTEGER);
 CREATE INDEX IF NOT EXISTS ix_faces_cluster ON faces(cluster_id);
 
 CREATE TABLE IF NOT EXISTS tags(id INTEGER PRIMARY KEY, name TEXT UNIQUE);

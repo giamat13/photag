@@ -45,7 +45,7 @@ const mediaUrl = id => `/media/${id}${VER[id]?'?v='+VER[id]:''}`;
 
 // ---------- state ----------
 const S = {
-  mod:'library', view:'grid', prevView:'grid',
+  mod:'library', view:'grid', prevView:'grid', loupeFrom:'grid',
   src:{kind:'all', name:t('All Photographs')}, hist:[], histPos:-1,
   all:[], byId:new Map(), base:[], list:[], idx:new Map(),
   sel:new Set(), act:null, anchor:null,
@@ -963,6 +963,7 @@ function setView(v){
   if(S.mod!=='library') setModule('library');
   if(v==='loupe' && S.act==null && S.list.length) selectOnly(S.list[0].id);
   if(v==='compare' && S.act==null && S.list.length) selectOnly(S.list[0].id);
+  if(v==='loupe' && (S.view==='grid' || S.view==='timeline')) S.loupeFrom = S.view;          // leaving the loupe returns to the view it was opened from (the Timeline stays the Timeline)
   S.prevView = ['people','review'].includes(S.view)?S.prevView:S.view; S.view=v;
   ['grid','loupe','compare','survey','people','map','timeline','review'].forEach(k=>$('#v-'+k).classList.toggle('hidden', k!==v));
   $('#v-empty').classList.add('hidden');
@@ -1184,7 +1185,7 @@ $('#loupe-media').addEventListener('mousedown', e=>{   // drag to pan when zoome
   const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); setTimeout(()=>m._dragged=false); };
   addEventListener('mousemove',mv); addEventListener('mouseup',up);
 });
-$('#v-loupe').addEventListener('dblclick', e=>{ if(e.target.closest('.vp')) return; if(!$('#loupe-media').classList.contains('zoom')) setView('grid'); });
+$('#v-loupe').addEventListener('dblclick', e=>{ if(e.target.closest('.vp')) return; if(!$('#loupe-media').classList.contains('zoom')) setView(S.loupeFrom==='timeline' ? 'timeline' : 'grid'); });
 
 let CMP_CAND=null, CMP_FOR=null, CMP_SHOWN=[];
 const CMPR = {key:'', cur:'', want:'', byId:new Map(), best:null, eyes:true};      // the ranking of the photos on screen: score, rank, closed eyes (#43)
@@ -2663,6 +2664,17 @@ $('#btn-dev-auto').onclick = async ()=>{
     tint:a.tint||0, vib:a.vibrance||0, shp:a.sharpness||0}, t('Auto'));
   await devApply(true); toast(t('Auto: the photo was improved · original kept'));
 };
+// AI: the AI of AI tagging looks at the picture and suggests settings; they go onto the sliders as a preview and nothing is saved until Apply (#46).
+$('#btn-dev-ai').onclick = async ()=>{
+  if(DEV.id==null) return;
+  toast(t('Asking the AI…'), 60000);
+  let r; try{ r = await send('POST', `/api/photo/${DEV.id}/ai-edit`); }catch(e){ toast(e.message, 5000); return; }
+  const a = r.ops||{};
+  devSet({...NEUTRAL(), rot:DEV.ops.rot, crop:DEV.ops.crop, gray:DEV.ops.gray, fh:DEV.ops.fh, fv:DEV.ops.fv,
+    exp:Math.round((a.exposure||0)*100), hi:a.highlights||0, sh:a.shadows||0, con:unfac(a.contrast,.3), temp:a.temperature||0,
+    tint:a.tint||0, vib:a.vibrance||0, shp:a.sharpness||0}, t('AI suggestion'));
+  toast(r.reason ? t('AI suggestion') + ': ' + r.reason + ' · ' + t('Press Apply to keep it') : t('The AI suggestion is on the sliders · press Apply to keep it'), 9000);
+};
 $('#btn-dev-reset').onclick = ()=>{ if(DEV.id!=null) devSet(NEUTRAL(), t('Reset')); };
 $('#btn-copy-prev').onclick = ()=>{ if(DEV.id==null) return; if(!DEV.last) return toast(t('No settings have been applied to another photo yet')); devSet({...toneNeutral(), ...JSON.parse(JSON.stringify(DEV.last))}, t('Previous Settings')); };
 $('#btn-dev-revert').onclick = async ()=>{
@@ -2733,6 +2745,76 @@ async function loadSeries(){
   }catch{ return; }
   if(S.stackBursts) applyFilter(); else refreshCells();
 }
+// Desktop wallpaper that changes by itself (#55): Windows only. The pictures are copied (scaled) to a folder of photag; the originals are only read.
+async function wallpaperDialog(albumId){
+  let w; try{ w = await api('/api/wallpaper'); }catch(e){ return toast(e.message); }
+  if(!w.supported){ modal(`<h3>${t('Desktop wallpaper')}</h3><div class="mb"><p>${t('The changing wallpaper works on Windows only.')}</p></div><div class="mf"><span class="spacer"></span><button class="primary" onclick="closeModal()">${t('OK')}</button></div>`); return; }
+  const cols = S.albums.filter(a=>a.kind==='album');
+  const src = albumId ? 'album:'+albumId : w.source==='album' && w.album_id ? 'album:'+w.album_id : w.source;
+  const mins = [[5,t('5 minutes')],[15,t('15 minutes')],[30,t('30 minutes')],[60,t('1 hour')],[180,t('3 hours')],[360,t('6 hours')],[720,t('12 hours')],[1440,t('1 day')]];
+  modal(`<h3>${t('Desktop wallpaper')}</h3><div class="mb">
+    <label class="chkrow"><input type="checkbox" id="wp-on" ${w.enabled || albumId ? 'checked' : ''}> ${t('Change the desktop wallpaper by itself')}</label>
+    <label class="fld"><span>${t('Pictures from')}</span><select id="wp-src"><option value="all">${t('All photos')}</option><option value="favorites">${t('Favorites')}</option>
+      ${cols.map(a=>`<option value="album:${a.id}">${t('Collection')}: ${esc(a.name)}</option>`).join('')}</select></label>
+    <label class="fld"><span>${t('Change every')}</span><select id="wp-min">${mins.map(([m,l])=>`<option value="${m}">${l}</option>`).join('')}<option value="custom">${t('Other…')}</option></select>
+      <input type="number" id="wp-cmin" min="1" max="10080" value="${w.minutes}" style="width:90px" dir="ltr"> <span id="wp-cl">${t('minutes')}</span></label>
+    <label class="fld"><span>${t('Order')}</span><select id="wp-ord"><option value="random">${t('Random')}</option><option value="newest">${t('Newest first')}</option><option value="oldest">${t('Oldest first')}</option></select></label>
+    <p class="hint" style="padding:0">${t('photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).')}</p></div>
+    <div class="mf"><button id="wp-now">${t('Change now')}</button><span class="spacer"></span><button id="wp-cancel">${t('Cancel')}</button><button class="primary" id="wp-ok">${t('Save')}</button></div>`);
+  $('#wp-src').value = src; if(!$('#wp-src').value) $('#wp-src').value = 'all';
+  $('#wp-min').value = mins.some(([m])=>m===w.minutes) ? String(w.minutes) : 'custom'; $('#wp-ord').value = w.order;
+  const sync = ()=>{ const c = $('#wp-min').value==='custom'; $('#wp-cmin').style.display = c ? '' : 'none'; $('#wp-cl').style.display = c ? '' : 'none'; };
+  $('#wp-min').onchange = sync; sync();
+  const read = ()=>{ const s = $('#wp-src').value; return {enabled:$('#wp-on').checked, source:s.startsWith('album:') ? 'album' : s, album_id:s.startsWith('album:') ? +s.slice(6) : null,
+    minutes:$('#wp-min').value==='custom' ? Math.max(1, +$('#wp-cmin').value||60) : +$('#wp-min').value, order:$('#wp-ord').value}; };
+  $('#wp-cancel').onclick = closeModal;
+  $('#wp-ok').onclick = async ()=>{ try{ await send('POST', '/api/wallpaper', read()); closeModal(); toast($('#wp-on').checked ? t('The wallpaper will change by itself') : t('The wallpaper stays as it is'), 2500); }catch(e){ toast(e.message); } };
+  $('#wp-now').onclick = async ()=>{ try{ await send('POST', '/api/wallpaper', read()); await send('POST', '/api/wallpaper/now'); toast(t('The wallpaper was changed'), 2500); }catch(e){ toast(e.message, 4000); } };
+}
+// Tag a person by hand (#67): drag a rectangle around the face on the picture in the loupe, then type the name.
+function tagPersonByHand(){
+  const p = actPhoto(); if(!p || p.is_video) return;
+  if(S.view!=='loupe') setView('loupe');
+  $('#loupe-media').classList.remove('zoom');
+  setTimeout(()=>{
+    const img = $('#loupe-media img'); if(!img) return;
+    const layer = document.createElement('div'); layer.id = 'ft-layer';
+    layer.style.cssText = 'position:fixed;inset:0;z-index:60;cursor:crosshair;background:rgba(0,0,0,.18)';
+    const box = document.createElement('div'); box.style.cssText = 'position:fixed;border:2px solid var(--accent,#4ea1ff);background:rgba(78,161,255,.18);display:none;pointer-events:none';
+    const tip = document.createElement('div'); tip.textContent = t('Drag a rectangle around the face · Esc to cancel');
+    tip.style.cssText = 'position:fixed;top:56px;inset-inline:0;text-align:center;color:#fff;font-size:14px;text-shadow:0 1px 3px #000;pointer-events:none';
+    layer.append(box, tip); document.body.append(layer);
+    const stop = ()=>{ layer.remove(); document.removeEventListener('keydown', onKey, true); };
+    const onKey = e=>{ if(e.key==='Escape'){ e.stopPropagation(); stop(); } };
+    document.addEventListener('keydown', onKey, true);
+    let sx=0, sy=0, drag=false;
+    const show = (x,y)=>{ const l=Math.min(sx,x), tp=Math.min(sy,y); Object.assign(box.style, {display:'block', left:l+'px', top:tp+'px', width:Math.abs(x-sx)+'px', height:Math.abs(y-sy)+'px'}); };
+    layer.addEventListener('mousedown', e=>{ drag=true; sx=e.clientX; sy=e.clientY; show(sx,sy); e.preventDefault(); });
+    layer.addEventListener('mousemove', e=>{ if(drag) show(e.clientX, e.clientY); });
+    layer.addEventListener('mouseup', async e=>{
+      if(!drag) return; drag=false;
+      const b = img.getBoundingClientRect(), cl = (v,a,z)=>Math.max(a, Math.min(z, v));
+      const x1=(cl(Math.min(sx,e.clientX), b.left, b.right)-b.left)/b.width, x2=(cl(Math.max(sx,e.clientX), b.left, b.right)-b.left)/b.width,
+            y1=(cl(Math.min(sy,e.clientY), b.top, b.bottom)-b.top)/b.height, y2=(cl(Math.max(sy,e.clientY), b.top, b.bottom)-b.top)/b.height;
+      stop();
+      if(x2-x1 < 0.01 || y2-y1 < 0.01){ toast(t('The rectangle is too small'), 2500); return; }
+      const names = (S.people||[]).filter(x=>x.name).map(x=>`<option value="${esc(x.name)}">`).join('');
+      const name = await promptBox(t('Who is this?'), '', `<datalist id="ft-dl">${names}</datalist>`);
+      if(!name) return;
+      try{ await send('POST', `/api/photo/${p.id}/face`, {x1, y1, x2, y2, name}); toast(t('{0} was tagged in this photo', [name]), 2500); await loadSide(); if(DETAIL?.id===p.id) renderRight(); }
+      catch(err){ toast(err.message); }
+    });
+  }, 60);
+}
+async function makeSeries(){
+  const ids = targets().filter(id=>!(S.byId.get(id)||{}).is_video);
+  if(ids.length<2) return toast(t('Choose at least two photos'));
+  try{ await send('POST', '/api/series', {ids}); await loadSeries(); toast(t('A series of {0} photos was made', [num(ids.length)]), 2500); }catch(e){ toast(e.message); }
+}
+async function removeFromSeries(){
+  const ids = targets();
+  try{ await send('POST', '/api/series/remove', {ids}); await loadSeries(); toast(t('Removed from the series'), 2500); }catch(e){ toast(e.message); }
+}
 // ---------- themes (the engine is themes.js; this is the picker) ----------
 function toggleTheme(){                    // View > Light Theme: the Light theme, and back to the last dark one
   const cur = PhotagTheme.current(), th = PhotagTheme.resolve(cur);
@@ -2795,7 +2877,7 @@ $('#modal').addEventListener('mousedown', e=>{ if(e.target===$('#modal')) closeM
 let PB_CHECKED=false;   // state of an optional checkbox passed to promptBox via `extra`
 function promptBox(title, value='', extra=''){
   return new Promise(res=>{
-    modal(`<h3>${esc(title)}</h3><form class="mb" id="pb-form"><input type="text" id="pb-in" value="${esc(value)}" autocomplete="off">${extra}</form>
+    modal(`<h3>${esc(title)}</h3><form class="mb" id="pb-form"><input type="text" id="pb-in" value="${esc(value)}" autocomplete="off"${/<datalist id="ft-dl"/.test(extra) ? ' list="ft-dl"' : ''}>${extra}</form>
       <div class="mf"><button id="pb-cancel">${t("Cancel")}</button><button class="primary" id="pb-ok">${t("OK")}</button></div>`);
     const done=v=>{ PB_CHECKED = !!$('#modal-box input[type=checkbox]')?.checked; closeModal(); res(v); };
     $('#pb-form').onsubmit=e=>{ e.preventDefault(); done($('#pb-in').value.trim()||null); };
@@ -3664,6 +3746,8 @@ async function reportProblem(){
     <input id="rp-title" type="text" maxlength="200" style="width:100%;box-sizing:border-box">
     <label for="rp-desc" id="rp-lbl">${t('What happened? What did you expect?')}</label>
     <textarea id="rp-desc" rows="6" maxlength="4000" style="width:100%;box-sizing:border-box" placeholder="${t('Please do not write personal information: the report is public.')}"></textarea>
+    <div class="fld" style="padding:4px 0"><button type="button" id="rp-img">${t('Add pictures…')}</button><input type="file" id="rp-file" accept="image/*" multiple hidden>
+      <span class="hint" style="padding:0 8px">${t('Up to 3 pictures. They are shown publicly on GitHub, together with the report.')}</span><div id="rp-thumbs" style="display:flex;gap:6px;padding-top:6px;flex-wrap:wrap"></div></div>
     <label class="chk" style="padding:6px 0"><input type="checkbox" id="rp-tech" checked> ${t('Include technical details (version, system, recent errors)')}</label>
     <details id="rp-det"><summary>${t('Show what will be sent')}</summary><pre id="rp-pre" dir="ltr" style="max-height:180px;overflow:auto;white-space:pre-wrap;font-size:11px">${esc(pv.tech + '\n\n' + clientInfo())}</pre></details>
     <p id="rp-msg" class="hint" style="padding:0"></p></div>
@@ -3673,14 +3757,28 @@ async function reportProblem(){
   relabel();
   $$('#modal-box input[name=rp-kind]').forEach(r=>r.onchange = relabel);
   $('#rp-no').onclick = closeModal;
+  const shots = [];                                          // JPEG data addresses, scaled down (a canvas drops the picture's metadata)
+  const drawShots = ()=>{ $('#rp-thumbs').innerHTML = shots.map((s,i)=>`<span style="position:relative"><img src="${s}" style="height:56px;border-radius:4px;display:block" alt=""><button type="button" data-rm="${i}" style="position:absolute;top:0;inset-inline-end:0;padding:0 5px" aria-label="${esc(t('Remove'))}">×</button></span>`).join('');
+    $$('#rp-thumbs [data-rm]').forEach(b=>b.onclick=()=>{ shots.splice(+b.dataset.rm,1); drawShots(); }); };
+  const addShot = async f=>{
+    if(shots.length>=3 || !/^image\//.test(f.type)) return;
+    try{
+      const bmp = await createImageBitmap(f), k = Math.min(1, 1600/Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(bmp.width*k)); c.height = Math.max(1, Math.round(bmp.height*k)); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      shots.push(c.toDataURL('image/jpeg', .82)); drawShots();
+    }catch{ $('#rp-msg').textContent = t('This picture could not be read'); }
+  };
+  $('#rp-img').onclick = ()=>$('#rp-file').click();
+  $('#rp-file').onchange = async e=>{ for(const f of [...e.target.files]) await addShot(f); e.target.value=''; };
+  $('#rp-desc').addEventListener('paste', async e=>{ const fs=[...(e.clipboardData?.files||[])].filter(f=>/^image\//.test(f.type)); if(fs.length){ e.preventDefault(); for(const f of fs) await addShot(f); } });
   $('#rp-tech').onchange = ()=>{ $('#rp-det').style.display = $('#rp-tech').checked ? '' : 'none'; };
   $('#rp-ok').onclick = async ()=>{
     const desc=$('#rp-desc').value.trim(), msg=$('#rp-msg'), k=kind();
     if($('#rp-title').value.trim().length < 3 && desc.length < 3){ msg.textContent = t('Please write a title'); return; }       // a title is enough, like on GitHub (#29)
     $('#rp-ok').disabled = true; msg.textContent = t('Sending…');
     try{
-      const r = await send('POST', '/api/report', {description:desc, title:$('#rp-title').value.trim(), kind:k, include_tech:$('#rp-tech').checked, language:I18N.lang, client:clientInfo()});
-      if(r.sent){ closeModal(); toast(k==='feature' ? t('Thank you! Your suggestion was sent (#{0}).', [r.number]) : t('Thank you! Your report was sent (#{0}).', [r.number]), 4500); }
+      const r = await send('POST', '/api/report', {description:desc, title:$('#rp-title').value.trim(), kind:k, include_tech:$('#rp-tech').checked, language:I18N.lang, client:clientInfo(), images:shots});
+      if(r.sent){ closeModal(); if(r.images_failed) setTimeout(()=>toast(t('{0} pictures could not be attached', [num(r.images_failed)]), 5000), 4600); toast(k==='feature' ? t('Thank you! Your suggestion was sent (#{0}).', [r.number]) : t('Thank you! Your report was sent (#{0}).', [r.number]), 4500); }
     }catch(e){ msg.textContent = e.message || t('The report could not be sent'); $('#rp-ok').disabled = false; }
   };
 }
@@ -3878,6 +3976,7 @@ function openExport(){
     <label class="fld" id="ex-title-row"><span>${t('Gallery Title')}</span><input type="text" id="ex-title" value="${esc(last.title||'Photos')}"></label>
     <div class="fld" id="ex-modes"><span>${t("File Settings")}</span>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="current" ${last.mode==='current'?'checked':''}> ${t(" The file as it is in the catalog (including edits)")}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="full" ${last.mode==='full'?'checked':''}> ${t(" Full quality, with the edits and all the metadata written into the file")}</label>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="original" ${last.mode==='original'?'checked':''}> ${t(" The original, without edits")}</label>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="jpeg" ${last.mode==='jpeg'?'checked':''}> ${t(" JPEG, resized")}</label></div>
     <div class="frow" id="ex-jpeg"><span>${t("Long Edge")}</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>${t("Pixels · Quality")}</span>
@@ -3914,7 +4013,7 @@ function openExport(){
     pref.set('export', {dest, mode, edge:edge||2048, q, kind, xmp, meta, title});
     closeModal();
     if(kind==='html') runJob('/api/export-html','export',t('Export'),{ids, dest, long_edge:edge, quality:q, title});
-    else runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip:kind==='zip', xmp, update_metadata:meta});
+    else runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip:kind==='zip', xmp, update_metadata:meta || mode==='full'});    // "full" = the catalog's look at full quality, with the EXIF, caption, rating and keywords written into the copy (your library files are never changed)
   };
 }
 
@@ -4006,7 +4105,7 @@ function renderImport(){
         <div class="hint">${t("Reads an XMP sidecar next to each file, or an XMP packet embedded in it -- useful for Lightroom originals you no longer have a catalog for.")}</div></div></section>
       <section class="pnl"><h3><span>${t("Apply During Import")}</span></h3><div class="pbody">
         <label class="fld" style="padding:4px 12px"><span>${t("Keywords")}</span><input type="text" id="im-kw" placeholder="${t("Vacation, family")}"></label>
-        <label class="fld" style="padding:4px 12px"><span>${t("Add to Collection")}</span><input type="text" id="im-album" list="im-albums" placeholder="${t("None")}"></label>
+        <label class="fld" style="padding:4px 12px"><span>${t("Add to Collection")}</span><input type="text" id="im-album" list="im-albums" value="${esc(IM.album||'')}" placeholder="${t("None")}"></label>
         <datalist id="im-albums">${S.albums.filter(a=>a.kind==='album').map(a=>`<option value="${esc(a.name)}">`).join('')}</datalist></div></section>`:''}
       ${lr?`<section class="pnl"><h3><span>${t("What Is Imported")}</span></h3><div class="pbody"><div class="hint">
         ${t(" Ratings, flags, color labels, captions, capture dates, locations, keywords (“person” keywords become People), collections and the Quick Collection. Files are copied into the library — the original is not changed. Develop edits are saved in Lightroom's format and are not transferred; the original file is imported. Virtual copies and smart collections are skipped.")}</div></div></section>`:''}
@@ -4189,6 +4288,7 @@ const MENUS = [
     [t('Show Library Filter Bar'), '\\', ()=>{ $('#filterbar').classList.toggle('hidden'); }, null, ()=>!$('#filterbar').classList.contains('hidden')],
     sep,
     [t('Face Detection'), '', ()=>runJob('/api/faces','faces',t('Face Detection'))],
+    [t('Desktop wallpaper…'), '', ()=>wallpaperDialog()],
     sep,
     [t('Search by Meaning...'), 'Ctrl+Shift+M', semanticDialog],
     [t('On This Day'), '', ()=>setSource(srcFromKey('otd'))],
@@ -4323,10 +4423,12 @@ function photoMenuItems(){
     [t('Add to Collection'), '', collectionItems],
     [t('Show in Explorer'), 'Ctrl+R', reveal],
     [t('Copy path'), '', copyPath],
-    ...(n===1 && photos ? [[t('Copy picture'), '', copyPictureToClipboard]] : []),
+    ...(n===1 && photos ? [[t('Copy picture'), '', copyPictureToClipboard], [t('Tag a person in this photo…'), '', tagPersonByHand]] : []),
     [t('Send (small copy)'), '', sendSmall],
     ...(n===1 && !photos && !isGifPhoto() ? [sep, [t('Save this frame as a photo'), '', saveVideoFrame], [t('Trim video…'), '', trimVideoDialog]] : []),
     ...(n>1 && photos ? [[t('Make a collage…'), '', ()=>mergePhotos('collage')]] : []),
+    ...(n>1 && photos ? [[t('Make a series ({0}×)', [num(n)]), '', makeSeries]] : []),
+    ...(targets().some(id=>S.bursts && S.bursts.get(id)) ? [[t('Remove from the series'), '', removeFromSeries]] : []),
     sep,
     ...(photos ? [[t('Rotate Left'), 'Ctrl+[', ()=>rotateSel(-90)], [t('Rotate Right'), 'Ctrl+]', ()=>rotateSel(90)], sep] : []),
     [t('Flag: Pick'), 'P', ()=>setFlag(1)],
@@ -4357,6 +4459,7 @@ function albumMenuItems(a){
     [a.is_trip ? t('Remove Trip status') : t('Mark as Trip'), '', ()=>toggleTrip(a.id)],
     null,
     [t('Best moments slideshow'), '', ()=>albumBestMoments(a.id, a.name)],
+    [t('Use as the desktop wallpaper…'), '', ()=>wallpaperDialog(a.id)],
     null,
     [t('Delete Collection'), '', async ()=>{
       if(!await confirmBox(`${t("Delete the collection “{0}”?", [esc(a.name)])}`, t('The photos themselves will stay in the catalog.'), t('Delete'))) return;
@@ -4369,7 +4472,7 @@ document.addEventListener('contextmenu', e=>{
   if(fr){ e.preventDefault(); const fname = fr.dataset.src.slice(7); openContextMenu(e.clientX, e.clientY, [[t('Make a collection from this folder'), '', ()=>albumFromFolder(fname)]]); return; }
   const ar = e.target.closest('[data-src^="album:"]');
   if(ar){ e.preventDefault(); const a=S.albums.find(x=>'album:'+x.id===ar.dataset.src); if(a) openContextMenu(e.clientX, e.clientY, albumMenuItems(a)); return; }
-  const c = e.target.closest('.cell, .fc');
+  const c = e.target.closest('.cell, .fc, .tl-c');
   const big = !c && e.target.closest('#v-loupe, #v-compare, #slideshow');          // the picture shown large (loupe, compare, slideshow): the same menu as in the grid
   if(big){
     e.preventDefault();
@@ -4596,7 +4699,7 @@ document.addEventListener('keydown', e=>{
       if(MENU_OPEN!=null){ closeMenu(); return; }
       if(S.mod==='develop'){ if(DEV.crop){ devCropToggle(); return; } if(DEV.tool){ DEV.tool=null; renderDevPanels(); return; } if(DEV.view && DEV.view!=='after'){ devView(DEV.view); return; } setModule('library'); return; }
       if(S.lights){ S.lights=2; cycleLights(); return; }
-      if(S.view!=='grid') setView('grid'); return;
+      if(S.view==='loupe') setView(S.loupeFrom==='timeline' ? 'timeline' : 'grid'); else if(S.view!=='grid' && S.view!=='timeline') setView('grid'); return;
   }
   const digit = /^Digit(\d)$/.exec(code)?.[1] ?? /^Numpad(\d)$/.exec(code)?.[1];
   if(digit!=null){
@@ -5248,6 +5351,14 @@ function oneDriveNotice(force){
   $('#od-ok').onclick = closeModal; $('#od-set').onclick = ()=>{ closeModal(); catalogSettings(); };
 }
 
+// The "photag" sub-menu of a folder in Explorer (#60) opens the window with ?folder_action=import|collection&folder=<path>: the Import dialog for that folder.
+function folderActionFromExplorer(){
+  const q = new URLSearchParams(location.search), verb = q.get('folder_action'), folder = q.get('folder');
+  if(!verb || !folder) return;
+  history.replaceState(null, '', location.pathname);                 // once: a reload must not open it again
+  IM.path = folder; IM.files = []; IM.on = new Set(); IM.album = verb==='collection' ? folder.split(/[\\/]/).filter(Boolean).pop() || '' : '';
+  openImport('folder');
+}
 // ---------- boot ----------
 const splashSay = msg => { const m = $('#sp-msg'); if(m) m.textContent = msg; };
 const splashEnd = () => { const sp = $('#splash'); if(!sp) return; sp.classList.add('gone'); setTimeout(()=>sp.remove(), 500); };
@@ -5265,6 +5376,7 @@ splashSay(t('Starting photag…'));
   loadSeries();
   setView(S.startView==='timeline' ? 'timeline' : 'grid');       // the Timeline as the opening view when the user chose it (View menu)
   splashEnd();
+  folderActionFromExplorer();
   setTimeout(reportNews, 7000); setInterval(reportNews, 2*3600*1000);
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);
   setTimeout(backupHealthNotice, 8000);

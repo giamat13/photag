@@ -475,8 +475,49 @@ def find_bursts(con, window: int = BURST_WINDOW, dist: int = BURST_SIM_DIST, min
 
 def find_series(con) -> list[dict]:
     """Series (#42): two or more similar photos, each taken within SERIES_WINDOW seconds of the one before it -- the same thing photographed
-    several times. They are shown as a series, can be compared, and share their keywords."""
-    return find_bursts(con, SERIES_WINDOW, SERIES_DIST, 2)
+    several times. They are shown as a series, can be compared, and share their keywords. The user can also make a series by hand
+    from chosen photos (manual_series), and take photos out of an automatic one."""
+    auto = find_bursts(con, SERIES_WINDOW, SERIES_DIST, 2)
+    try:
+        manual = con.execute("SELECT photo_id, series_id FROM manual_series").fetchall()
+    except Exception:
+        return auto
+    if not manual:
+        return auto
+    touched = {r["photo_id"] for r in manual}
+    out = []
+    for g in auto:                                    # an automatic series without the photos the user moved or removed
+        ms = [i for i in g["members"] if i not in touched]
+        if len(ms) >= 2:
+            out.append({"best": g["best"] if g["best"] in ms else ms[0], "members": ms})
+    groups: dict = {}
+    for r in manual:
+        if r["series_id"]:
+            groups.setdefault(r["series_id"], []).append(r["photo_id"])
+    for sid, ids in sorted(groups.items()):
+        rows = con.execute(f"SELECT p.id, p.taken_at, a.score FROM photos p LEFT JOIN photo_analysis a ON a.photo_id=p.id "
+                           f"WHERE p.trashed=0 AND p.id IN ({','.join('?' * len(ids))}) ORDER BY p.taken_at, p.id", ids).fetchall()
+        if len(rows) >= 2:
+            best = max(rows, key=lambda r: (r["score"] or 0))
+            out.append({"best": best["id"], "members": [r["id"] for r in rows]})
+    return out
+
+
+def make_series(con, ids) -> int:
+    """The chosen photos become one series (they leave any other series they were in). Returns the series number."""
+    ids = sorted({int(i) for i in ids})
+    if len(ids) < 2:
+        raise ValueError("a series needs at least two photos")
+    sid = (con.execute("SELECT COALESCE(MAX(series_id), 0) FROM manual_series").fetchone()[0] or 0) + 1
+    con.executemany("INSERT OR REPLACE INTO manual_series(photo_id, series_id) VALUES(?,?)", [(i, sid) for i in ids])
+    con.commit()
+    return sid
+
+
+def unseries(con, ids) -> None:
+    """The chosen photos are no longer in a series (an automatic series does not take them back)."""
+    con.executemany("INSERT OR REPLACE INTO manual_series(photo_id, series_id) VALUES(?,0)", [(int(i),) for i in ids])
+    con.commit()
 
 
 def series_members(con, ids) -> list[int]:
