@@ -1746,7 +1746,7 @@ def report_send(b: ReportIn):
     title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind, report.redact(b.title)[:200], urls)
     try:
         r = report.send(title, body, __version__, kind)
-        return {"sent": True, "number": r["number"], "url": r["url"], "images": len(urls), "images_failed": failed}
+        return {"sent": True, "number": r["number"], "url": r["url"], **({"images": len(urls), "images_failed": failed} if b.images else {})}
     except report.ReportError:                        # never opens GitHub in the browser: the user is told it was not sent
         raise err(503, "The report could not be sent")
 
