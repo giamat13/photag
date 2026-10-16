@@ -99,6 +99,11 @@ CREATE TABLE IF NOT EXISTS auto_import_seen(
   path TEXT PRIMARY KEY, size INTEGER, mtime INTEGER, failed INTEGER DEFAULT 0
 );
 
+-- photos picked in Google Photos (app/gphotos.py): the Google id of each, so a photo is never brought in twice
+CREATE TABLE IF NOT EXISTS gphotos_items(
+  media_id TEXT PRIMARY KEY, photo_id INTEGER, status TEXT, at INTEGER
+);
+
 -- photos that stay in the user's own folder (app/refmode.py): where each file was and how it looked when last read
 CREATE TABLE IF NOT EXISTS ref_files(
   path TEXT PRIMARY KEY, size INTEGER, mtime_ns INTEGER, photo_id INTEGER

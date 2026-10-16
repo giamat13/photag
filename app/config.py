@@ -244,6 +244,15 @@ def set_auto_import(data: dict) -> None:
     _write_pointer(auto_import=data or None)
 
 
+def get_gphotos() -> dict:
+    """Import from Google Photos (app/gphotos.py): client_id, client_secret / refresh_token (encrypted), reminder, reminder_days, last_import."""
+    return _read_pointer().get("gphotos") or {}
+
+
+def set_gphotos(data: dict) -> None:
+    _write_pointer(gphotos=data or None)
+
+
 def get_handbrake_path() -> str | None:
     """User-chosen HandBrakeCLI location (when it's not on PATH or in a standard folder)."""
     return _read_pointer().get("handbrake_path") or None

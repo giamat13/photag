@@ -11,7 +11,7 @@ released together count as one feature (three small additions in one release mak
 Pre-releases add "-beta.N" ("11.1.0-beta.1"). ALWAYS write all three parts: programs installed before this scheme only
 recognise a code update "photag-code-X.Y.Z-rtN.zip" with three parts. (The short "9.1" is still read as 9.1.0.)
 """
-__version__ = "24.1.0"
+__version__ = "25.0.0"
 REPO = "giamat13/photag"
 try:
     from ._prerelease import PRE       # written by the release workflow into a PRE build only (tools/write_prerelease.py), never committed

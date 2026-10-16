@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, extras, fileassoc, power, wallpaper, background as bgmode
+from . import gphotos, geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, extras, fileassoc, power, wallpaper, background as bgmode
 from .version import __version__, FULL_VERSION, PRE
 from .config import PATHS
 from .security import LocalOnlyMiddleware
@@ -245,7 +245,8 @@ def background():
         last = {}
     ref = {"at": db.get_setting(con, "ref_last_scan", None),
            "added": last.get("added", 0), "moved": last.get("moved", 0), "removed": last.get("removed", 0), "changed": last.get("changed", 0)}
-    return {"auto_import": dict(importer.AUTO), "verify": backup.get_state().get("last_verify"), "ref": ref}
+    return {"auto_import": dict(importer.AUTO), "verify": backup.get_state().get("last_verify"), "ref": ref,
+            "gphotos_due": gphotos.reminder_due()}
 
 
 # ---- automatic import from a folder ------------------------------------------------
@@ -283,6 +284,74 @@ def auto_import_set(body: AutoImportIn):
         db.set_setting(con, "auto_import_baseline", s["folder"])
     config.set_auto_import(s)
     return auto_import_info()
+
+
+# ---- import from Google Photos (the Picker: the user chooses, photag brings in what is new) ----------
+class GPhotosIn(BaseModel):
+    client_id: str | None = None
+    client_secret: str | None = None
+    reminder: bool | None = None
+    reminder_days: int | None = None
+
+
+def _gerr(e: "gphotos.GError") -> HTTPException:
+    return err(502 if e.status not in (401, 403) else 401, e.key, **e.vars)
+
+
+@app.get("/api/gphotos")
+def gphotos_info():
+    return gphotos.info()
+
+
+@app.post("/api/gphotos")
+def gphotos_set(body: GPhotosIn):
+    gphotos.configure(body.client_id, body.client_secret, body.reminder, body.reminder_days)
+    return gphotos.info()
+
+
+@app.post("/api/gphotos/connect")
+def gphotos_connect():
+    try:
+        gphotos.start_auth()
+    except gphotos.GError as e:
+        raise _gerr(e)
+    return gphotos.info()
+
+
+@app.post("/api/gphotos/disconnect")
+def gphotos_disconnect():
+    gphotos.disconnect()
+    return gphotos.info()
+
+
+@app.post("/api/gphotos/snooze")
+def gphotos_snooze():
+    gphotos.snooze()
+    return gphotos.info()
+
+
+@app.post("/api/gphotos/cancel")
+def gphotos_cancel():
+    p = JOBS.get("gphotos")
+    if p:
+        p.cancel = True
+    return {"ok": True}
+
+
+@app.post("/api/gphotos/pick")
+def gphotos_pick():
+    """Open Google's photo chooser; the job `gphotos` waits for the user to press Done and imports what is new."""
+    cur = JOBS.get("gphotos")
+    if cur and cur.state in BUSY_STATES:
+        raise err(409, "The task is already running")
+    if _other_job_running():
+        raise err(409, "The task is already running")
+    try:
+        gphotos.start_pick()
+    except gphotos.GError as e:
+        raise _gerr(e)
+    _start("gphotos", gphotos.run_import)
+    return {"ok": True}
 
 
 # ---- photos that stay in the user's own folder ---------------------------------------

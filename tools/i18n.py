@@ -22,7 +22,7 @@ HEB = re.compile(r"[֐-׿]")
 LETTERS = re.compile(r"[A-Za-z]{2,}")
 # static text in index.html that is a name, not a sentence to translate
 STATIC_IGNORE = {"photag"}
-BACKEND_FILES = ("server.py", "importer.py", "faces.py", "aitag.py", "compress.py", "updater.py", "backup.py", "refmode.py", "analysis.py", "semantic.py", "smart.py", "background.py", "slidevideo.py", "merge.py", "fileassoc.py", "wallpaper.py")
+BACKEND_FILES = ("server.py", "importer.py", "faces.py", "aitag.py", "compress.py", "updater.py", "backup.py", "refmode.py", "analysis.py", "semantic.py", "smart.py", "background.py", "slidevideo.py", "merge.py", "fileassoc.py", "wallpaper.py", "gphotos.py")
 
 
 def _js_keys() -> set[str]:
@@ -76,10 +76,10 @@ def _html_keys() -> set[str]:
 
 def _py_keys() -> set[str]:
     keys = set()
-    pat = re.compile(r'''(?:\.say|\.fail|err\(\d+,)\s*\(?\s*"([^"]*)"|\(\s*"([^"]*[A-Za-z][^"]* [^"]*)",\s*\{|error_key=\s*"([^"]*)"|"error_key":\s*"([^"]*)"''')
+    pat = re.compile(r'''(?:\.say|\.fail|err\(\d+,)\s*\(?\s*"([^"]*)"|\(\s*"([^"]*[A-Za-z][^"]* [^"]*)",\s*\{|error_key=\s*"([^"]*)"|"error_key":\s*"([^"]*)"|GError\(\s*"([^"]*)"|\berror="([^"]*)"''')
     for f in BACKEND_FILES:
         for m in pat.finditer((ROOT / "app" / f).read_text("utf-8")):
-            k = m.group(1) or m.group(2) or m.group(3) or m.group(4)
+            k = m.group(1) or m.group(2) or m.group(3) or m.group(4) or m.group(5) or m.group(6)
             if k and (LETTERS.search(k) or "{" in k):
                 keys.add(k)
     return keys

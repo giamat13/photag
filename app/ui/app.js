@@ -2956,6 +2956,10 @@ async function preferences(){
     <div class="bk-path"><input id="ai-folder" readonly dir="ltr"><button id="ai-pick">${t('Choose…')}</button></div>
     <label class="chkrow"><input type="checkbox" id="ai-existing"> ${t('Also import the photos already in the folder')}</label>
     <div class="hint" style="padding:0" id="ai-status"></div>
+    <div class="lbl-sub" style="padding:0">Google Photos</div>
+    <label class="chkrow"><input type="checkbox" id="gp-rem"> ${t('Remind me to import from Google Photos')}</label>
+    <div class="bk-path"><span>${t('Every')}</span> <input type="number" id="gp-days" min="1" max="365" style="width:70px"> <span>${t('days')}</span><button id="gp-open">${t('Import from Google Photos…')}</button></div>
+    <div class="hint" style="padding:0" id="gp-status"></div>
     <div class="lbl-sub" style="padding:0">${t('Photos stay in my folder')}</div>
     <label class="chkrow"><input type="checkbox" id="rf-on"> ${t('Show the photos of one folder where they are, without copying, moving or changing them')}</label>
     <div class="bk-path"><input id="rf-folder" readonly dir="ltr"><button id="rf-pick">${t('Choose…')}</button><button id="rf-scan">${t('Scan now')}</button></div>
@@ -2994,6 +2998,19 @@ async function preferences(){
   };
   $('#ai-pick').onclick = async () => { const f = await pick(); if(f) await save({folder: f, enabled: true}); };
   drawAi();
+  // Google Photos: a reminder to import (off by default; the window never asks unless it is switched on)
+  let gpi = null;
+  const drawGp = () => {
+    if(!gpi || !$('#gp-rem')) return;                 // the dialog may have been closed while the answer was on its way
+    $('#gp-rem').checked = gpi.reminder; $('#gp-days').value = gpi.reminder_days; $('#gp-days').disabled = !gpi.reminder;
+    $('#gp-status').textContent = !gpi.configured ? t('Google Photos is not set up yet: open “Import from Google Photos…” to enter the Client ID.') : !gpi.connected ? t('Not connected to Google Photos yet.')
+      : gpi.last_import ? t('Last import from Google Photos: {0}', [fdt(gpi.last_import)]) : t('Connected to Google Photos.');
+  };
+  api('/api/gphotos').then(g => { gpi = g; drawGp(); }).catch(()=>{});
+  const gpSave = async body => { try{ gpi = await send('POST', '/api/gphotos', body); }catch(e){ toast(e.message); } drawGp(); };
+  $('#gp-rem').onchange = e => gpSave({reminder: e.target.checked});
+  $('#gp-days').onchange = e => gpSave({reminder_days: Math.max(1, Math.min(365, parseInt(e.target.value, 10) || 7))});
+  $('#gp-open').onclick = () => { closeModal(); openImport('gphotos'); };
   // photos that stay in the user's own folder (off by default)
   let rf = rf0;
   const drawRf = () => {
@@ -3495,6 +3512,7 @@ async function backgroundTick(){
         if(rf.added + rf.moved + rf.removed + rf.changed > 0 && S.mod === 'library'){ await reloadAll(); toast(t('Photo folder updated: {0} new, {1} moved, {2} removed', [num(rf.added), num(rf.moved), num(rf.removed)]), 3500); }
       }
     }
+    if(b.gphotos_due && pref.get('gpRemindedAt', 0) < Date.now() - 3600000 && $('#modal').classList.contains('hidden') && $('#import').classList.contains('hidden')){ pref.set('gpRemindedAt', Date.now()); await gpReminderNotice(); }
     if(b.verify && !b.verify.ok && pref.get('bkVerifyAlerted', 0) !== b.verify.at && $('#modal').classList.contains('hidden')) await backupHealthNotice();
   }catch{} finally{ BG_BUSY = false; }
 }
@@ -3525,8 +3543,8 @@ async function libraryMoveNotice(){
 
 // ---------- job screen: click the progress line in the corner for numbers, speed and time left (import has the most detail) ----------
 const JOBSCR = {open: false, name: '', label: '', last: null, samples: [], t0: {}, fin: {}};
-const JOB_CANCEL = {import: '/api/import/cancel', aitag: '/api/aitag/cancel', compress: '/api/compress/cancel', analysis: '/api/analysis/cancel', semantic: '/api/semantic/cancel'};
-const JOB_UNIT = {import: 'files', compress: 'files', export: 'files', faces: 'photos', aitag: 'photos', analysis: 'photos', semantic: 'photos', backup: 'bytes', update: 'bytes'};
+const JOB_CANCEL = {gphotos: '/api/gphotos/cancel', import: '/api/import/cancel', aitag: '/api/aitag/cancel', compress: '/api/compress/cancel', analysis: '/api/analysis/cancel', semantic: '/api/semantic/cancel'};
+const JOB_UNIT = {gphotos: 'files', import: 'files', compress: 'files', export: 'files', faces: 'photos', aitag: 'photos', analysis: 'photos', semantic: 'photos', backup: 'bytes', update: 'bytes'};
 const AFTER_JOB = {};     // name -> function to run once that job has finished (e.g. open the duplicates screen after the analysis)
 function jobScreenOpen(name, label){
   JOBSCR.open = true; JOBSCR.name = name; JOBSCR.label = label; JOBSCR.samples = [];
@@ -3548,7 +3566,7 @@ function jobScreenUpdate(name, p){
   p = JOBSCR.last;
   if(!document.getElementById('ims-fill')){ JOBSCR.open = false; return; }             // another dialog took the place
   if(!p) return;
-  const x = p.extra || {}, now = Date.now(), finished = ['done', 'error'].includes(p.state), isImport = name === 'import';
+  const x = p.extra || {}, now = Date.now(), finished = ['done', 'error'].includes(p.state), isImport = name === 'import' || name === 'gphotos';
   if(!JOBSCR.t0[name] || (JOBSCR.fin[name] && !finished)){ JOBSCR.t0[name] = now; delete JOBSCR.fin[name]; }          // a new run starts the clock again
   if(finished && !JOBSCR.fin[name]) JOBSCR.fin[name] = now;
   const t0 = isImport && x.t0 ? x.t0 * 1000 : JOBSCR.t0[name], el = Math.max(0.001, ((JOBSCR.fin[name] || now) - t0) / 1000);
@@ -3564,7 +3582,7 @@ function jobScreenUpdate(name, p){
   const rateB = win ? (b[1] - a[1]) / win : avgB, rateF = win ? (b[2] - a[2]) / win : avgF;
   const pct = total ? Math.min(100, done / total * 100) : 0;
   const left = !finished && done > 0 ? (btotal && rateB > 0 ? (btotal - bytes) / rateB : (total - done) / (rateF > 0 ? rateF : avgF > 0 ? avgF : Infinity)) : null;     // also right after the first photo (AI tagging is slow: 1% can take 40 minutes)
-  const src = {takeout: t('Import from Google Takeout'), folder: t('Import from a folder or memory card'), lightroom: t('Import from Lightroom')}[x.source] || JOBSCR.label;
+  const src = {takeout: t('Import from Google Takeout'), folder: t('Import from a folder or memory card'), lightroom: t('Import from Lightroom'), gphotos: t('Import from Google Photos')}[x.source] || JOBSCR.label;
   const cancelled = finished && p.msg && /cancel/i.test(p.msg);
   $('#ims-title').textContent = p.state === 'error' ? `${JOBSCR.label}: ${t('Failed')}` : finished ? `${JOBSCR.label}: ${cancelled ? t('Cancelled') : t('Done')}` : (isImport ? src : JOBSCR.label);
   $('#ims-fill').style.width = (finished && p.state !== 'error' ? 100 : pct).toFixed(1) + '%';
@@ -4029,13 +4047,46 @@ function openExport(){
 }
 
 // ---------- import (full-window dialog) ----------
-const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, dkpath:'', dkinfo:null, socialZips:[], recursive:true, files:[], total:0, on:new Set(), skipDup:true, show:'all', recoverXmp:false};
+const IM = {gp:null, mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, dkpath:'', dkinfo:null, socialZips:[], recursive:true, files:[], total:0, on:new Set(), skipDup:true, show:'all', recoverXmp:false};
 function openImport(mode){
   IM.mode = mode || IM.mode;
   IM.path = IM.path || pref.get('importPath','');
   $('#import').classList.remove('hidden');
   renderImport();
   if(IM.mode==='folder' && IM.path && !IM.files.length) scanImport();
+  if(IM.mode==='gphotos') gpLoad();
+}
+// ---------- import from Google Photos (the Picker: you choose in Google's window, photag brings in what is new) ----------
+async function gpLoad(){ try{ IM.gp = await api('/api/gphotos'); }catch{ IM.gp = null; } if(IM.mode==='gphotos' && !$('#import').classList.contains('hidden')) renderImport(); }
+function gpSourcePanel(){
+  const g = IM.gp;
+  if(!g) return `<div class="hint">${t('Scanning…')}</div>`;
+  if(!g.configured) return `<div class="hint">${t('To import from Google Photos, enter the Client ID and the Client secret of your Google Cloud project (OAuth client of type Desktop app).')}</div>
+    <label class="fld" style="padding:4px 12px"><span>Client ID</span><input type="text" id="gp-cid" dir="ltr"></label>
+    <label class="fld" style="padding:4px 12px"><span>Client secret</span><input type="password" id="gp-sec" dir="ltr"></label>
+    <div class="btnrow"><button id="gp-save">${t('Save')}</button></div>`;
+  if(!g.connected) return `<div class="btnrow"><button id="gp-connect" ${g.auth.state==='waiting'?'disabled':''}>${I('import')} ${t('Connect to Google Photos')}</button></div>
+    <div class="hint">${g.auth.state==='waiting' ? t('Finish signing in in the browser window that opened…') : g.auth.error ? esc(t(g.auth.error)) : t('A browser window opens so you can allow photag to see the photos you choose. photag never reads your library by itself.')}</div>`;
+  return `<div class="hint">${t('Connected to Google Photos.')}</div>
+    <div class="btnrow"><button id="gp-disc">${t('Disconnect')}</button></div>`;
+}
+async function gpConnect(){
+  try{ IM.gp = await send('POST', '/api/gphotos/connect'); }catch(e){ toast(e.message); return; }
+  renderImport();
+  for(let i = 0; i < 400 && IM.mode === 'gphotos' && IM.gp && IM.gp.auth.state === 'waiting'; i++){        // until the browser sign-in is finished
+    await new Promise(r => setTimeout(r, 1500));
+    try{ IM.gp = await api('/api/gphotos'); }catch{ return; }
+    if($('#import').classList.contains('hidden')) return;
+    renderImport();
+  }
+}
+// the reminder (Preferences, off by default): shown only when it is switched on and the period has passed
+async function gpReminderNotice(){
+  modal(`<h3>${t('Time to import from Google Photos?')}</h3><div class="mb"><p>${t('You asked to be reminded to bring in new photos from Google Photos. You choose the photos in Google’s window; the ones photag already has are skipped.')}</p></div>
+    <div class="mf"><button id="gr-off">${t('Stop reminding me')}</button><span class="spacer"></span><button id="gr-later">${t('Not now')}</button><button class="primary" id="gr-go">${t('Import now')}</button></div>`);
+  $('#gr-later').onclick = async ()=>{ closeModal(); try{ await send('POST', '/api/gphotos/snooze'); }catch{} };
+  $('#gr-off').onclick = async ()=>{ closeModal(); try{ await send('POST', '/api/gphotos', {reminder: false}); }catch{} };
+  $('#gr-go').onclick = ()=>{ closeModal(); openImport('gphotos'); };
 }
 function closeImport(){ $('#import').classList.add('hidden'); }
 // one key per file whatever the slashes and capitals (the file dialog says C:/x/a.zip, the server C:\x\a.zip)
@@ -4049,19 +4100,19 @@ function zipGaps(zips){
   return [...gaps].sort((a, b) => a - b);
 }
 function renderImport(){
-  const el=$('#import'), folder=IM.mode==='folder', lr=IM.mode==='lrcat', dk=IM.mode==='digikam', sm=IM.mode==='social', li=IM.lrinfo, di=IM.dkinfo;
+  const el=$('#import'), folder=IM.mode==='folder', lr=IM.mode==='lrcat', dk=IM.mode==='digikam', sm=IM.mode==='social', gp=IM.mode==='gphotos', li=IM.lrinfo, di=IM.dkinfo;
   const shown = IM.files.filter(f=>IM.show==='all' || !f.dup);
   const chosen = IM.files.filter(f=>IM.on.has(f.path));
   const bytes = chosen.reduce((a,f)=>a+f.bytes,0);
   const recent = pref.get('importRecent', []);
-  const ready = folder ? chosen.length : lr ? (li && li.images-li.missing>0) : dk ? (di && di.images-di.missing>0) : sm ? IM.socialZips.length : IM.zips.length;
+  const ready = gp ? !!(IM.gp && IM.gp.configured && IM.gp.connected) : folder ? chosen.length : lr ? (li && li.images-li.missing>0) : dk ? (di && di.images-di.missing>0) : sm ? IM.socialZips.length : IM.zips.length;
   const zipTotal = IM.zips.reduce((a, z) => a + z.bytes, 0);
   const socialTotal = IM.socialZips.reduce((a, z) => a + z.bytes, 0);
   el.innerHTML = `
   <div class="im-top">
-    <div class="blk"><span>${t("Source")}</span><b>${esc(folder ? (IM.path||t('Choose a folder')) : lr ? (IM.lrcat||t('Choose a Lightroom catalog')) : dk ? (IM.dkpath||t('Choose a digiKam database')) : sm ? (IM.socialZips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.socialZips.length), fsize(socialTotal)]) : IM.socialZips.length ? IM.socialZips[0].name : t('Choose an export ZIP file')) : (IM.zips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.zips.length), fsize(zipTotal)]) : IM.zips.length ? IM.zips[0].name : t('Choose a ZIP file')))}</b></div>
+    <div class="blk"><span>${t("Source")}</span><b>${esc(folder ? (IM.path||t('Choose a folder')) : lr ? (IM.lrcat||t('Choose a Lightroom catalog')) : dk ? (IM.dkpath||t('Choose a digiKam database')) : gp ? t('Google Photos') : sm ? (IM.socialZips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.socialZips.length), fsize(socialTotal)]) : IM.socialZips.length ? IM.socialZips[0].name : t('Choose an export ZIP file')) : (IM.zips.length > 1 ? t('{0} ZIP files · {1}', [num(IM.zips.length), fsize(zipTotal)]) : IM.zips.length ? IM.zips[0].name : t('Choose a ZIP file')))}</b></div>
     <span class="im-arrow">←</span>
-    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("Copy")}<small>${t("From Folder / Memory Card")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("Catalog .lrcat")}</small></a><a data-im="digikam" class="${dk?'on':''}">digiKam<small>${t("Database digikam4.db")}</small></a><a data-im="social" class="${sm?'on':''}">Instagram / Facebook<small>${t("Export ZIP")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("ZIP file from Google Photos")}</small></a></nav>
+    <nav class="im-modes"><a data-im="folder" class="${folder?'on':''}">${t("Copy")}<small>${t("From Folder / Memory Card")}</small></a><a data-im="lrcat" class="${lr?'on':''}">Lightroom Classic<small>${t("Catalog .lrcat")}</small></a><a data-im="digikam" class="${dk?'on':''}">digiKam<small>${t("Database digikam4.db")}</small></a><a data-im="social" class="${sm?'on':''}">Instagram / Facebook<small>${t("Export ZIP")}</small></a><a data-im="gphotos" class="${gp?'on':''}">Google Photos<small>${t("Choose photos in Google Photos")}</small></a><a data-im="zip" class="${IM.mode==='zip'?'on':''}">Google Takeout<small>${t("ZIP file from Google Photos")}</small></a></nav>
     <span class="im-arrow">←</span>
     <div class="blk"><span>${t("Destination")}</span><b>${esc(S.status?.media_path||'')}</b></div>
   </div>
@@ -4076,6 +4127,7 @@ function renderImport(){
           ${(IM.lrcatCandidates||[]).length ? `<div class="lbl-sub" style="padding-top:8px">${t('Found on this computer')}</div>${IM.lrcatCandidates.map(c=>`<div class="row" data-lrpick="${esc(c.path)}">${I('import')}<span class="nm" dir="ltr" title="${esc(c.path)}">${esc(c.name)}</span></div>`).join('')}` : ''}`
         : dk ? `<div class="btnrow"><button id="im-dkdb">${I('import')} ${t(" Choose digiKam database...")}</button></div>
           <div class="hint">${t("File ")}<code>digikam4.db</code>${t(" from digiKam's database folder. Closing digiKam before importing is recommended.")}</div>`
+        : gp ? gpSourcePanel()
         : sm ? `<div class="btnrow"><button id="im-social-zip">${I('import')} ${t(" Choose export ZIP files...")}</button></div>
           <div class="hint">${t("Request your data from Instagram or Facebook (Accounts Center → Your information and permissions → Download your information), choosing JSON format. The ZIP is read directly, without extracting it.")}</div>`
         : `<div class="btnrow"><button id="im-zip">${I('import')} ${t(" Choose ZIP files...")}</button></div>
@@ -4096,6 +4148,8 @@ function renderImport(){
       : dk ? `<div class="im-grid"><div class="im-empty">${IM.dkloading?t('Reading the database…'):!di?t('Choose a digiKam database from the “Source” panel.')
           : `<b dir="ltr">${esc(IM.dkpath)}</b><br>${t("{0} photos · {1} tags · {2} albums · {3}", [num(di.images), num(di.tags), num(di.albums), fsize(di.bytes)])}
              ${di.missing?`<br><span style="color:var(--yellow)">${t("{0} files referenced by the database were not found on disk and will not be imported.", [num(di.missing)])}</span>`:''}`}</div></div>`
+      : gp ? `<div class="im-grid"><div class="im-empty">${t('Press “Choose photos…”: Google Photos opens in your browser. Mark the photos you want and press Done there. photag brings in the ones it does not have yet; photos you imported before, and photos you edited in Google Photos, are not added twice.')}
+          <br><br>${t('Your Google Photos library is only read, never changed. The photos come into photag as new copies.')}</div></div>`
       : sm ? `<div class="im-grid"><div class="im-empty">${IM.socialZips.length ? `${IM.socialZips.map((z,i)=>`<div class="zrow" dir="ltr"><b>${esc(z.name)}</b> · ${fsize(z.bytes)}<button class="zrm" data-szrm="${i}" title="${t('Remove this file from the import')}">✕</button></div>`).join('')}
           <div><a data-sclear>${t('Remove all')}</a></div>
           <br><br>${t("Every photo and video in the export is imported, with its caption and date when the export includes them.")}`
@@ -4127,7 +4181,7 @@ function renderImport(){
     </aside>
   </div>
   <div class="im-foot">${folder?`${t("{0} photos / {1}", [num(chosen.length), fsize(bytes)])}`:lr&&li?`${t("{0} photos / {1}", [num(li.images-li.missing), fsize(li.bytes)])}`:''}<span class="spacer"></span>
-    <button id="im-cancel">${t("Cancel")}</button><button class="primary" id="im-go" ${ready?'':'disabled'}>${t("Import")}</button></div>`;
+    <button id="im-cancel">${t("Cancel")}</button><button class="primary" id="im-go" ${ready?'':'disabled'}>${gp ? t("Choose photos…") : t("Import")}</button></div>`;
 }
 async function scanImport(){
   if(!IM.path) return;
@@ -4140,10 +4194,14 @@ async function scanImport(){
 }
 $('#import').addEventListener('click', async e=>{
   const tg=e.target;
-  const mode=tg.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport();
+  const mode=tg.closest('[data-im]'); if(mode){ IM.mode=mode.dataset.im; renderImport(); if(IM.mode==='gphotos') gpLoad();
     if(IM.mode==='lrcat' && IM.lrcatCandidates===null){ IM.lrcatCandidates=[]; api('/api/lrcat-candidates').then(r=>{ IM.lrcatCandidates=r.candidates; renderImport(); }); }
     return; }
   if(tg.closest('#im-cancel')) return closeImport();
+  if(tg.closest('#gp-save')){ const cid = ($('#gp-cid').value||'').trim(), sec = ($('#gp-sec').value||'').trim(); if(!cid || !sec) return toast(t('Enter both the Client ID and the Client secret'));
+    try{ IM.gp = await send('POST', '/api/gphotos', {client_id: cid, client_secret: sec}); }catch(e){ toast(e.message); } renderImport(); return; }
+  if(tg.closest('#gp-connect')){ gpConnect(); return; }
+  if(tg.closest('#gp-disc')){ try{ IM.gp = await send('POST', '/api/gphotos/disconnect'); }catch(e){ toast(e.message); } renderImport(); return; }
   if(tg.closest('#im-pick')){ const r=await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose folder to import'))); if(r.path){ IM.path=r.path; scanImport(); } return; }
   if(tg.closest('#im-zip')){
     const r=await api('/api/pick-file?kind=zip&title='+encodeURIComponent(t('Choose Google Takeout ZIP files')));
@@ -4185,6 +4243,7 @@ $('#import').addEventListener('click', async e=>{
     const chosen=IM.files.filter(f=>IM.on.has(f.path)); $('#import .im-foot').firstChild.textContent=`${t("{0} photos / {1}", [num(chosen.length), fsize(chosen.reduce((a,f)=>a+f.bytes,0))])}`;
     $('#im-go').disabled=!chosen.length; return; }
   if(tg.closest('#im-go')){
+    if(IM.mode==='gphotos'){ try{ await send('POST','/api/gphotos/pick'); }catch(e){ toast(e.message); gpLoad(); return; } closeImport(); toast(t('Choose your photos in the browser window, then press Done there.'), 6000); pollJob('gphotos',t('Import from Google Photos')); return; }
     if(IM.mode==='zip'){ await send('POST','/api/import',{zip_paths:IM.zips.map(z=>z.path)}); closeImport(); pollJob('import',t('Import from Google')); return; }
     if(IM.mode==='lrcat'){ await send('POST','/api/import-lrcat',{path:IM.lrcat}); closeImport(); pollJob('import',t('Import from Lightroom')); return; }
     if(IM.mode==='digikam'){ await send('POST','/api/import-digikam',{path:IM.dkpath}); closeImport(); pollJob('import',t('Import from digiKam')); return; }
@@ -4240,7 +4299,7 @@ async function pollJob(name, label){
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
     if(name==='export' && AFTER_JOB.export){ const f=AFTER_JOB.export; delete AFTER_JOB.export; await reloadAll(); f(); }          // "write into the original files": the files, their size and their edit state changed
-    if(['import','faces','aitag','compress','backup','refscan','analysis','merge'].includes(name)){
+    if(['import','gphotos','faces','aitag','compress','backup','refscan','analysis','merge'].includes(name)){
       await reloadAll();
       if(name==='merge' && p.state==='done' && p.result) selectOnly(p.result.id);
       if(name==='import' && p.state==='done' && S.status.last_import){ setSource(srcFromKey('prev')); setTimeout(()=>newInLibrary(true), 700); }
