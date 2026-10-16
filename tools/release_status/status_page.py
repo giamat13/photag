@@ -23,6 +23,7 @@ ROOT = HERE.parent.parent
 PAGE = HERE / "status.html"
 DATA = HERE / "status-data.js"
 PROGRESS = HERE / "local-tests.json"
+SINGLE = HERE / "local-single.json"      # one test run on its own (run_local_tests.py with a single name)
 CYCLE = HERE / "cycle.json"          # {"closed": "v19.0.0"}: the last release whose page was put away
 ARCHIVE = HERE / "archive"
 ACTIVITY = HERE / "activity.json"   # the live log: [{"at": epoch, "text": "..."}], written by log.py
@@ -177,8 +178,19 @@ def collect():
         sts = [t["state"] for t in prog["tests"]]
         local_state = "fail" if "fail" in sts else ("done" if all(s == "done" for s in sts) else "run")
 
+    # ---- one test on its own: shown while it runs, and for ten minutes after it ended
+    single = None
+    try:
+        sp = json.loads(SINGLE.read_text("utf-8"))
+        st = sp["tests"][0]
+        if st["state"] in ("run", "todo") or now - (sp.get("finished") or sp.get("started") or 0) < 600:
+            single = {"name": st["name"], "state": st["state"], "summary": st.get("summary", ""), "seconds": st.get("seconds"), "estimate": st["estimate"],
+                      "began": st.get("began"), "detail": st.get("detail", ""), "live": st.get("live")}
+    except (OSError, ValueError, KeyError, IndexError):
+        pass
+
     # ---- git
-    dirty = len([l for l in git("status", "--porcelain").splitlines() if l.strip()])
+    dirty =len([l for l in git("status", "--porcelain").splitlines() if l.strip()])
     head = git("rev-parse", "HEAD")
     remote = git("ls-remote", "origin", "refs/heads/main").split("\t")[0] if time.time() - Cache.gh_at >= GITHUB_EVERY else Cache.gh.get("remote", "")
     # this version is on GitHub when the remote is the commit that is checked out AND that commit holds this version's number: the run of the last
@@ -331,7 +343,7 @@ def collect():
         "waiting": bool(dev or (not idle and not published and not failing and pushed and not cur and local_state != "run")), "idle": idle, "dev": dev,
         "todo": todo, "activity": activity,
         "eta_end": None if (idle or dev or published or failing or (pushed and not cur and local_state != "run")) else now + left, "local_left": local_left, "gh_left": gh_left, "typical": typical,
-        "percent": pct, "stages": stages, "local": local, "local_stale": stale, "jobs": jobs, "gh_began": cur_began,
+        "percent": pct, "stages": stages, "local": local, "single": single, "local_stale": stale, "jobs": jobs, "gh_began": cur_began,
         "error": gh["error"], "recent": [r["tag_name"] for r in rels[:3]],
     }
 
@@ -450,6 +462,7 @@ h2{font-size:13px;margin:0 2px 6px}#ghcol .grid+#localsec h2,#localsec h2{margin
 <div id="ghcol"><h2>GitHub <span class="mut" style="text-transform:none;font-weight:400">— מה נבנה ונבדק עכשיו</span></h2>
 <div class="grid" id="jobs"></div>
 <div id="localsec" style="display:none"><h2>בדיקות במחשב שלך <span class="mut" style="text-transform:none;font-weight:400">— מה נבדק עכשיו</span> <span id="stale-local" class="mut" style="text-transform:none;color:var(--warn)"></span></h2><div class="grid" id="local"></div></div>
+<div id="singlesec" style="display:none"><h2>בדיקה בודדת <span class="mut" style="text-transform:none;font-weight:400">— בדיקה אחת שרצה לבד</span></h2><div class="grid" id="single"></div></div>
 <div class="mut" id="localok" style="display:none;margin:6px 2px"></div></div>
 <footer id="foot"></footer>
 </main><script src="status-data.js"></script><script>
@@ -504,6 +517,15 @@ function render(){
   $('localsec').style.display = showLocal ? '' : 'none';
   $('localok').style.display = lt.length && !showLocal ? '' : 'none';
   setText($('localok'), lt.length && !showLocal ? (ltDone === lt.length ? `✓ כל ${lt.length} הבדיקות במחשב עברו` : `הבדיקות במחשב: ${ltDone} מתוך ${lt.length} עברו`) + (D.local_stale ? ' — הורצו לפני השינויים האחרונים, צריך להריץ שוב' : '') : '');
+  const sg = D.single;
+  $('singlesec').style.display = sg ? '' : 'none';
+  if(sg){
+    const run = sg.state === 'run' || sg.state === 'todo', lv = sg.live || {pass:0, fail:0, last:[]};
+    const cur = run ? `${lv.pass} בדיקות עברו${lv.fail ? ` · <b style="color:var(--bad)">${lv.fail} נכשלו</b>` : ''}` : sg.state === 'done' ? esc(sg.summary) + ' ✓' : 'נכשלה' + (sg.summary ? ' · ' + esc(sg.summary) : '');
+    const extra = run && lv.last.length ? `<pre class="live" dir="ltr">${esc(lv.last.slice(-3).join('\n'))}</pre>` : sg.state === 'fail' && sg.detail ? `<pre class="live" dir="ltr" style="color:var(--bad)">${esc(sg.detail)}</pre>` : '';
+    setHtml($('single'), `<div class="job ${sg.state}"><span class="chip ${sg.state}">${CHIP[sg.state]}</span><div class="nm" dir="ltr" style="text-align:start">${esc(sg.name)}</div><div class="cur">${cur}</div>
+      <div class="bar"><i ${sg.state === 'run' ? `data-pb="${sg.began}" data-pe="${sg.estimate}"` : ''} style="width:${sg.state === 'done' ? 100 : 0}%"></i></div><div class="meta"><span>${sg.state === 'run' ? 'רץ עכשיו' : ''}</span>${sg.state === 'run' ? `<span data-end="${sg.began + sg.estimate}"></span>` : sg.seconds ? `<span>לקח ${Math.round(sg.seconds)} שנ׳</span>` : ''}</div>${extra}</div>`);
+  }
   if(showLocal){
     setHtml($('local'), lt.map(t => {
       const run = t.state === 'run', lv = t.live || {pass:0, fail:0, last:[]};

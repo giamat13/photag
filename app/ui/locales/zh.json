@@ -1346,6 +1346,7 @@
  "The file is too big": "文件太大",
  "The folder can't be reached right now. Import continues when it is available again.": "目前无法访问该文件夹。恢复可用后，导入将继续进行。",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "目前无法访问该文件夹。在它恢复之前，目录不会有任何变化。",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "该文件夹中有 {0} 张照片和视频，但只会列出并导入前 {1} 个。请选择其子文件夹或分几次导入其余部分。",
  "The folder was not found": "找不到该文件夹",
  "The image was compressed. The previous version is saved in backups.": "图片已压缩。上一版本已保存在备份中。",
  "The image will be downscaled to at most {0} pixels on the long side": "图像将缩小，长边最多 {0} 像素",

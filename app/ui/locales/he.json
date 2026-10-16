@@ -1346,6 +1346,7 @@
  "The file is too big": "הקובץ גדול מדי",
  "The folder can't be reached right now. Import continues when it is available again.": "אי אפשר להגיע לתיקייה כרגע. הייבוא יימשך כשהיא תהיה זמינה שוב.",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "אי אפשר להגיע לתיקייה כרגע. שום דבר בקטלוג לא ישתנה עד שהיא תחזור.",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "בתיקייה יש {0} תמונות וסרטונים, אבל רק {1} הראשונים מופיעים ויובאו. ייבא את השאר לפי תת-תיקיות או בכמה חלקים.",
  "The folder was not found": "התיקייה לא נמצאה",
  "The image was compressed. The previous version is saved in backups.": "התמונה נדחסה. הגרסה הקודמת נשמרה בגיבויים.",
  "The image will be downscaled to at most {0} pixels on the long side": "גודל התמונה יוקטן עד {0} פיקסלים בצלע הארוכה",

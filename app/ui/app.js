@@ -4029,7 +4029,7 @@ function openExport(){
 }
 
 // ---------- import (full-window dialog) ----------
-const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, dkpath:'', dkinfo:null, socialZips:[], recursive:true, files:[], on:new Set(), skipDup:true, show:'all', recoverXmp:false};
+const IM = {mode:'folder', path:'', zips:[], zipMissing:[], zipFound:0, lrcat:'', lrinfo:null, lrcatCandidates:null, dkpath:'', dkinfo:null, socialZips:[], recursive:true, files:[], total:0, on:new Set(), skipDup:true, show:'all', recoverXmp:false};
 function openImport(mode){
   IM.mode = mode || IM.mode;
   IM.path = IM.path || pref.get('importPath','');
@@ -4085,7 +4085,7 @@ function renderImport(){
     <div class="im-center">
       ${folder ? `<div class="im-bar"><a data-show="all" class="${IM.show==='all'?'on':''}">${t("All Photographs")}</a><a data-show="new" class="${IM.show==='new'?'on':''}">${t("New Photos")}</a>
         <span class="spacer"></span><a data-chk="all">${t("Check All")}</a><a data-chk="none">${t("Uncheck")}</a></div>
-        <div class="im-grid" id="im-grid">${IM.loading?("<div class=\"im-empty\">"+t("Scanning…")+"</div>"):!IM.files.length?`<div class="im-empty">${IM.path?t('No photos or videos were found in the folder.'):t('Choose a folder or memory card from the “Source” panel.')}</div>`
+        ${!IM.loading && IM.total>IM.files.length ? `<div class="im-empty" style="color:var(--yellow)">${t("The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.", [num(IM.total), num(IM.files.length)])}</div>` : ''}<div class="im-grid" id="im-grid">${IM.loading?("<div class=\"im-empty\">"+t("Scanning…")+"</div>"):!IM.files.length?`<div class="im-empty">${IM.path?t('No photos or videos were found in the folder.'):t('Choose a folder or memory card from the “Source” panel.')}</div>`
           : shown.slice(0,3000).map(f=>`<div class="im-cell ${IM.on.has(f.path)?'':'off'}" data-path="${esc(f.path)}" title="${esc(f.path)}">
             <input type="checkbox" ${IM.on.has(f.path)?'checked':''}>${f.dup?("<span class=\"dup\" title=\""+t("Already in catalog (same name and size)")+"\">"+t("Duplicate")+"</span>"):''}
             ${f.is_video?`<span class="vid">${I('play')}</span>`:`<img loading="lazy" src="/api/local-thumb?path=${encodeURIComponent(f.path)}" alt="">`}
@@ -4134,7 +4134,7 @@ async function scanImport(){
   IM.loading=true; renderImport();
   try{
     const r=await api('/api/scan-folder?'+new URLSearchParams({path:IM.path, recursive:IM.recursive?1:0}));
-    IM.files=r.files; IM.on=new Set(r.files.filter(f=>!(IM.skipDup&&f.dup)).map(f=>f.path));
+    IM.files=r.files; IM.total=r.total||r.files.length; IM.on=new Set(r.files.filter(f=>!(IM.skipDup&&f.dup)).map(f=>f.path));
     const rec=[IM.path, ...pref.get('importRecent',[]).filter(p=>p!==IM.path)].slice(0,5); pref.set('importRecent', rec); pref.set('importPath', IM.path);
   } finally { IM.loading=false; renderImport(); }
 }

@@ -1346,6 +1346,7 @@
  "The file is too big": "Файл слишком большой",
  "The folder can't be reached right now. Import continues when it is available again.": "Папка сейчас недоступна. Импорт продолжится, когда она снова станет доступна.",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "Папка сейчас недоступна. В каталоге ничего не изменится, пока она не вернётся.",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "В папке {0} фото и видео, но в список и в импорт попадут только первые {1}. Остальное импортируйте, выбирая вложенные папки, или частями.",
  "The folder was not found": "Папка не найдена",
  "The image was compressed. The previous version is saved in backups.": "Изображение сжато. Предыдущая версия сохранена в резервных копиях.",
  "The image will be downscaled to at most {0} pixels on the long side": "Изображение будет уменьшено до {0} пикселей по длинной стороне",

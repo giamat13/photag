@@ -439,20 +439,30 @@ def _ingest_media(con, zf, entry, base, album_id, meta):
 MEDIA_EXT = images.IMAGE_EXT | images.VIDEO_EXT
 
 
-def scan_folder(folder: str, recursive: bool = True, cap: int = 20000) -> list[dict]:
-    """Media files under `folder`, newest first, for the import dialog grid."""
+SCAN_CAP = 100000      # how many files the import dialog lists; the rest are only counted (see scan_folder_total)
+
+
+def scan_folder_total(folder: str, recursive: bool = True, cap: int = SCAN_CAP) -> tuple[list[dict], int]:
+    """Media files under `folder`, newest first, for the import dialog grid -- at most `cap` of them -- and how many
+    media files there are in all (the walk goes on past the cap, only counting), so the dialog can say it is cut."""
     root = Path(folder)
     it = root.rglob("*") if recursive else root.glob("*")
     out = []
+    total = 0
     for p in it:
-        if len(out) >= cap:
-            break
-        if p.suffix.lower() in MEDIA_EXT and p.is_file() and not p.name.startswith("."):
+        if p.suffix.lower() not in MEDIA_EXT or p.name.startswith(".") or not p.is_file():
+            continue
+        total += 1
+        if len(out) < cap:
             st = p.stat()
             out.append({"path": str(p), "name": p.name, "bytes": st.st_size,
                         "mtime": int(st.st_mtime), "is_video": images.is_video(p), "online": cloud.is_online_only(p)})
     out.sort(key=lambda f: -f["mtime"])
-    return out
+    return out, total
+
+
+def scan_folder(folder: str, recursive: bool = True, cap: int = SCAN_CAP) -> list[dict]:
+    return scan_folder_total(folder, recursive, cap)[0]
 
 
 def _ingest_file(con, src: Path, taken=None, lat=None, lng=None) -> tuple[int, bool]:

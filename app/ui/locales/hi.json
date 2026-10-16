@@ -1346,6 +1346,7 @@
  "The file is too big": "फ़ाइल बहुत बड़ी है",
  "The folder can't be reached right now. Import continues when it is available again.": "फ़ोल्डर अभी उपलब्ध नहीं है। उपलब्ध होने पर इंपोर्ट फिर से जारी रहेगा।",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "फ़ोल्डर अभी उपलब्ध नहीं है। वापस आने तक कैटलॉग में कुछ नहीं बदलेगा।",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "फ़ोल्डर में {0} फ़ोटो और वीडियो हैं, लेकिन केवल पहले {1} सूचीबद्ध हैं और आयात किए जाएँगे। बाकी को उसके उप-फ़ोल्डर चुनकर या कई हिस्सों में आयात करें।",
  "The folder was not found": "फ़ोल्डर नहीं मिला",
  "The image was compressed. The previous version is saved in backups.": "छवि संपीड़ित हो गई। पिछला संस्करण बैकअप में सहेजा गया है।",
  "The image will be downscaled to at most {0} pixels on the long side": "छवि को लंबी भुजा पर अधिकतम {0} पिक्सेल तक छोटा किया जाएगा",

@@ -1346,6 +1346,7 @@
  "The file is too big": "ファイルが大きすぎます",
  "The folder can't be reached right now. Import continues when it is available again.": "現在フォルダにアクセスできません。再びアクセスできるようになると、取り込みが再開されます。",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "現在フォルダーにアクセスできません。戻るまでカタログは変更されません。",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "このフォルダーには写真と動画が {0} 件ありますが、一覧に表示されインポートされるのは最初の {1} 件だけです。残りはサブフォルダーを選ぶか、数回に分けてインポートしてください。",
  "The folder was not found": "フォルダーが見つかりません",
  "The image was compressed. The previous version is saved in backups.": "画像を圧縮しました。以前のバージョンはバックアップに保存されています。",
  "The image will be downscaled to at most {0} pixels on the long side": "画像は長辺が最大 {0} ピクセルに縮小されます",

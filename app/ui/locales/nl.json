@@ -1346,6 +1346,7 @@
  "The file is too big": "Het bestand is te groot",
  "The folder can't be reached right now. Import continues when it is available again.": "De map is nu niet bereikbaar. Het importeren gaat verder zodra de map weer beschikbaar is.",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "De map is nu niet bereikbaar. Er verandert niets in de catalogus tot hij weer beschikbaar is.",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "De map bevat {0} foto's en video's, maar alleen de eerste {1} worden getoond en geïmporteerd. Importeer de rest via de submappen of in meerdere delen.",
  "The folder was not found": "De map is niet gevonden",
  "The image was compressed. The previous version is saved in backups.": "Afbeelding gecomprimeerd. De vorige versie is bewaard in de back-ups.",
  "The image will be downscaled to at most {0} pixels on the long side": "De afbeelding wordt verkleind tot maximaal {0} pixels aan de lange zijde",

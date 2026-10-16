@@ -104,6 +104,15 @@ release workflow writes it into `app/_report_token.py` (never committed). Setup 
   (`POST /issues/N/comments`, `PATCH /issues/N {"state":"closed","state_reason":"completed"}`, token via `git credential fill`, never printed).
 - Keep the **dashboard** up to date at every step (below). If a test fails: tell the user at once (the test runner also shows a message box).
 - Never start a second run of the tests while one is running (they share ports and the progress file) and never restart one that is running.
+  **One exception (decided with the user): a failure.** While the local tests run, look at `tools/release_status/local-tests.json` (the `fail` count and the
+  `summary` of each test) every now and then, not only at the end. At the first failed test **stop the run at once** (kill the `run_local_tests.py` process and
+  the test processes it started), read the failure, fix it, and run everything again from the start -- the whole set is run again anyway, so waiting for the
+  rest of a run that is already red is a waste. **Do not look by hand: start a watcher in the background next to the run** (a small Python loop that reads
+  `local-tests.json` every 3 seconds, prints the failed test with its last live lines, kills the run and exits with code 1 -- the exit code wakes you up --
+  or prints "FINISHED OK" and exits 0). Start the run and the watcher in the same step, delete a stale `local-tests.json` first (a killed run leaves one
+  behind, with every test marked failed, and the dashboard flips between "all failed" and "all done"), and never pass anything but test names or
+  `--parallel N` / `--serial` to `run_local_tests.py` (any other word is run as a test name and shows up as a failed test). A test that failed in the
+  full run is run again alone before it is called broken: UI tests can fail under load and pass alone. Before the next run make sure no test process or server is left over (the fixed ports).
 
 ## The release dashboard (live page for the user)
 Files in `tools/release_status/` (the generated ones -- status.html, status-data.js, local-tests*.json, activity.json, cycle.json, archive/ -- are git-ignored):

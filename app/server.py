@@ -2780,11 +2780,11 @@ def semantic_search(q: str, limit: int = 600):
 def scan_folder(path: str, recursive: int = 1):
     if not Path(path).is_dir():
         raise err(404, "Folder not found")
-    files = importer.scan_folder(path, bool(recursive))
+    files, total = importer.scan_folder_total(path, bool(recursive))
     known = {(r["filename"], r["bytes"]) for r in db.connect().execute("SELECT filename, bytes FROM photos")}
     for f in files:  # "suspected duplicate": same name + size already in the catalog
         f["dup"] = (f["name"], f["bytes"]) in known
-    return {"files": files}
+    return {"files": files, "total": total, "cap": importer.SCAN_CAP}
 
 
 @app.get("/api/local-thumb")

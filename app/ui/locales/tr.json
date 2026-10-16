@@ -1346,6 +1346,7 @@
  "The file is too big": "Dosya çok büyük",
  "The folder can't be reached right now. Import continues when it is available again.": "Klasöre şu anda erişilemiyor. Tekrar erişilebilir olduğunda içe aktarma devam edecek.",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "Klasöre şu anda ulaşılamıyor. Klasör geri gelene kadar katalogda hiçbir şey değişmez.",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "Klasörde {0} fotoğraf ve video var, ancak yalnızca ilk {1} listelenir ve içe aktarılır. Geri kalanını alt klasörleri seçerek veya birkaç parça halinde içe aktarın.",
  "The folder was not found": "Klasör bulunamadı",
  "The image was compressed. The previous version is saved in backups.": "Görsel sıkıştırıldı. Önceki sürüm yedeklerde saklandı.",
  "The image will be downscaled to at most {0} pixels on the long side": "Görüntü, uzun kenarda en fazla {0} piksele küçültülecek",

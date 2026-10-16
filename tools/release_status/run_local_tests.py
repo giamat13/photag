@@ -5,6 +5,7 @@ tests use throw-away profiles.
 
     py -3.12 tools/release_status/run_local_tests.py            the usual set
     py -3.12 tools/release_status/run_local_tests.py test_pool ui_smoke      only these
+    py -3.12 tools/release_status/run_local_tests.py test_pool               one test: written to local-single.json, shown in its own card
 """
 import json
 import os
@@ -22,7 +23,7 @@ HISTORY = HERE / "local-tests-history.json"
 DEFAULT = ["test_pool", "test_window_close", "test_aitag", "test_place_search", "test_advanced_filters", "test_help_search_history",
            "test_surprise_compare", "test_smart_features", "test_smart_ui", "test_features_ui", "ui_smoke", "test_code_update",
            "test_update_rollback", "test_release_notes", "test_version_scheme", "test_runtime_lock", "test_dates_from_names", "test_tag_rules", "test_ai_pick", "test_auto_score", "test_originals_untouched", "test_new_media", "test_new_features_ui", "test_report_news", "test_report_manage",
-           "test_viewer", "test_viewer_ui", "test_ref_folder", "test_loupe_splash_compare", "test_issue_batch", "test_issue_batch_ui", "i18n check"]
+           "test_viewer", "test_viewer_ui", "test_ref_folder", "test_loupe_splash_compare", "test_issue_batch", "test_issue_batch_ui", "test_scan_cap", "i18n check"]
 GUESS = 45          # seconds, for a test that has never run
 TAIL = 5            # lines of the running test that the page shows
 WRITE_EVERY = 0.4   # seconds between writes of the progress file while a test runs
@@ -140,6 +141,9 @@ def main():
         workers = max(1, int(args[i + 1]))
         del args[i:i + 2]
     names = args or DEFAULT
+    if args and len(names) == 1:                 # one test on its own: its own file, so a run of the whole set that is going on is not overwritten; the page shows it in its own card
+        global PROGRESS
+        PROGRESS = HERE / "local-single.json"
     workers = workers or len(names)
     hist = load(HISTORY, {})
     state = {"started": time.time(), "finished": None,

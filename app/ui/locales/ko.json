@@ -1346,6 +1346,7 @@
  "The file is too big": "파일이 너무 큽니다",
  "The folder can't be reached right now. Import continues when it is available again.": "지금은 폴더에 접근할 수 없습니다. 다시 사용할 수 있게 되면 가져오기가 계속됩니다.",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "지금은 폴더에 접근할 수 없습니다. 다시 접근할 수 있을 때까지 카탈로그는 변경되지 않습니다.",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "이 폴더에는 사진과 동영상이 {0}개 있지만 처음 {1}개만 목록에 표시되고 가져옵니다. 나머지는 하위 폴더를 선택하거나 여러 번에 나누어 가져오세요.",
  "The folder was not found": "폴더를 찾을 수 없습니다",
  "The image was compressed. The previous version is saved in backups.": "이미지를 압축했습니다. 이전 버전은 백업에 저장되었습니다.",
  "The image will be downscaled to at most {0} pixels on the long side": "이미지가 긴 변 기준 최대 {0}픽셀로 축소됩니다",

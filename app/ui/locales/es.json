@@ -1346,6 +1346,7 @@
  "The file is too big": "El archivo es demasiado grande",
  "The folder can't be reached right now. Import continues when it is available again.": "No se puede acceder a la carpeta en este momento. La importación continuará cuando vuelva a estar disponible.",
  "The folder can't be reached right now. Nothing is changed in the catalog until it is back.": "No se puede acceder a la carpeta ahora. No se cambia nada en el catálogo hasta que vuelva.",
+ "The folder has {0} photos and videos, but only the first {1} are listed and will be imported. Import the rest by choosing its subfolders, or in several parts.": "La carpeta tiene {0} fotos y vídeos, pero solo se muestran e importan los primeros {1}. Importa el resto eligiendo sus subcarpetas o en varias partes.",
  "The folder was not found": "No se encontró la carpeta",
  "The image was compressed. The previous version is saved in backups.": "Imagen comprimida. La versión anterior se guardó en las copias de seguridad.",
  "The image will be downscaled to at most {0} pixels on the long side": "La imagen se reducirá a un máximo de {0} píxeles en el lado largo",
