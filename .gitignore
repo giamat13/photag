@@ -19,3 +19,4 @@ tools/release_status/todo.json
 tools/release_status/activity.json
 tools/release_status/archive/
 tools/release_status/cycle.json
+tools/release_status/local-single.json
