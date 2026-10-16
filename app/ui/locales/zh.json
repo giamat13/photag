@@ -1778,5 +1778,6 @@
  "Write into the original files": "写入原始文件",
  "Write into {0} original files?": "要写入 {0} 个原始文件吗？",
  "{n} original files were written · backup copies are in {folder}": "已写入 {n} 个原始文件 · 备份副本在 {folder}",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "已跳过 {n} 个（不是 JPEG 或 PNG，或没有可写入的内容）"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "已跳过 {n} 个（不是 JPEG 或 PNG，或没有可写入的内容）",
+ "This is a test build (pre-release): {0}": "这是测试版本（pre-release）：{0}"
 }

@@ -3,6 +3,10 @@ name: unix-build
 # and keeps the files as workflow artifacts. The release workflow calls this and attaches the files to the GitHub release.
 on:
   workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        default: false
   workflow_dispatch:
   push:
     paths: ["photag_unix.spec", "tools/make_unix_package.py", ".github/workflows/unix-build.yml", "requirements.txt", "photag.py"]
@@ -30,6 +34,11 @@ jobs:
         env:
           REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
         run: python tools/write_report_token.py
+      - name: "A PRE build knows its PRE number"
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/write_prerelease.py
       - name: Build the program
         run: python -m PyInstaller --noconfirm photag_unix.spec
       - name: The packaged program starts and answers (no window)

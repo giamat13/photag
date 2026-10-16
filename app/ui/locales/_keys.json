@@ -1460,6 +1460,7 @@
  "This folder is inside OneDrive: every backup is uploaded to the cloud and counts against your OneDrive space. A folder on another disk is safer and faster.",
  "This format can't be played inside the app.",
  "This is a pre-release: a test version that may still have bugs.",
+ "This is a test build (pre-release): {0}",
  "This is not a photag preset file",
  "This is not a photag theme file",
  "This is not a valid 3D .cube file",

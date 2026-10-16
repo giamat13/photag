@@ -1778,5 +1778,6 @@
  "Write into the original files": "원본 파일에 기록",
  "Write into {0} original files?": "원본 파일 {0}개에 기록할까요?",
  "{n} original files were written · backup copies are in {folder}": "원본 파일 {n}개를 기록했습니다 · 백업 사본은 {folder}에 있습니다",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n}개를 건너뛰었습니다(JPEG나 PNG가 아니거나 기록할 내용이 없음)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n}개를 건너뛰었습니다(JPEG나 PNG가 아니거나 기록할 내용이 없음)",
+ "This is a test build (pre-release): {0}": "이것은 테스트 빌드(pre-release)입니다: {0}"
 }

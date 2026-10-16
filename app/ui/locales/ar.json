@@ -1778,5 +1778,6 @@
  "Write into the original files": "الكتابة داخل الملفات الأصلية",
  "Write into {0} original files?": "الكتابة داخل {0} ملفات أصلية؟",
  "{n} original files were written · backup copies are in {folder}": "تمت كتابة {n} ملفات أصلية · نسخ النسخ الاحتياطي في {folder}",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "تم تخطي {n} (ليس JPEG أو PNG، أو لا شيء للكتابة)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "تم تخطي {n} (ليس JPEG أو PNG، أو لا شيء للكتابة)",
+ "This is a test build (pre-release): {0}": "هذه نسخة اختبار (pre-release): {0}"
 }

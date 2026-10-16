@@ -80,6 +80,29 @@ for v in ("9.0.0", "9.1", "8.2.0"):
 doc = (ROOT / "app" / "version.py").read_text("utf-8")
 check("app/version.py explains the scheme and the three-part first release", "FEATURE.SMALL-FEATURE.FIX" in doc and "three parts" in doc)
 
+# ---- PRE N of a version (the tag is vX.Y.Z-beta.N, and a PRE build knows its N)
+check("PRE 2 is newer than PRE 1, and both are older than the release and newer than the version before", nw("24.0.0-beta.2", "24.0.0-beta.1") and not nw("24.0.0-beta.1", "24.0.0-beta.2")
+      and nw("24.0.0", "24.0.0-beta.2") and not nw("24.0.0-beta.2", "24.0.0") and nw("24.0.0-beta.1", "23.2.0"))
+check("PRE 10 is newer than PRE 9 (numbers, not text)", nw("24.0.0-beta.10", "24.0.0-beta.9"))
+import subprocess
+pf = ROOT / "app" / "_prerelease.py"
+had = pf.read_bytes() if pf.exists() else None
+try:
+    pf.write_text("PRE = 3\n", "utf-8")
+    probe = "from app.version import __version__ as v, FULL_VERSION, PRE; from app import updater as u; print(FULL_VERSION, PRE, u.running_is_prerelease(), u.is_newer(v + '-beta.4'), u.is_newer(v + '-beta.3'), u.is_newer(v))"
+    out = subprocess.run([sys.executable, "-c", probe], cwd=str(ROOT), capture_output=True, text=True).stdout.split()
+    from app.version import __version__ as plain
+    check("a PRE build (app/_prerelease.py) is 'X.Y.Z-beta.N': it offers PRE 4 and the release, not PRE 3", out == [f"{plain}-beta.3", "3", "True", "True", "False", "True"], out)
+finally:
+    if had is None:
+        pf.unlink(missing_ok=True)
+    else:
+        pf.write_bytes(had)
+from app.version import FULL_VERSION as _full, PRE as _pre
+check("without that file (a regular build, or from source) the version is plain", (_pre == 0 and _full == plain) if had is None else True)
+wp = subprocess.run([sys.executable, str(ROOT / "tools" / "write_prerelease.py")], cwd=str(ROOT), capture_output=True, text=True, env={**__import__("os").environ, "PRERELEASE": "false"})
+check("write_prerelease.py writes nothing for a regular release", wp.returncode == 0 and (had is not None or not pf.exists()), wp.stderr[-200:])
+
 n_fail = res.count(False)
 print(f"\n{len(res) - n_fail}/{len(res)} passed")
 sys.exit(1 if n_fail else 0)

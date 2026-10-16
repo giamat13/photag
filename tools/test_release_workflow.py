@@ -68,8 +68,8 @@ check("the build job and the packages job (the code zip holds app/) write the re
 plain_b = [name(x) for x in steps if x not in signing]
 plain_i = [name(x) for x in isteps if x not in signing]
 plain_p = [name(x) for x in psteps if x not in store and x not in msi and x not in reports]
-check("without signing, the build job is: setup, tag, report token, version info, PyInstaller x2, keep the programs", plain_b[:4] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py"]
-      and plain_b[6:8] == ["python -m PyInstaller --noconfirm photag.spec", "python -m PyInstaller --noconfirm photag_backup.spec"] and plain_b[-1].startswith("Keep the built programs"), plain_b)
+check("without signing, the build job is: setup, tag, report token, PRE number, version info, PyInstaller x2, keep the programs", plain_b[:4] == ["actions/checkout@v4", "actions/setup-python@v5", "python -m pip install -r requirements-dev.txt", "Tag matches app/version.py"]
+      and plain_b[7:9] == ["python -m PyInstaller --noconfirm photag.spec", "python -m PyInstaller --noconfirm photag_backup.spec"] and plain_b[-1].startswith("Keep the built programs"), plain_b)
 check("without signing, the installer job builds the installer, its ZIP copy and keeps them", "Build the installer" in plain_i and plain_i[-2].startswith("Keep the release files") and any(x.startswith("Put a copy of the installer in a ZIP") for x in plain_i), plain_i)
 check("without signing, the packages job builds the code zip, the portable ZIP and the install scripts, in that order",
       [x.split(" (")[0] for x in plain_p if x.startswith("Build")] == ["Build the code update", "Build the portable ZIP", "Build the install scripts"], plain_p)

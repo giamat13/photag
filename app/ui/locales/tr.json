@@ -1778,5 +1778,6 @@
  "Write into the original files": "Orijinal dosyalara yaz",
  "Write into {0} original files?": "{0} orijinal dosyaya yazılsın mı?",
  "{n} original files were written · backup copies are in {folder}": "{n} orijinal dosya yazıldı · yedek kopyalar {folder} içinde",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} atlandı (JPEG ya da PNG değil veya yazılacak bir şey yok)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} atlandı (JPEG ya da PNG değil veya yazılacak bir şey yok)",
+ "This is a test build (pre-release): {0}": "Bu bir test sürümüdür (pre-release): {0}"
 }

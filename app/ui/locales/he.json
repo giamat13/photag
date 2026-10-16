@@ -1778,5 +1778,6 @@
  "Write into the original files": "לכתוב לתוך הקבצים המקוריים",
  "Write into {0} original files?": "לכתוב לתוך {0} קבצים מקוריים?",
  "{n} original files were written · backup copies are in {folder}": "{n} קבצים מקוריים נכתבו · עותקי הגיבוי נמצאים ב-{folder}",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} דולגו (לא JPEG או PNG, או שאין מה לכתוב)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} דולגו (לא JPEG או PNG, או שאין מה לכתוב)",
+ "This is a test build (pre-release): {0}": "זו גרסת בדיקה (pre-release): {0}"
 }

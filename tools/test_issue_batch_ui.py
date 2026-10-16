@@ -207,6 +207,15 @@ try:
         # ---- #46 the AI button in Develop
         check("the Develop module has an AI button next to Auto", pg.locator("#btn-dev-ai").count() == 1 and pg.locator("#btn-dev-auto").count() == 1)
 
+        # ---- a PRE build says so (a badge and the window title); a regular build shows nothing
+        check("a regular build has no PRE badge and a plain title", pg.locator("#pre-badge").count() == 0 and pg.title() == "photag", pg.title())
+        pg.route("**/api/status", lambda route: route.fetch().json() and route.fulfill(json={**route.fetch().json(), "pre": 2}))
+        pg.evaluate("preMark()")
+        pg.wait_for_selector("#pre-badge", timeout=10000)
+        check("a PRE build shows 'PRE 2' at the top and in the window title", pg.inner_text("#pre-badge") == "PRE 2" and "PRE 2" in pg.title(), (pg.inner_text("#pre-badge"), pg.title()))
+        pg.unroute("**/api/status")
+        pg.evaluate("document.getElementById('pre-badge').remove()")
+
         # ---- #66 the language comes back from the server when the window's storage is gone
         call("POST", "/api/ui-lang", {"lang": "he"})
         pg.evaluate("localStorage.removeItem('pm.lang')")

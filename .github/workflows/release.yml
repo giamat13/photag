@@ -21,7 +21,9 @@ jobs:
   unix:
     # Linux (tar.gz) and macOS (zip with photag.app) builds, made by the same reusable workflow that tests them on every change to the spec
     uses: ./.github/workflows/unix-build.yml
-    secrets: inherit                      # the Linux / macOS builds get the same REPORT_TOKEN as the Windows one
+    with:
+      prerelease: ${{ inputs.prerelease == true }}
+    secrets: inherit                     # the Linux / macOS builds get the same REPORT_TOKEN as the Windows one
   build:
     # 1/3 of the Windows build: the programs (PyInstaller) and their signature. The installer and the other packages are built from them by the
     # two jobs below, AT THE SAME TIME (this used to be one long chain: about a minute longer)
@@ -51,6 +53,12 @@ jobs:
         env:
           REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
         run: python tools/write_report_token.py
+      - name: "A PRE build knows its PRE number (app/_prerelease.py; nothing for a regular release)"
+        shell: bash
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/write_prerelease.py
       - run: python tools/make_version_info.py
       - run: python -m PyInstaller --noconfirm photag.spec
       - run: python -m PyInstaller --noconfirm photag_backup.spec
@@ -191,6 +199,12 @@ jobs:
         env:
           REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
         run: python tools/write_report_token.py
+      - name: "A PRE build knows its PRE number (the code update zip carries the same app folder)"
+        shell: bash
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/write_prerelease.py
       - uses: actions/download-artifact@v4
         with:
           name: built-app

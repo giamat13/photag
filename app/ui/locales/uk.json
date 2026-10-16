@@ -1778,5 +1778,6 @@
  "Write into the original files": "Записати в оригінальні файли",
  "Write into {0} original files?": "Записати в оригінальні файли ({0})?",
  "{n} original files were written · backup copies are in {folder}": "Записано оригінальних файлів: {n} · резервні копії в {folder}",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "Пропущено: {n} (не JPEG і не PNG, або нічого записувати)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "Пропущено: {n} (не JPEG і не PNG, або нічого записувати)",
+ "This is a test build (pre-release): {0}": "Це тестова збірка (pre-release): {0}"
 }

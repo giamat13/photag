@@ -1778,5 +1778,6 @@
  "Write into the original files": "मूल फ़ाइलों में लिखें",
  "Write into {0} original files?": "{0} मूल फ़ाइलों में लिखें?",
  "{n} original files were written · backup copies are in {folder}": "{n} मूल फ़ाइलें लिखी गईं · बैकअप प्रतियाँ {folder} में हैं",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} छोड़ी गईं (JPEG या PNG नहीं, या लिखने को कुछ नहीं)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} छोड़ी गईं (JPEG या PNG नहीं, या लिखने को कुछ नहीं)",
+ "This is a test build (pre-release): {0}": "यह एक परीक्षण संस्करण (pre-release) है: {0}"
 }

@@ -1778,5 +1778,6 @@
  "Write into the original files": "In de originele bestanden schrijven",
  "Write into {0} original files?": "In {0} originele bestanden schrijven?",
  "{n} original files were written · backup copies are in {folder}": "{n} originele bestanden zijn geschreven · de back-upkopieën staan in {folder}",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} overgeslagen (geen JPEG of PNG, of niets om te schrijven)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} overgeslagen (geen JPEG of PNG, of niets om te schrijven)",
+ "This is a test build (pre-release): {0}": "Dit is een testversie (pre-release): {0}"
 }

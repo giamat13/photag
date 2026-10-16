@@ -36,7 +36,7 @@ from pathlib import Path
 
 from . import config, platform_dirs
 from .net import ssl_context
-from .version import REPO, __version__
+from .version import REPO, __version__, FULL_VERSION
 
 API = os.environ.get("PHOTAG_UPDATE_API", "https://api.github.com").rstrip("/")     # tests point this at a mock
 ALLOWED_DOWNLOAD = os.environ.get("PHOTAG_UPDATE_ALLOW_PREFIX") or f"https://github.com/{REPO}/releases/download/"
@@ -57,16 +57,20 @@ def parse_version(s: str) -> tuple:
     if not m:
         return (0, 0, 0, 0)
     nums = tuple(int(x or 0) for x in m.groups()[:3])
-    return nums + (0 if m.group(4).strip().startswith("-") else 1,)
+    suffix = m.group(4).strip()
+    if suffix.startswith("-"):                       # a pre-release: the PRE number after the suffix ("-beta.2") orders PRE 2 above PRE 1
+        n = re.search(r"(\d+)", suffix)
+        return nums + (0, int(n.group(1)) if n else 0)
+    return nums + (1, 0)
 
 
-def is_newer(latest: str, current: str = __version__) -> bool:
+def is_newer(latest: str, current: str = FULL_VERSION) -> bool:
     return parse_version(latest) > parse_version(current)
 
 
 def running_is_prerelease() -> bool:
-    """Whether the version currently running (app/version.py) is itself a pre-release build."""
-    return parse_version(__version__)[3] == 0
+    """Whether the version currently running is itself a pre-release build (a PRE build of the release workflow)."""
+    return parse_version(FULL_VERSION)[3] == 0
 
 
 def auto_enable_beta_if_prerelease():
@@ -117,7 +121,7 @@ def check(force: bool = False, include_pre: bool = False) -> dict:
     "prerelease" says the release offered is a pre-release (only possible in tester mode). include_pre (a manual check)
     also looks for a newer pre-release while tester mode is OFF and reports it as "pre" -- it is only mentioned, never
     offered for installation."""
-    out = {"current": __version__, "available": False, "latest": None, "notes": "", "page": f"https://github.com/{REPO}/releases",
+    out = {"current": FULL_VERSION, "available": False, "latest": None, "notes": "", "page": f"https://github.com/{REPO}/releases",
            "asset": None, "code_asset": None, "published": None, "skipped": False, "error": None,
            "prerelease": False, "pre": None}
     if config.IN_STORE_PACKAGE:
@@ -150,12 +154,12 @@ def check(force: bool = False, include_pre: bool = False) -> dict:
         out["asset"] = None                  # photagSetup.exe is a Windows installer: macOS / Linux get the release page (and code updates)
     out["code_asset"] = _pick_code_asset(rel.get("assets") or [], out["latest"])
     out["prerelease"] = bool(tag) and _is_pre(rel)
-    out["available"] = bool(tag) and is_newer(tag, __version__)
+    out["available"] = bool(tag) and is_newer(tag, FULL_VERSION)
     out["skipped"] = out["available"] and config.get_update_skipped() == out["latest"]
     if out["available"]:
-        out["notes"] = _notes_since(__version__)       # several versions behind: show what's new in all of them, not just the latest
+        out["notes"] = _notes_since(FULL_VERSION)       # several versions behind: show what's new in all of them, not just the latest
     if include_pre and not beta:
-        out["pre"] = _newest_pre(out["latest"] if out["available"] else __version__)
+        out["pre"] = _newest_pre(out["latest"] if out["available"] else FULL_VERSION)
     return out
 
 
@@ -167,7 +171,7 @@ def _newest_pre(newer_than: str) -> dict | None:
         return None
     for r in rels:
         tag = r.get("tag_name") or ""
-        if tag and _is_pre(r) and is_newer(tag, __version__) and is_newer(tag, newer_than):
+        if tag and _is_pre(r) and is_newer(tag, FULL_VERSION) and is_newer(tag, newer_than):
             return {"latest": tag.lstrip("vV"), "page": r.get("html_url") or "", "notes": r.get("body") or ""}
     return None
 
@@ -435,7 +439,7 @@ def prepare_rollback(installer: Path, to_version: str) -> dict:
     (d / "just_failed.json").unlink(missing_ok=True)
     script = d / "recover.ps1"
     script.write_text(RECOVER_PS1, "utf-8-sig")             # BOM: Windows PowerShell 5 reads it as UTF-8
-    journal = {"from_version": __version__, "to_version": to_version, "installer": str(installer), "exe": str(exe),
+    journal = {"from_version": FULL_VERSION, "to_version": to_version, "installer": str(installer), "exe": str(exe),
                "app_dir": str(app_dir), "backup_dir": str(backup_dir), "fingerprint": fingerprint,
                "started": time.time(), "pid": os.getpid()}
     _write_json(d / "pending.json", journal)
@@ -468,7 +472,7 @@ def reconcile() -> dict:
         return {"state": "none"}
     flag = d / "done.flag"
     if flag.exists():
-        if parse_version(__version__) >= parse_version(j.get("to_version", "")):
+        if parse_version(FULL_VERSION) >= parse_version(j.get("to_version", "")):
             _write_json(d / "just_updated.json", {"from": j.get("from_version"), "to": j.get("to_version")})
             _clear_pending(d)
             return {"state": "updated", "from": j.get("from_version"), "to": j.get("to_version")}
@@ -625,7 +629,7 @@ def apply_code(zip_path: Path) -> dict:
     except Exception as e:
         shutil.rmtree(new, ignore_errors=True)
         raise UpdateError(str(e))
-    _write_json(state_dir() / "just_updated.json", {"from": __version__, "to": version})      # the "what's new" window after the restart
+    _write_json(state_dir() / "just_updated.json", {"from": FULL_VERSION, "to": version})      # the "what's new" window after the restart
     if os.environ.get("PHOTAG_UPDATE_DRY_RUN"):
         return {"mode": "code-dry-run", "version": version, "code": str(code)}
     # start the same (already allowed) photag.exe again a moment after this process has gone

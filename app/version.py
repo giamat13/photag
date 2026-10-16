@@ -13,3 +13,10 @@ recognise a code update "photag-code-X.Y.Z-rtN.zip" with three parts. (The short
 """
 __version__ = "24.0.0"
 REPO = "giamat13/photag"
+try:
+    from ._prerelease import PRE       # written by the release workflow into a PRE build only (tools/write_prerelease.py), never committed
+except ImportError:
+    PRE = 0                            # 0 = a regular build (and every build from source)
+# What this program is, for the update check, the "Report a problem" text and the screen: "24.0.0" for a regular build, "24.0.0-beta.2"
+# for PRE 2 of 24.0.0. __version__ itself stays plain (file names, tags and tests of the regular version use it).
+FULL_VERSION = f"{__version__}-beta.{PRE}" if PRE else __version__

@@ -1778,5 +1778,6 @@
  "Write into the original files": "Escribir en los archivos originales",
  "Write into {0} original files?": "¿Escribir en {0} archivos originales?",
  "{n} original files were written · backup copies are in {folder}": "Se escribieron {n} archivos originales · las copias de seguridad están en {folder}",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} omitidos (no son JPEG ni PNG, o no hay nada que escribir)"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} omitidos (no son JPEG ni PNG, o no hay nada que escribir)",
+ "This is a test build (pre-release): {0}": "Esta es una versión de prueba (pre-release): {0}"
 }

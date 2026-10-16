@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import geocode, report, merge, geotag, slidevideo, db, images, importer, faces, aitag, compress, config, updater, backup, backup_task, refmode, analysis, semantic, smart, cloud, triplan, exifindex, render, opener, viewer, extras, fileassoc, power, wallpaper, background as bgmode
-from .version import __version__
+from .version import __version__, FULL_VERSION, PRE
 from .config import PATHS
 from .security import LocalOnlyMiddleware
 
@@ -413,7 +413,7 @@ def status():
             "trashed": c("SELECT COUNT(*) FROM photos WHERE trashed=1"),
         },
         "trash_days": importer.trash_days(con),
-        "version": __version__,
+        "version": __version__, "version_full": FULL_VERSION, "pre": PRE,
         "legacy_library": config.legacy_library_in_use(),
         "target_library": str(config.TARGET_LIBRARY),
         "move_notice": config.move_notice(),
@@ -1723,7 +1723,7 @@ def _report_tech(language: str = "") -> str:
         extra["Edits kept in the catalog"] = bool(config.get_catalog_edits())
     except Exception:
         pass
-    return report.tech_text(__version__, language, str(PATHS.root), n, extra)
+    return report.tech_text(FULL_VERSION, language, str(PATHS.root), n, extra)
 
 
 @app.get("/api/report/preview")
@@ -1743,9 +1743,9 @@ def report_send(b: ReportIn):
     if not report.allowed():
         raise err(429, "You have sent several reports already. You can send again in about {minutes} minutes.", minutes=report.retry_in_minutes())
     urls, failed = report.upload_images(b.images) if (b.images and report.can_send()) else ([], 0)
-    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, __version__, b.client, kind, report.redact(b.title)[:200], urls)
+    title, body = report.compose(report.redact(desc), _report_tech(b.language) if b.include_tech else None, FULL_VERSION, b.client, kind, report.redact(b.title)[:200], urls)
     try:
-        r = report.send(title, body, __version__, kind)
+        r = report.send(title, body, FULL_VERSION, kind)
         return {"sent": True, "number": r["number"], "url": r["url"], **({"images": len(urls), "images_failed": failed} if b.images else {})}
     except report.ReportError:                        # never opens GitHub in the browser: the user is told it was not sent
         raise err(503, "The report could not be sent")

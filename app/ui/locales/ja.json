@@ -1778,5 +1778,6 @@
  "Write into the original files": "元のファイルに書き込む",
  "Write into {0} original files?": "{0}個の元のファイルに書き込みますか？",
  "{n} original files were written · backup copies are in {folder}": "{n}個の元のファイルを書き込みました · バックアップのコピーは {folder} にあります",
- "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n}個をスキップしました（JPEGでもPNGでもない、または書き込む内容がない）"
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n}個をスキップしました（JPEGでもPNGでもない、または書き込む内容がない）",
+ "This is a test build (pre-release): {0}": "これはテスト版（pre-release）です：{0}"
 }

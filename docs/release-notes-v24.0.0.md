@@ -18,6 +18,8 @@
 - **The Timeline shows what the Grid shows**: the quality score and the series badge ("N×", a click compares the series) are on the Timeline pictures too (#69).
 - **One right-click menu for the Timeline and the Grid**: both open the menu from the same piece of code, so anything added to it appears in both (#68).
 
+- **A test build (PRE) says so**: a pre-release shows "PRE N" at the top of the window and in the window title, its version in "Report a problem" is "24.0.0-beta.N", and the update check tells PRE 2 from PRE 1 (and both from the regular release).
+
 ## Fixes
 
 - **The language went back to English after an update**: the language you chose is now also kept by photag itself, not only by the window, which forgets it when photag has to use another port (#66).

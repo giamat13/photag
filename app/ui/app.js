@@ -5381,6 +5381,16 @@ function folderActionFromExplorer(){
   IM.path = folder; IM.files = []; IM.on = new Set(); IM.album = verb==='collection' ? folder.split(/[\\/]/).filter(Boolean).pop() || '' : '';
   openImport('folder');
 }
+// A PRE build (a test build of the release workflow) says so: a badge at the top and in the window title ("24.0.0 PRE 2").
+async function preMark(){
+  let s; try{ s = await api('/api/status'); }catch{ return; }
+  if(!s || !s.pre) return;
+  const label = `${s.version} PRE ${s.pre}`;
+  document.title = `photag ${label}`;
+  const b = document.createElement('div'); b.id = 'pre-badge'; b.textContent = `PRE ${s.pre}`;
+  b.title = t('This is a test build (pre-release): {0}', [label]);
+  document.body.append(b);
+}
 // ---------- boot ----------
 const splashSay = msg => { const m = $('#sp-msg'); if(m) m.textContent = msg; };
 const splashEnd = () => { const sp = $('#splash'); if(!sp) return; sp.classList.add('gone'); setTimeout(()=>sp.remove(), 500); };
@@ -5398,6 +5408,7 @@ splashSay(t('Starting photag…'));
   loadSeries();
   setView(S.startView==='timeline' ? 'timeline' : 'grid');       // the Timeline as the opening view when the user chose it (View menu)
   splashEnd();
+  preMark();
   folderActionFromExplorer();
   setTimeout(reportNews, 7000); setInterval(reportNews, 2*3600*1000);
   setTimeout(async ()=>{ if(await libraryMoveNotice()) return; if(!(await whatsNew(false)) && pref.get('autoUpdate', true)){ UPDATE_BUSY = true; try{ if(await updateCheck(false)) pref.set('updateCheckedAt', Date.now()); } finally{ UPDATE_BUSY = false; } } }, 2500);

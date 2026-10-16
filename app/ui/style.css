@@ -80,6 +80,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
 input[type=range]:hover::-webkit-slider-thumb{background:#e6e6e6}
 
 /* ---------- menu bar ---------- */
+#pre-badge{position:fixed;inset-block-start:3px;inset-inline-end:10px;z-index:80;font-size:10px;font-weight:700;line-height:16px;padding:0 7px;border-radius:8px;background:#cba34a;color:#111;cursor:default}
 .menubar{height:24px;flex:none;display:flex;align-items:stretch;background:var(--mb);border-bottom:1px solid var(--line-strong);padding:0 4px}
 .menubar>button{height:auto;border:0;background:transparent;border-radius:0;padding:0 9px;color:var(--t2)}
 .menubar>button:hover,.menubar>button.open{background:var(--hover);color:var(--t1)}

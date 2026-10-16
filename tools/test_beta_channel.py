@@ -86,8 +86,8 @@ check("a plain version like '1.7.2' is not a pre-release", updater.parse_version
 check("running_is_prerelease() agrees for the real running version (a plain release)", updater.running_is_prerelease() is False)
 check("parse_version() marks a '-beta'-suffixed version as a pre-release", updater.parse_version("1.8.0-beta.1")[3] == 0)
 
-_orig_version = updater.__version__
-updater.__version__ = "1.8.0-beta.1"
+_orig_version = updater.FULL_VERSION
+updater.FULL_VERSION = "1.8.0-beta.1"
 try:
     check("running_is_prerelease() is True for a pre-release build", updater.running_is_prerelease() is True)
     updater.auto_enable_beta_if_prerelease()
@@ -96,18 +96,18 @@ try:
     updater.auto_enable_beta_if_prerelease()
     check("...and keeps doing so every start, not just once", config.get_beta_channel() is True)
 finally:
-    updater.__version__ = _orig_version
+    updater.FULL_VERSION = _orig_version
     config.set_beta_channel(False)
 
-updater.__version__ = "1.7.2"
+updater.FULL_VERSION = "1.7.2"
 config.set_beta_channel(False)
 updater.auto_enable_beta_if_prerelease()
 check("a plain release build never turns tester mode on by itself", config.get_beta_channel() is False)
-updater.__version__ = _orig_version
+updater.FULL_VERSION = _orig_version
 
 # ---- pre-release banner / manual check while tester mode is OFF
 config.set_beta_channel(False)
-updater.__version__ = "1.7.2"
+updater.FULL_VERSION = "1.7.2"
 try:
     o = updater.check(force=True)
     check("tester OFF, plain check: nothing about pre-releases is reported", o["pre"] is None and o["available"] is False and o["prerelease"] is False, o)
@@ -115,13 +115,13 @@ try:
     check("tester OFF, manual check: the newer pre-release is reported as 'pre'", o["pre"] and o["pre"]["latest"] == "1.8.0-beta.1", o["pre"])
     check("...with its page and notes", o["pre"]["page"] == "https://x/1.8.0-beta.1" and o["pre"]["notes"] == "beta notes")
     check("...but it is NOT offered as an update (not available, nothing to install)", o["available"] is False and o["asset"] is None and o["prerelease"] is False)
-    updater.__version__ = "1.8.0-beta.1"
+    updater.FULL_VERSION = "1.8.0-beta.1"
     check("a pre-release that is not newer than the running version is not reported", updater.check(force=True, include_pre=True)["pre"] is None)
-    updater.__version__ = "1.6.0"
+    updater.FULL_VERSION = "1.6.0"
     o = updater.check(force=True, include_pre=True)
     check("a newer STABLE update and a newer pre-release can both be reported", o["available"] and o["latest"] == "1.7.0" and o["prerelease"] is False and o["pre"]["latest"] == "1.8.0-beta.1", (o["latest"], o["pre"]))
     STABLE["tag_name"] = "v1.9.0"
-    updater.__version__ = "1.7.2"
+    updater.FULL_VERSION = "1.7.2"
     o = updater.check(force=True, include_pre=True)
     check("a pre-release OLDER than the available stable release is not mentioned", o["available"] and o["latest"] == "1.9.0" and o["pre"] is None, (o["latest"], o["pre"]))
     STABLE["tag_name"] = "v1.7.0"
@@ -142,7 +142,7 @@ try:
     check("what's new: a stable version's notes are not", updater.whats_new("1.7.0")["prerelease"] is False)
     check("a release marked prerelease on GitHub counts even without a suffix in its tag", updater._is_pre({"tag_name": "v2.0.0", "prerelease": True}) and not updater._is_pre({"tag_name": "v2.0.0", "prerelease": False}))
 finally:
-    updater.__version__ = _orig_version
+    updater.FULL_VERSION = _orig_version
     STABLE["tag_name"] = "v1.7.0"
     config.set_beta_channel(False)
 
