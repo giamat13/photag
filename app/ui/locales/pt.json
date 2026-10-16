@@ -1771,5 +1771,12 @@
  "minutes": "minutos",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "O photag coloca uma cópia reduzida da imagem na área de trabalho; suas fotos não são alteradas. Continua funcionando enquanto o photag estiver em segundo plano (o ícone ao lado do relógio).",
  "{0} pictures could not be attached": "Não foi possível anexar {0} imagens",
- "{0} was tagged in this photo": "{0} foi marcado(a) nesta foto"
+ "{0} was tagged in this photo": "{0} foi marcado(a) nesta foto",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Gravar as edições e todos os metadados nos próprios arquivos originais (substitui-os)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "As edições são aplicadas aos pixels e os metadados são gravados nos próprios arquivos. Uma cópia de cada arquivo como era é mantida na pasta da biblioteca (original-backups). Vídeos e arquivos que não são JPEG nem PNG não são tocados.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Isto altera os arquivos originais (JPEG e PNG): as edições são aplicadas aos pixels e os metadados são gravados neles. Antes de cada arquivo ser substituído, uma cópia dele como era é mantida na pasta da biblioteca (original-backups). Vídeos e outros tipos de arquivo não são tocados.",
+ "Write into the original files": "Gravar nos arquivos originais",
+ "Write into {0} original files?": "Gravar em {0} arquivos originais?",
+ "{n} original files were written · backup copies are in {folder}": "{n} arquivos originais foram gravados · as cópias de segurança estão em {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} ignorados (nem JPEG nem PNG, ou nada a gravar)"
 }

@@ -2859,7 +2859,8 @@ def start_import_folder(body: ImportFolderIn):
 
 class ExportIn(BaseModel):
     ids: list[int]
-    dest: str
+    dest: str = ""
+    write_original: bool = False       # replace the photos' own files with the edited / metadata-carrying version (a backup copy is kept; the one exception to rule number one)
     originals: bool = False
     long_edge: int | None = None
     quality: int = 100
@@ -2869,6 +2870,11 @@ class ExportIn(BaseModel):
 
 @app.post("/api/export")
 def start_export(body: ExportIn):
+    if body.write_original:
+        if not body.ids:
+            raise err(400, "Missing items or destination folder")
+        _start("export", importer.run_write_originals, body.ids)
+        return {"ok": True}
     if not body.ids or not body.dest.strip():
         raise err(400, "Missing items or destination folder")
     import functools

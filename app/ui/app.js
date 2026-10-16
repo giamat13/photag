@@ -2743,7 +2743,7 @@ async function loadSeries(){
     for(const b of r.series) for(const id of b.members) m.set(id, {best:b.best, n:b.members.length, members:b.members});
     S.bursts = m;
   }catch{ return; }
-  if(S.stackBursts) applyFilter(); else refreshCells();
+  if(S.stackBursts) applyFilter(); else { refreshCells(); tlRepaint(); }
 }
 // Desktop wallpaper that changes by itself (#55): Windows only. The pictures are copied (scaled) to a folder of photag; the originals are only read.
 async function wallpaperDialog(albumId){
@@ -3977,6 +3977,7 @@ function openExport(){
     <div class="fld" id="ex-modes"><span>${t("File Settings")}</span>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="current" ${last.mode==='current'?'checked':''}> ${t(" The file as it is in the catalog (including edits)")}</label>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="full" ${last.mode==='full'?'checked':''}> ${t(" Full quality, with the edits and all the metadata written into the file")}</label>
+      <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="write"> ${t(" Write the edits and all the metadata into the original files themselves (replaces them)")}</label>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="original" ${last.mode==='original'?'checked':''}> ${t(" The original, without edits")}</label>
       <label class="check" style="padding:0"><input type="radio" name="ex-mode" value="jpeg" ${last.mode==='jpeg'?'checked':''}> ${t(" JPEG, resized")}</label></div>
     <div class="frow" id="ex-jpeg"><span>${t("Long Edge")}</span><input type="number" id="ex-edge" min="200" max="20000" value="${last.edge}" style="width:90px" dir="ltr"><span>${t("Pixels · Quality")}</span>
@@ -3985,6 +3986,7 @@ function openExport(){
     <label class="check" id="ex-meta-row" style="padding:4px 0 0"><input type="checkbox" id="ex-meta" ${last.meta?'checked':''}> ${t('Update the EXIF of the exported JPEG files and write the edit settings with the originals')}</label>
     <p class="hint" id="ex-meta-hint" style="padding:0 0 0 24px">${t("The copies get the caption, capture time, location, rating and keywords as they are in photag now, and keep the camera's EXIF even when edited or resized. An unedited original is exported with its edit settings in the XMP sidecar. Your library files are never changed. JPEG only.")}</p>
     <p id="ex-note">${t("Videos are always copied as they are. Duplicate file names get a number.")}</p>
+    <p id="ex-write-warn" class="hint hidden" style="padding:0;color:var(--yellow)">${t("This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.")}</p>
   </div><div class="mf"><button onclick="closeModal()">${t("Cancel")}</button><button class="primary" id="ex-go">${t("Export")}</button></div>`);
   $('#ex-q').oninput=e=>$('#ex-qv').textContent=e.target.value;
   const syncKind = ()=>{
@@ -3994,11 +3996,13 @@ function openExport(){
     if(ext && $('#ex-dest').value && !$('#ex-dest').value.toLowerCase().endsWith(ext)) $('#ex-dest').value += ext;
     $('#ex-title-row').classList.toggle('hidden', k!=='html');
     $('#ex-modes').classList.toggle('hidden', k==='html');
-    $('#ex-xmp-row').classList.toggle('hidden', k==='html');
-    $('#ex-meta-row').classList.toggle('hidden', k==='html'); $('#ex-meta-hint').classList.toggle('hidden', k==='html');
-    $('#ex-note').classList.toggle('hidden', k==='html');
+    const w = k!=='html' && $('input[name=ex-mode]:checked')?.value==='write';        // writing into the originals: no destination, no copy options
+    for(const el of [$('#ex-xmp-row'), $('#ex-meta-row'), $('#ex-meta-hint'), $('#ex-note')]) el.classList.toggle('hidden', k==='html' || w);
+    for(const el of [$('#ex-dest').closest('label.fld'), $('#ex-kind').closest('label.fld'), $('#ex-jpeg')]) el.classList.toggle('hidden', w);
+    $('#ex-write-warn').classList.toggle('hidden', !w);
+    $('#ex-go').textContent = w ? t('Write into the original files') : t('Export');
   };
-  $('#ex-kind').onchange = syncKind; syncKind();
+  $('#ex-kind').onchange = syncKind; $$('input[name=ex-mode]').forEach(r=>r.onchange = syncKind); syncKind();
   $('#ex-pick').onclick=async()=>{
     const k=$('#ex-kind').value;
     const r = k==='folder' ? await api('/api/pick-file?kind=folder&title='+encodeURIComponent(t('Choose export folder')))
@@ -4009,8 +4013,15 @@ function openExport(){
   $('#ex-go').onclick=async()=>{
     const dest=$('#ex-dest').value.trim(), kind=$('#ex-kind').value, mode=$('input[name=ex-mode]:checked').value,
       edge=+$('#ex-edge').value||null, q=+$('#ex-q').value, xmp=$('#ex-xmp').checked, meta=$('#ex-meta').checked, title=$('#ex-title').value.trim()||'Photos';
+    if(mode==='write' && kind!=='html'){          // the one exception to "never touch the originals": asked for, confirmed, and every file is backed up first
+      if(!await confirmBox(t('Write into {0} original files?', [num(ids.length)]), t('The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.'), t('Write into the original files'))) return;
+      closeModal();
+      AFTER_JOB.export = ()=>{ ids.forEach(id=>{ VER[id] = Date.now(); }); if(S.view==='loupe'){ $('#loupe-media').dataset.id = ''; renderLoupe(); } else if(S.view==='timeline') renderTimeline(); };
+      runJob('/api/export','export',t('Export'),{ids, write_original:true});
+      return;
+    }
     if(!dest) return toast(t('Choose a destination'));
-    pref.set('export', {dest, mode, edge:edge||2048, q, kind, xmp, meta, title});
+    pref.set('export', {dest, mode: mode==='write' ? 'current' : mode, edge:edge||2048, q, kind, xmp, meta, title});       // "write into the originals" is never remembered as the default
     closeModal();
     if(kind==='html') runJob('/api/export-html','export',t('Export'),{ids, dest, long_edge:edge, quality:q, title});
     else runJob('/api/export','export',t('Export'),{ids, dest, originals:mode==='original', long_edge:mode==='jpeg'?edge:null, quality:mode==='jpeg'?q:100, zip:kind==='zip', xmp, update_metadata:meta || mode==='full'});    // "full" = the catalog's look at full quality, with the EXIF, caption, rating and keywords written into the copy (your library files are never changed)
@@ -4228,6 +4239,7 @@ async function pollJob(name, label){
     if(name==='compress' && CPG.alive){ CPG.alive = false; closeModal(); }
     toast(`<bdi>${label}</bdi>: <bdi>${esc(p.error_key ? t(p.error_key, p.vars) : p.error || msg || t('Done'))}</bdi>`, 4000);   // bdi: Latin model names must not scramble RTL text
     if(name==='backupcheck' && p.result && !p.result.ok) setTimeout(backupHealthNotice, 600);
+    if(name==='export' && AFTER_JOB.export){ const f=AFTER_JOB.export; delete AFTER_JOB.export; await reloadAll(); f(); }          // "write into the original files": the files, their size and their edit state changed
     if(['import','faces','aitag','compress','backup','refscan','analysis','merge'].includes(name)){
       await reloadAll();
       if(name==='merge' && p.state==='done' && p.result) selectOnly(p.result.id);
@@ -5294,8 +5306,16 @@ function renderTimeline(){
 }
 function tlFill(g, grp){
   g.innerHTML = grp.items.map((p,i)=>`<div class="tl-c ${S.sel.has(p.id)?'sel':''} ${S.act===p.id?'act':''}" data-id="${p.id}" style="width:${TL.cs}px;height:${TL.cs}px;inset-block-start:${Math.floor(i/TL.cols)*TL.cs}px;inset-inline-start:${(i%TL.cols)*TL.cs}px" draggable="true">
-    <img loading="lazy" decoding="async" src="${thumbUrl(p.id)}" alt="">${p.is_video?`<i class="tl-v">${I('play')}</i>`:''}${p.flag===1?`<i class="tl-f">${I('flag')}</i>`:''}</div>`).join('');
+    <img loading="lazy" decoding="async" src="${thumbUrl(p.id)}" alt="">${p.is_video?`<i class="tl-v">${I('play')}</i>`:''}${p.flag===1?`<i class="tl-f">${I('flag')}</i>`:''}${tlBadges(p)}</div>`).join('');
 }
+// the same badges as in the Grid (quality score, "N×" for a series): one function for the badge markup of both views (#69)
+function photoBadges(p){
+  const stack = S.bursts && S.bursts.get(p.id);
+  return [p.score!=null && `<em class="scb ${p.score>=70?'hi':p.score>=40?'mid':'lo'}" title="${t('Quality score: {0}', [p.score])}">${p.score}</em>`,
+    stack && stack.n>1 && `<em class="scb stb" data-a="stack" title="${esc(t('{0} similar photos taken within 2 minutes: click to compare them', [stack.n]))}">${stack.n}×</em>`].filter(Boolean);
+}
+function tlBadges(p){ const b = photoBadges(p); return b.length ? `<div class="badges">${b.join('')}</div>` : ''; }
+function tlRepaint(){ if(S.view!=='timeline') return; $$('#tl-main .tl-g').forEach(g=>{ if(g.dataset.on){ const grp = TL.groups[+g.closest('.tl-s').dataset.i]; if(grp) tlFill(g, grp); } }); }
 function tlRefresh(){ $$('#tl-main .tl-c').forEach(c=>{ const id=+c.dataset.id; c.classList.toggle('sel', S.sel.has(id)); c.classList.toggle('act', S.act===id); }); }
 function tlReveal(id){
   const gi = TL.groups.findIndex(g=>g.items.some(p=>p.id===id)); if(gi<0) return;
@@ -5334,7 +5354,9 @@ $('#tl-main').addEventListener('scroll', ()=>{ cancelAnimationFrame(TL.raf); TL.
   rail.addEventListener('pointerup', ()=>{ drag=false; });
   rail.addEventListener('pointerleave', ()=>{ if(!drag) $('#tl-bub')?.classList.add('hidden'); else drag=false; $('#tl-bub')?.classList.add('hidden'); });
 })();
-$('#tl-main').addEventListener('mousedown', e=>{ const c=e.target.closest('.tl-c'); if(c && e.button===0) selectClick(+c.dataset.id, e); else if(!c) selectNone(); });
+$('#tl-main').addEventListener('mousedown', e=>{ const c=e.target.closest('.tl-c');
+  if(c && e.button===0 && e.target.closest('[data-a=stack]')){ const b=S.bursts && S.bursts.get(+c.dataset.id); if(b){ e.preventDefault(); S.sel=new Set(b.members); S.act=b.best; S.anchor=b.best; onSelChange(); setView('compare'); } return; }     // the series badge: compare them, as in the Grid
+  if(c && e.button===0) selectClick(+c.dataset.id, e); else if(!c) selectNone(); });
 $('#tl-main').addEventListener('dblclick', e=>{ const c=e.target.closest('.tl-c'); if(c){ selectOnly(+c.dataset.id); setView('loupe'); } });
 $('#tl-main').addEventListener('dragstart', e=>{ const c=e.target.closest('.tl-c'); if(!c) return; const id=+c.dataset.id; if(!S.sel.has(id)) selectOnly(id);
   e.dataTransfer.setData('text/x-pm-ids', JSON.stringify([...S.sel])); e.dataTransfer.effectAllowed='copy'; });

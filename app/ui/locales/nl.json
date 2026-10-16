@@ -1771,5 +1771,12 @@
  "minutes": "minuten",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag zet een verkleinde kopie van de afbeelding op het bureaublad; uw foto's blijven ongewijzigd. Het blijft werken zolang photag op de achtergrond draait (het pictogram naast de klok).",
  "{0} pictures could not be attached": "{0} afbeeldingen konden niet worden bijgevoegd",
- "{0} was tagged in this photo": "{0} is getagd op deze foto"
+ "{0} was tagged in this photo": "{0} is getagd op deze foto",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " De bewerkingen en alle metadata in de originele bestanden zelf schrijven (vervangt ze)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "De bewerkingen worden op de pixels toegepast en de metadata wordt in de bestanden zelf geschreven. Van elk bestand wordt een kopie zoals het was bewaard in de bibliotheekmap (original-backups). Video's en bestanden die geen JPEG of PNG zijn, blijven onaangeroerd.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Dit wijzigt de originele bestanden (JPEG en PNG): de bewerkingen worden op de pixels toegepast en de metadata wordt erin geschreven. Voordat elk bestand wordt vervangen, wordt een kopie zoals het was bewaard in de bibliotheekmap (original-backups). Video's en andere bestandstypen blijven onaangeroerd.",
+ "Write into the original files": "In de originele bestanden schrijven",
+ "Write into {0} original files?": "In {0} originele bestanden schrijven?",
+ "{n} original files were written · backup copies are in {folder}": "{n} originele bestanden zijn geschreven · de back-upkopieën staan in {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} overgeslagen (geen JPEG of PNG, of niets om te schrijven)"
 }

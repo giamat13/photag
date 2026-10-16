@@ -1771,5 +1771,12 @@
  "minutes": "minut",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag umieszcza na pulpicie pomniejszoną kopię obrazu; Twoje zdjęcia nie są zmieniane. Działa, dopóki photag pracuje w tle (ikona obok zegara).",
  "{0} pictures could not be attached": "Nie udało się dołączyć obrazów: {0}",
- "{0} was tagged in this photo": "Oznaczono: {0} na tym zdjęciu"
+ "{0} was tagged in this photo": "Oznaczono: {0} na tym zdjęciu",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Zapisz edycje i wszystkie metadane w samych oryginalnych plikach (zastępuje je)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "Edycje zostaną zastosowane do pikseli, a metadane zapisane w samych plikach. Kopia każdego pliku w dawnej postaci jest zachowywana w folderze biblioteki (original-backups). Filmy i pliki, które nie są JPEG ani PNG, nie są ruszane.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "To zmienia oryginalne pliki (JPEG i PNG): edycje są stosowane do pikseli, a metadane są w nich zapisywane. Przed zastąpieniem każdego pliku jego kopia w dawnej postaci jest zachowywana w folderze biblioteki (original-backups). Filmy i inne typy plików nie są ruszane.",
+ "Write into the original files": "Zapisz w oryginalnych plikach",
+ "Write into {0} original files?": "Zapisać w {0} oryginalnych plikach?",
+ "{n} original files were written · backup copies are in {folder}": "Zapisano {n} oryginalnych plików · kopie zapasowe są w {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "Pominięto {n} (to nie JPEG ani PNG albo nie ma co zapisać)"
 }

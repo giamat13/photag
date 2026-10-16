@@ -204,6 +204,34 @@ try:
     check("a hand-made face can be removed", cl.delete(f"/api/face/{fid}").status_code == 200
           and db.connect().execute("SELECT COUNT(*) FROM faces WHERE id=?", (fid,)).fetchone()[0] == 0)
 
+    # ---- #62 Export > write the edits and the metadata into the original files (the one exception to rule number one)
+    import hashlib
+    import piexif
+    f2, f3 = PATHS.media / "2023/batch2.jpg", PATHS.media / "2023/batch3.jpg"
+    before2, before3 = f2.read_bytes(), f3.read_bytes()
+    cw = db.connect()
+    old_sha2 = cw.execute("SELECT sha256 FROM photos WHERE id=?", (p2,)).fetchone()["sha256"]
+    cw.execute("UPDATE photos SET description='A caption', rating=4 WHERE id=?", (p2,))
+    cw.commit(); cw.close()
+    r = cl.post("/api/export", json={"ids": [p2, p3], "write_original": True})
+    for _ in range(100):
+        if cl.get("/api/job/export").json()["state"] in ("done", "error"):
+            break
+        time.sleep(0.3)
+    job = cl.get("/api/job/export").json()
+    cw = db.connect()
+    row2, row3 = (cw.execute("SELECT sha256, bytes, width, height, edited, edit_ops FROM photos WHERE id=?", (i,)).fetchone() for i in (p2, p3))
+    bk = sorted((PATHS.root / "original-backups").glob("*"))
+    check("writing into the originals is a job that ends well", r.status_code == 200 and job["state"] == "done", (r.status_code, job.get("state"), job.get("error")))
+    check("a copy of each file as it was is kept first", len(bk) == 2 and {b.read_bytes() for b in bk} == {before2, before3}, [b.name for b in bk])
+    check("the edit settings are now in the pixels of the file (the 80x60 picture was rotated)", Image.open(f3).size == (60, 80) and (row3["width"], row3["height"]) == (60, 80) and row3["edited"] == 0 and row3["edit_ops"] is None, dict(row3))
+    ex = piexif.load(str(f2))
+    check("the caption and rating are written into the file's EXIF", ex["0th"].get(piexif.ImageIFD.ImageDescription) == b"A caption" and ex["0th"].get(piexif.ImageIFD.Rating) == 4, ex["0th"].get(piexif.ImageIFD.ImageDescription))
+    check("the catalog follows the new file: checksum and size", row2["sha256"] == hashlib.sha256(f2.read_bytes()).hexdigest() and row2["sha256"] != old_sha2 and row2["bytes"] == f2.stat().st_size)
+    check("the thumbnail was rebuilt for the new file and the old one is gone", images.thumb_path(row2["sha256"]).exists() and not images.thumb_path(old_sha2).exists())
+    check("no temporary file is left next to the originals", not list((PATHS.media / "2023").glob(".*photag-write*")))
+    cw.close()
+
     # ---- #55 the changing wallpaper
     w = cl.get("/api/wallpaper").json()
     check("on this system the wallpaper is not supported, and the settings say so", w["supported"] == (sys.platform == "win32") and w["enabled"] is False)

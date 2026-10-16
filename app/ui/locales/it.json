@@ -1771,5 +1771,12 @@
  "minutes": "minuti",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag mette sul desktop una copia ridotta dell'immagine; le tue foto non cambiano. Continua a funzionare finché photag è in esecuzione in background (l'icona accanto all'orologio).",
  "{0} pictures could not be attached": "Impossibile allegare {0} immagini",
- "{0} was tagged in this photo": "{0} è stato/a taggato/a in questa foto"
+ "{0} was tagged in this photo": "{0} è stato/a taggato/a in questa foto",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Scrivi le modifiche e tutti i metadati nei file originali stessi (li sostituisce)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "Le modifiche vengono applicate ai pixel e i metadati vengono scritti nei file stessi. Una copia di ogni file com'era viene conservata nella cartella della libreria (original-backups). I video e i file che non sono JPEG o PNG non vengono toccati.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Questo modifica i file originali (JPEG e PNG): le modifiche vengono applicate ai pixel e i metadati vi vengono scritti. Prima di sostituire ogni file ne viene conservata una copia com'era nella cartella della libreria (original-backups). I video e gli altri tipi di file non vengono toccati.",
+ "Write into the original files": "Scrivi nei file originali",
+ "Write into {0} original files?": "Scrivere in {0} file originali?",
+ "{n} original files were written · backup copies are in {folder}": "Sono stati scritti {n} file originali · le copie di backup sono in {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} saltati (non JPEG né PNG, o niente da scrivere)"
 }

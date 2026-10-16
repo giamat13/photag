@@ -1771,5 +1771,12 @@
  "minutes": "דקות",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag שם על שולחן העבודה עותק מוקטן של התמונה; התמונות שלכם לא משתנות. זה ממשיך לעבוד כל עוד photag רץ ברקע (הסמל ליד השעון).",
  "{0} pictures could not be attached": "לא ניתן היה לצרף {0} תמונות",
- "{0} was tagged in this photo": "{0} תויג/ה בתמונה הזו"
+ "{0} was tagged in this photo": "{0} תויג/ה בתמונה הזו",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " לכתוב את העריכות וכל המטא-דאטה לתוך הקבצים המקוריים עצמם (מחליף אותם)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "העריכות מוחלות על הפיקסלים והמטא-דאטה נכתבת לתוך הקבצים עצמם. עותק של כל קובץ כפי שהיה נשמר בתיקיית הספרייה (original-backups). סרטונים וקבצים שאינם JPEG או PNG לא ייגעו.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "זה משנה את הקבצים המקוריים (JPEG ו-PNG): העריכות מוחלות על הפיקסלים והמטא-דאטה נכתבת לתוכם. לפני שכל קובץ מוחלף נשמר עותק שלו כפי שהיה בתיקיית הספרייה (original-backups). סרטונים וסוגי קבצים אחרים לא ייגעו.",
+ "Write into the original files": "לכתוב לתוך הקבצים המקוריים",
+ "Write into {0} original files?": "לכתוב לתוך {0} קבצים מקוריים?",
+ "{n} original files were written · backup copies are in {folder}": "{n} קבצים מקוריים נכתבו · עותקי הגיבוי נמצאים ב-{folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} דולגו (לא JPEG או PNG, או שאין מה לכתוב)"
 }

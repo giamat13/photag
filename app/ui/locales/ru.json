@@ -1771,5 +1771,12 @@
  "minutes": "мин.",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag ставит на рабочий стол уменьшенную копию фото; ваши фото не меняются. Работает, пока photag запущен в фоне (значок возле часов).",
  "{0} pictures could not be attached": "Не удалось прикрепить картинок: {0}",
- "{0} was tagged in this photo": "{0} отмечен(а) на этом фото"
+ "{0} was tagged in this photo": "{0} отмечен(а) на этом фото",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Записать правки и все метаданные в сами исходные файлы (заменяет их)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "Правки применяются к пикселям, а метаданные записываются в сами файлы. Копия каждого файла в прежнем виде сохраняется в папке библиотеки (original-backups). Видео и файлы, не являющиеся JPEG или PNG, не затрагиваются.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Это изменяет исходные файлы (JPEG и PNG): правки применяются к пикселям, а метаданные записываются в них. Перед заменой каждого файла его копия в прежнем виде сохраняется в папке библиотеки (original-backups). Видео и другие типы файлов не затрагиваются.",
+ "Write into the original files": "Записать в исходные файлы",
+ "Write into {0} original files?": "Записать в исходные файлы ({0})?",
+ "{n} original files were written · backup copies are in {folder}": "Записано исходных файлов: {n} · резервные копии в {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "Пропущено: {n} (не JPEG и не PNG, или нечего записывать)"
 }

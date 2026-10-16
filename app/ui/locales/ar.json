@@ -1771,5 +1771,12 @@
  "minutes": "دقائق",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "يضع photag نسخة مصغّرة من الصورة على سطح المكتب؛ صورك لا تتغيّر. يستمر العمل ما دام photag يعمل في الخلفية (الأيقونة بجانب الساعة).",
  "{0} pictures could not be attached": "تعذّر إرفاق {0} صور",
- "{0} was tagged in this photo": "تم وسم {0} في هذه الصورة"
+ "{0} was tagged in this photo": "تم وسم {0} في هذه الصورة",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " كتابة التعديلات وكل البيانات الوصفية داخل الملفات الأصلية نفسها (تستبدلها)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "تُطبَّق التعديلات على البكسلات وتُكتب البيانات الوصفية داخل الملفات نفسها. تُحفظ نسخة من كل ملف كما كان في مجلد المكتبة (original-backups). لا تُمَسّ مقاطع الفيديو والملفات غير JPEG أو PNG.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "هذا يغيّر الملفات الأصلية (JPEG وPNG): تُطبَّق التعديلات على البكسلات وتُكتب البيانات الوصفية داخلها. قبل استبدال كل ملف تُحفظ نسخة منه كما كان في مجلد المكتبة (original-backups). لا تُمَسّ مقاطع الفيديو وأنواع الملفات الأخرى.",
+ "Write into the original files": "الكتابة داخل الملفات الأصلية",
+ "Write into {0} original files?": "الكتابة داخل {0} ملفات أصلية؟",
+ "{n} original files were written · backup copies are in {folder}": "تمت كتابة {n} ملفات أصلية · نسخ النسخ الاحتياطي في {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "تم تخطي {n} (ليس JPEG أو PNG، أو لا شيء للكتابة)"
 }

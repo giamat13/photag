@@ -1771,5 +1771,12 @@
  "minutes": "хв.",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag ставить на робочий стіл зменшену копію фото; ваші фото не змінюються. Працює, поки photag запущений у фоні (значок біля годинника).",
  "{0} pictures could not be attached": "Не вдалося прикріпити зображень: {0}",
- "{0} was tagged in this photo": "{0} позначено на цьому фото"
+ "{0} was tagged in this photo": "{0} позначено на цьому фото",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Записати правки та всі метадані в самі оригінальні файли (замінює їх)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "Правки застосовуються до пікселів, а метадані записуються в самі файли. Копія кожного файлу в колишньому вигляді зберігається в папці бібліотеки (original-backups). Відео та файли, що не є JPEG чи PNG, не чіпаються.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Це змінює оригінальні файли (JPEG і PNG): правки застосовуються до пікселів, а метадані записуються в них. Перед заміною кожного файлу його копія в колишньому вигляді зберігається в папці бібліотеки (original-backups). Відео та інші типи файлів не чіпаються.",
+ "Write into the original files": "Записати в оригінальні файли",
+ "Write into {0} original files?": "Записати в оригінальні файли ({0})?",
+ "{n} original files were written · backup copies are in {folder}": "Записано оригінальних файлів: {n} · резервні копії в {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "Пропущено: {n} (не JPEG і не PNG, або нічого записувати)"
 }

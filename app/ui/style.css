@@ -785,6 +785,11 @@ b.scv{display:inline-block;min-width:26px;text-align:center;padding:0 5px;border
 .tl-c.sel img{outline:3px solid var(--cell-act);outline-offset:-3px}
 .tl-c.act img{outline-color:var(--acc)}
 .tl-c i{position:absolute;color:#fff;font-style:normal;text-shadow:0 0 3px #000}
+.tl-c .badges{position:absolute;inset-block-end:5px;inset-inline-end:5px;display:flex;gap:2px;pointer-events:none}
+.tl-c .badges em.scb{font-style:normal;font-size:10px;font-weight:700;line-height:14px;height:14px;padding:0 4px;border-radius:2px;color:#111;background:#9aa;pointer-events:none}
+.tl-c .badges em.scb.hi{background:#5db35b}.tl-c .badges em.scb.mid{background:#e0c33f}.tl-c .badges em.scb.lo{background:#d44d4d}
+.tl-c .badges em.stb{pointer-events:auto;cursor:pointer;background:#cba34a}
+.tl-c .badges em.stb:hover{background:#ddb65a}
 .tl-v{inset-block-end:5px;inset-inline-start:5px}.tl-f{inset-block-start:5px;inset-inline-start:5px}
 .tl-c i .ic{width:14px;height:14px}
 .tl-rail{flex:none;width:54px;position:relative;margin:6px 2px 6px 0;touch-action:none;cursor:ns-resize;user-select:none;border-inline-start:1px solid #333}

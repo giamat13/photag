@@ -1308,6 +1308,99 @@ def run_export(ids: list[int], dest: str, originals: bool, long_edge: int | None
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+WRITE_BACKUP_DIR = "original-backups"       # inside the library folder: the file as it was, before "Write into the original files" replaced it
+
+
+def run_write_originals(ids: list[int], progress: Progress):
+    """The ONE place (besides Export itself, which makes copies) where photag changes a user's picture file: Export > "Write the edits and the metadata
+    into the original files" (the exception to rule number one, asked for by the user). For each photo it
+      1. copies the file as it is to <library>/original-backups (so nothing can be lost),
+      2. makes the new file next to it: the edits applied to the pixels (if the photo has edit settings), then the catalog's EXIF on top of the
+         file's own (caption, capture time, GPS, rating, keywords and people), written for JPEG; a PNG gets the edited pixels only,
+      3. replaces the file with it and updates the catalog (new checksum and size, the edit settings are now in the pixels, thumbnail rebuilt).
+    It works on library files and on the files of reference mode alike. JPEG and PNG only; videos, RAW, HEIC ... are left alone and counted.
+    Any failure puts the original back and leaves that photo as it was."""
+    import shutil
+    import sys
+    from . import refmode
+    con = db.connect()
+    progress.state = "exporting"; progress.total = len(ids); progress.done = 0
+    backup_dir = PATHS.root / WRITE_BACKUP_DIR
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    written = skipped = failed = 0
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    try:
+        for pid in ids:
+            progress.done += 1
+            progress.say("{done}/{total}", done=progress.done, total=progress.total)
+            r = con.execute("SELECT id, sha256, filename, rel_path, orig_backup, is_video, edited, edit_ops, description, taken_at, lat, lng, rating "
+                            "FROM photos WHERE id=?", (pid,)).fetchone()
+            if not r or r["is_video"]:
+                skipped += 1
+                continue
+            path = PATHS.media / r["rel_path"]                       # an absolute path (reference mode) stays what it is
+            kind = path.suffix.lower()
+            ops = None if r["orig_backup"] else _edit_settings_of(r)  # an old-model photo's file IS its edited picture already: only the metadata is added
+            if not path.is_file() or kind not in (".jpg", ".jpeg", ".png") or (kind == ".png" and not ops):
+                skipped += 1                                         # nothing can be written into it (or nothing would change)
+                continue
+            tmp = path.with_name(f".{path.stem}.photag-write{path.suffix}")
+            backup = backup_dir / f"{pid}-{stamp}-{_safe_component(path.name)}"
+            replaced = False
+            try:
+                shutil.copy2(path, backup)
+                if ops:
+                    images.apply_edit(path, ops, tmp)
+                else:
+                    shutil.copy2(path, tmp)
+                if kind in (".jpg", ".jpeg"):
+                    fields = _photo_xmp_fields(con, pid)
+                    images.embed_exif(tmp, path, description=r["description"], taken_at=r["taken_at"], lat=r["lat"], lng=r["lng"], rating=r["rating"],
+                                      keywords=[*fields["tags"], *fields["people"]], upright=bool(ops))
+                sha = images.sha256_file(tmp)
+                other = con.execute("SELECT id FROM photos WHERE sha256=? AND id<>?", (sha, pid)).fetchone()
+                if other:
+                    raise ValueError("another photo in the catalog would have the same file")
+                os.replace(tmp, path)
+                replaced = True
+                w, h = images.dimensions(path)
+                size = path.stat().st_size
+                con.execute("UPDATE photos SET sha256=?, bytes=?, width=?, height=?, edited=0, edit_ops=NULL WHERE id=?", (sha, size, w, h, pid))
+                images.store_exif(con, pid, path)
+                if refmode.is_external(r["rel_path"]):
+                    con.execute("UPDATE ref_files SET size=?, mtime_ns=? WHERE photo_id=?", (size, path.stat().st_mtime_ns, pid))
+                con.commit()
+                render.drop_renders(pid)
+                images.thumb_path(r["sha256"]).unlink(missing_ok=True)
+                try:
+                    images.make_thumb(path, sha)
+                except Exception:
+                    pass
+                written += 1
+            except Exception as e:
+                con.rollback()
+                if replaced:                                         # the file was replaced but the catalog could not follow: the original goes back
+                    try:
+                        shutil.copy2(backup, path)
+                    except OSError:
+                        pass
+                if not replaced:
+                    backup.unlink(missing_ok=True)                  # nothing was changed: no reason to keep a copy
+                failed += 1
+                print(f"write into the original failed for photo {pid}: {e!r}", file=sys.stderr, flush=True)
+            finally:
+                tmp.unlink(missing_ok=True)
+        progress.state = "done"
+        parts = [("{n} original files were written · backup copies are in {folder}", {"n": written, "folder": str(backup_dir)})]
+        if skipped:
+            parts.append(("{n} skipped (not a JPEG or PNG, or nothing to write)", {"n": skipped}))
+        if failed:
+            parts.append(("{n} failed", {"n": failed}))
+        progress.say_parts(*parts)
+    except Exception as e:
+        progress.fail("Export failed: {error}", error=str(e))
+
+
 _GALLERY_TEMPLATE = """<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>

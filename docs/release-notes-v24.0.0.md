@@ -7,12 +7,16 @@
 - **A desktop wallpaper that changes by itself** (Windows): Library > "Desktop wallpaper…" (or right-click a collection > "Use as the desktop wallpaper…"). Choose all photos, favourites or a collection, how often it changes, and the order. photag puts a scaled copy on the desktop; your photos are not changed (#55).
 - **photag in the right-click menu of a folder in Explorer** (Windows): "photag" > "Import this folder into photag…" / "Import this folder as a collection…" opens photag's Import window on that folder (#60).
 - **A series by hand**: select two or more photos, right-click > "Make a series (N×)". They get the series badge, can be compared, and share their keywords like an automatic series; "Remove from the series" takes photos out (also out of an automatic one) (#59).
-- **Export in full quality, with the edits and all the metadata written into the file**: a new choice in Export. The copy gets the edits, the EXIF, caption, rating and keywords; your library files are never changed (#62).
+- **Export in full quality, with the edits and all the metadata written into the file**: a new choice in Export. The copy gets the edits, the EXIF, caption, rating and keywords; your library files are not changed (#62).
+- **Write the edits and the metadata into the original files themselves**: a new choice in Export, for when the original has to carry its edits and EXIF (to send it, or to use it elsewhere). It is the one place where photag changes your files, so it asks first and is never the default. JPEG and PNG, for library photos and for photos in your own folders (reference mode); videos and other types are left alone. The edits go into the pixels, the caption, time, place, rating, keywords and people into the EXIF. Before each file is replaced, a copy of it as it was is kept in the library folder, `original-backups` (#62).
 - **Pictures in a problem report or suggestion**: "Add pictures…" (or paste with Ctrl+V) attaches up to 3 pictures. They are scaled down, stripped of their metadata, and shown with the report on GitHub (#51).
 
 ## Small features
 
 - **The AI sees more when it picks the best photo or tags a photo**: the capture time, camera and exposure, caption, people, and the keywords of the photos taken close in time (about two hours around it) go with the photo (#63, #65).
+
+- **The Timeline shows what the Grid shows**: the quality score and the series badge ("N×", a click compares the series) are on the Timeline pictures too (#69).
+- **One right-click menu for the Timeline and the Grid**: both open the menu from the same piece of code, so anything added to it appears in both (#68).
 
 ## Fixes
 

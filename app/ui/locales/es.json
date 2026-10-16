@@ -1771,5 +1771,12 @@
  "minutes": "minutos",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag pone en el escritorio una copia reducida de la imagen; tus fotos no cambian. Sigue funcionando mientras photag se ejecuta en segundo plano (el icono junto al reloj).",
  "{0} pictures could not be attached": "No se pudieron adjuntar {0} imágenes",
- "{0} was tagged in this photo": "Se etiquetó a {0} en esta foto"
+ "{0} was tagged in this photo": "Se etiquetó a {0} en esta foto",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Escribir las ediciones y todos los metadatos en los propios archivos originales (los reemplaza)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "Las ediciones se aplican a los píxeles y los metadatos se escriben en los propios archivos. Se guarda una copia de cada archivo tal como era en la carpeta de la biblioteca (original-backups). Los vídeos y los archivos que no son JPEG ni PNG no se tocan.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Esto cambia los archivos originales (JPEG y PNG): las ediciones se aplican a los píxeles y los metadatos se escriben en ellos. Antes de reemplazar cada archivo se guarda una copia tal como era en la carpeta de la biblioteca (original-backups). Los vídeos y otros tipos de archivo no se tocan.",
+ "Write into the original files": "Escribir en los archivos originales",
+ "Write into {0} original files?": "¿Escribir en {0} archivos originales?",
+ "{n} original files were written · backup copies are in {folder}": "Se escribieron {n} archivos originales · las copias de seguridad están en {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} omitidos (no son JPEG ni PNG, o no hay nada que escribir)"
 }

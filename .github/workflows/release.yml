@@ -265,6 +265,16 @@ jobs:
         run: |
           VERSION=$(python3 -c "from app.version import __version__ as v; print(v)")
           TAG="v${VERSION}"
+          TITLE="photag ${VERSION}"
+          if [ "${{ inputs.prerelease }}" = "true" ]; then
+            # a pre-release is "PRE N" of the version in app/version.py: the tag is vX.Y.Z-beta.N (the form the updater already reads as a pre-release),
+            # N = the highest number among the existing pre-release tags of this version + 1. It starts again at 1 with every new version, because the
+            # pre-releases of a version are deleted (with their tags) when the regular release of it is made.
+            last=$(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v${VERSION}-beta." --jq '[.[].ref | capture("-beta\\.(?<n>[0-9]+)$").n | tonumber] | (max // 0)')
+            PRE=$((last + 1))
+            TAG="v${VERSION}-beta.${PRE}"
+            TITLE="photag ${VERSION} (pre ${PRE})"
+          fi
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then [ "$TAG" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != version $TAG"; exit 1; }; fi
           notes=docs/release-notes-v${VERSION}.md
           [ -f "$notes" ] || notes=docs/release-notes-v1.0.0.md
@@ -273,4 +283,4 @@ jobs:
           cd release_files
           shopt -s nullglob
           msi=(windows-photag-*.msi)
-          gh release create "${TAG}" --target "${GITHUB_SHA}" photagSetup.exe windows-photagSetup-*.zip photag-code-*.zip windows-photag-*-portable.zip windows-photag-install.bat windows-photag-install.ps1 photag-*-linux-x64.tar.gz photag-*-macos-*.zip "${msi[@]}" --title "photag ${VERSION}" --notes-file "../$notes" "${flags[@]}"
+          gh release create "${TAG}" --target "${GITHUB_SHA}" photagSetup.exe windows-photagSetup-*.zip photag-code-*.zip windows-photag-*-portable.zip windows-photag-install.bat windows-photag-install.ps1 photag-*-linux-x64.tar.gz photag-*-macos-*.zip "${msi[@]}" --title "${TITLE}" --notes-file "../$notes" "${flags[@]}"

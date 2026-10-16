@@ -1771,5 +1771,12 @@
  "minutes": "分钟",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag 会把图片的缩小副本放到桌面上；你的照片不会被改动。只要 photag 在后台运行（时钟旁的图标），它就会持续工作。",
  "{0} pictures could not be attached": "有 {0} 张图片无法附加",
- "{0} was tagged in this photo": "已在这张照片中标记 {0}"
+ "{0} was tagged in this photo": "已在这张照片中标记 {0}",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " 将编辑和所有元数据写入原始文件本身（会替换它们）",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "编辑会应用到像素上，元数据会写入文件本身。每个文件原来的样子会先复制一份保存在库文件夹（original-backups）中。视频以及不是 JPEG 或 PNG 的文件不会被改动。",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "这会修改原始文件（JPEG 和 PNG）：编辑会应用到像素上，元数据会写入其中。替换每个文件之前，会先把它原来的样子复制一份保存在库文件夹（original-backups）中。视频和其他类型的文件不会被改动。",
+ "Write into the original files": "写入原始文件",
+ "Write into {0} original files?": "要写入 {0} 个原始文件吗？",
+ "{n} original files were written · backup copies are in {folder}": "已写入 {n} 个原始文件 · 备份副本在 {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "已跳过 {n} 个（不是 JPEG 或 PNG，或没有可写入的内容）"
 }

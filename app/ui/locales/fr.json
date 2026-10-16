@@ -1771,5 +1771,12 @@
  "minutes": "minutes",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag place sur le bureau une copie réduite de l'image ; vos photos ne sont pas modifiées. Cela continue tant que photag tourne en arrière-plan (l'icône près de l'horloge).",
  "{0} pictures could not be attached": "{0} images n'ont pas pu être jointes",
- "{0} was tagged in this photo": "{0} a été identifié(e) sur cette photo"
+ "{0} was tagged in this photo": "{0} a été identifié(e) sur cette photo",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Écrire les modifications et toutes les métadonnées dans les fichiers originaux eux-mêmes (les remplace)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "Les modifications sont appliquées aux pixels et les métadonnées sont écrites dans les fichiers eux-mêmes. Une copie de chaque fichier tel qu'il était est conservée dans le dossier de la bibliothèque (original-backups). Les vidéos et les fichiers qui ne sont ni JPEG ni PNG ne sont pas touchés.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Cela modifie les fichiers originaux (JPEG et PNG) : les modifications sont appliquées aux pixels et les métadonnées y sont écrites. Avant de remplacer chaque fichier, une copie telle qu'il était est conservée dans le dossier de la bibliothèque (original-backups). Les vidéos et les autres types de fichiers ne sont pas touchés.",
+ "Write into the original files": "Écrire dans les fichiers originaux",
+ "Write into {0} original files?": "Écrire dans {0} fichiers originaux ?",
+ "{n} original files were written · backup copies are in {folder}": "{n} fichiers originaux ont été écrits · les copies de sauvegarde sont dans {folder}",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} ignorés (ni JPEG ni PNG, ou rien à écrire)"
 }

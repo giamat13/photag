@@ -2,7 +2,10 @@
 
 ## Rule number one: never touch the user's original files
 photag never modifies, renames, moves or deletes a user's **original** files -- the files they import from, the files of reference mode
-(`refmode.is_external()`), the pictures opened in the viewer -- except when they run an **Export**, which writes a copy elsewhere.
+(`refmode.is_external()`), the pictures opened in the viewer -- except when they run an **Export**. Export normally writes a copy elsewhere;
+its one option "Write the edits and all the metadata into the original files themselves" (`importer.run_write_originals`) is the ONLY
+exception (decided with the user, #62): JPEG/PNG only, confirmed in a dialog, never remembered as the default, and every file is copied to
+`<library>/original-backups` before it is replaced. Nothing else may change those files.
 Every new feature works on the catalog or on copies. `tools/test_originals_untouched.py` checks it and must stay green.
 
 ## Task tracking
@@ -34,8 +37,16 @@ push straight to `main`.
   everything works. **When all the tests pass there is no reason not to make a regular release** (decided with the user) -- a pre-release
   is only for a huge update, or for something the tests may not cover that has to be checked for real. Only when there is truly no other
   way to check it (it can only be seen in a built, installed program) release a
-  **pre-release** (`workflow_dispatch` with `prerelease=true`; the version in `app/version.py` stays plain, e.g. `18.0.0` -- the tests assume the running version is not a `-beta`; delete the pre-release and its tag before the regular release of the same version) and say clearly that it is a test build; the user asks
+  **pre-release** (`workflow_dispatch` with `prerelease=true`; the version in `app/version.py` stays plain, e.g. `18.0.0` -- the tests assume the running version is not a `-beta`) and say clearly that it is a test build; the user asks
   before a regular release follows. A release that turns out bad is deleted (`gh release delete vX --cleanup-tag -y`) and made again.
+- **Pre-release numbering ("PRE N", decided with the user).** A pre-release is always a pre-release OF a version written in the regular
+  format, plus a PRE number: `24.0.0` pre 1, `24.0.0` pre 2, ... The release workflow makes it by itself: tag `v24.0.0-beta.N`, title
+  `photag 24.0.0 (pre N)`, and N is the highest existing `v<version>-beta.*` tag + 1 (so the first pre of a version is pre 1). **The PRE number
+  starts again at 1 with every new version**: when the regular release of a version is made, first delete ALL the pre-releases of it and
+  their tags (`gh release delete v24.0.0-beta.1 --cleanup-tag -y`, for each), then release `v24.0.0`. Do not delete an earlier pre of a
+  version that is still being worked on -- the numbers would be used again. `version.py` never carries the PRE number; the files of every
+  pre keep the plain version in their names. Each new batch of changes the user has to check for real gets its own pre (pre 2, pre 3 ...),
+  and "what to check" is told for that pre.
 - `app/version.py` (`__version__`) is the single source of truth for the app's version. Bump it
   before every release.
 - **Numbering ("FEATURE.SMALL-FEATURE.FIX", decided with the user; from 18.1.0 — from 11.0.0 to 18.0.0 it was "FEATURE.FIX.SMALL-FIX", earlier "FEATURE.FIX" with a trailing 0).**

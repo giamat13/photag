@@ -1771,5 +1771,12 @@
  "minutes": "dakika",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photag masaüstüne resmin küçültülmüş bir kopyasını koyar; fotoğraflarınız değişmez. photag arka planda çalıştığı sürece (saatin yanındaki simge) çalışmaya devam eder.",
  "{0} pictures could not be attached": "{0} resim eklenemedi",
- "{0} was tagged in this photo": "{0} bu fotoğrafta etiketlendi"
+ "{0} was tagged in this photo": "{0} bu fotoğrafta etiketlendi",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " Düzenlemeleri ve tüm meta verileri orijinal dosyaların kendisine yaz (onların yerine geçer)",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "Düzenlemeler piksellere uygulanır ve meta veriler dosyaların kendisine yazılır. Her dosyanın eski hâlinin bir kopyası kitaplık klasöründe (original-backups) saklanır. Videolara ve JPEG ya da PNG olmayan dosyalara dokunulmaz.",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "Bu, orijinal dosyaları (JPEG ve PNG) değiştirir: düzenlemeler piksellere uygulanır ve meta veriler içlerine yazılır. Her dosya değiştirilmeden önce eski hâlinin bir kopyası kitaplık klasöründe (original-backups) saklanır. Videolara ve diğer dosya türlerine dokunulmaz.",
+ "Write into the original files": "Orijinal dosyalara yaz",
+ "Write into {0} original files?": "{0} orijinal dosyaya yazılsın mı?",
+ "{n} original files were written · backup copies are in {folder}": "{n} orijinal dosya yazıldı · yedek kopyalar {folder} içinde",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n} atlandı (JPEG ya da PNG değil veya yazılacak bir şey yok)"
 }

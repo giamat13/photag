@@ -1771,5 +1771,12 @@
  "minutes": "分",
  "photag puts a scaled copy of the picture on the desktop; your photos are not changed. It keeps working while photag runs in the background (the icon next to the clock).": "photagは画像の縮小コピーをデスクトップに設定します。元の写真は変更されません。photagがバックグラウンド（時計の横のアイコン）で動作している間は動き続けます。",
  "{0} pictures could not be attached": "{0}枚の画像を添付できませんでした",
- "{0} was tagged in this photo": "この写真で{0}にタグを付けました"
+ "{0} was tagged in this photo": "この写真で{0}にタグを付けました",
+ " Write the edits and all the metadata into the original files themselves (replaces them)": " 編集とすべてのメタデータを元のファイル自体に書き込む（置き換えます）",
+ "The edits are applied to the pixels and the metadata is written into the files themselves. A copy of each file as it was is kept in the library folder (original-backups). Videos and files that are not JPEG or PNG are left alone.": "編集はピクセルに適用され、メタデータはファイル自体に書き込まれます。各ファイルの元の状態のコピーがライブラリフォルダー（original-backups）に保存されます。動画や、JPEG・PNG以外のファイルは変更されません。",
+ "This changes the original files (JPEG and PNG): the edits are applied to the pixels and the metadata is written into them. Before each file is replaced, a copy of it as it was is kept in the library folder (original-backups). Videos and other file types are left alone.": "元のファイル（JPEGとPNG）が変更されます。編集はピクセルに適用され、メタデータがその中に書き込まれます。各ファイルを置き換える前に、元の状態のコピーがライブラリフォルダー（original-backups）に保存されます。動画やその他の種類のファイルは変更されません。",
+ "Write into the original files": "元のファイルに書き込む",
+ "Write into {0} original files?": "{0}個の元のファイルに書き込みますか？",
+ "{n} original files were written · backup copies are in {folder}": "{n}個の元のファイルを書き込みました · バックアップのコピーは {folder} にあります",
+ "{n} skipped (not a JPEG or PNG, or nothing to write)": "{n}個をスキップしました（JPEGでもPNGでもない、または書き込む内容がない）"
 }
