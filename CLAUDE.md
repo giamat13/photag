@@ -42,9 +42,10 @@ push straight to `main`.
 - **Pre-release numbering ("PRE N", decided with the user).** A pre-release is always a pre-release OF a version written in the regular
   format, plus a PRE number: `24.0.0` pre 1, `24.0.0` pre 2, ... The release workflow makes it by itself: tag `v24.0.0-beta.N`, title
   `photag 24.0.0 (pre N)`, and N is the highest existing `v<version>-beta.*` tag + 1 (so the first pre of a version is pre 1). **The PRE number
-  starts again at 1 with every new version**: when the regular release of a version is made, first delete ALL the pre-releases of it and
-  their tags (`gh release delete v24.0.0-beta.1 --cleanup-tag -y`, for each), then release `v24.0.0`. Do not delete an earlier pre of a
-  version that is still being worked on -- the numbers would be used again. `version.py` never carries the PRE number; the files of every
+  starts again at 1 with every new version**, by itself (the tags of the next version are `v25.0.0-beta.*`, so there are none to count).
+  Pre-releases are NOT deleted when the regular release is made: they stay as history (their tags never clash with `v24.0.0`). Only a
+  pre-release made with the old scheme, whose tag IS the version (`v24.0.0` flagged as pre-release), must be deleted before the regular
+  release, because the regular release needs that tag. `version.py` never carries the PRE number; the files of every
   pre keep the plain version in their names. Each new batch of changes the user has to check for real gets its own pre (pre 2, pre 3 ...),
   and "what to check" is told for that pre.
 - `app/version.py` (`__version__`) is the single source of truth for the app's version. Bump it
