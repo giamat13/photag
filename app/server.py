@@ -1092,6 +1092,103 @@ def map_points(body: MapIn):
     return {"points": pts, "total": len(ids), "without": len(ids) - len(pts)}
 
 
+def _parse_query(con, q: str) -> dict:
+    """Split a typed search ("Dana 2023 beach") into the people it names, the years and the plain words left.
+    A person is found by a whole name or by one word of it ("Dana" for "Dana Levi"), the longest run of words first."""
+    words = q.split()
+    names = {}
+    for r in con.execute("SELECT id, name FROM people WHERE name IS NOT NULL AND name!=''"):
+        names.setdefault(r["name"].strip().lower(), []).append(r["id"])
+    first = {}                                      # one word of a name -> person ids
+    for nm, ids in names.items():
+        for w in nm.split():
+            first.setdefault(w, []).extend(ids)
+    people, years, rest, i = [], [], [], 0
+    while i < len(words):
+        hit = None
+        for j in range(min(len(words), i + 4), i, -1):          # the longest run of words that is a whole name
+            ids = names.get(" ".join(words[i:j]).lower())
+            if ids:
+                hit = (j, ids)
+                break
+        if not hit:
+            w = words[i].lower()
+            if len(w) >= 2 and len(first.get(w, [])) and len(set(first[w])) == 1:       # a word of exactly one person's name
+                hit = (i + 1, first[w])
+        if hit:
+            people.append(sorted(set(hit[1])))
+            i = hit[0]
+            continue
+        w = words[i]
+        if len(w) == 4 and w.isdigit() and 1900 <= int(w) <= 2100:
+            years.append(int(w))
+        else:
+            rest.append(w)
+        i += 1
+    return {"people": people, "years": years, "rest": rest}
+
+
+def _query_where(p: dict, with_text: bool = True) -> tuple[list[str], list]:
+    """SQL conditions of a parsed query: every person named (any of the ids of a same name), one of the years, every word."""
+    where, args = [], []
+    for ids in p["people"]:
+        mark = ",".join("?" * len(ids))
+        where.append(f"(p.id IN (SELECT photo_id FROM faces WHERE person_id IN ({mark})) "
+                     f"OR p.id IN (SELECT photo_id FROM photo_people WHERE person_id IN ({mark})))")
+        args += ids + ids
+    if p["years"]:
+        where.append("CAST(strftime('%Y', p.taken_at, 'unixepoch') AS INT) IN (" + ",".join("?" * len(p["years"])) + ")")
+        args += p["years"]
+    if with_text:
+        for w in p["rest"]:
+            where.append("(p.filename LIKE ? OR p.description LIKE ? "
+                         "OR p.id IN (SELECT photo_id FROM photo_tags pt JOIN tags t ON t.id=pt.tag_id WHERE t.name LIKE ?) "
+                         "OR p.id IN (SELECT pp.photo_id FROM photo_people pp JOIN people pe ON pe.id=pp.person_id WHERE pe.name LIKE ?))")
+            args += [f"%{w}%"] * 4
+    return where, args
+
+
+@app.get("/api/search/smart")
+def smart_search(q: str, limit: int = 600):
+    """One search box for people, year and meaning ("Dana 2023 beach at sunset"): the people and years narrow the photos, the
+    words left are looked for by meaning (local CLIP) among them. Without the model, or when only people / years were typed,
+    the plain text match is used."""
+    q = q.strip()
+    if not q:
+        raise err(400, "Type what to look for")
+    con = db.connect()
+    parsed = _parse_query(con, q)
+    where, args = _query_where(parsed, with_text=False)
+    ids = {r["id"] for r in con.execute(f"SELECT p.id FROM photos p WHERE p.trashed=0 AND {' AND '.join(where or ['1'])}", args)}
+    out = {"people": [con.execute("SELECT name FROM people WHERE id=?", (i[0],)).fetchone()["name"] for i in parsed["people"]],
+           "years": parsed["years"], "rest": parsed["rest"], "meaning": False, "english": ""}
+    rest = " ".join(parsed["rest"])
+    if not rest:
+        out["results"] = [{"id": i, "score": 1.0} for i in ids]
+        return out
+    text_where, text_args = _query_where(parsed)
+    text_ids = {r["id"] for r in con.execute(f"SELECT p.id FROM photos p WHERE p.trashed=0 AND {' AND '.join(text_where)}", text_args)}
+    scores = {}
+    if semantic.model_ready() and semantic.counts(con)["indexed"] > 0:
+        english = rest
+        if not semantic.is_english(rest):
+            if not aitag.can_translate():
+                english = ""
+            else:
+                try:
+                    english = aitag.translate_query(rest)
+                except aitag.AIError:
+                    english = ""
+        if english:
+            scores = {i: s for i, s in semantic.search(con, english, 2000).items() if i in ids}
+            out["meaning"], out["english"] = True, english
+    res = {i: 1.0 for i in text_ids}                # words that are in a name / caption / keyword count as a full match
+    for i, s in scores.items():
+        res[i] = max(res.get(i, 0), s)
+    out["results"] = [{"id": i, "score": s} for i, s in sorted(res.items(), key=lambda x: -x[1])[:max(1, min(limit, 2000))]]
+    return out
+
+
 @app.get("/api/photos")
 def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
            favorite: int = 0, year: int = 0, trashed: int = 0,
@@ -1127,10 +1224,11 @@ def photos(album: int = 0, person: int = 0, tag: int = 0, q: str = "",
     if year:
         where.append("CAST(strftime('%Y', p.taken_at, 'unixepoch') AS INT)=?"); args.append(year)
     if q:
-        where.append("(p.filename LIKE ? OR p.description LIKE ? "
-                     "OR p.id IN (SELECT photo_id FROM photo_tags pt JOIN tags t ON t.id=pt.tag_id WHERE t.name LIKE ?) "
-                     "OR p.id IN (SELECT pp.photo_id FROM photo_people pp JOIN people pe ON pe.id=pp.person_id WHERE pe.name LIKE ?))")
-        args += [f"%{q}%"] * 4
+        qw, qa = _query_where(_parse_query(con, q))      # "Dana 2023 beach": the person, the year and each word
+        if not qw:
+            qw, qa = ["1"], []
+        where += qw
+        args += qa
     sql = (f"SELECT p.id,p.filename,p.is_video,p.taken_at,p.favorited,p.rating,p.width,p.height,"
            f"p.flag,p.label,p.quick,p.edited,p.bytes,p.imported_at,p.trashed_at,p.rel_path,p.lat,p.lng,"
            f"p.camera_make,p.camera_model,p.lens,p.focal_length,p.focal_length_35mm,"

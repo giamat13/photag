@@ -20,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 PROGRESS = HERE / "local-tests.json"
 HISTORY = HERE / "local-tests-history.json"
-DEFAULT = ["test_pool", "test_window_close", "test_aitag", "test_place_search", "test_advanced_filters", "test_help_search_history",
+DEFAULT = ["test_pool", "test_window_close", "test_aitag", "test_place_search", "test_smart_query","test_advanced_filters", "test_help_search_history",
            "test_surprise_compare", "test_smart_features", "test_smart_ui", "test_features_ui", "ui_smoke", "test_code_update",
            "test_update_rollback", "test_release_notes", "test_version_scheme", "test_runtime_lock", "test_dates_from_names", "test_tag_rules", "test_ai_pick", "test_auto_score", "test_originals_untouched", "test_new_media", "test_new_features_ui", "test_report_news", "test_report_manage",
            "test_viewer", "test_viewer_ui", "test_ref_folder", "test_loupe_splash_compare", "test_issue_batch", "test_issue_batch_ui", "test_scan_cap", "test_gphotos", "test_gphotos_ui", "i18n check"]

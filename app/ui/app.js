@@ -607,7 +607,7 @@ function rememberSearch(q){
   S.recentSearches=[q, ...S.recentSearches.filter(x=>x!==q)].slice(0,10); pref.set('recentSearches', S.recentSearches); renderRecentSearches();
 }
 $('#ft-q').addEventListener('input', debounce(()=>{ S.F.q=$('#ft-q').value.trim(); if(S.F.qf==='meaning') return; if(S.F.qf!=='name') fetchSource(); else applyFilter(); }, 300));
-$('#ft-q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ const q=$('#ft-q').value.trim(); if(q){ rememberSearch(q); if(S.F.qf==='meaning') semanticSearch(q); } } });
+$('#ft-q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ const q=$('#ft-q').value.trim(); if(q){ rememberSearch(q); if(S.F.qf==='meaning') semanticSearch(q); else if(S.F.qf==='any') smartSearch(q); } } });
 $('#ft-q').addEventListener('change', ()=>rememberSearch($('#ft-q').value));
 $('#ft-field').onchange = ()=>{ S.F.qf=$('#ft-field').value; if(S.F.qf==='meaning') return; if(S.F.q) fetchSource(); };
 function renderMetaBrowser(){
@@ -5099,6 +5099,17 @@ async function semanticSearch(q){
   S.sort='relevance'; S.asc=false;           // not saved: leaving the results returns to the usual sort
   if(S.mod!=='library') setModule('library');
   await setSource({kind:'semantic', id:null, name:t('Search: {0}', [q]) + (r.english!==r.q ? ` (${r.english})` : ''), scores});
+  if(S.view!=='grid' && S.view!=='loupe' && S.view!=='timeline') setView('grid');
+}
+// Enter in the usual search box ("Any Searchable Field"): people and years narrow the photos (already done live), and the
+// words left are also looked for by meaning when the local model is installed; otherwise the live text filter stays as it is
+async function smartSearch(q){
+  let r; try{ r = await api('/api/search/smart?q='+encodeURIComponent(q)); }catch(e){ return; }
+  if(!r.meaning || !r.results.length) return;
+  const scores = Object.fromEntries(r.results.map(x=>[x.id, x.score]));
+  S.sort='relevance'; S.asc=false;
+  if(S.mod!=='library') setModule('library');
+  await setSource({kind:'semantic', id:null, name:t('Search: {0}', [q]) + (r.english && r.english!==r.rest.join(' ') ? ` (${r.english})` : ''), scores});
   if(S.view!=='grid' && S.view!=='loupe' && S.view!=='timeline') setView('grid');
 }
 async function semanticDialog(){
