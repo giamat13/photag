@@ -167,7 +167,7 @@ def main():
     save(state)
     dash("run", "start", "Local tests", "--plain", f"Running {len(names)} test suites on this computer, several at the same time",
          "--steps", "Run all test suites::Each suite shows as its own job", "--eta", "3m")
-    dash("step", "start", "1", "--plain", "Every test suite is a sub-step; the percent follows them", "--eta", "3m", "--subs", "|".join(names))
+    dash("step", "start", "1", "--plain", "Every test suite is a sub-step; the percent follows them", "--eta", "3m", "--subs", "|".join(f"{n}~{max(5, int(hist.get(n, GUESS)))}s" for n in names))
     dash("now", "Starting the test suites")
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
     lock, busy, pending = threading.Lock(), set(), sorted(state["tests"], key=lambda t: -t["estimate"])      # the longest first: they finish together

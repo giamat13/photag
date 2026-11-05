@@ -139,7 +139,11 @@ try:
         best_id = int(pg.evaluate("document.querySelector('#v-compare .cmp.best').dataset.id"))
         pg.click("[data-t=cmppick]")
         pg.wait_for_function(f"S.byId.get({best_id}).flag === 1 && [...S.sel].filter(id => id !== {best_id}).every(id => S.byId.get(id).flag === -1)", timeout=10000)
-        fl = {p["id"]: p["flag"] for p in call("GET", "/api/photos?limit=999")}
+        for _ in range(50):  # the UI flags at once, the server a moment later: wait for the server
+            fl = {p["id"]: p["flag"] for p in call("GET", "/api/photos?limit=999")}
+            if fl[best_id] == 1 and all(fl[i] == -1 for i in sel if i != best_id):
+                break
+            pg.wait_for_timeout(200)
         check("'Pick this, reject the others' flags them", fl[best_id] == 1 and all(fl[i] == -1 for i in sel if i != best_id), fl)
         pg.evaluate("setView('grid')")
         pg.wait_for_function("!document.querySelector('#v-grid').classList.contains('hidden')", timeout=5000)
