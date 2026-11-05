@@ -149,6 +149,67 @@ begin
   Result := ExpandConstant('{param:update|0}') = '1';
 end;
 
+var
+  ModePage: TInputOptionWizardPage;
+  UninstallPath, InstalledVersion: String;
+  Quitting: Boolean;
+
+// Is photag already installed (per user, or for all users)? Fills UninstallPath and InstalledVersion.
+function FindInstalled: Boolean;
+var
+  K, U: String;
+begin
+  K := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F0B7C1E-3A52-4D8B-9C47-5E2A1D0F8B36}_is1';
+  Result := RegQueryStringValue(HKCU, K, 'UninstallString', U) or RegQueryStringValue(HKLM, K, 'UninstallString', U);
+  if Result then
+  begin
+    UninstallPath := RemoveQuotes(U);
+    if not (RegQueryStringValue(HKCU, K, 'DisplayVersion', InstalledVersion) or RegQueryStringValue(HKLM, K, 'DisplayVersion', InstalledVersion)) then
+      InstalledVersion := '';
+    Result := FileExists(UninstallPath);
+  end;
+end;
+
+// When photag is already installed, the first page after the welcome page asks: Update, Repair or Uninstall.
+procedure InitializeWizard;
+begin
+  if not FindInstalled then Exit;
+  ModePage := CreateInputOptionPage(wpWelcome, 'photag is already installed',
+    'Version ' + InstalledVersion + ' is installed. What would you like to do?', '', True, False);
+  ModePage.Add('Update to version {#MyAppVersion} (keeps your settings, photos and catalog)');
+  ModePage.Add('Repair (put back the program files, shortcuts and Open with entries of this version)');
+  ModePage.Add('Uninstall (removes the program; your photos and catalog are NOT touched)');
+  if InstalledVersion = '{#MyAppVersion}' then
+    ModePage.SelectedValueIndex := 1
+  else
+    ModePage.SelectedValueIndex := 0;
+end;
+
+// silent runs (the in-app updater: /SILENT /update=1) never show the page and always update
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := (ModePage <> nil) and (PageID = ModePage.ID) and WizardSilent;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  Code: Integer;
+begin
+  Result := True;
+  if (ModePage <> nil) and (CurPageID = ModePage.ID) and (ModePage.SelectedValueIndex = 2) then
+  begin
+    Result := False;
+    Exec(UninstallPath, '', '', SW_SHOW, ewWaitUntilTerminated, Code);
+    Quitting := True;
+    WizardForm.Close;
+  end;
+end;
+
+procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
+begin
+  if Quitting then Confirm := False;
+end;
+
 // The in-app updater saves a copy of the running program before it starts this installer. When all files are in place
 // we write done.flag; if it is missing afterwards (power loss, killed installer) the app puts the saved copy back.
 procedure CurStepChanged(CurStep: TSetupStep);

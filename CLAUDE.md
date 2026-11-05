@@ -102,7 +102,7 @@ release workflow writes it into `app/_report_token.py` (never committed). Setup 
   when done or on the first failure (the exit code wakes you up). Never poll by hand.
 - All GitHub issue reports come from the user: solve every open issue, release, then comment on it with the version and close it
   (`POST /issues/N/comments`, `PATCH /issues/N {"state":"closed","state_reason":"completed"}`, token via `git credential fill`, never printed).
-- Keep the **dashboard** up to date at every step (below). If a test fails: tell the user at once (the test runner also shows a message box).
+- Keep the VS Code **dashboard** up to date at every step. If a test fails: tell the user at once (the test runner also shows a message box).
 - Never start a second run of the tests while one is running (they share ports and the progress file) and never restart one that is running.
   **One exception (decided with the user): a failure.** While the local tests run, look at `tools/release_status/local-tests.json` (the `fail` count and the
   `summary` of each test) every now and then, not only at the end. At the first failed test **stop the run at once** (kill the `run_local_tests.py` process and
@@ -110,21 +110,12 @@ release workflow writes it into `app/_report_token.py` (never committed). Setup 
   rest of a run that is already red is a waste. **Do not look by hand: start a watcher in the background next to the run** (a small Python loop that reads
   `local-tests.json` every 3 seconds, prints the failed test with its last live lines, kills the run and exits with code 1 -- the exit code wakes you up --
   or prints "FINISHED OK" and exits 0). Start the run and the watcher in the same step, delete a stale `local-tests.json` first (a killed run leaves one
-  behind, with every test marked failed, and the dashboard flips between "all failed" and "all done"), and never pass anything but test names or
+  behind, with every test marked failed), and never pass anything but test names or
   `--parallel N` / `--serial` to `run_local_tests.py` (any other word is run as a test name and shows up as a failed test). A test that failed in the
   full run is run again alone before it is called broken: UI tests can fail under load and pass alone. Before the next run make sure no test process or server is left over (the fixed ports).
 
-## The release dashboard (live page for the user)
-Files in `tools/release_status/` (the generated ones -- status.html, status-data.js, local-tests*.json, activity.json, cycle.json, archive/ -- are git-ignored):
-- `status_page.py` -- the generator. Start it as an independent, hidden process (it keeps running until the version of `app/version.py` is published; a lock
-  prevents a second copy; it reloads itself when its own file is edited): `py -3.12 toolselease_status\status_page.py` (PowerShell: `Start-Process -WindowStyle Hidden`).
-  The user opens `http://127.0.0.1:5501/tools/release_status/status.html` (VS Code Live Server on the repository root) or the file itself.
-  It shows: percent, time left, what is happening now, the pipeline stages, a live log, the task list, the GitHub jobs and the local tests (only while running or
-  failed). The timer stops at the first failed job. It resets itself when a release is out and new work begins (`reset.py` does it by hand).
-- `todo.json` -- the user's task card: `[{"text": "...", "state": "todo|run|done"}]` (Hebrew texts). Rewrite it whenever a task starts or ends.
-- `log.py "text"` -- one line in the live log ("what I am doing now"). Call it at each step.
-- `run_local_tests.py` -- the local tests (below); it writes `local-tests.json`, which the page shows.
-Check that the generator is alive (e.g. `status-data.js` modified in the last minute) at the start of a session and start it if not.
+## Progress dashboard
+Progress is shown by the VS Code dashboard extension (agent-dashboard, see the global instructions); the old `tools/release_status/status.html` page is no longer used -- do not start `status_page.py`, `todo.json` or `log.py`.
 
 ## Local tests (before every push and release)
 `PYTHONIOENCODING=utf-8 py -3.12 tools/release_status/run_local_tests.py [names...]` runs the `DEFAULT` list (about 27 suites; add every new test to it **and** to
@@ -150,7 +141,7 @@ Rules learned the hard way:
   (`git status -sb` without "ahead"), check the tag does not exist (`GET /git/ref/tags/vX.Y.Z` = 404), then
   `POST /actions/workflows/release.yml/dispatches {"ref":"main","inputs":{"prerelease":"false"}}` (204). Watch `GET /actions/workflows/release.yml/runs?per_page=1` and the
   jobs of that run every 30 seconds, stop at the first `failure` (read its log: `GET /actions/jobs/<id>/logs`), cancel the run (`POST /actions/runs/<id>/cancel`), fix, push, dispatch again.
-  The release has 9 files when it succeeded. Then comment on and close the issues, update the dashboard.
+  The release has 9 files when it succeeded. Then comment on and close the issues.
 - The "health check" prompt of the user (list the last 5 runs and 3 releases, report in Hebrew in 2 lines) is read-only: do not push or release.
 
 ## State at the end of the last session (2026-10-10)

@@ -36,6 +36,20 @@ def load(p, default):
         return default
 
 
+DASH = Path(r"c:/Users/thefu/code/agent-dashboard/claude-plugin/scripts/dash.js")
+
+
+def dash(*args):
+    """Tell the VS Code dashboard (agent-dashboard extension) what is happening: one job per test. Never blocks and never fails the run."""
+    if not DASH.exists() or PROGRESS.name != "local-tests.json":
+        return
+    try:
+        subprocess.Popen(["node", str(DASH), *args], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                         creationflags=0x08000000 if sys.platform == "win32" else 0)
+    except OSError:
+        pass
+
+
 def notify_failure(name, detail):
     """A message box on the user's screen the moment a test fails (the run goes on; the box is its own process, so it stays up)."""
     if sys.platform != "win32" or not os.environ.get("PHOTAG_TEST_POPUP"):   # no box on the user's screen (they asked): the failure shows on the dashboard; set PHOTAG_TEST_POPUP=1 to get it back
@@ -87,6 +101,7 @@ def run_one(t, state, env):
     """Run one test, streaming its output: the page sees the checks pile up while it runs."""
     t["state"], t["began"], t["live"] = "run", time.time(), {"pass": 0, "fail": 0, "last": []}
     save(state)
+    dash("job", "start", t["name"])
     p = subprocess.Popen(command(t["name"]), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
                          env=env, cwd=str(ROOT), bufsize=1)
     lines, last_write = [], 0.0
@@ -150,6 +165,10 @@ def main():
              "tests": [{"name": n, "state": "todo", "seconds": None, "estimate": hist.get(n, GUESS), "summary": ""} for n in names]}
     state["workers"] = workers
     save(state)
+    dash("run", "start", "Local tests", "--plain", f"Running {len(names)} test suites on this computer, several at the same time",
+         "--steps", "Run all test suites::Each suite shows as its own job", "--eta", "3m")
+    dash("step", "start", "1", "--plain", "Every test suite is a sub-step; the percent follows them", "--eta", "3m", "--subs", "|".join(names))
+    dash("now", "Starting the test suites")
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
     lock, busy, pending = threading.Lock(), set(), sorted(state["tests"], key=lambda t: -t["estimate"])      # the longest first: they finish together
     ports = {t["name"]: ports_of(t["name"]) for t in pending}
@@ -180,6 +199,10 @@ def main():
                 t["summary"], fails = summarize(out)
                 t["state"] = "done" if code == 0 and not fails else "fail"
                 t.pop("live", None)
+                dash("job", "done" if t["state"] == "done" else "fail", t["name"])
+                dash("sub", "done")
+                n_done = sum(1 for x in state["tests"] if x["state"] in ("done", "fail"))
+                dash("now", f"{n_done} of {len(state['tests'])} test suites finished; last: {t['name']} {t['summary']}".strip())
                 if t["state"] == "fail":
                     t["detail"] = "\n".join(l for l in out.splitlines() if l.startswith("FAIL") or "Error" in l)[-600:]
                     notify_failure(t["name"], t["detail"])
@@ -202,6 +225,8 @@ def main():
     state["finished"] = time.time()
     save(state)
     bad = [t["name"] for t in state["tests"] if t["state"] == "fail"]
+    dash("run", "fail" if bad else "done", "--summary", ("Failed: " + ", ".join(bad)) if bad else f"All {len(names)} test suites passed")
+    time.sleep(1.5)                                  # let the last dashboard call start before this process ends
     print("FAILED: " + ", ".join(bad) if bad else "all passed")
     sys.exit(1 if bad else 0)
 
